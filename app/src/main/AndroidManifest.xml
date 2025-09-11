@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <application
+        android:name=".RestoidApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -11,11 +12,6 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Restoid">
-        <activity
-            android:name=".SettingsScreen"
-            android:exported="false"
-            android:label="@string/title_activity_settings_screen"
-            android:theme="@style/Theme.Restoid" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

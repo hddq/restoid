@@ -12,6 +12,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -20,6 +22,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import app.restoid.ui.screens.HomeScreen
 import app.restoid.ui.screens.SettingsScreen
+import app.restoid.ui.settings.SettingsViewModel
+import app.restoid.ui.settings.SettingsViewModelFactory
 import app.restoid.ui.theme.RestoidTheme
 
 class MainActivity : ComponentActivity() {
@@ -64,6 +68,7 @@ class MainActivity : ComponentActivity() {
                     ) {
                         composable(Screen.Home.route) { HomeScreen() }
                         composable(Screen.Settings.route) { SettingsScreen() }
+
                     }
                 }
             }
