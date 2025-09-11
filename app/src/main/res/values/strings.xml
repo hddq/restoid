@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Restoid</string>
+    <string name="title_activity_settings_screen">SettingsScreen</string>
+</resources>
