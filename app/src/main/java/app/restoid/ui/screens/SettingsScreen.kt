@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -119,29 +120,53 @@ fun SettingsScreen() {
         item {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
+                    // Title row is always visible, but the add button is conditional
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Repositories", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                        IconButton(onClick = { settingsViewModel.onShowAddRepoDialog() }) {
-                            Icon(Icons.Default.Add, contentDescription = "Add Repository")
+                        Text("Backup Repositories", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                        // Show "Add" button only if restic is installed
+                        if (resticState is ResticState.Installed) {
+                            IconButton(onClick = { settingsViewModel.onShowAddRepoDialog() }) {
+                                Icon(Icons.Default.Add, contentDescription = "Add Repository")
+                            }
                         }
                     }
                     Spacer(Modifier.height(4.dp))
 
-                    if (repositories.isEmpty()) {
-                        Text(
-                            "No repositories configured. Add one to get started.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-                    } else {
-                        Column {
-                            repositories.forEach { repo ->
-                                RepositoryRow(repo = repo)
+                    // Content depends on whether restic is installed
+                    if (resticState is ResticState.Installed) {
+                        if (repositories.isEmpty()) {
+                            Text(
+                                "No repositories configured. Add one to get started.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
+                        } else {
+                            Column {
+                                repositories.forEach { repo ->
+                                    RepositoryRow(repo = repo)
+                                }
                             }
+                        }
+                    } else {
+                        // Show a message asking the user to install restic first
+                        Row(
+                            modifier = Modifier.padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Info,
+                                contentDescription = null,
+                                modifier = Modifier.padding(end = 8.dp),
+                                tint = LocalContentColor.current.copy(alpha = 0.6f)
+                            )
+                            Text(
+                                "Install restic to manage repositories.",
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
                         }
                     }
                 }

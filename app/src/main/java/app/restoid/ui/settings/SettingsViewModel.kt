@@ -62,7 +62,10 @@ class SettingsViewModel(
     }
 
     fun onShowAddRepoDialog() {
-        _addRepoUiState.update { it.copy(showDialog = true) }
+        // Only show the dialog if restic is actually installed.
+        if (resticState.value is ResticState.Installed) {
+            _addRepoUiState.update { it.copy(showDialog = true) }
+        }
     }
 
     // Logic to add a new repository
