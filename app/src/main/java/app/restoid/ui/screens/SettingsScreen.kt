@@ -9,6 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
@@ -29,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
@@ -58,6 +60,7 @@ fun SettingsScreen() {
     val rootState by settingsViewModel.rootState.collectAsStateWithLifecycle()
     val resticState by settingsViewModel.resticState.collectAsStateWithLifecycle()
     val repositories by settingsViewModel.repositories.collectAsStateWithLifecycle()
+    val selectedRepository by settingsViewModel.selectedRepository.collectAsStateWithLifecycle()
     val addRepoUiState by settingsViewModel.addRepoUiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
@@ -177,7 +180,11 @@ fun SettingsScreen() {
                         } else {
                             Column {
                                 repositories.forEach { repo ->
-                                    RepositoryRow(repo = repo)
+                                    SelectableRepositoryRow(
+                                        repo = repo,
+                                        isSelected = repo.path == selectedRepository,
+                                        onSelected = { settingsViewModel.selectRepository(repo.path) }
+                                    )
                                 }
                             }
                         }
@@ -206,25 +213,34 @@ fun SettingsScreen() {
 }
 
 @Composable
-fun RepositoryRow(repo: LocalRepository) {
+fun SelectableRepositoryRow(
+    repo: LocalRepository,
+    isSelected: Boolean,
+    onSelected: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 12.dp),
+            .selectable(
+                selected = isSelected,
+                onClick = onSelected,
+                role = Role.RadioButton
+            )
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            Icons.Default.Storage,
-            contentDescription = "Repository",
-            modifier = Modifier.padding(end = 16.dp),
-            tint = MaterialTheme.colorScheme.secondary
+        RadioButton(
+            selected = isSelected,
+            onClick = null // Handled by Row's selectable modifier
         )
-        Column {
+        Spacer(Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
             Text(repo.name, style = MaterialTheme.typography.bodyLarge)
             Text(repo.path, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
+
 
 @Composable
 fun AddRepositoryDialog(

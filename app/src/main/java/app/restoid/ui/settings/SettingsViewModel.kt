@@ -31,6 +31,7 @@ class SettingsViewModel(
     val rootState = rootRepository.rootState
     val resticState = resticRepository.resticState
     val repositories = repositoriesRepository.repositories
+    val selectedRepository = repositoriesRepository.selectedRepository
 
     // Internal and exposed UI State for adding a new repository
     private val _addRepoUiState = MutableStateFlow(AddRepoUiState())
@@ -46,6 +47,10 @@ class SettingsViewModel(
         viewModelScope.launch {
             resticRepository.downloadAndInstallRestic()
         }
+    }
+
+    fun selectRepository(path: String) {
+        repositoriesRepository.selectRepository(path)
     }
 
     // UI event handlers for the Add Repository dialog
@@ -101,4 +106,3 @@ class SettingsViewModel(
         }
     }
 }
-
