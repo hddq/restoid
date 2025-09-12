@@ -26,7 +26,6 @@ import app.restoid.ui.settings.SettingsViewModelFactory
 @Composable
 fun SettingsScreen() {
     val application = LocalContext.current.applicationContext as RestoidApplication
-    // Update ViewModel creation to pass both repositories from the application context
     val settingsViewModel: SettingsViewModel = viewModel(
         factory = SettingsViewModelFactory(application.rootRepository, application.resticRepository)
     )
@@ -89,70 +88,83 @@ fun ResticDependencyRow(
     state: ResticState,
     onDownloadClick: () -> Unit
 ) {
-    // This composable shows the status of the restic binary and provides an action button
     AnimatedContent(targetState = state, label = "ResticStatusAnimation") { targetState ->
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            // Left side: Icon and Text
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                val icon = when (targetState) {
-                    is ResticState.Installed -> Icons.Default.CheckCircle
-                    is ResticState.Error -> Icons.Default.Error
-                    else -> Icons.Default.CloudDownload
-                }
-                val iconColor = when (targetState) {
-                    is ResticState.Installed -> MaterialTheme.colorScheme.primary
-                    is ResticState.Error -> MaterialTheme.colorScheme.error
-                    else -> LocalContentColor.current
-                }
-                Icon(imageVector = icon, contentDescription = null, modifier = Modifier.padding(end = 16.dp), tint = iconColor)
-
-                Column {
-                    Text("Restic Binary", style = MaterialTheme.typography.bodyLarge)
-                    val supportingText = when(targetState) {
-                        ResticState.Idle -> "Checking status..."
-                        ResticState.NotInstalled -> "Required for backups"
-                        is ResticState.Downloading -> "Downloading & extracting..."
-                        is ResticState.Installed -> "Version ${targetState.version}"
-                        is ResticState.Error -> "Error: ${targetState.message}"
+                // Left side: Icon and Text
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    val icon = when (targetState) {
+                        is ResticState.Installed -> Icons.Default.CheckCircle
+                        is ResticState.Error -> Icons.Default.Error
+                        else -> Icons.Default.CloudDownload
                     }
-                    Text(
-                        text = supportingText,
-                        style = MaterialTheme.typography.bodySmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    val iconColor = when (targetState) {
+                        is ResticState.Installed -> MaterialTheme.colorScheme.primary
+                        is ResticState.Error -> MaterialTheme.colorScheme.error
+                        else -> LocalContentColor.current
+                    }
+                    Icon(imageVector = icon, contentDescription = null, modifier = Modifier.padding(end = 16.dp), tint = iconColor)
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Restic Binary", style = MaterialTheme.typography.bodyLarge)
+                        val supportingText = when (targetState) {
+                            ResticState.Idle -> "Checking status..."
+                            ResticState.NotInstalled -> "Required for backups"
+                            is ResticState.Downloading -> "Downloading..."
+                            ResticState.Extracting -> "Extracting binary..."
+                            is ResticState.Installed -> targetState.version
+                            is ResticState.Error -> "Error: ${targetState.message}"
+                        }
+                        Text(
+                            text = supportingText,
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                // Right side: Button, Progress Indicator or Percentage Text
+                when (targetState) {
+                    ResticState.NotInstalled, is ResticState.Error -> {
+                        Button(onClick = onDownloadClick) {
+                            Text(if (targetState is ResticState.Error) "Retry" else "Download")
+                        }
+                    }
+                    ResticState.Extracting -> CircularProgressIndicator()
+                    is ResticState.Downloading -> {
+                        Text(
+                            text = "${(targetState.progress * 100).toInt()}%",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    is ResticState.Installed, ResticState.Idle -> {
+                        // Nothing to show here for these states
+                    }
                 }
             }
 
-            // Right side: Button or Progress Indicator
-            when (targetState) {
-                ResticState.NotInstalled, is ResticState.Error -> {
-                    Button(onClick = onDownloadClick) {
-                        Text(if (targetState is ResticState.Error) "Retry" else "Download")
-                    }
-                }
-                is ResticState.Downloading -> {
-                    CircularProgressIndicator()
-                }
-                is ResticState.Installed, ResticState.Idle -> {
-                    // No action needed when installed or idle
-                }
+            // Show a determinate progress bar only when downloading
+            if (targetState is ResticState.Downloading) {
+                LinearProgressIndicator(
+                    progress = { targetState.progress },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
     }
 }
 
 
-// Helper composables for Root Status (unchanged from original logic)
+// Helper composables for Root Status (unchanged)
 @Composable
 fun RootRequestRow(
     text: String,
@@ -199,3 +211,4 @@ fun RootStatusRow(text: String, icon: ImageVector) {
         Text(text = text, style = MaterialTheme.typography.bodyLarge)
     }
 }
+

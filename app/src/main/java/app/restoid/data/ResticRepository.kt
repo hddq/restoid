@@ -2,6 +2,7 @@ package app.restoid.data
 
 import android.content.Context
 import android.os.Build
+import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,7 +17,8 @@ import java.net.URL
 sealed class ResticState {
     object Idle : ResticState() // Not checked yet
     object NotInstalled : ResticState()
-    data class Downloading(val progress: Float) : ResticState() // Progress is not implemented yet, dummy values
+    data class Downloading(val progress: Float) : ResticState() // Progress from 0.0 to 1.0
+    object Extracting : ResticState() // State for when decompression is in progress
     data class Installed(val path: String, val version: String) : ResticState()
     data class Error(val message: String) : ResticState()
 }
@@ -27,26 +29,33 @@ class ResticRepository(private val context: Context) {
     val resticState = _resticState.asStateFlow()
 
     private val resticFile = File(context.filesDir, "restic")
-    private val resticVersion = "0.18.0"
+    private val resticReleaseVersion = "0.18.0"
 
-    // Check the status of the restic binary
+    // Check the status of the restic binary by executing it
     suspend fun checkResticStatus() {
         withContext(Dispatchers.IO) {
             if (resticFile.exists() && resticFile.canExecute()) {
-                // A simple check is enough for now. A version check could be added later.
-                _resticState.value = ResticState.Installed(resticFile.absolutePath, resticVersion)
+                // Execute the binary with the 'version' command
+                val result = Shell.cmd("${resticFile.absolutePath} version").exec()
+                if (result.isSuccess) {
+                    // Get the first line of the output, e.g., "restic 0.18.0 ..."
+                    val versionOutput = result.out.firstOrNull()?.trim() ?: "Unknown version"
+                    _resticState.value = ResticState.Installed(resticFile.absolutePath, versionOutput)
+                } else {
+                    // If the command fails, the binary might be corrupted
+                    _resticState.value = ResticState.Error("Binary corrupted or invalid")
+                    resticFile.delete() // Clean up the bad file
+                }
             } else {
                 _resticState.value = ResticState.NotInstalled
             }
         }
     }
 
-    // Download and install the restic binary
+    // Download, decompress, and verify the restic binary
     suspend fun downloadAndInstallRestic() {
         withContext(Dispatchers.IO) {
             try {
-                _resticState.value = ResticState.Downloading(0f)
-
                 // Determine architecture based on device ABI
                 val arch = getArchForRestic()
                 if (arch == null) {
@@ -54,16 +63,30 @@ class ResticRepository(private val context: Context) {
                     return@withContext
                 }
 
-                // Download the bz2 compressed file
-                val url = URL("https://github.com/restic/restic/releases/download/v$resticVersion/restic_${resticVersion}_linux_$arch.bz2")
+                // Download the bz2 compressed file and report progress
+                val url = URL("https://github.com/restic/restic/releases/download/v$resticReleaseVersion/restic_${resticReleaseVersion}_linux_$arch.bz2")
                 val bz2File = File(context.cacheDir, "restic.bz2")
+                val urlConnection = url.openConnection()
+                val fileSize = urlConnection.contentLength.toLong()
 
-                url.openStream().use { input ->
+                urlConnection.getInputStream().use { input ->
                     FileOutputStream(bz2File).use { output ->
-                        input.copyTo(output) // In a real app, you'd want to report progress here
+                        val buffer = ByteArray(8192)
+                        var bytesRead: Int
+                        var downloadedSize = 0L
+                        while (input.read(buffer).also { bytesRead = it } != -1) {
+                            output.write(buffer, 0, bytesRead)
+                            downloadedSize += bytesRead
+                            if (fileSize > 0) {
+                                val progress = downloadedSize.toFloat() / fileSize.toFloat()
+                                _resticState.value = ResticState.Downloading(progress)
+                            }
+                        }
                     }
                 }
-                _resticState.value = ResticState.Downloading(0.5f) // Dummy progress update
+
+                // Switch to extracting state
+                _resticState.value = ResticState.Extracting
 
                 // Decompress the file
                 FileInputStream(bz2File).use { fileInput ->
@@ -73,17 +96,13 @@ class ResticRepository(private val context: Context) {
                         }
                     }
                 }
-                _resticState.value = ResticState.Downloading(1.0f)
 
-                // Make the binary executable and clean up the downloaded archive
+                // Make the binary executable and clean up
                 resticFile.setExecutable(true)
                 bz2File.delete()
 
-                if (resticFile.exists() && resticFile.canExecute()) {
-                    _resticState.value = ResticState.Installed(resticFile.absolutePath, resticVersion)
-                } else {
-                    _resticState.value = ResticState.Error("Failed to make binary executable")
-                }
+                // Verify installation by checking the version
+                checkResticStatus()
 
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -104,3 +123,4 @@ class ResticRepository(private val context: Context) {
         }
     }
 }
+
