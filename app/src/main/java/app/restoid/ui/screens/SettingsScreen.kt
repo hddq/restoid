@@ -1,5 +1,11 @@
 package app.restoid.ui.screens
 
+import android.content.Intent
+import android.net.Uri
+import android.os.Environment
+import android.provider.DocumentsContract
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -8,6 +14,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Visibility
@@ -52,15 +59,38 @@ fun SettingsScreen() {
     val resticState by settingsViewModel.resticState.collectAsStateWithLifecycle()
     val repositories by settingsViewModel.repositories.collectAsStateWithLifecycle()
     val addRepoUiState by settingsViewModel.addRepoUiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    val directoryPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree(),
+        onResult = { uri ->
+            uri?.let {
+                try {
+                    // Persist access permissions for the selected directory.
+                    val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                            Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    context.contentResolver.takePersistableUriPermission(it, takeFlags)
+
+                    getPathFromTreeUri(it)?.let { path ->
+                        settingsViewModel.onNewRepoPathChanged(path)
+                    }
+                } catch (e: SecurityException) {
+                    e.printStackTrace()
+                    // Handle cases where permission couldn't be persisted.
+                }
+            }
+        }
+    )
+
 
     // Show dialog for adding a new repo when requested by the state
     if (addRepoUiState.showDialog) {
         AddRepositoryDialog(
             uiState = addRepoUiState,
             onDismiss = { settingsViewModel.onNewRepoDialogDismiss() },
-            onPathChange = { settingsViewModel.onNewRepoPathChanged(it) },
             onPasswordChange = { settingsViewModel.onNewRepoPasswordChanged(it) },
-            onConfirm = { settingsViewModel.addRepository() }
+            onConfirm = { settingsViewModel.addRepository() },
+            onSelectPath = { directoryPickerLauncher.launch(null) }
         )
     }
 
@@ -200,9 +230,9 @@ fun RepositoryRow(repo: LocalRepository) {
 fun AddRepositoryDialog(
     uiState: AddRepoUiState,
     onDismiss: () -> Unit,
-    onPathChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
+    onSelectPath: () -> Unit
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
 
@@ -211,14 +241,24 @@ fun AddRepositoryDialog(
         title = { Text("Add Local Repository") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Path Selector Field (read-only)
                 OutlinedTextField(
                     value = uiState.path,
-                    onValueChange = onPathChange,
+                    onValueChange = {}, // Path is selected via picker, not typed
                     label = { Text("Path") },
-                    placeholder = { Text("/sdcard/backup/restic") },
+                    placeholder = { Text("Select a directory...") },
                     singleLine = true,
-                    isError = uiState.state is AddRepositoryState.Error
+                    readOnly = true,
+                    isError = uiState.state is AddRepositoryState.Error,
+                    trailingIcon = {
+                        IconButton(onClick = onSelectPath) {
+                            Icon(Icons.Default.FolderOpen, contentDescription = "Select Folder")
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
                 )
+
+                // Password Field
                 OutlinedTextField(
                     value = uiState.password,
                     onValueChange = onPasswordChange,
@@ -232,7 +272,8 @@ fun AddRepositoryDialog(
                             Icon(imageVector = image, contentDescription = description)
                         }
                     },
-                    isError = uiState.state is AddRepositoryState.Error
+                    isError = uiState.state is AddRepositoryState.Error,
+                    modifier = Modifier.fillMaxWidth()
                 )
                 if (uiState.state is AddRepositoryState.Error) {
                     Text(
@@ -246,7 +287,7 @@ fun AddRepositoryDialog(
         confirmButton = {
             Button(
                 onClick = onConfirm,
-                enabled = uiState.state !is AddRepositoryState.Initializing
+                enabled = uiState.state !is AddRepositoryState.Initializing && uiState.path.isNotBlank()
             ) {
                 if (uiState.state is AddRepositoryState.Initializing) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
@@ -389,3 +430,30 @@ fun RootStatusRow(text: String, icon: ImageVector) {
     }
 }
 
+/**
+ * A helper function to convert a tree URI from ACTION_OPEN_DOCUMENT_TREE
+ * into a file path. This is a simplified implementation and mainly works for
+ * primary external storage. More complex cases like SD cards may require
+ * additional logic.
+ */
+private fun getPathFromTreeUri(treeUri: Uri): String? {
+    // Check if the authority is the External Storage provider.
+    if (treeUri.authority != "com.android.externalstorage.documents") {
+        return null
+    }
+
+    val docId = DocumentsContract.getTreeDocumentId(treeUri)
+    val split = docId.split(":")
+    if (split.size > 1) {
+        val type = split[0]
+        val path = split[1]
+        return when (type) {
+            // "primary" refers to the primary shared/external storage volume.
+            "primary" -> "${Environment.getExternalStorageDirectory()}/$path"
+            // TODO: Handle other storage volumes (e.g., SD cards) if needed.
+            // This would require iterating through storage volumes to match the type.
+            else -> null
+        }
+    }
+    return null
+}

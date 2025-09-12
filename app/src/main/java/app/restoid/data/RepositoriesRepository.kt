@@ -37,8 +37,8 @@ class RepositoriesRepository(private val context: Context) {
     }
 
     /**
-     * Adds a new repository. If the directory doesn't exist or isn't a restic repository,
-     * it attempts to initialize it using 'restic init'.
+     * Adds a new repository. Before initializing, it checks if a valid restic repository
+     * already exists at the given path with the provided password.
      *
      * @param path The local file system path for the repository.
      * @param password The password for the new or existing repository.
@@ -50,34 +50,46 @@ class RepositoriesRepository(private val context: Context) {
             val repoDir = File(path)
             val configFile = File(repoDir, "config")
 
-            // Check if it already looks like a restic repository.
-            if (repoDir.exists() && repoDir.isDirectory && configFile.exists()) {
-                // If it exists, we just add it without trying to init.
-                // A more robust check might involve running a command like 'restic check'.
-            } else {
-                // Directory doesn't exist or doesn't look like a repo, so initialize it.
-                if (!repoDir.exists() && !repoDir.mkdirs()) {
-                    return@withContext AddRepositoryState.Error("Failed to create directory at $path")
-                }
+            val currentPaths = prefs.getStringSet(REPO_PATHS_KEY, mutableSetOf())?.toMutableSet() ?: mutableSetOf()
+            if (currentPaths.contains(path)) {
+                return@withContext AddRepositoryState.Error("Repository already exists.")
+            }
 
-                // Execute 'restic init' with the provided password and path.
-                val command = "RESTIC_PASSWORD='$password' $resticBinaryPath -r '$path' init"
-                val result = Shell.cmd(command).exec()
-
-                if (!result.isSuccess) {
-                    val errorMsg = result.err.joinToString("\n").ifEmpty { "Failed to initialize repository." }
+            // Check if it's an existing repository by trying to list keys
+            if (repoDir.exists() && configFile.exists()) {
+                val checkCommand = "RESTIC_PASSWORD='$password' $resticBinaryPath -r '$path' list keys --no-lock"
+                val checkResult = Shell.cmd(checkCommand).exec()
+                if (checkResult.isSuccess) {
+                    // Valid existing repo, add it
+                    currentPaths.add(path)
+                    prefs.edit().putStringSet(REPO_PATHS_KEY, currentPaths).apply()
+                    loadRepositories()
+                    return@withContext AddRepositoryState.Success
+                } else {
+                    val errorMsg = checkResult.err.joinToString("\n").ifEmpty { "Invalid password or corrupted repository." }
                     return@withContext AddRepositoryState.Error(errorMsg)
                 }
             }
 
-            // If initialization was successful or skipped, save the path.
-            val currentPaths = prefs.getStringSet(REPO_PATHS_KEY, mutableSetOf())?.toMutableSet() ?: mutableSetOf()
-            currentPaths.add(path)
-            prefs.edit().putStringSet(REPO_PATHS_KEY, currentPaths).apply()
+            // It's not an existing repo, so try to initialize it.
+            if (!repoDir.exists()) {
+                if (!repoDir.mkdirs()) {
+                    return@withContext AddRepositoryState.Error("Failed to create directory at $path")
+                }
+            }
 
-            // Reload the list to reflect the changes.
-            loadRepositories()
-            AddRepositoryState.Success
+            val initCommand = "RESTIC_PASSWORD='$password' $resticBinaryPath -r '$path' init"
+            val initResult = Shell.cmd(initCommand).exec()
+
+            if (initResult.isSuccess) {
+                currentPaths.add(path)
+                prefs.edit().putStringSet(REPO_PATHS_KEY, currentPaths).apply()
+                loadRepositories()
+                return@withContext AddRepositoryState.Success
+            } else {
+                val errorMsg = initResult.err.joinToString("\n").ifEmpty { "Failed to initialize repository." }
+                return@withContext AddRepositoryState.Error(errorMsg)
+            }
         }
     }
 }
