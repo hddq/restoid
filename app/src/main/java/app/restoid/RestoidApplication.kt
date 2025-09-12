@@ -1,6 +1,7 @@
 package app.restoid
 
 import android.app.Application
+import app.restoid.data.RepositoriesRepository
 import app.restoid.data.ResticRepository
 import app.restoid.data.RootRepository
 import kotlinx.coroutines.CoroutineScope
@@ -13,10 +14,12 @@ class RestoidApplication : Application() {
     // Use a proper scope that is cancelled when the app is destroyed
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
-    // Create a single instance of the repositories for the whole app
+    // Create single instances of the repositories for the whole app
     lateinit var rootRepository: RootRepository
         private set
     lateinit var resticRepository: ResticRepository
+        private set
+    lateinit var repositoriesRepository: RepositoriesRepository
         private set
 
     override fun onCreate() {
@@ -24,11 +27,14 @@ class RestoidApplication : Application() {
         // Initialize repositories
         rootRepository = RootRepository()
         resticRepository = ResticRepository(applicationContext)
+        repositoriesRepository = RepositoriesRepository(applicationContext)
 
-        // Start the initial status checks on a background thread
+        // Start initial status checks and load data on a background thread
         applicationScope.launch {
             rootRepository.checkRootAccess()
             resticRepository.checkResticStatus()
+            repositoriesRepository.loadRepositories()
         }
     }
 }
+
