@@ -1,6 +1,7 @@
 package app.restoid
 
 import android.app.Application
+import app.restoid.data.NotificationRepository
 import app.restoid.data.RepositoriesRepository
 import app.restoid.data.ResticRepository
 import app.restoid.data.RootRepository
@@ -21,6 +22,8 @@ class RestoidApplication : Application() {
         private set
     lateinit var repositoriesRepository: RepositoriesRepository
         private set
+    lateinit var notificationRepository: NotificationRepository
+        private set
 
     override fun onCreate() {
         super.onCreate()
@@ -28,13 +31,14 @@ class RestoidApplication : Application() {
         rootRepository = RootRepository()
         resticRepository = ResticRepository(applicationContext)
         repositoriesRepository = RepositoriesRepository(applicationContext)
+        notificationRepository = NotificationRepository(applicationContext)
 
         // Start initial status checks and load data on a background thread
         applicationScope.launch {
             rootRepository.checkRootAccess()
             resticRepository.checkResticStatus()
             repositoriesRepository.loadRepositories()
+            notificationRepository.checkPermissionStatus()
         }
     }
 }
-

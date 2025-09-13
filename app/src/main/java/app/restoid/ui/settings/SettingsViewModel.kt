@@ -3,6 +3,7 @@ package app.restoid.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.restoid.data.AddRepositoryState
+import app.restoid.data.NotificationRepository
 import app.restoid.data.RepositoriesRepository
 import app.restoid.data.ResticRepository
 import app.restoid.data.ResticState
@@ -25,7 +26,8 @@ data class AddRepoUiState(
 class SettingsViewModel(
     private val rootRepository: RootRepository,
     private val resticRepository: ResticRepository,
-    private val repositoriesRepository: RepositoriesRepository
+    private val repositoriesRepository: RepositoriesRepository,
+    private val notificationRepository: NotificationRepository
 ) : ViewModel() {
 
     // Expose states from repositories
@@ -33,6 +35,8 @@ class SettingsViewModel(
     val resticState = resticRepository.resticState
     val repositories = repositoriesRepository.repositories
     val selectedRepository = repositoriesRepository.selectedRepository
+    val notificationPermissionState = notificationRepository.permissionState
+
 
     // Internal and exposed UI State for adding a new repository
     private val _addRepoUiState = MutableStateFlow(AddRepoUiState())
@@ -42,6 +46,10 @@ class SettingsViewModel(
         viewModelScope.launch {
             rootRepository.checkRootAccess()
         }
+    }
+
+    fun checkNotificationPermission() {
+        notificationRepository.checkPermissionStatus()
     }
 
     fun downloadRestic() {

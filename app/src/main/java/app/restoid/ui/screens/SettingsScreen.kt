@@ -1,9 +1,12 @@
 package app.restoid.ui.screens
 
+import android.Manifest
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Environment
 import android.provider.DocumentsContract
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
@@ -18,11 +21,13 @@ import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,6 +46,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.restoid.RestoidApplication
 import app.restoid.data.AddRepositoryState
 import app.restoid.data.LocalRepository
+import app.restoid.data.NotificationPermissionState
 import app.restoid.data.ResticState
 import app.restoid.data.RootState
 import app.restoid.ui.settings.AddRepoUiState
@@ -54,7 +60,8 @@ fun SettingsScreen() {
         factory = SettingsViewModelFactory(
             application.rootRepository,
             application.resticRepository,
-            application.repositoriesRepository
+            application.repositoriesRepository,
+            application.notificationRepository
         )
     )
 
@@ -63,6 +70,8 @@ fun SettingsScreen() {
     val repositories by settingsViewModel.repositories.collectAsStateWithLifecycle()
     val selectedRepository by settingsViewModel.selectedRepository.collectAsStateWithLifecycle()
     val addRepoUiState by settingsViewModel.addRepoUiState.collectAsStateWithLifecycle()
+    val notificationPermissionState by settingsViewModel.notificationPermissionState.collectAsStateWithLifecycle()
+
     val context = LocalContext.current
 
     val directoryPickerLauncher = rememberLauncherForActivityResult(
@@ -86,6 +95,13 @@ fun SettingsScreen() {
         }
     )
 
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            settingsViewModel.checkNotificationPermission()
+        }
+    )
+
 
     // Show dialog for adding a new repo when requested by the state
     if (addRepoUiState.showDialog) {
@@ -97,6 +113,10 @@ fun SettingsScreen() {
             onConfirm = { settingsViewModel.addRepository() },
             onSelectPath = { directoryPickerLauncher.launch(null) }
         )
+    }
+
+    LaunchedEffect(Unit) {
+        settingsViewModel.checkNotificationPermission()
     }
 
     LazyColumn(
@@ -133,6 +153,21 @@ fun SettingsScreen() {
                             )
                         }
                     }
+                    Divider(modifier = Modifier.padding(vertical = 8.dp))
+                    NotificationPermissionRow(
+                        state = notificationPermissionState,
+                        onRequestPermission = {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                        },
+                        onOpenSettings = {
+                            val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                            }
+                            context.startActivity(intent)
+                        }
+                    )
                 }
             }
         }
@@ -209,6 +244,53 @@ fun SettingsScreen() {
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun NotificationPermissionRow(
+    state: NotificationPermissionState,
+    onRequestPermission: () -> Unit,
+    onOpenSettings: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
+            val icon = when (state) {
+                NotificationPermissionState.Granted -> Icons.Default.CheckCircle
+                NotificationPermissionState.Denied -> Icons.Default.Error
+                NotificationPermissionState.NotRequested -> Icons.Default.Notifications
+            }
+            val iconColor = when (state) {
+                NotificationPermissionState.Granted -> MaterialTheme.colorScheme.primary
+                NotificationPermissionState.Denied -> MaterialTheme.colorScheme.error
+                NotificationPermissionState.NotRequested -> LocalContentColor.current
+            }
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.padding(end = 8.dp),
+                tint = iconColor
+            )
+            Text(
+                text = when (state) {
+                    NotificationPermissionState.Granted -> "Notifications enabled"
+                    NotificationPermissionState.Denied -> "Notifications disabled"
+                    NotificationPermissionState.NotRequested -> "Notification permission"
+                }
+            )
+        }
+        if (state != NotificationPermissionState.Granted) {
+            Button(onClick = if (state == NotificationPermissionState.NotRequested) onRequestPermission else onOpenSettings) {
+                Text(if (state == NotificationPermissionState.Denied) "Settings" else "Grant")
             }
         }
     }
