@@ -6,9 +6,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -22,7 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.rememberCoroutineScope
 import app.restoid.data.PasswordManager
 import app.restoid.data.RepositoriesRepository
 import app.restoid.data.ResticRepository
@@ -30,30 +35,28 @@ import app.restoid.data.ResticState
 import app.restoid.data.SnapshotInfo
 import app.restoid.ui.components.PasswordDialog
 import kotlinx.coroutines.launch
-import androidx.compose.runtime.rememberCoroutineScope
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(onNavigateToBackup: () -> Unit) { // Changed signature
     val context = LocalContext.current
     val repositoriesRepository = remember { RepositoriesRepository(context) }
     val resticRepository = remember { ResticRepository(context) }
-    val passwordManager = remember { PasswordManager(context) }
     val coroutineScope = rememberCoroutineScope()
-    
+
     val selectedRepo by repositoriesRepository.selectedRepository.collectAsState()
     val resticState by resticRepository.resticState.collectAsState()
-    
+
     var snapshots by remember { mutableStateOf<List<SnapshotInfo>>(emptyList()) }
     var isLoadingSnapshots by remember { mutableStateOf(false) }
     var snapshotError by remember { mutableStateOf<String?>(null) }
     var showPasswordDialog by remember { mutableStateOf(false) }
     var repositoryNeedingPassword by remember { mutableStateOf<String?>(null) }
-    
+
     LaunchedEffect(Unit) {
         repositoriesRepository.loadRepositories()
         resticRepository.checkResticStatus()
     }
-    
+
     // Load snapshots when we have a selected repo and restic is installed
     LaunchedEffect(selectedRepo, resticState) {
         val currentRepo = selectedRepo
@@ -82,79 +85,92 @@ fun HomeScreen() {
             }
         }
     }
-    
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        // Restoid title at top left - Material 3 style
-        Text(
-            text = "Restoid",
-            style = MaterialTheme.typography.headlineLarge,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 24.dp)
-        )
-        
-        when {
-            selectedRepo == null -> {
-                Text(
-                    text = "No repository selected",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            resticState !is ResticState.Installed -> {
-                Text(
-                    text = "Restic not available",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
-            isLoadingSnapshots -> {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                )
-                Text(
-                    text = "Loading snapshots...",
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
-                        .padding(top = 8.dp)
-                )
-            }
-            snapshotError != null -> {
-                Text(
-                    text = "Error: $snapshotError",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
-            snapshots.isEmpty() -> {
-                Text(
-                    text = "No snapshots found",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            else -> {
-                Text(
-                    text = "Snapshots (${snapshots.size})",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                
-                LazyColumn {
-                    items(snapshots) { snapshot ->
-                        SnapshotCard(snapshot = snapshot)
+
+    // Wrapped in Scaffold to add FAB
+    Scaffold(
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                text = { Text("Backup") },
+                icon = { Icon(Icons.Filled.Add, contentDescription = "Backup") },
+                onClick = onNavigateToBackup
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding) // Apply padding from scaffold
+                .padding(16.dp) // Original padding
+        ) {
+            // Restoid title at top left - Material 3 style
+            Text(
+                text = "Restoid",
+                style = MaterialTheme.typography.headlineLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 24.dp)
+            )
+
+            when {
+                selectedRepo == null -> {
+                    Text(
+                        text = "No repository selected",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                resticState !is ResticState.Installed -> {
+                    Text(
+                        text = "Restic not available",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+                isLoadingSnapshots -> {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator()
+                        Text(
+                            text = "Loading snapshots...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
+                }
+                snapshotError != null -> {
+                    Text(
+                        text = "Error: $snapshotError",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+                snapshots.isEmpty() -> {
+                    Text(
+                        text = "No snapshots found",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                else -> {
+                    Text(
+                        text = "Snapshots (${snapshots.size})",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+
+                    LazyColumn {
+                        items(snapshots) { snapshot ->
+                            SnapshotCard(snapshot = snapshot)
+                        }
                     }
                 }
             }
         }
     }
-    
+
     // Password dialog
     if (showPasswordDialog && repositoryNeedingPassword != null) {
         PasswordDialog(
