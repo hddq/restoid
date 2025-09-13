@@ -23,6 +23,7 @@ sealed class AddRepositoryState {
 
 class RepositoriesRepository(private val context: Context) {
     private val prefs = context.getSharedPreferences("repositories", Context.MODE_PRIVATE)
+    private val passwordManager = PasswordManager(context)
     private val REPO_PATHS_KEY = "repo_paths"
     private val SELECTED_REPO_PATH_KEY = "selected_repo_path"
 
@@ -45,6 +46,11 @@ class RepositoriesRepository(private val context: Context) {
     fun selectRepository(path: String) {
         prefs.edit().putString(SELECTED_REPO_PATH_KEY, path).apply()
         _selectedRepository.value = path
+    }
+
+    // Gets the stored password for a repository
+    fun getRepositoryPassword(path: String): String? {
+        return passwordManager.getPassword(path)
     }
 
     /**
@@ -70,11 +76,12 @@ class RepositoriesRepository(private val context: Context) {
             // Check if it's an existing repository by trying to list keys
             if (repoDir.exists() && configFile.exists()) {
                 val checkCommand = "RESTIC_PASSWORD='$password' $resticBinaryPath -r '$path' list keys --no-lock"
-                val checkResult = Shell.cmd(checkCommand).exec()
+                val checkResult = Shell.su(checkCommand).exec()
                 if (checkResult.isSuccess) {
                     // Valid existing repo, add it
                     currentPaths.add(path)
                     prefs.edit().putStringSet(REPO_PATHS_KEY, currentPaths).apply()
+                    passwordManager.savePassword(path, password)
                     loadRepositories()
                     if (wasEmpty) selectRepository(path)
                     return@withContext AddRepositoryState.Success
@@ -92,11 +99,12 @@ class RepositoriesRepository(private val context: Context) {
             }
 
             val initCommand = "RESTIC_PASSWORD='$password' $resticBinaryPath -r '$path' init"
-            val initResult = Shell.cmd(initCommand).exec()
+            val initResult = Shell.su(initCommand).exec()
 
             if (initResult.isSuccess) {
                 currentPaths.add(path)
                 prefs.edit().putStringSet(REPO_PATHS_KEY, currentPaths).apply()
+                passwordManager.savePassword(path, password)
                 loadRepositories()
                 if (wasEmpty) selectRepository(path)
                 return@withContext AddRepositoryState.Success

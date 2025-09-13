@@ -111,6 +111,121 @@ class ResticRepository(private val context: Context) {
         }
     }
 
+    // Execute restic snapshots command for a repository
+    suspend fun getSnapshots(repoPath: String, password: String): Result<List<SnapshotInfo>> {
+        return withContext(Dispatchers.IO) {
+            try {
+                if (resticState.value !is ResticState.Installed) {
+                    return@withContext Result.failure(Exception("Restic not installed"))
+                }
+                
+                val resticPath = (resticState.value as ResticState.Installed).path
+                val command = "RESTIC_PASSWORD='$password' $resticPath -r '$repoPath' snapshots --json"
+                val result = Shell.su(command).exec()
+                
+                if (result.isSuccess) {
+                    val snapshots = parseSnapshotsJson(result.out.joinToString("\n"))
+                    Result.success(snapshots)
+                } else {
+                    val errorMsg = result.err.joinToString("\n").ifEmpty { "Failed to load snapshots" }
+                    Result.failure(Exception(errorMsg))
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
+    
+    private fun parseSnapshotsJson(jsonOutput: String): List<SnapshotInfo> {
+        val snapshots = mutableListOf<SnapshotInfo>()
+        try {
+            // Parse JSON array - each line should be a JSON object
+            val lines = jsonOutput.trim().lines()
+            if (lines.size == 1 && lines[0].trim().startsWith("[")) {
+                // Single line JSON array
+                val content = lines[0].trim().removeSurrounding("[", "]")
+                if (content.isNotEmpty()) {
+                    val objects = splitJsonObjects(content)
+                    objects.forEach { obj ->
+                        parseSnapshotObject(obj)?.let { snapshots.add(it) }
+                    }
+                }
+            } else {
+                // Multiple lines, each could be a JSON object
+                lines.forEach { line ->
+                    if (line.trim().startsWith("{")) {
+                        parseSnapshotObject(line.trim())?.let { snapshots.add(it) }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            // If parsing fails, return empty list
+        }
+        return snapshots
+    }
+    
+    private fun splitJsonObjects(content: String): List<String> {
+        val objects = mutableListOf<String>()
+        var braceCount = 0
+        var start = 0
+        var inString = false
+        var escapeNext = false
+        
+        for (i in content.indices) {
+            val char = content[i]
+            
+            if (escapeNext) {
+                escapeNext = false
+                continue
+            }
+            
+            when (char) {
+                '\\' -> escapeNext = true
+                '"' -> if (!escapeNext) inString = !inString
+                '{' -> if (!inString) braceCount++
+                '}' -> if (!inString) {
+                    braceCount--
+                    if (braceCount == 0) {
+                        objects.add(content.substring(start, i + 1))
+                        start = i + 1
+                        // Skip comma and whitespace
+                        while (start < content.length && (content[start] == ',' || content[start].isWhitespace())) {
+                            start++
+                        }
+                    }
+                }
+            }
+        }
+        
+        return objects
+    }
+    
+    private fun parseSnapshotObject(jsonObj: String): SnapshotInfo? {
+        try {
+            val id = extractJsonField(jsonObj, "short_id") ?: extractJsonField(jsonObj, "id")?.take(8) ?: return null
+            val time = extractJsonField(jsonObj, "time") ?: "unknown"
+            val paths = extractJsonArrayField(jsonObj, "paths")
+            return SnapshotInfo(id, time, paths)
+        } catch (e: Exception) {
+            return null
+        }
+    }
+    
+    private fun extractJsonField(json: String, field: String): String? {
+        val pattern = "\"$field\"\\s*:\\s*\"([^\"]*)\""
+        val regex = Regex(pattern)
+        return regex.find(json)?.groupValues?.get(1)
+    }
+    
+    private fun extractJsonArrayField(json: String, field: String): List<String> {
+        val pattern = "\"$field\"\\s*:\\s*\\[([^\\]]*)\\]"
+        val regex = Regex(pattern)
+        val match = regex.find(json)?.groupValues?.get(1) ?: return emptyList()
+        return match.split(",")
+            .map { it.trim().removeSurrounding("\"") }
+            .filter { it.isNotEmpty() }
+    }
+
     // Map Android ABI to restic's architecture name convention
     private fun getArchForRestic(): String? {
         val abi = Build.SUPPORTED_ABIS[0]
@@ -123,4 +238,10 @@ class ResticRepository(private val context: Context) {
         }
     }
 }
+
+data class SnapshotInfo(
+    val id: String,
+    val time: String,
+    val paths: List<String>
+)
 
