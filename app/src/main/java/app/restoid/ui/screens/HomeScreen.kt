@@ -164,14 +164,11 @@ fun HomeScreen() {
                 val repoPath = repositoryNeedingPassword!!
                 showPasswordDialog = false
                 repositoryNeedingPassword = null
-                
-                // Save password and load snapshots
-                passwordManager.savePassword(repoPath, password)
-                
+
                 // Load snapshots with the provided password
                 isLoadingSnapshots = true
                 snapshotError = null
-                
+
                 // Use a coroutine to load snapshots
                 coroutineScope.launch {
                     try {

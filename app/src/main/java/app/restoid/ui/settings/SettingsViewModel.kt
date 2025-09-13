@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 data class AddRepoUiState(
     val path: String = "",
     val password: String = "",
+    val savePassword: Boolean = true,
     val showDialog: Boolean = false,
     val state: AddRepositoryState = AddRepositoryState.Idle
 )
@@ -62,6 +63,10 @@ class SettingsViewModel(
         _addRepoUiState.update { it.copy(password = password) }
     }
 
+    fun onSavePasswordChanged(save: Boolean) {
+        _addRepoUiState.update { it.copy(savePassword = save) }
+    }
+
     fun onNewRepoDialogDismiss() {
         _addRepoUiState.value = AddRepoUiState() // Reset state on dismiss
     }
@@ -83,6 +88,7 @@ class SettingsViewModel(
 
         val path = addRepoUiState.value.path.trim()
         val password = addRepoUiState.value.password
+        val savePassword = addRepoUiState.value.savePassword
 
         if (path.isBlank() || password.isBlank()) {
             _addRepoUiState.update { it.copy(state = AddRepositoryState.Error("Path and password cannot be empty.")) }
@@ -94,7 +100,8 @@ class SettingsViewModel(
             val result = repositoriesRepository.addRepository(
                 path = path,
                 password = password,
-                resticBinaryPath = currentResticState.path
+                resticBinaryPath = currentResticState.path,
+                savePassword = savePassword
             )
             _addRepoUiState.update { it.copy(state = result) }
 

@@ -60,9 +60,15 @@ class RepositoriesRepository(private val context: Context) {
      * @param path The local file system path for the repository.
      * @param password The password for the new or existing repository.
      * @param resticBinaryPath The absolute path to the restic executable.
+     * @param savePassword Whether to store the password securely on the device.
      * @return An [AddRepositoryState] indicating the result of the operation.
      */
-    suspend fun addRepository(path: String, password: String, resticBinaryPath: String): AddRepositoryState {
+    suspend fun addRepository(
+        path: String,
+        password: String,
+        resticBinaryPath: String,
+        savePassword: Boolean
+    ): AddRepositoryState {
         return withContext(Dispatchers.IO) {
             val repoDir = File(path)
             val configFile = File(repoDir, "config")
@@ -81,7 +87,9 @@ class RepositoriesRepository(private val context: Context) {
                     // Valid existing repo, add it
                     currentPaths.add(path)
                     prefs.edit().putStringSet(REPO_PATHS_KEY, currentPaths).apply()
-                    passwordManager.savePassword(path, password)
+                    if (savePassword) {
+                        passwordManager.savePassword(path, password)
+                    }
                     loadRepositories()
                     if (wasEmpty) selectRepository(path)
                     return@withContext AddRepositoryState.Success
@@ -104,7 +112,9 @@ class RepositoriesRepository(private val context: Context) {
             if (initResult.isSuccess) {
                 currentPaths.add(path)
                 prefs.edit().putStringSet(REPO_PATHS_KEY, currentPaths).apply()
-                passwordManager.savePassword(path, password)
+                if (savePassword) {
+                    passwordManager.savePassword(path, password)
+                }
                 loadRepositories()
                 if (wasEmpty) selectRepository(path)
                 return@withContext AddRepositoryState.Success

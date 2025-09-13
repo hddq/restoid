@@ -7,6 +7,7 @@ import android.provider.DocumentsContract
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.selectable
@@ -92,6 +93,7 @@ fun SettingsScreen() {
             uiState = addRepoUiState,
             onDismiss = { settingsViewModel.onNewRepoDialogDismiss() },
             onPasswordChange = { settingsViewModel.onNewRepoPasswordChanged(it) },
+            onSavePasswordChange = { settingsViewModel.onSavePasswordChanged(it) },
             onConfirm = { settingsViewModel.addRepository() },
             onSelectPath = { directoryPickerLauncher.launch(null) }
         )
@@ -247,6 +249,7 @@ fun AddRepositoryDialog(
     uiState: AddRepoUiState,
     onDismiss: () -> Unit,
     onPasswordChange: (String) -> Unit,
+    onSavePasswordChange: (Boolean) -> Unit,
     onConfirm: () -> Unit,
     onSelectPath: () -> Unit
 ) {
@@ -291,6 +294,21 @@ fun AddRepositoryDialog(
                     isError = uiState.state is AddRepositoryState.Error,
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = uiState.savePassword,
+                        onCheckedChange = onSavePasswordChange
+                    )
+                    Text(
+                        text = "Save password",
+                        modifier = Modifier.clickable(onClick = { onSavePasswordChange(!uiState.savePassword) })
+                    )
+                }
+
                 if (uiState.state is AddRepositoryState.Error) {
                     Text(
                         text = uiState.state.message,
