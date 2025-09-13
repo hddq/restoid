@@ -13,10 +13,24 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+// Data class to hold the state of backup types
+data class BackupTypes(
+    val apk: Boolean = true,
+    val data: Boolean = true,
+    val deviceProtectedData: Boolean = true,
+    val externalData: Boolean = false,
+    val obb: Boolean = false,
+    val media: Boolean = false
+)
+
 class BackupViewModel(private val application: Application) : ViewModel() {
 
     private val _apps = MutableStateFlow<List<AppInfo>>(emptyList())
     val apps = _apps.asStateFlow()
+
+    private val _backupTypes = MutableStateFlow(BackupTypes())
+    val backupTypes = _backupTypes.asStateFlow()
+
 
     init {
         loadInstalledAppsWithRoot()
@@ -86,5 +100,23 @@ class BackupViewModel(private val application: Application) : ViewModel() {
             currentApps.map { it.copy(isSelected = shouldSelectAll) }
         }
     }
-}
 
+    fun setBackupApk(value: Boolean) {
+        _backupTypes.update { it.copy(apk = value) }
+    }
+    fun setBackupData(value: Boolean) {
+        _backupTypes.update { it.copy(data = value) }
+    }
+    fun setBackupDeviceProtectedData(value: Boolean) {
+        _backupTypes.update { it.copy(deviceProtectedData = value) }
+    }
+    fun setBackupExternalData(value: Boolean) {
+        _backupTypes.update { it.copy(externalData = value) }
+    }
+    fun setBackupObb(value: Boolean) {
+        _backupTypes.update { it.copy(obb = value) }
+    }
+    fun setBackupMedia(value: Boolean) {
+        _backupTypes.update { it.copy(media = value) }
+    }
+}

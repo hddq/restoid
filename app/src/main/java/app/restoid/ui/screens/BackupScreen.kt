@@ -29,11 +29,12 @@ fun BackupScreen(onNavigateUp: () -> Unit) {
     val application = LocalContext.current.applicationContext as RestoidApplication
     val viewModel: BackupViewModel = viewModel(factory = BackupViewModelFactory(application))
     val apps by viewModel.apps.collectAsState()
+    val backupTypes by viewModel.backupTypes.collectAsState()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Backup") },
+                title = { Text("New Backup") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateUp) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -47,28 +48,84 @@ fun BackupScreen(onNavigateUp: () -> Unit) {
                 .padding(paddingValues)
                 .fillMaxSize()
         ) {
-            Button(
-                onClick = { viewModel.toggleAll() },
+            // Top side: Backup types
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text("Toggle All")
+                Text("Backup Types", style = MaterialTheme.typography.titleMedium)
+                Divider(modifier = Modifier.padding(vertical = 8.dp))
+                BackupTypeCheckbox(
+                    label = "APK",
+                    checked = backupTypes.apk,
+                    onCheckedChange = { viewModel.setBackupApk(it) }
+                )
+                BackupTypeCheckbox(
+                    label = "Data",
+                    checked = backupTypes.data,
+                    onCheckedChange = { viewModel.setBackupData(it) }
+                )
+                BackupTypeCheckbox(
+                    label = "Device Protected Data",
+                    checked = backupTypes.deviceProtectedData,
+                    onCheckedChange = { viewModel.setBackupDeviceProtectedData(it) }
+                )
+                BackupTypeCheckbox(
+                    label = "External Data",
+                    checked = backupTypes.externalData,
+                    onCheckedChange = { viewModel.setBackupExternalData(it) }
+                )
+                BackupTypeCheckbox(
+                    label = "OBB Data",
+                    checked = backupTypes.obb,
+                    onCheckedChange = { viewModel.setBackupObb(it) }
+                )
+                BackupTypeCheckbox(
+                    label = "Media Data",
+                    checked = backupTypes.media,
+                    onCheckedChange = { viewModel.setBackupMedia(it) }
+                )
             }
-            if (apps.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp)
+
+            Divider()
+
+            // Bottom side: App selection
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    items(apps, key = { it.packageName }) { app ->
-                        AppListItem(
-                            app = app,
-                            onToggle = { viewModel.toggleAppSelection(app.packageName) }
-                        )
+                    Text("Apps", style = MaterialTheme.typography.titleMedium)
+                    Button(
+                        onClick = { viewModel.toggleAll() }
+                    ) {
+                        Text("Toggle All")
+                    }
+                }
+                if (apps.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 16.dp)
+                    ) {
+                        items(apps, key = { it.packageName }) { app ->
+                            AppListItem(
+                                app = app,
+                                onToggle = { viewModel.toggleAppSelection(app.packageName) }
+                            )
+                        }
                     }
                 }
             }
@@ -105,3 +162,21 @@ fun AppListItem(app: AppInfo, onToggle: () -> Unit) {
         )
     }
 }
+
+@Composable
+fun BackupTypeCheckbox(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Checkbox(
+            checked = checked,
+            onCheckedChange = onCheckedChange
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(text = label, style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
