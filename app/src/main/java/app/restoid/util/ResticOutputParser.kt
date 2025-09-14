@@ -2,6 +2,7 @@ package app.restoid.util
 
 import app.restoid.ui.backup.BackupProgress
 import org.json.JSONObject
+import java.util.concurrent.TimeUnit
 
 object ResticOutputParser {
 
@@ -31,16 +32,25 @@ object ResticOutputParser {
     }
 
     private fun parseSummary(json: JSONObject): BackupProgress {
-        val totalBytes = json.optLong("total_bytes_processed", 0)
+        val filesNew = json.optInt("files_new", 0)
+        val filesChanged = json.optInt("files_changed", 0)
+        val dataAdded = json.optLong("data_added", 0)
+        val totalDuration = json.optDouble("total_duration", 0.0)
+
         return BackupProgress(
             percentage = 1.0f,
             totalFiles = json.optInt("total_files_processed", 0),
             filesProcessed = json.optInt("total_files_processed", 0),
-            totalBytes = totalBytes,
-            bytesProcessed = totalBytes,
+            totalBytes = json.optLong("total_bytes_processed", 0),
+            bytesProcessed = json.optLong("total_bytes_processed", 0),
             currentAction = "Finishing...",
             isFinished = true,
-            finalSummary = formatSummary(json)
+            finalSummary = formatSummary(json), // Use the helper to create the string
+            // Add the new fields
+            filesNew = filesNew,
+            filesChanged = filesChanged,
+            dataAdded = dataAdded,
+            totalDuration = totalDuration
         )
     }
 
@@ -51,9 +61,20 @@ object ResticOutputParser {
         val dataAdded = json.optLong("data_added", 0)
         val totalDuration = json.optDouble("total_duration", 0.0)
 
-        return "Processed $filesNew new, $filesChanged changed, $filesUnmodified unmodified files. Added ${android.text.format.Formatter.formatShortFileSize(null, dataAdded)}. Took ${String.format("%.2f", totalDuration)}s."
+        val seconds = totalDuration.toLong()
+        val formattedDuration = String.format(
+            "%02d:%02d:%02d",
+            TimeUnit.SECONDS.toHours(seconds),
+            TimeUnit.SECONDS.toMinutes(seconds) % 60,
+            seconds % 60
+        )
+
+        return "Added ${android.text.format.Formatter.formatShortFileSize(null, dataAdded)} " +
+                "($filesNew new, $filesChanged changed files) " +
+                "in $formattedDuration."
     }
 
+    // This is likely not needed anymore with JSON parsing, but keep for now.
     fun findSummaryLine(log: String): String? {
         val regex = """files:.*?new,.*?changed,.*?unmodified.*?processed.*?added.*?duration:.*?,.*?total""".toRegex()
         return regex.find(log)?.value

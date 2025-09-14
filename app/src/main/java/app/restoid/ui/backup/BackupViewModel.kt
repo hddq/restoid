@@ -44,7 +44,12 @@ data class BackupProgress(
     val elapsedTime: Long = 0, // in seconds
     val error: String? = null,
     val isFinished: Boolean = false,
-    val finalSummary: String = ""
+    val finalSummary: String = "",
+    // Detailed summary fields
+    val filesNew: Int = 0,
+    val filesChanged: Int = 0,
+    val dataAdded: Long = 0,
+    val totalDuration: Double = 0.0
 )
 
 class BackupViewModel(
@@ -85,6 +90,7 @@ class BackupViewModel(
             val fileList = File.createTempFile("restic-files-", ".txt", application.cacheDir)
             var isSuccess = false
             var summary = ""
+            var finalSummaryProgress: BackupProgress? = null
 
             try {
                 // --- Pre-flight checks ---
@@ -120,6 +126,9 @@ class BackupViewModel(
                     override fun onAddElement(line: String) {
                         val progressUpdate = ResticOutputParser.parse(line)
                         progressUpdate?.let {
+                            if (it.isFinished) {
+                                finalSummaryProgress = it
+                            }
                             val elapsedTime = (System.currentTimeMillis() - startTime) / 1000
                             val newProgress = it.copy(elapsedTime = elapsedTime)
                             _backupProgress.value = newProgress
@@ -136,8 +145,7 @@ class BackupViewModel(
 
                 isSuccess = result.isSuccess
                 summary = if (isSuccess) {
-                    val finalSummaryLine = ResticOutputParser.findSummaryLine(_backupProgress.value.currentFile) // The last status line has the summary
-                    finalSummaryLine ?: "Backed up ${selectedApps.size} app(s)."
+                    finalSummaryProgress?.finalSummary ?: "Backed up ${selectedApps.size} app(s)."
                 } else {
                     val error = stderr.joinToString("\n").ifEmpty { "Restic command failed with exit code ${result.code}." }
                     "Backup failed: $error"
@@ -149,7 +157,16 @@ class BackupViewModel(
             } finally {
                 fileList.delete()
                 _isBackingUp.value = false
-                val finalProgress = _backupProgress.value.copy(isFinished = true, error = if (!isSuccess) summary else null, finalSummary = summary)
+                val finalProgress = _backupProgress.value.copy(
+                    isFinished = true,
+                    error = if (!isSuccess) summary else null,
+                    finalSummary = summary,
+                    // Copy over the detailed stats if they exist
+                    filesNew = finalSummaryProgress?.filesNew ?: 0,
+                    filesChanged = finalSummaryProgress?.filesChanged ?: 0,
+                    dataAdded = finalSummaryProgress?.dataAdded ?: 0,
+                    totalDuration = finalSummaryProgress?.totalDuration ?: ((System.currentTimeMillis() - startTime) / 1000.0)
+                )
                 _backupProgress.value = finalProgress
                 notificationRepository.showBackupFinishedNotification(isSuccess, summary)
             }
@@ -268,4 +285,3 @@ class BackupViewModel(
     fun setBackupObb(value: Boolean) = _backupTypes.update { it.copy(obb = value) }
     fun setBackupMedia(value: Boolean) = _backupTypes.update { it.copy(media = value) }
 }
-
