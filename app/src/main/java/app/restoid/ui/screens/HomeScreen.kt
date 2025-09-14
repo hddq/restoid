@@ -1,5 +1,6 @@
 package app.restoid.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -37,7 +38,10 @@ import app.restoid.ui.components.PasswordDialog
 import kotlinx.coroutines.launch
 
 @Composable
-fun HomeScreen(onNavigateToBackup: () -> Unit) { // Changed signature
+fun HomeScreen(
+    onNavigateToBackup: () -> Unit,
+    onSnapshotClick: (String) -> Unit
+) {
     val context = LocalContext.current
     val repositoriesRepository = remember { RepositoriesRepository(context) }
     val resticRepository = remember { ResticRepository(context) }
@@ -163,7 +167,7 @@ fun HomeScreen(onNavigateToBackup: () -> Unit) { // Changed signature
 
                     LazyColumn {
                         items(snapshots) { snapshot ->
-                            SnapshotCard(snapshot = snapshot)
+                            SnapshotCard(snapshot = snapshot, onClick = { onSnapshotClick(snapshot.id) })
                         }
                     }
                 }
@@ -209,11 +213,12 @@ fun HomeScreen(onNavigateToBackup: () -> Unit) { // Changed signature
 }
 
 @Composable
-private fun SnapshotCard(snapshot: SnapshotInfo) {
+private fun SnapshotCard(snapshot: SnapshotInfo, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp)
+            .clickable(onClick = onClick)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)

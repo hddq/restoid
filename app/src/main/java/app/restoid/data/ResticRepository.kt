@@ -137,6 +137,30 @@ class ResticRepository(private val context: Context) {
         }
     }
 
+    suspend fun forgetSnapshot(repoPath: String, password: String, snapshotId: String): Result<Unit> {
+        return withContext(Dispatchers.IO) {
+            try {
+                if (resticState.value !is ResticState.Installed) {
+                    return@withContext Result.failure(Exception("Restic not installed"))
+                }
+
+                val resticPath = (resticState.value as ResticState.Installed).path
+                val command = "RESTIC_PASSWORD='$password' $resticPath -r '$repoPath' forget $snapshotId"
+                val result = Shell.cmd(command).exec()
+
+                if (result.isSuccess) {
+                    Result.success(Unit)
+                } else {
+                    val errorOutput = result.err.joinToString("\n")
+                    val errorMsg = if (errorOutput.isEmpty()) "Failed to delete snapshot" else errorOutput
+                    Result.failure(Exception(errorMsg))
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
+
     private fun parseSnapshotsJson(jsonOutput: String): List<SnapshotInfo> {
         val snapshots = mutableListOf<SnapshotInfo>()
         try {
@@ -245,3 +269,4 @@ data class SnapshotInfo(
     val time: String,
     val paths: List<String>
 )
+
