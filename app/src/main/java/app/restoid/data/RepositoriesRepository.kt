@@ -82,7 +82,7 @@ class RepositoriesRepository(private val context: Context) {
             // Check if it's an existing repository by trying to list keys
             if (repoDir.exists() && configFile.exists()) {
                 val checkCommand = "RESTIC_PASSWORD='$password' $resticBinaryPath -r '$path' list keys --no-lock"
-                val checkResult = Shell.su(checkCommand).exec()
+                val checkResult = Shell.cmd(checkCommand).exec()
                 if (checkResult.isSuccess) {
                     // Valid existing repo, add it
                     currentPaths.add(path)
@@ -94,7 +94,8 @@ class RepositoriesRepository(private val context: Context) {
                     if (wasEmpty) selectRepository(path)
                     return@withContext AddRepositoryState.Success
                 } else {
-                    val errorMsg = checkResult.err.joinToString("\n").ifEmpty { "Invalid password or corrupted repository." }
+                    val errorOutput = checkResult.err.joinToString("\n")
+                    val errorMsg = if (errorOutput.isEmpty()) "Invalid password or corrupted repository." else errorOutput
                     return@withContext AddRepositoryState.Error(errorMsg)
                 }
             }
@@ -107,7 +108,7 @@ class RepositoriesRepository(private val context: Context) {
             }
 
             val initCommand = "RESTIC_PASSWORD='$password' $resticBinaryPath -r '$path' init"
-            val initResult = Shell.su(initCommand).exec()
+            val initResult = Shell.cmd(initCommand).exec()
 
             if (initResult.isSuccess) {
                 currentPaths.add(path)
@@ -120,7 +121,8 @@ class RepositoriesRepository(private val context: Context) {
                 return@withContext AddRepositoryState.Success
             } else {
                 repoDir.deleteRecursively() // Clean up failed init
-                val errorMsg = initResult.err.joinToString("\n").ifEmpty { "Failed to initialize repository." }
+                val errorOutput = initResult.err.joinToString("\n")
+                val errorMsg = if (errorOutput.isEmpty()) "Failed to initialize repository." else errorOutput
                 return@withContext AddRepositoryState.Error(errorMsg)
             }
         }

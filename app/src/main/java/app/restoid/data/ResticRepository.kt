@@ -118,16 +118,17 @@ class ResticRepository(private val context: Context) {
                 if (resticState.value !is ResticState.Installed) {
                     return@withContext Result.failure(Exception("Restic not installed"))
                 }
-                
+
                 val resticPath = (resticState.value as ResticState.Installed).path
                 val command = "RESTIC_PASSWORD='$password' $resticPath -r '$repoPath' snapshots --json"
-                val result = Shell.su(command).exec()
-                
+                val result = Shell.cmd(command).exec()
+
                 if (result.isSuccess) {
                     val snapshots = parseSnapshotsJson(result.out.joinToString("\n"))
                     Result.success(snapshots)
                 } else {
-                    val errorMsg = result.err.joinToString("\n").ifEmpty { "Failed to load snapshots" }
+                    val errorOutput = result.err.joinToString("\n")
+                    val errorMsg = if (errorOutput.isEmpty()) "Failed to load snapshots" else errorOutput
                     Result.failure(Exception(errorMsg))
                 }
             } catch (e: Exception) {
@@ -135,7 +136,7 @@ class ResticRepository(private val context: Context) {
             }
         }
     }
-    
+
     private fun parseSnapshotsJson(jsonOutput: String): List<SnapshotInfo> {
         val snapshots = mutableListOf<SnapshotInfo>()
         try {
@@ -163,22 +164,22 @@ class ResticRepository(private val context: Context) {
         }
         return snapshots
     }
-    
+
     private fun splitJsonObjects(content: String): List<String> {
         val objects = mutableListOf<String>()
         var braceCount = 0
         var start = 0
         var inString = false
         var escapeNext = false
-        
+
         for (i in content.indices) {
             val char = content[i]
-            
+
             if (escapeNext) {
                 escapeNext = false
                 continue
             }
-            
+
             when (char) {
                 '\\' -> escapeNext = true
                 '"' -> if (!escapeNext) inString = !inString
@@ -196,10 +197,10 @@ class ResticRepository(private val context: Context) {
                 }
             }
         }
-        
+
         return objects
     }
-    
+
     private fun parseSnapshotObject(jsonObj: String): SnapshotInfo? {
         try {
             val id = extractJsonField(jsonObj, "short_id") ?: extractJsonField(jsonObj, "id")?.take(8) ?: return null
@@ -210,13 +211,13 @@ class ResticRepository(private val context: Context) {
             return null
         }
     }
-    
+
     private fun extractJsonField(json: String, field: String): String? {
         val pattern = "\"$field\"\\s*:\\s*\"([^\"]*)\""
         val regex = Regex(pattern)
         return regex.find(json)?.groupValues?.get(1)
     }
-    
+
     private fun extractJsonArrayField(json: String, field: String): List<String> {
         val pattern = "\"$field\"\\s*:\\s*\\[([^\\]]*)\\]"
         val regex = Regex(pattern)
@@ -244,4 +245,3 @@ data class SnapshotInfo(
     val time: String,
     val paths: List<String>
 )
-
