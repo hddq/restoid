@@ -53,6 +53,13 @@ class BackupViewModel(
             _isBackingUp.value = true
             _backupLogs.value = emptyList()
 
+            val selectedApps = _apps.value.filter { it.isSelected }
+            if (selectedApps.isEmpty()) {
+                _backupLogs.value = listOf("Error: No apps were selected for backup. Pick something!")
+                _isBackingUp.value = false
+                return@launch
+            }
+
             val resticState = resticRepository.resticState.value
             if (resticState !is ResticState.Installed) {
                 _backupLogs.value = listOf("Error: Restic is not installed.")
@@ -69,22 +76,23 @@ class BackupViewModel(
 
             val password = repositoriesRepository.getRepositoryPassword(selectedRepoPath)
             if (password == null) {
-                // This case should ideally not happen if snapshots can be loaded on the home screen
                 _backupLogs.value = listOf("Error: Password for repository not found.")
                 _isBackingUp.value = false
                 return@launch
             }
 
             val resticBinPath = resticState.path
-            // Hardcoded path as per instructions for testing
-            val backupPath = "/data/data/org.fdroid.fdroid"
 
-            // Sanitize password for shell command. This replaces every ' with '\''
+            // Construct a space-separated string of all data paths to be backed up
+            // Each path is quoted to handle potential special characters.
+            val backupPaths = selectedApps.joinToString(" ") { "'/data/data/${it.packageName}'" }
+
             val sanitizedPassword = password.replace("'", "'\\''")
 
-            val command = "RESTIC_PASSWORD='$sanitizedPassword' $resticBinPath -r '$selectedRepoPath' backup '$backupPath' --verbose=2"
+            // Build the final command with all the selected app data paths
+            val command = "RESTIC_PASSWORD='$sanitizedPassword' $resticBinPath -r '$selectedRepoPath' backup $backupPaths --verbose=2"
 
-            val logOutput = mutableListOf("Executing backup command...")
+            val logOutput = mutableListOf("Starting backup for ${selectedApps.size} app(s)...", "Executing command...")
             _backupLogs.value = logOutput.toList()
 
             val stdout = mutableListOf<String>()
