@@ -108,7 +108,7 @@ class BackupViewModel(
                 // --- Generate file list for restic ---
                 updateProgress(currentAction = "Scanning files...")
                 val pathsToBackup = generateFilePathsToBackup(selectedApps)
-                val existingPathsToBackup = pathsToBackup.filter { Shell.su("[ -e '$it' ]").exec().isSuccess }
+                val existingPathsToBackup = pathsToBackup.filter { Shell.cmd("[ -e '$it' ]").exec().isSuccess }
 
                 if (existingPathsToBackup.isEmpty()) {
                     _backupProgress.value = BackupProgress(isFinished = true, error = "No files found to back up for the selected apps.", finalSummary = "No files found to back up.")
@@ -139,7 +139,7 @@ class BackupViewModel(
 
                 val stderr = mutableListOf<String>()
 
-                val result = Shell.su("RESTIC_PASSWORD='$sanitizedPassword' $command")
+                val result = Shell.cmd("RESTIC_PASSWORD='$sanitizedPassword' $command")
                     .to(stdoutCallback, stderr)
                     .exec()
 
@@ -147,7 +147,8 @@ class BackupViewModel(
                 summary = if (isSuccess) {
                     finalSummaryProgress?.finalSummary ?: "Backed up ${selectedApps.size} app(s)."
                 } else {
-                    val error = stderr.joinToString("\n").ifEmpty { "Restic command failed with exit code ${result.code}." }
+                    val errorOutput = stderr.joinToString("\n")
+                    val error = if (errorOutput.isEmpty()) "Restic command failed with exit code ${result.code}." else errorOutput
                     "Backup failed: $error"
                 }
 
@@ -222,14 +223,14 @@ class BackupViewModel(
     private fun loadInstalledAppsWithRoot() {
         viewModelScope.launch(Dispatchers.IO) {
             val pm = application.packageManager
-            val packageNamesResult = Shell.su("pm list packages -3").exec()
+            val packageNamesResult = Shell.cmd("pm list packages -3").exec()
 
             if (packageNamesResult.isSuccess) {
                 _apps.value = packageNamesResult.out
                     .map { it.removePrefix("package:").trim() }
                     .mapNotNull { packageName ->
                         try {
-                            val pathResult = Shell.su("pm path $packageName").exec()
+                            val pathResult = Shell.cmd("pm path $packageName").exec()
                             if (pathResult.isSuccess && pathResult.out.isNotEmpty()) {
                                 val apkPath = pathResult.out.first().removePrefix("package:").trim()
                                 val packageInfo: PackageInfo? = pm.getPackageArchiveInfo(apkPath, PackageManager.GET_META_DATA)
