@@ -1,5 +1,11 @@
 package app.restoid.ui.screens
 
+import android.text.format.Formatter
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -8,6 +14,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Backup
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -16,15 +24,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.restoid.RestoidApplication
 import app.restoid.model.AppInfo
+import app.restoid.ui.backup.BackupProgress
 import app.restoid.ui.backup.BackupTypes
 import app.restoid.ui.backup.BackupViewModel
 import app.restoid.ui.backup.BackupViewModelFactory
 import coil.compose.rememberAsyncImagePainter
+import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,17 +52,15 @@ fun BackupScreen(onNavigateUp: () -> Unit) {
     val apps by viewModel.apps.collectAsState()
     val backupTypes by viewModel.backupTypes.collectAsState()
     val isBackingUp by viewModel.isBackingUp.collectAsState()
-    val backupLogs by viewModel.backupLogs.collectAsState()
     val backupProgress by viewModel.backupProgress.collectAsState()
-    val currentBackupFile by viewModel.currentBackupFile.collectAsState()
 
+    val showProgressScreen = isBackingUp || backupProgress.isFinished
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (isBackingUp || backupLogs.isNotEmpty()) "Backup Progress" else "New Backup") },
+                title = { Text(if (showProgressScreen) "Backup Progress" else "New Backup") },
                 navigationIcon = {
-                    // Only show back arrow if not currently backing up
                     if (!isBackingUp) {
                         IconButton(onClick = onNavigateUp) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -61,8 +70,7 @@ fun BackupScreen(onNavigateUp: () -> Unit) {
             )
         },
         floatingActionButton = {
-            // Only show FAB on the selection screen
-            if (!isBackingUp && backupLogs.isEmpty()) {
+            if (!showProgressScreen) {
                 ExtendedFloatingActionButton(
                     onClick = { viewModel.startBackup() },
                     icon = { Icon(Icons.Default.Backup, contentDescription = "Start Backup") },
@@ -71,87 +79,146 @@ fun BackupScreen(onNavigateUp: () -> Unit) {
             }
         }
     ) { paddingValues ->
-        // Show backup progress/logs if backup is running or has finished
-        if (isBackingUp || backupLogs.isNotEmpty()) {
-            BackupProgressScreen(
-                isBackingUp = isBackingUp,
-                logs = backupLogs,
-                progress = backupProgress,
-                currentFile = currentBackupFile,
-                modifier = Modifier.padding(paddingValues)
-            )
-        } else {
-            // Otherwise, show the app and type selection
-            BackupSelectionContent(
-                paddingValues = paddingValues,
-                viewModel = viewModel,
-                apps = apps,
-                backupTypes = backupTypes
-            )
+        Crossfade(targetState = showProgressScreen, label = "BackupScreenCrossfade") { showProgress ->
+            if (showProgress) {
+                BackupProgressContent(
+                    progress = backupProgress,
+                    onDone = {
+                        viewModel.onDone()
+                        onNavigateUp()
+                    },
+                    modifier = Modifier.padding(paddingValues)
+                )
+            } else {
+                BackupSelectionContent(
+                    paddingValues = paddingValues,
+                    viewModel = viewModel,
+                    apps = apps,
+                    backupTypes = backupTypes
+                )
+            }
         }
     }
 }
 
+
 @Composable
-fun BackupProgressScreen(
-    isBackingUp: Boolean,
-    logs: List<String>,
-    progress: Int,
-    currentFile: String?,
-    modifier: Modifier = Modifier
-) {
+fun BackupProgressContent(progress: BackupProgress, onDone: () -> Unit, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+
     Column(
         modifier = modifier
             .fillMaxSize()
             .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        if (isBackingUp) {
-            LinearProgressIndicator(
-                progress = { progress / 100f },
-                modifier = Modifier.fillMaxWidth()
+        if (progress.isFinished) {
+            // Finished State
+            val icon = if (progress.error == null) Icons.Default.CheckCircle else Icons.Default.Error
+            val iconColor = if (progress.error == null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(80.dp),
+                tint = iconColor
             )
             Spacer(Modifier.height(16.dp))
-            Text("Backup in progress: $progress%", style = MaterialTheme.typography.titleMedium)
-            if (currentFile != null) {
-                Text(
-                    text = currentFile,
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            Text(
+                text = if (progress.error == null) "Backup Complete" else "Backup Failed",
+                style = MaterialTheme.typography.headlineSmall
+            )
             Spacer(Modifier.height(8.dp))
             Text(
-                "Please don't close the app.",
+                text = progress.finalSummary,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Spacer(Modifier.height(24.dp))
+            Button(onClick = onDone) {
+                Text("Done")
+            }
+
         } else {
-            Text("Backup Finished", style = MaterialTheme.typography.headlineSmall)
-        }
+            // In-Progress State
+            Text(text = progress.currentAction, style = MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.height(24.dp))
 
-        Spacer(Modifier.height(16.dp))
-
-        Card(modifier = Modifier.fillMaxSize()) {
-            LazyColumn(
-                modifier = Modifier.padding(16.dp),
-                reverseLayout = true // Show latest logs at the bottom
-            ) {
-                items(logs.asReversed()) { logLine ->
-                    Text(
-                        text = logLine,
-                        style = MaterialTheme.typography.bodySmall,
-                        fontFamily = FontFamily.Monospace,
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp)) {
+                    // Progress Bar
+                    LinearProgressIndicator(
+                        progress = { progress.percentage },
                         modifier = Modifier.fillMaxWidth()
                     )
+                    Spacer(Modifier.height(16.dp))
+
+                    // Stats Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceAround
+                    ) {
+                        ProgressStat(label = "Elapsed", value = formatElapsedTime(progress.elapsedTime))
+                        ProgressStat(
+                            label = "Files",
+                            value = "${progress.filesProcessed}/${progress.totalFiles}"
+                        )
+                        ProgressStat(
+                            label = "Size",
+                            value = "${Formatter.formatFileSize(context, progress.bytesProcessed)} / ${Formatter.formatFileSize(context, progress.totalBytes)}"
+                        )
+                    }
+                    Spacer(Modifier.height(16.dp))
+
+                    // Current File Text
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "Processing: ",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        AnimatedContent(
+                            targetState = progress.currentFile,
+                            label = "CurrentFileAnimation",
+                            transitionSpec = {
+                                slideInVertically { height -> height } togetherWith
+                                        slideOutVertically { height -> -height }
+                            }
+                        ) { targetFile ->
+                            Text(
+                                text = targetFile.ifEmpty { "..." },
+                                style = MaterialTheme.typography.bodySmall,
+                                fontFamily = FontFamily.Monospace,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
                 }
             }
         }
     }
 }
 
+@Composable
+fun ProgressStat(label: String, value: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(text = label, style = MaterialTheme.typography.labelMedium)
+        Text(text = value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+    }
+}
+
+private fun formatElapsedTime(seconds: Long): String {
+    val hours = TimeUnit.SECONDS.toHours(seconds)
+    val minutes = TimeUnit.SECONDS.toMinutes(seconds) % 60
+    val secs = seconds % 60
+    return if (hours > 0) {
+        String.format("%02d:%02d:%02d", hours, minutes, secs)
+    } else {
+        String.format("%02d:%02d", minutes, secs)
+    }
+}
 
 @Composable
 fun BackupSelectionContent(

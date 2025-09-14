@@ -6,13 +6,16 @@ import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import android.text.format.Formatter
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import app.restoid.R
+import app.restoid.ui.backup.BackupProgress
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.concurrent.TimeUnit
 
 sealed class NotificationPermissionState {
     object Granted : NotificationPermissionState()
@@ -45,43 +48,30 @@ class NotificationRepository(private val context: Context) {
         notificationManager.createNotificationChannel(channel)
     }
 
-    fun showBackupStartingNotification() {
-        if (ActivityCompat.checkSelfPermission(
-                context,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            // Can't post notification, permission not granted.
-            // The UI should prevent this from being called if permission is denied.
+    fun showBackupProgressNotification(progress: BackupProgress) {
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             return
         }
-        val builder = NotificationCompat.Builder(context, BACKUP_CHANNEL_ID)
-            .setContentTitle("Backup in progress")
-            .setContentText("Preparing to back up your apps...")
-            .setSmallIcon(R.drawable.ic_launcher_foreground) // You should have a proper backup icon
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setOngoing(true)
-            .setProgress(100, 0, true) // Indeterminate progress initially
 
-        NotificationManagerCompat.from(context).notify(BACKUP_PROGRESS_NOTIFICATION_ID, builder.build())
-    }
+        val percentage = (progress.percentage * 100).toInt()
+        val processedSize = Formatter.formatFileSize(context, progress.bytesProcessed)
+        val totalSize = Formatter.formatFileSize(context, progress.totalBytes)
+        val filesText = "${progress.filesProcessed}/${progress.totalFiles} files"
 
-    fun updateBackupProgress(progress: Int, text: String) {
-        if (ActivityCompat.checkSelfPermission(
-                context,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            return
+        val contentText = if (progress.totalFiles > 0) {
+            "$filesText | $processedSize / $totalSize"
+        } else {
+            "Scanning files..."
         }
+
         val builder = NotificationCompat.Builder(context, BACKUP_CHANNEL_ID)
-            .setContentTitle("Backup in progress ($progress%)")
-            .setContentText(text)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle("Backup in progress ($percentage%)")
+            .setContentText(contentText)
+            .setSmallIcon(R.drawable.ic_launcher_foreground) // TODO: Use a proper backup icon
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
-            .setOnlyAlertOnce(true) // Don't make a sound for each update
-            .setProgress(100, progress, false) // Determinate progress
+            .setOnlyAlertOnce(true)
+            .setProgress(100, percentage, false)
 
         NotificationManagerCompat.from(context).notify(BACKUP_PROGRESS_NOTIFICATION_ID, builder.build())
     }
@@ -103,9 +93,9 @@ class NotificationRepository(private val context: Context) {
         val builder = NotificationCompat.Builder(context, BACKUP_CHANNEL_ID)
             .setContentTitle(title)
             .setContentText(summary)
-            .setSmallIcon(R.drawable.ic_launcher_foreground) // Different icon for success/fail?
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setStyle(NotificationCompat.BigTextStyle().bigText(summary))
+            .setSmallIcon(R.drawable.ic_launcher_foreground) // TODO: Different icon for success/fail?
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
 
         NotificationManagerCompat.from(context).notify(BACKUP_FINISHED_NOTIFICATION_ID, builder.build())
@@ -113,7 +103,6 @@ class NotificationRepository(private val context: Context) {
 
 
     fun checkPermissionStatus() {
-        // Condition (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) is always true for minSdk 35
         when {
             ContextCompat.checkSelfPermission(
                 context,
@@ -122,9 +111,6 @@ class NotificationRepository(private val context: Context) {
                 _permissionState.value = NotificationPermissionState.Granted
             }
             else -> {
-                // We can't know for sure if it was denied or just not requested yet
-                // A better approach would be to check a flag in shared preferences
-                // For now, let's assume if not granted, it's denied for simplicity in UI
                 _permissionState.value = NotificationPermissionState.Denied
             }
         }
