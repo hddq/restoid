@@ -5,6 +5,7 @@ import app.restoid.data.NotificationRepository
 import app.restoid.data.RepositoriesRepository
 import app.restoid.data.ResticRepository
 import app.restoid.data.RootRepository
+import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -27,6 +28,16 @@ class RestoidApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        // Configure libsu for a more stable root environment.
+        // This is crucial for avoiding SELinux/namespace issues.
+        // FLAG_MOUNT_MASTER gives the shell a clean mount namespace.
+        Shell.enableVerboseLogging = true
+        Shell.setDefaultBuilder(
+            Shell.Builder.create()
+                .setFlags(Shell.FLAG_MOUNT_MASTER)
+        )
+
         // Initialize repositories
         rootRepository = RootRepository()
         resticRepository = ResticRepository(applicationContext)

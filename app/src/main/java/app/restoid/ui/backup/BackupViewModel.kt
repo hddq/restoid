@@ -5,6 +5,9 @@ import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.restoid.data.RepositoriesRepository
+import app.restoid.data.ResticRepository
+import app.restoid.data.ResticState
 import app.restoid.model.AppInfo
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
@@ -23,7 +26,11 @@ data class BackupTypes(
     val media: Boolean = false
 )
 
-class BackupViewModel(private val application: Application) : ViewModel() {
+class BackupViewModel(
+    private val application: Application,
+    private val repositoriesRepository: RepositoriesRepository,
+    private val resticRepository: ResticRepository
+) : ViewModel() {
 
     private val _apps = MutableStateFlow<List<AppInfo>>(emptyList())
     val apps = _apps.asStateFlow()
@@ -31,55 +38,108 @@ class BackupViewModel(private val application: Application) : ViewModel() {
     private val _backupTypes = MutableStateFlow(BackupTypes())
     val backupTypes = _backupTypes.asStateFlow()
 
+    private val _isBackingUp = MutableStateFlow(false)
+    val isBackingUp = _isBackingUp.asStateFlow()
+
+    private val _backupLogs = MutableStateFlow<List<String>>(emptyList())
+    val backupLogs = _backupLogs.asStateFlow()
 
     init {
         loadInstalledAppsWithRoot()
     }
 
+    fun startBackup() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isBackingUp.value = true
+            _backupLogs.value = emptyList()
+
+            val resticState = resticRepository.resticState.value
+            if (resticState !is ResticState.Installed) {
+                _backupLogs.value = listOf("Error: Restic is not installed.")
+                _isBackingUp.value = false
+                return@launch
+            }
+
+            val selectedRepoPath = repositoriesRepository.selectedRepository.value
+            if (selectedRepoPath == null) {
+                _backupLogs.value = listOf("Error: No backup repository selected.")
+                _isBackingUp.value = false
+                return@launch
+            }
+
+            val password = repositoriesRepository.getRepositoryPassword(selectedRepoPath)
+            if (password == null) {
+                // This case should ideally not happen if snapshots can be loaded on the home screen
+                _backupLogs.value = listOf("Error: Password for repository not found.")
+                _isBackingUp.value = false
+                return@launch
+            }
+
+            val resticBinPath = resticState.path
+            // Hardcoded path as per instructions for testing
+            val backupPath = "/data/data/org.fdroid.fdroid"
+
+            // Sanitize password for shell command. This replaces every ' with '\''
+            val sanitizedPassword = password.replace("'", "'\\''")
+
+            val command = "RESTIC_PASSWORD='$sanitizedPassword' $resticBinPath -r '$selectedRepoPath' backup '$backupPath' --verbose=2"
+
+            val logOutput = mutableListOf("Executing backup command...")
+            _backupLogs.value = logOutput.toList()
+
+            val stdout = mutableListOf<String>()
+            val stderr = mutableListOf<String>()
+
+            val result = Shell.su(command).to(stdout, stderr).exec()
+
+            val finalLogs = mutableListOf<String>()
+            finalLogs.add("Backup finished with exit code: ${result.code}")
+            finalLogs.add("----- STDOUT -----")
+            finalLogs.addAll(stdout)
+            if (stdout.isEmpty()) finalLogs.add("(empty)")
+            finalLogs.add("----- STDERR -----")
+            finalLogs.addAll(stderr)
+            if (stderr.isEmpty()) finalLogs.add("(empty)")
+
+            _backupLogs.value = finalLogs
+            _isBackingUp.value = false
+        }
+    }
+
     private fun loadInstalledAppsWithRoot() {
         viewModelScope.launch(Dispatchers.IO) {
             val pm = application.packageManager
-
-            // Step 1: Get all third-party package names using root.
             val packageNamesResult = Shell.su("pm list packages -3").exec()
 
             if (packageNamesResult.isSuccess) {
-                val installedApps = packageNamesResult.out
+                _apps.value = packageNamesResult.out
                     .map { it.removePrefix("package:").trim() }
                     .mapNotNull { packageName ->
-                        // Step 2: For each package, get its APK path using root.
-                        val pathResult = Shell.su("pm path $packageName").exec()
-                        if (pathResult.isSuccess && pathResult.out.isNotEmpty()) {
-                            val apkPath = pathResult.out.first().removePrefix("package:").trim()
-
-                            // Step 3: Get info directly from the APK file. This bypasses visibility restrictions.
-                            val packageInfo: PackageInfo? = pm.getPackageArchiveInfo(apkPath, PackageManager.GET_META_DATA)
-
-                            packageInfo?.applicationInfo?.let { appInfo ->
-                                // We need to manually set these source dirs for the resources (label, icon) to be loaded correctly.
-                                appInfo.sourceDir = apkPath
-                                appInfo.publicSourceDir = apkPath
-
-                                AppInfo(
-                                    name = appInfo.loadLabel(pm).toString(),
-                                    packageName = appInfo.packageName,
-                                    icon = appInfo.loadIcon(pm)
-                                )
-                            }
-                        } else {
-                            null
+                        try {
+                            val pathResult = Shell.su("pm path $packageName").exec()
+                            if (pathResult.isSuccess && pathResult.out.isNotEmpty()) {
+                                val apkPath = pathResult.out.first().removePrefix("package:").trim()
+                                val packageInfo: PackageInfo? = pm.getPackageArchiveInfo(apkPath, PackageManager.GET_META_DATA)
+                                packageInfo?.applicationInfo?.let { appInfo ->
+                                    appInfo.sourceDir = apkPath
+                                    appInfo.publicSourceDir = apkPath
+                                    AppInfo(
+                                        name = appInfo.loadLabel(pm).toString(),
+                                        packageName = appInfo.packageName,
+                                        icon = appInfo.loadIcon(pm)
+                                    )
+                                }
+                            } else null
+                        } catch (e: Exception) {
+                            null // Ignore packages that can't be processed
                         }
                     }
                     .sortedBy { it.name.lowercase() }
-
-                _apps.value = installedApps
             } else {
-                // Handle the case where the root command fails.
                 _apps.value = emptyList()
             }
         }
     }
-
 
     fun toggleAppSelection(packageName: String) {
         _apps.update { currentApps ->
@@ -95,28 +155,16 @@ class BackupViewModel(private val application: Application) : ViewModel() {
 
     fun toggleAll() {
         _apps.update { currentApps ->
-            // If any app is not selected, select all. Otherwise, deselect all.
             val shouldSelectAll = currentApps.any { !it.isSelected }
             currentApps.map { it.copy(isSelected = shouldSelectAll) }
         }
     }
 
-    fun setBackupApk(value: Boolean) {
-        _backupTypes.update { it.copy(apk = value) }
-    }
-    fun setBackupData(value: Boolean) {
-        _backupTypes.update { it.copy(data = value) }
-    }
-    fun setBackupDeviceProtectedData(value: Boolean) {
-        _backupTypes.update { it.copy(deviceProtectedData = value) }
-    }
-    fun setBackupExternalData(value: Boolean) {
-        _backupTypes.update { it.copy(externalData = value) }
-    }
-    fun setBackupObb(value: Boolean) {
-        _backupTypes.update { it.copy(obb = value) }
-    }
-    fun setBackupMedia(value: Boolean) {
-        _backupTypes.update { it.copy(media = value) }
-    }
+    fun setBackupApk(value: Boolean) = _backupTypes.update { it.copy(apk = value) }
+    fun setBackupData(value: Boolean) = _backupTypes.update { it.copy(data = value) }
+    fun setBackupDeviceProtectedData(value: Boolean) = _backupTypes.update { it.copy(deviceProtectedData = value) }
+    fun setBackupExternalData(value: Boolean) = _backupTypes.update { it.copy(externalData = value) }
+    fun setBackupObb(value: Boolean) = _backupTypes.update { it.copy(obb = value) }
+    fun setBackupMedia(value: Boolean) = _backupTypes.update { it.copy(media = value) }
 }
+
