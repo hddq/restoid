@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.File
 
 // Data class to hold the state of backup types
 data class BackupTypes(
@@ -53,27 +54,31 @@ class BackupViewModel(
             _isBackingUp.value = true
             _backupLogs.value = emptyList()
 
+            // Pre-flight checks
             val selectedApps = _apps.value.filter { it.isSelected }
             if (selectedApps.isEmpty()) {
-                _backupLogs.value = listOf("Error: No apps were selected for backup. Pick something!")
+                _backupLogs.value = listOf("Error: No apps selected. Pick something!")
                 _isBackingUp.value = false
                 return@launch
             }
-
+            val backupOptions = _backupTypes.value
+            if (!backupOptions.apk && !backupOptions.data && !backupOptions.deviceProtectedData && !backupOptions.externalData && !backupOptions.obb && !backupOptions.media) {
+                _backupLogs.value = listOf("Error: No backup types selected. Nothing to do.")
+                _isBackingUp.value = false
+                return@launch
+            }
             val resticState = resticRepository.resticState.value
             if (resticState !is ResticState.Installed) {
                 _backupLogs.value = listOf("Error: Restic is not installed.")
                 _isBackingUp.value = false
                 return@launch
             }
-
             val selectedRepoPath = repositoriesRepository.selectedRepository.value
             if (selectedRepoPath == null) {
                 _backupLogs.value = listOf("Error: No backup repository selected.")
                 _isBackingUp.value = false
                 return@launch
             }
-
             val password = repositoriesRepository.getRepositoryPassword(selectedRepoPath)
             if (password == null) {
                 _backupLogs.value = listOf("Error: Password for repository not found.")
@@ -81,36 +86,73 @@ class BackupViewModel(
                 return@launch
             }
 
-            val resticBinPath = resticState.path
-
-            // Construct a space-separated string of all data paths to be backed up
-            // Each path is quoted to handle potential special characters.
-            val backupPaths = selectedApps.joinToString(" ") { "'/data/data/${it.packageName}'" }
-
-            val sanitizedPassword = password.replace("'", "'\\''")
-
-            // Build the final command with all the selected app data paths
-            val command = "RESTIC_PASSWORD='$sanitizedPassword' $resticBinPath -r '$selectedRepoPath' backup $backupPaths --verbose=2"
-
-            val logOutput = mutableListOf("Starting backup for ${selectedApps.size} app(s)...", "Executing command...")
+            // --- Backup Logic Starts ---
+            val logOutput = mutableListOf("Starting backup for ${selectedApps.size} app(s)...")
             _backupLogs.value = logOutput.toList()
 
-            val stdout = mutableListOf<String>()
-            val stderr = mutableListOf<String>()
+            // --- Generate file list for restic ---
+            val pathsToBackup = mutableListOf<String>()
+            selectedApps.forEach { app ->
+                val pkg = app.packageName
+                // The `pm path` gives the full path to base.apk. The actual install location is its parent dir.
+                if (backupOptions.apk) File(app.apkPath).parentFile?.absolutePath?.let { pathsToBackup.add(it) }
+                if (backupOptions.data) pathsToBackup.add("/data/data/$pkg")
+                if (backupOptions.deviceProtectedData) pathsToBackup.add("/data/user_de/0/$pkg")
+                if (backupOptions.externalData) pathsToBackup.add("/storage/emulated/0/Android/data/$pkg")
+                if (backupOptions.obb) pathsToBackup.add("/storage/emulated/0/Android/obb/$pkg")
+                if (backupOptions.media) pathsToBackup.add("/storage/emulated/0/Android/media/$pkg")
+            }
 
-            val result = Shell.su(command).to(stdout, stderr).exec()
+            // Filter out paths that don't actually exist on the system
+            val existingPathsToBackup = pathsToBackup.filter {
+                Shell.su("[ -e '$it' ]").exec().isSuccess
+            }
 
-            val finalLogs = mutableListOf<String>()
-            finalLogs.add("Backup finished with exit code: ${result.code}")
-            finalLogs.add("----- STDOUT -----")
-            finalLogs.addAll(stdout)
-            if (stdout.isEmpty()) finalLogs.add("(empty)")
-            finalLogs.add("----- STDERR -----")
-            finalLogs.addAll(stderr)
-            if (stderr.isEmpty()) finalLogs.add("(empty)")
+            if (existingPathsToBackup.isEmpty()) {
+                _backupLogs.value = listOf("Error: Selected backup types resulted in no existing files/directories to back up.")
+                _isBackingUp.value = false
+                return@launch
+            }
 
-            _backupLogs.value = finalLogs
-            _isBackingUp.value = false
+            logOutput.add("✅ Found ${existingPathsToBackup.size} locations to back up.")
+            logOutput.add("🚀 Starting restic backup...")
+            _backupLogs.value = logOutput.toList()
+
+            // --- Run restic backup using --files-from and a temporary file ---
+            val resticBinPath = resticState.path
+            val sanitizedPassword = password.replace("'", "'\\''")
+            // Create a temp file to hold the list of paths to back up. This is more reliable than stdin pipes.
+            val fileList = File.createTempFile("restic-files-", ".txt", application.cacheDir)
+
+            try {
+                fileList.writeText(existingPathsToBackup.joinToString("\n"))
+
+                val command = "$resticBinPath -r '$selectedRepoPath' backup --files-from '${fileList.absolutePath}' --verbose=2 --tag ${selectedApps.joinToString(",") { it.packageName }}"
+                val stdout = mutableListOf<String>()
+                val stderr = mutableListOf<String>()
+
+                val result = Shell.su("RESTIC_PASSWORD='$sanitizedPassword' $command")
+                    .to(stdout, stderr)
+                    .exec()
+
+                // --- Log results ---
+                logOutput.add("--- Backup Finished (Exit Code: ${result.code}) ---")
+                logOutput.add("--- STDOUT ---")
+                logOutput.addAll(stdout.ifEmpty { listOf("(empty)") })
+                logOutput.add("--- STDERR ---")
+                logOutput.addAll(stderr.ifEmpty { listOf("(empty)") })
+                _backupLogs.value = logOutput.toList()
+
+            } catch (e: Exception) {
+                // Catch any exceptions during file writing or command execution
+                logOutput.add("--- FATAL ERROR ---")
+                logOutput.add(e.message ?: "An unknown exception occurred.")
+                _backupLogs.value = logOutput.toList()
+            } finally {
+                // Ensure the temp file is always deleted and we stop the backup state
+                fileList.delete()
+                _isBackingUp.value = false
+            }
         }
     }
 
@@ -134,7 +176,8 @@ class BackupViewModel(
                                     AppInfo(
                                         name = appInfo.loadLabel(pm).toString(),
                                         packageName = appInfo.packageName,
-                                        icon = appInfo.loadIcon(pm)
+                                        icon = appInfo.loadIcon(pm),
+                                        apkPath = apkPath
                                     )
                                 }
                             } else null
