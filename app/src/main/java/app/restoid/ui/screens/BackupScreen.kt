@@ -42,6 +42,9 @@ fun BackupScreen(onNavigateUp: () -> Unit) {
     val backupTypes by viewModel.backupTypes.collectAsState()
     val isBackingUp by viewModel.isBackingUp.collectAsState()
     val backupLogs by viewModel.backupLogs.collectAsState()
+    val backupProgress by viewModel.backupProgress.collectAsState()
+    val currentBackupFile by viewModel.currentBackupFile.collectAsState()
+
 
     Scaffold(
         topBar = {
@@ -73,6 +76,8 @@ fun BackupScreen(onNavigateUp: () -> Unit) {
             BackupProgressScreen(
                 isBackingUp = isBackingUp,
                 logs = backupLogs,
+                progress = backupProgress,
+                currentFile = currentBackupFile,
                 modifier = Modifier.padding(paddingValues)
             )
         } else {
@@ -88,7 +93,13 @@ fun BackupScreen(onNavigateUp: () -> Unit) {
 }
 
 @Composable
-fun BackupProgressScreen(isBackingUp: Boolean, logs: List<String>, modifier: Modifier = Modifier) {
+fun BackupProgressScreen(
+    isBackingUp: Boolean,
+    logs: List<String>,
+    progress: Int,
+    currentFile: String?,
+    modifier: Modifier = Modifier
+) {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -96,16 +107,29 @@ fun BackupProgressScreen(isBackingUp: Boolean, logs: List<String>, modifier: Mod
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         if (isBackingUp) {
-            CircularProgressIndicator()
+            LinearProgressIndicator(
+                progress = { progress / 100f },
+                modifier = Modifier.fillMaxWidth()
+            )
             Spacer(Modifier.height(16.dp))
-            Text("Backup in progress...", style = MaterialTheme.typography.titleMedium)
+            Text("Backup in progress: $progress%", style = MaterialTheme.typography.titleMedium)
+            if (currentFile != null) {
+                Text(
+                    text = currentFile,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(Modifier.height(8.dp))
             Text(
                 "Please don't close the app.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         } else {
-            Text("Backup Finished", style = MaterialTheme.typography.titleMedium)
+            Text("Backup Finished", style = MaterialTheme.typography.headlineSmall)
         }
 
         Spacer(Modifier.height(16.dp))
@@ -127,6 +151,7 @@ fun BackupProgressScreen(isBackingUp: Boolean, logs: List<String>, modifier: Mod
         }
     }
 }
+
 
 @Composable
 fun BackupSelectionContent(

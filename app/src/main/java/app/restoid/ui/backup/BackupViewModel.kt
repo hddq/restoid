@@ -12,10 +12,13 @@ import app.restoid.data.ResticState
 import app.restoid.model.AppInfo
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.json.JSONException
+import org.json.JSONObject
 import java.io.File
 
 // Data class to hold the state of backup types
@@ -47,6 +50,13 @@ class BackupViewModel(
     private val _backupLogs = MutableStateFlow<List<String>>(emptyList())
     val backupLogs = _backupLogs.asStateFlow()
 
+    private val _backupProgress = MutableStateFlow(0)
+    val backupProgress = _backupProgress.asStateFlow()
+
+    private val _currentBackupFile = MutableStateFlow<String?>(null)
+    val currentBackupFile = _currentBackupFile.asStateFlow()
+
+
     init {
         loadInstalledAppsWithRoot()
     }
@@ -56,51 +66,50 @@ class BackupViewModel(
             notificationRepository.showBackupStartingNotification()
             _isBackingUp.value = true
             _backupLogs.value = emptyList()
+            _backupProgress.value = 0
+            _currentBackupFile.value = null
             var isSuccess = false
             var summary = ""
             val fileList = File.createTempFile("restic-files-", ".txt", application.cacheDir)
+            val logFile = File.createTempFile("restic-log-", ".txt", application.cacheDir)
 
             try {
                 // Pre-flight checks
                 val selectedApps = _apps.value.filter { it.isSelected }
                 if (selectedApps.isEmpty()) {
-                    _backupLogs.value = listOf("Error: No apps selected. Pick something!")
                     summary = "No apps were selected."
+                    _backupLogs.value = listOf("Error: No apps selected. Pick something!")
                     isSuccess = false
                     return@launch
                 }
                 val backupOptions = _backupTypes.value
                 if (!backupOptions.apk && !backupOptions.data && !backupOptions.deviceProtectedData && !backupOptions.externalData && !backupOptions.obb && !backupOptions.media) {
-                    _backupLogs.value = listOf("Error: No backup types selected. Nothing to do.")
                     summary = "No backup types were selected."
+                    _backupLogs.value = listOf("Error: No backup types selected. Nothing to do.")
                     isSuccess = false
                     return@launch
                 }
                 val resticState = resticRepository.resticState.value
                 if (resticState !is ResticState.Installed) {
-                    _backupLogs.value = listOf("Error: Restic is not installed.")
                     summary = "Restic binary is not installed."
+                    _backupLogs.value = listOf("Error: Restic is not installed.")
                     isSuccess = false
                     return@launch
                 }
                 val selectedRepoPath = repositoriesRepository.selectedRepository.value
                 if (selectedRepoPath == null) {
-                    _backupLogs.value = listOf("Error: No backup repository selected.")
                     summary = "No backup repository is selected."
+                    _backupLogs.value = listOf("Error: No backup repository selected.")
                     isSuccess = false
                     return@launch
                 }
                 val password = repositoriesRepository.getRepositoryPassword(selectedRepoPath)
                 if (password == null) {
-                    _backupLogs.value = listOf("Error: Password for repository not found.")
                     summary = "Could not find the password for the repository."
+                    _backupLogs.value = listOf("Error: Password for repository not found.")
                     isSuccess = false
                     return@launch
                 }
-
-                // --- Backup Logic Starts ---
-                val logOutput = mutableListOf("Starting backup for ${selectedApps.size} app(s)...")
-                _backupLogs.value = logOutput.toList()
 
                 // --- Generate file list for restic ---
                 val pathsToBackup = mutableListOf<String>()
@@ -119,40 +128,82 @@ class BackupViewModel(
                 }
 
                 if (existingPathsToBackup.isEmpty()) {
-                    _backupLogs.value = listOf("Error: Selected backup types resulted in no existing files/directories to back up.")
                     summary = "Found no files to back up for the selected apps."
+                    _backupLogs.value = listOf("Error: Selected backup types resulted in no existing files/directories to back up.")
                     isSuccess = false
                     return@launch
                 }
 
-                logOutput.add("✅ Found ${existingPathsToBackup.size} locations to back up.")
-                logOutput.add("🚀 Starting restic backup...")
-                _backupLogs.value = logOutput.toList()
-
                 fileList.writeText(existingPathsToBackup.joinToString("\n"))
 
-                val command = "${resticState.path} -r '$selectedRepoPath' backup --files-from '${fileList.absolutePath}' --verbose=2 --tag ${selectedApps.joinToString(",") { it.packageName }}"
-                val stdout = mutableListOf<String>()
-                val stderr = mutableListOf<String>()
-                val sanitizedPassword = password.replace("'", "'\\''")
+                // --- Live Log Reading Job ---
+                val readerJob = launch {
+                    val reader = logFile.bufferedReader()
+                    while (_isBackingUp.value) {
+                        val line = reader.readLine()
+                        if (line != null) {
+                            launch(Dispatchers.Main) { _backupLogs.value += line }
+                            try {
+                                val json = JSONObject(line)
+                                if (json.optString("message_type") == "status") {
+                                    val percent = json.optDouble("percent_done", 0.0)
+                                    val progress = (percent * 100).toInt()
+                                    val totalFiles = json.optInt("total_files")
+                                    val filesDone = json.optInt("files_done")
+                                    val currentFiles = json.optJSONArray("current_files")
+                                    val currentFile = if (currentFiles != null && currentFiles.length() > 0) {
+                                        File(currentFiles.getString(0)).name
+                                    } else { null }
 
-                val result = Shell.su("RESTIC_PASSWORD='$sanitizedPassword' $command")
-                    .to(stdout, stderr)
-                    .exec()
+                                    launch(Dispatchers.Main) {
+                                        _backupProgress.value = progress
+                                        _currentBackupFile.value = currentFile
+                                    }
+                                    notificationRepository.updateBackupProgress(progress, "File $filesDone of $totalFiles")
+                                }
+                            } catch (e: JSONException) {
+                                // Not a JSON progress line, just a regular log
+                            }
+                        } else {
+                            delay(200) // Wait for more data to be written
+                        }
+                    }
+                    reader.close()
+                }
+
+                // --- Restic Command Execution ---
+                launch(Dispatchers.Main) {
+                    _backupLogs.value += "✅ Found ${existingPathsToBackup.size} locations to back up."
+                    _backupLogs.value += "🚀 Starting restic backup..."
+                }
+
+                val command = "${resticState.path} -r '$selectedRepoPath' backup --files-from '${fileList.absolutePath}' --json --tag ${selectedApps.joinToString(",") { it.packageName }}"
+                val sanitizedPassword = password.replace("'", "'\\''")
+                val fullCommand = "RESTIC_PASSWORD='$sanitizedPassword' $command > ${logFile.absolutePath} 2>&1"
+
+                val result = Shell.su(fullCommand).exec()
+
+                _isBackingUp.value = false // Signal reader to stop
+                readerJob.join() // Wait for reader to finish
 
                 isSuccess = result.isSuccess
-                summary = if (isSuccess) {
-                    "Backed up ${selectedApps.size} app(s)."
+
+                // --- Parse Summary ---
+                val logLines = logFile.readLines()
+                val summaryJsonString = logLines.lastOrNull { it.trim().startsWith("{\"message_type\":\"summary\"") }
+                summary = if (isSuccess && summaryJsonString != null) {
+                    try {
+                        val json = JSONObject(summaryJsonString)
+                        "Added ${json.optString("files_new", "N/A")} files, processed ${json.optString("total_files_processed", "N/A")} (${json.optString("data_added_packed", "N/A")})."
+                    } catch (e: JSONException) {
+                        "Backed up ${selectedApps.size} app(s) successfully."
+                    }
+                } else if (isSuccess) {
+                    "Backed up ${selectedApps.size} app(s) successfully."
                 } else {
                     "Restic command failed with exit code ${result.code}."
                 }
-
-                logOutput.add("--- Backup Finished (Exit Code: ${result.code}) ---")
-                logOutput.add("--- STDOUT ---")
-                logOutput.addAll(stdout.ifEmpty { listOf("(empty)") })
-                logOutput.add("--- STDERR ---")
-                logOutput.addAll(stderr.ifEmpty { listOf("(empty)") })
-                _backupLogs.value = logOutput.toList()
+                launch(Dispatchers.Main) { _backupLogs.value += "--- Backup Finished (Exit Code: ${result.code}) ---" }
 
             } catch (e: Exception) {
                 _backupLogs.value += "--- FATAL ERROR ---"
@@ -161,11 +212,13 @@ class BackupViewModel(
                 isSuccess = false
             } finally {
                 fileList.delete()
+                logFile.delete()
                 _isBackingUp.value = false
                 notificationRepository.showBackupFinishedNotification(isSuccess, summary)
             }
         }
     }
+
 
     private fun loadInstalledAppsWithRoot() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -229,3 +282,4 @@ class BackupViewModel(
     fun setBackupObb(value: Boolean) = _backupTypes.update { it.copy(obb = value) }
     fun setBackupMedia(value: Boolean) = _backupTypes.update { it.copy(media = value) }
 }
+

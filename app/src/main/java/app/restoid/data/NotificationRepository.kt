@@ -61,10 +61,31 @@ class NotificationRepository(private val context: Context) {
             .setSmallIcon(R.drawable.ic_launcher_foreground) // You should have a proper backup icon
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
-            .setProgress(0, 0, true) // Indeterminate progress
+            .setProgress(100, 0, true) // Indeterminate progress initially
 
         NotificationManagerCompat.from(context).notify(BACKUP_PROGRESS_NOTIFICATION_ID, builder.build())
     }
+
+    fun updateBackupProgress(progress: Int, text: String) {
+        if (ActivityCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        val builder = NotificationCompat.Builder(context, BACKUP_CHANNEL_ID)
+            .setContentTitle("Backup in progress ($progress%)")
+            .setContentText(text)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true) // Don't make a sound for each update
+            .setProgress(100, progress, false) // Determinate progress
+
+        NotificationManagerCompat.from(context).notify(BACKUP_PROGRESS_NOTIFICATION_ID, builder.build())
+    }
+
 
     fun showBackupFinishedNotification(success: Boolean, summary: String) {
         if (ActivityCompat.checkSelfPermission(
@@ -84,6 +105,7 @@ class NotificationRepository(private val context: Context) {
             .setContentText(summary)
             .setSmallIcon(R.drawable.ic_launcher_foreground) // Different icon for success/fail?
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(summary))
             .setAutoCancel(true)
 
         NotificationManagerCompat.from(context).notify(BACKUP_FINISHED_NOTIFICATION_ID, builder.build())
