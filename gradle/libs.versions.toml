@@ -17,7 +17,7 @@ navigationComposeVersion = "2.9.4"
 libsu = "5.2.2"
 lifecycle = "2.9.3"
 apacheCommonsCompress = "1.28.0"
-securityCrypto = "1.1.0-alpha06"
+securityCrypto = "1.1.0"
 coilCompose = "2.7.0"
 
 [libraries]

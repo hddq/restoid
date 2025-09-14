@@ -169,9 +169,7 @@ fun SettingsScreen() {
                     NotificationPermissionRow(
                         state = notificationPermissionState,
                         onRequestPermission = {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                            }
+                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                         },
                         onOpenSettings = {
                             val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {

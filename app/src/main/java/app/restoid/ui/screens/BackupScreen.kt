@@ -34,7 +34,8 @@ fun BackupScreen(onNavigateUp: () -> Unit) {
         factory = BackupViewModelFactory(
             application,
             application.repositoriesRepository,
-            application.resticRepository
+            application.resticRepository,
+            application.notificationRepository
         )
     )
     val apps by viewModel.apps.collectAsState()

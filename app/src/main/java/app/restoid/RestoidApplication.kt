@@ -44,6 +44,9 @@ class RestoidApplication : Application() {
         repositoriesRepository = RepositoriesRepository(applicationContext)
         notificationRepository = NotificationRepository(applicationContext)
 
+        // Create notification channels on app start
+        notificationRepository.createNotificationChannels()
+
         // Start initial status checks and load data on a background thread
         applicationScope.launch {
             rootRepository.checkRootAccess()

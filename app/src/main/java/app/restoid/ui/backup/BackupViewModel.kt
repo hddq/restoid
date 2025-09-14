@@ -5,6 +5,7 @@ import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.restoid.data.NotificationRepository
 import app.restoid.data.RepositoriesRepository
 import app.restoid.data.ResticRepository
 import app.restoid.data.ResticState
@@ -30,7 +31,8 @@ data class BackupTypes(
 class BackupViewModel(
     private val application: Application,
     private val repositoriesRepository: RepositoriesRepository,
-    private val resticRepository: ResticRepository
+    private val resticRepository: ResticRepository,
+    private val notificationRepository: NotificationRepository
 ) : ViewModel() {
 
     private val _apps = MutableStateFlow<List<AppInfo>>(emptyList())
@@ -51,91 +53,100 @@ class BackupViewModel(
 
     fun startBackup() {
         viewModelScope.launch(Dispatchers.IO) {
+            notificationRepository.showBackupStartingNotification()
             _isBackingUp.value = true
             _backupLogs.value = emptyList()
-
-            // Pre-flight checks
-            val selectedApps = _apps.value.filter { it.isSelected }
-            if (selectedApps.isEmpty()) {
-                _backupLogs.value = listOf("Error: No apps selected. Pick something!")
-                _isBackingUp.value = false
-                return@launch
-            }
-            val backupOptions = _backupTypes.value
-            if (!backupOptions.apk && !backupOptions.data && !backupOptions.deviceProtectedData && !backupOptions.externalData && !backupOptions.obb && !backupOptions.media) {
-                _backupLogs.value = listOf("Error: No backup types selected. Nothing to do.")
-                _isBackingUp.value = false
-                return@launch
-            }
-            val resticState = resticRepository.resticState.value
-            if (resticState !is ResticState.Installed) {
-                _backupLogs.value = listOf("Error: Restic is not installed.")
-                _isBackingUp.value = false
-                return@launch
-            }
-            val selectedRepoPath = repositoriesRepository.selectedRepository.value
-            if (selectedRepoPath == null) {
-                _backupLogs.value = listOf("Error: No backup repository selected.")
-                _isBackingUp.value = false
-                return@launch
-            }
-            val password = repositoriesRepository.getRepositoryPassword(selectedRepoPath)
-            if (password == null) {
-                _backupLogs.value = listOf("Error: Password for repository not found.")
-                _isBackingUp.value = false
-                return@launch
-            }
-
-            // --- Backup Logic Starts ---
-            val logOutput = mutableListOf("Starting backup for ${selectedApps.size} app(s)...")
-            _backupLogs.value = logOutput.toList()
-
-            // --- Generate file list for restic ---
-            val pathsToBackup = mutableListOf<String>()
-            selectedApps.forEach { app ->
-                val pkg = app.packageName
-                // The `pm path` gives the full path to base.apk. The actual install location is its parent dir.
-                if (backupOptions.apk) File(app.apkPath).parentFile?.absolutePath?.let { pathsToBackup.add(it) }
-                if (backupOptions.data) pathsToBackup.add("/data/data/$pkg")
-                if (backupOptions.deviceProtectedData) pathsToBackup.add("/data/user_de/0/$pkg")
-                if (backupOptions.externalData) pathsToBackup.add("/storage/emulated/0/Android/data/$pkg")
-                if (backupOptions.obb) pathsToBackup.add("/storage/emulated/0/Android/obb/$pkg")
-                if (backupOptions.media) pathsToBackup.add("/storage/emulated/0/Android/media/$pkg")
-            }
-
-            // Filter out paths that don't actually exist on the system
-            val existingPathsToBackup = pathsToBackup.filter {
-                Shell.su("[ -e '$it' ]").exec().isSuccess
-            }
-
-            if (existingPathsToBackup.isEmpty()) {
-                _backupLogs.value = listOf("Error: Selected backup types resulted in no existing files/directories to back up.")
-                _isBackingUp.value = false
-                return@launch
-            }
-
-            logOutput.add("✅ Found ${existingPathsToBackup.size} locations to back up.")
-            logOutput.add("🚀 Starting restic backup...")
-            _backupLogs.value = logOutput.toList()
-
-            // --- Run restic backup using --files-from and a temporary file ---
-            val resticBinPath = resticState.path
-            val sanitizedPassword = password.replace("'", "'\\''")
-            // Create a temp file to hold the list of paths to back up. This is more reliable than stdin pipes.
+            var isSuccess = false
+            var summary = ""
             val fileList = File.createTempFile("restic-files-", ".txt", application.cacheDir)
 
             try {
+                // Pre-flight checks
+                val selectedApps = _apps.value.filter { it.isSelected }
+                if (selectedApps.isEmpty()) {
+                    _backupLogs.value = listOf("Error: No apps selected. Pick something!")
+                    summary = "No apps were selected."
+                    isSuccess = false
+                    return@launch
+                }
+                val backupOptions = _backupTypes.value
+                if (!backupOptions.apk && !backupOptions.data && !backupOptions.deviceProtectedData && !backupOptions.externalData && !backupOptions.obb && !backupOptions.media) {
+                    _backupLogs.value = listOf("Error: No backup types selected. Nothing to do.")
+                    summary = "No backup types were selected."
+                    isSuccess = false
+                    return@launch
+                }
+                val resticState = resticRepository.resticState.value
+                if (resticState !is ResticState.Installed) {
+                    _backupLogs.value = listOf("Error: Restic is not installed.")
+                    summary = "Restic binary is not installed."
+                    isSuccess = false
+                    return@launch
+                }
+                val selectedRepoPath = repositoriesRepository.selectedRepository.value
+                if (selectedRepoPath == null) {
+                    _backupLogs.value = listOf("Error: No backup repository selected.")
+                    summary = "No backup repository is selected."
+                    isSuccess = false
+                    return@launch
+                }
+                val password = repositoriesRepository.getRepositoryPassword(selectedRepoPath)
+                if (password == null) {
+                    _backupLogs.value = listOf("Error: Password for repository not found.")
+                    summary = "Could not find the password for the repository."
+                    isSuccess = false
+                    return@launch
+                }
+
+                // --- Backup Logic Starts ---
+                val logOutput = mutableListOf("Starting backup for ${selectedApps.size} app(s)...")
+                _backupLogs.value = logOutput.toList()
+
+                // --- Generate file list for restic ---
+                val pathsToBackup = mutableListOf<String>()
+                selectedApps.forEach { app ->
+                    val pkg = app.packageName
+                    if (backupOptions.apk) File(app.apkPath).parentFile?.absolutePath?.let { pathsToBackup.add(it) }
+                    if (backupOptions.data) pathsToBackup.add("/data/data/$pkg")
+                    if (backupOptions.deviceProtectedData) pathsToBackup.add("/data/user_de/0/$pkg")
+                    if (backupOptions.externalData) pathsToBackup.add("/storage/emulated/0/Android/data/$pkg")
+                    if (backupOptions.obb) pathsToBackup.add("/storage/emulated/0/Android/obb/$pkg")
+                    if (backupOptions.media) pathsToBackup.add("/storage/emulated/0/Android/media/$pkg")
+                }
+
+                val existingPathsToBackup = pathsToBackup.filter {
+                    Shell.su("[ -e '$it' ]").exec().isSuccess
+                }
+
+                if (existingPathsToBackup.isEmpty()) {
+                    _backupLogs.value = listOf("Error: Selected backup types resulted in no existing files/directories to back up.")
+                    summary = "Found no files to back up for the selected apps."
+                    isSuccess = false
+                    return@launch
+                }
+
+                logOutput.add("✅ Found ${existingPathsToBackup.size} locations to back up.")
+                logOutput.add("🚀 Starting restic backup...")
+                _backupLogs.value = logOutput.toList()
+
                 fileList.writeText(existingPathsToBackup.joinToString("\n"))
 
-                val command = "$resticBinPath -r '$selectedRepoPath' backup --files-from '${fileList.absolutePath}' --verbose=2 --tag ${selectedApps.joinToString(",") { it.packageName }}"
+                val command = "${resticState.path} -r '$selectedRepoPath' backup --files-from '${fileList.absolutePath}' --verbose=2 --tag ${selectedApps.joinToString(",") { it.packageName }}"
                 val stdout = mutableListOf<String>()
                 val stderr = mutableListOf<String>()
+                val sanitizedPassword = password.replace("'", "'\\''")
 
                 val result = Shell.su("RESTIC_PASSWORD='$sanitizedPassword' $command")
                     .to(stdout, stderr)
                     .exec()
 
-                // --- Log results ---
+                isSuccess = result.isSuccess
+                summary = if (isSuccess) {
+                    "Backed up ${selectedApps.size} app(s)."
+                } else {
+                    "Restic command failed with exit code ${result.code}."
+                }
+
                 logOutput.add("--- Backup Finished (Exit Code: ${result.code}) ---")
                 logOutput.add("--- STDOUT ---")
                 logOutput.addAll(stdout.ifEmpty { listOf("(empty)") })
@@ -144,14 +155,14 @@ class BackupViewModel(
                 _backupLogs.value = logOutput.toList()
 
             } catch (e: Exception) {
-                // Catch any exceptions during file writing or command execution
-                logOutput.add("--- FATAL ERROR ---")
-                logOutput.add(e.message ?: "An unknown exception occurred.")
-                _backupLogs.value = logOutput.toList()
+                _backupLogs.value += "--- FATAL ERROR ---"
+                _backupLogs.value += (e.message ?: "An unknown exception occurred.")
+                summary = "A fatal error occurred: ${e.message}"
+                isSuccess = false
             } finally {
-                // Ensure the temp file is always deleted and we stop the backup state
                 fileList.delete()
                 _isBackingUp.value = false
+                notificationRepository.showBackupFinishedNotification(isSuccess, summary)
             }
         }
     }
@@ -218,4 +229,3 @@ class BackupViewModel(
     fun setBackupObb(value: Boolean) = _backupTypes.update { it.copy(obb = value) }
     fun setBackupMedia(value: Boolean) = _backupTypes.update { it.copy(media = value) }
 }
-
