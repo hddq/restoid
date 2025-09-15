@@ -72,6 +72,22 @@ class AppInfoRepository(private val context: Context) {
     }
 
     /**
+     * Gets all user-installed applications, leveraging the cache.
+     * It refreshes the list from the package manager and fetches info for any new apps.
+     */
+    suspend fun getInstalledUserApps(): List<AppInfo> = withContext(Dispatchers.IO) {
+        val packageNamesResult = Shell.cmd("pm list packages -3").exec()
+        if (packageNamesResult.isSuccess) {
+            val packageNames = packageNamesResult.out.map { it.removePrefix("package:").trim() }
+            // This will fetch from cache if available, or from system for new apps.
+            val appInfos = getAppInfoForPackages(packageNames)
+            return@withContext appInfos.sortedBy { it.name.lowercase() }
+        }
+        return@withContext emptyList()
+    }
+
+
+    /**
      * Fetches information for a single application.
      * 1. Checks hot (in-memory) cache.
      * 2. Checks warm (disk-backed) cache.
@@ -121,3 +137,4 @@ class AppInfoRepository(private val context: Context) {
         }
     }
 }
+

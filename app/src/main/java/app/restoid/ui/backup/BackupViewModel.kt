@@ -1,10 +1,9 @@
 package app.restoid.ui.backup
 
 import android.app.Application
-import android.content.pm.PackageInfo
-import android.content.pm.PackageManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.restoid.data.AppInfoRepository
 import app.restoid.data.NotificationRepository
 import app.restoid.data.RepositoriesRepository
 import app.restoid.data.ResticRepository
@@ -20,7 +19,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
-import java.util.concurrent.TimeUnit
 
 // Data class to hold the state of backup types
 data class BackupTypes(
@@ -56,11 +54,15 @@ class BackupViewModel(
     private val application: Application,
     private val repositoriesRepository: RepositoriesRepository,
     private val resticRepository: ResticRepository,
-    private val notificationRepository: NotificationRepository
+    private val notificationRepository: NotificationRepository,
+    private val appInfoRepository: AppInfoRepository
 ) : ViewModel() {
 
     private val _apps = MutableStateFlow<List<AppInfo>>(emptyList())
     val apps = _apps.asStateFlow()
+
+    private val _isLoadingApps = MutableStateFlow(true)
+    val isLoadingApps = _isLoadingApps.asStateFlow()
 
     private val _backupTypes = MutableStateFlow(BackupTypes())
     val backupTypes = _backupTypes.asStateFlow()
@@ -74,8 +76,21 @@ class BackupViewModel(
     private var backupJob: Job? = null
 
     init {
-        loadInstalledAppsWithRoot()
+        loadInstalledApps()
     }
+
+    fun refreshAppsList() {
+        loadInstalledApps()
+    }
+
+    private fun loadInstalledApps() {
+        viewModelScope.launch {
+            _isLoadingApps.value = true
+            _apps.value = appInfoRepository.getInstalledUserApps()
+            _isLoadingApps.value = false
+        }
+    }
+
 
     fun startBackup() {
         // Prevent multiple backups from running
@@ -220,42 +235,6 @@ class BackupViewModel(
         _backupProgress.update { it.copy(currentAction = currentAction) }
     }
 
-    private fun loadInstalledAppsWithRoot() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val pm = application.packageManager
-            val packageNamesResult = Shell.cmd("pm list packages -3").exec()
-
-            if (packageNamesResult.isSuccess) {
-                _apps.value = packageNamesResult.out
-                    .map { it.removePrefix("package:").trim() }
-                    .mapNotNull { packageName ->
-                        try {
-                            val pathResult = Shell.cmd("pm path $packageName").exec()
-                            if (pathResult.isSuccess && pathResult.out.isNotEmpty()) {
-                                val apkPath = pathResult.out.first().removePrefix("package:").trim()
-                                val packageInfo: PackageInfo? = pm.getPackageArchiveInfo(apkPath, PackageManager.GET_META_DATA)
-                                packageInfo?.applicationInfo?.let { appInfo ->
-                                    appInfo.sourceDir = apkPath
-                                    appInfo.publicSourceDir = apkPath
-                                    AppInfo(
-                                        name = appInfo.loadLabel(pm).toString(),
-                                        packageName = appInfo.packageName,
-                                        icon = appInfo.loadIcon(pm),
-                                        apkPath = apkPath
-                                    )
-                                }
-                            } else null
-                        } catch (e: Exception) {
-                            null // Ignore packages that can't be processed
-                        }
-                    }
-                    .sortedBy { it.name.lowercase() }
-            } else {
-                _apps.value = emptyList()
-            }
-        }
-    }
-
     fun toggleAppSelection(packageName: String) {
         _apps.update { currentApps ->
             currentApps.map { app ->
@@ -286,3 +265,4 @@ class BackupViewModel(
     fun setBackupObb(value: Boolean) = _backupTypes.update { it.copy(obb = value) }
     fun setBackupMedia(value: Boolean) = _backupTypes.update { it.copy(media = value) }
 }
+

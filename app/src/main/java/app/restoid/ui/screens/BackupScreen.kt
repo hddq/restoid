@@ -18,15 +18,19 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.restoid.RestoidApplication
 import app.restoid.model.AppInfo
@@ -46,13 +50,30 @@ fun BackupScreen(onNavigateUp: () -> Unit) {
             application,
             application.repositoriesRepository,
             application.resticRepository,
-            application.notificationRepository
+            application.notificationRepository,
+            application.appInfoRepository
         )
     )
     val apps by viewModel.apps.collectAsState()
+    val isLoadingApps by viewModel.isLoadingApps.collectAsState()
     val backupTypes by viewModel.backupTypes.collectAsState()
     val isBackingUp by viewModel.isBackingUp.collectAsState()
     val backupProgress by viewModel.backupProgress.collectAsState()
+
+    // Refresh the app list every time the screen becomes visible.
+    // The cache will make this fast. This handles newly installed apps.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshAppsList()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     val showProgressScreen = isBackingUp || backupProgress.isFinished
 
@@ -94,6 +115,7 @@ fun BackupScreen(onNavigateUp: () -> Unit) {
                     paddingValues = paddingValues,
                     viewModel = viewModel,
                     apps = apps,
+                    isLoading = isLoadingApps,
                     backupTypes = backupTypes
                 )
             }
@@ -225,6 +247,7 @@ fun BackupSelectionContent(
     paddingValues: PaddingValues,
     viewModel: BackupViewModel,
     apps: List<AppInfo>,
+    isLoading: Boolean,
     backupTypes: BackupTypes
 ) {
     Column(
@@ -269,7 +292,7 @@ fun BackupSelectionContent(
                     Text("Toggle All")
                 }
             }
-            if (apps.isEmpty()) {
+            if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
