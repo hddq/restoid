@@ -1,11 +1,13 @@
 package app.restoid.ui.snapshot
 
+import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.restoid.data.AppInfoRepository
 import app.restoid.data.RepositoriesRepository
 import app.restoid.data.ResticRepository
 import app.restoid.data.SnapshotInfo
+import app.restoid.model.AppInfo
 import app.restoid.model.BackupDetail
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,6 +16,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class SnapshotDetailsViewModel(
+    private val application: Application,
     private val repositoriesRepository: RepositoriesRepository,
     private val resticRepository: ResticRepository,
     private val appInfoRepository: AppInfoRepository
@@ -83,28 +86,48 @@ class SnapshotDetailsViewModel(
         }
 
         if (packageNames.isEmpty()) {
+            _backupDetails.value = emptyList()
             return
         }
 
         val appInfos = appInfoRepository.getAppInfoForPackages(packageNames)
-        val details = appInfos.map { appInfo ->
-            val items = mutableListOf<String>()
-            val pkg = appInfo.packageName
+        val appInfoMap = appInfos.associateBy { it.packageName }
 
-            // Infer what was backed up by checking the snapshot's path list
-            snapshot.paths.forEach { path ->
-                when {
-                    (path.startsWith("/data/app/") && path.contains(pkg)) -> if (!items.contains("APK")) items.add("APK")
-                    path == "/data/data/$pkg" -> if (!items.contains("Data")) items.add("Data")
-                    path == "/data/user_de/0/$pkg" -> if (!items.contains("Device Protected Data")) items.add("Device Protected Data")
-                    path == "/storage/emulated/0/Android/data/$pkg" -> if (!items.contains("External Data")) items.add("External Data")
-                    path == "/storage/emulated/0/Android/obb/$pkg" -> if (!items.contains("OBB")) items.add("OBB")
-                    path == "/storage/emulated/0/Android/media/$pkg" -> if (!items.contains("Media")) items.add("Media")
-                }
+        val details = packageNames.map { packageName ->
+            val appInfo = appInfoMap[packageName]
+            val items = findBackedUpItems(snapshot, packageName)
+
+            if (appInfo != null) {
+                // App is installed or was found in cache
+                BackupDetail(appInfo, items)
+            } else {
+                // App not installed and not in cache, create a placeholder
+                val placeholderAppInfo = AppInfo(
+                    name = packageName, // Use package name as the label
+                    packageName = packageName,
+                    icon = application.packageManager.defaultActivityIcon, // Use a generic icon
+                    apkPath = "",
+                    isSelected = false
+                )
+                BackupDetail(placeholderAppInfo, items)
             }
-            BackupDetail(appInfo, if (items.isNotEmpty()) items else listOf("Unknown items"))
         }
-        _backupDetails.value = details.sortedBy { it.appInfo.name }
+        _backupDetails.value = details.sortedBy { it.appInfo.name.lowercase() }
+    }
+
+    private fun findBackedUpItems(snapshot: SnapshotInfo, pkg: String): List<String> {
+        val items = mutableListOf<String>()
+        snapshot.paths.forEach { path ->
+            when {
+                (path.startsWith("/data/app/") && path.contains(pkg)) -> if (!items.contains("APK")) items.add("APK")
+                path == "/data/data/$pkg" -> if (!items.contains("Data")) items.add("Data")
+                path == "/data/user_de/0/$pkg" -> if (!items.contains("Device Protected Data")) items.add("Device Protected Data")
+                path == "/storage/emulated/0/Android/data/$pkg" -> if (!items.contains("External Data")) items.add("External Data")
+                path == "/storage/emulated/0/Android/obb/$pkg" -> if (!items.contains("OBB")) items.add("OBB")
+                path == "/storage/emulated/0/Android/media/$pkg" -> if (!items.contains("Media")) items.add("Media")
+            }
+        }
+        return if (items.isNotEmpty()) items else listOf("Unknown items")
     }
 
 
@@ -127,7 +150,7 @@ class SnapshotDetailsViewModel(
                     val result = resticRepository.forgetSnapshot(repoPath, password, snapshotToForget.id)
                     result.fold(
                         onSuccess = {
-                            // In a real app you might want to navigate back or show a success message
+                            // The list will be refreshed on the home screen automatically.
                         },
                         onFailure = { _error.value = it.message }
                     )

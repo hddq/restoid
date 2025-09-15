@@ -33,6 +33,7 @@ fun SnapshotDetailsScreen(
     val application = LocalContext.current.applicationContext as RestoidApplication
     val viewModel: SnapshotDetailsViewModel = viewModel(
         factory = SnapshotDetailsViewModelFactory(
+            application,
             application.repositoriesRepository,
             application.resticRepository,
             application.appInfoRepository
@@ -98,9 +99,9 @@ fun SnapshotDetailsScreen(
                     Spacer(Modifier.height(16.dp))
                     if (backupDetails.isNotEmpty()) {
                         BackedUpAppsList(backupDetails)
-                    } else {
+                    } else if (!isLoading) {
                         // For legacy snapshots or if processing fails
-                        Text("Raw Paths:", style = MaterialTheme.typography.titleMedium)
+                        Text("Backed up paths:", style = MaterialTheme.typography.titleMedium)
                         LazyColumn {
                             items(snapshot!!.paths) { path ->
                                 Text(path, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
@@ -108,7 +109,7 @@ fun SnapshotDetailsScreen(
                         }
                     }
                 }
-                else -> Text("No snapshot found.")
+                else -> if (!isLoading) Text("No snapshot found.")
             }
 
             if (isForgetting) {

@@ -24,14 +24,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.restoid.RestoidApplication
 import app.restoid.data.ResticState
@@ -55,7 +59,23 @@ fun HomeScreen(
             application.appInfoRepository
         )
     )
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // This effect will trigger a refresh of the snapshot list whenever the screen is resumed.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, uiState.selectedRepo) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                if (uiState.selectedRepo != null && uiState.resticState is ResticState.Installed) {
+                    viewModel.loadSnapshots(uiState.selectedRepo, uiState.resticState)
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     Scaffold(
         floatingActionButton = {
@@ -109,7 +129,7 @@ fun HomeScreen(
                         color = MaterialTheme.colorScheme.error
                     )
                 }
-                uiState.snapshots.isEmpty() -> {
+                uiState.snapshots.isEmpty() && !uiState.isLoading -> {
                     Text(
                         text = "No snapshots found for the selected repository.",
                         style = MaterialTheme.typography.bodyLarge,
