@@ -24,18 +24,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.restoid.RestoidApplication
 import app.restoid.data.ResticState
@@ -59,23 +55,7 @@ fun HomeScreen(
             application.appInfoRepository
         )
     )
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
-    // This effect will trigger a refresh of the snapshot list whenever the screen is resumed.
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner, uiState.selectedRepo) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                if (uiState.selectedRepo != null && uiState.resticState is ResticState.Installed) {
-                    viewModel.loadSnapshots(uiState.selectedRepo, uiState.resticState)
-                }
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
-    }
+    val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         floatingActionButton = {
@@ -129,7 +109,7 @@ fun HomeScreen(
                         color = MaterialTheme.colorScheme.error
                     )
                 }
-                uiState.snapshots.isEmpty() && !uiState.isLoading -> {
+                uiState.snapshots.isEmpty() -> {
                     Text(
                         text = "No snapshots found for the selected repository.",
                         style = MaterialTheme.typography.bodyLarge,
@@ -196,24 +176,33 @@ private fun SnapshotCard(snapshot: SnapshotInfo, apps: List<AppInfo>?, onClick: 
                 )
             }
 
-            if (apps != null && apps.isNotEmpty()) {
-                Text("Apps (${apps.size}):", style = MaterialTheme.typography.labelMedium)
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    apps.take(10).forEach { app ->
-                        Image(
-                            painter = rememberAsyncImagePainter(model = app.icon),
-                            contentDescription = app.name,
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
-                    if (apps.size > 10) {
-                        Text(
-                            "+${apps.size - 10} more",
-                            modifier = Modifier.align(Alignment.CenterVertically)
-                        )
+            // Prioritize tags for the app count as it's the source of truth.
+            val appCount = snapshot.tags.size
+            if (appCount > 0) {
+                Text("Apps ($appCount):", style = MaterialTheme.typography.labelMedium)
+                // Show icons for apps that are still installed.
+                if (apps != null && apps.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val shownApps = apps.take(10)
+                        shownApps.forEach { app ->
+                            Image(
+                                painter = rememberAsyncImagePainter(model = app.icon),
+                                contentDescription = app.name,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+                        // If the total count is greater than the number of icons shown,
+                        // display a "+X more" badge.
+                        val moreCount = appCount - shownApps.size
+                        if (moreCount > 0) {
+                            Text(
+                                "+$moreCount more",
+                            )
+                        }
                     }
                 }
             } else if (snapshot.tags.isEmpty() && snapshot.paths.isNotEmpty()) {
@@ -232,3 +221,4 @@ private fun SnapshotCard(snapshot: SnapshotInfo, apps: List<AppInfo>?, onClick: 
         }
     }
 }
+
