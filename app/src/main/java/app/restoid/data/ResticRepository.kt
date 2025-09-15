@@ -230,7 +230,8 @@ class ResticRepository(private val context: Context) {
             val id = extractJsonField(jsonObj, "short_id") ?: extractJsonField(jsonObj, "id")?.take(8) ?: return null
             val time = extractJsonField(jsonObj, "time") ?: "unknown"
             val paths = extractJsonArrayField(jsonObj, "paths")
-            return SnapshotInfo(id, time, paths)
+            val tags = extractJsonArrayField(jsonObj, "tags")
+            return SnapshotInfo(id, time, paths, tags)
         } catch (e: Exception) {
             return null
         }
@@ -246,6 +247,7 @@ class ResticRepository(private val context: Context) {
         val pattern = "\"$field\"\\s*:\\s*\\[([^\\]]*)\\]"
         val regex = Regex(pattern)
         val match = regex.find(json)?.groupValues?.get(1) ?: return emptyList()
+        if (match.isBlank()) return emptyList()
         return match.split(",")
             .map { it.trim().removeSurrounding("\"") }
             .filter { it.isNotEmpty() }
@@ -267,6 +269,6 @@ class ResticRepository(private val context: Context) {
 data class SnapshotInfo(
     val id: String,
     val time: String,
-    val paths: List<String>
+    val paths: List<String>,
+    val tags: List<String>
 )
-

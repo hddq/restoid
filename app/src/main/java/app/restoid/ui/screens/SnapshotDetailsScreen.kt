@@ -1,20 +1,28 @@
 package app.restoid.ui.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import app.restoid.RestoidApplication
+import app.restoid.data.SnapshotInfo
+import app.restoid.model.BackupDetail
 import app.restoid.ui.snapshot.SnapshotDetailsViewModel
 import app.restoid.ui.snapshot.SnapshotDetailsViewModelFactory
-import app.restoid.data.SnapshotInfo
+import coil.compose.rememberAsyncImagePainter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,11 +34,13 @@ fun SnapshotDetailsScreen(
     val viewModel: SnapshotDetailsViewModel = viewModel(
         factory = SnapshotDetailsViewModelFactory(
             application.repositoriesRepository,
-            application.resticRepository
+            application.resticRepository,
+            application.appInfoRepository
         )
     )
 
     val snapshot by viewModel.snapshot.collectAsState()
+    val backupDetails by viewModel.backupDetails.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
     val showConfirmDialog by viewModel.showConfirmForgetDialog.collectAsState()
@@ -75,35 +85,88 @@ fun SnapshotDetailsScreen(
             }
         }
     ) { padding ->
-        Column(modifier = Modifier.padding(padding).padding(16.dp)) {
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .padding(16.dp)
+        ) {
             when {
-                isLoading -> CircularProgressIndicator()
+                isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                 error != null -> Text("Error: $error", color = MaterialTheme.colorScheme.error)
                 snapshot != null -> {
-                    SnapshotDetailsContent(snapshot!!)
+                    SnapshotDetailsHeader(snapshot!!)
+                    Spacer(Modifier.height(16.dp))
+                    if (backupDetails.isNotEmpty()) {
+                        BackedUpAppsList(backupDetails)
+                    } else {
+                        // For legacy snapshots or if processing fails
+                        Text("Raw Paths:", style = MaterialTheme.typography.titleMedium)
+                        LazyColumn {
+                            items(snapshot!!.paths) { path ->
+                                Text(path, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
+                            }
+                        }
+                    }
                 }
                 else -> Text("No snapshot found.")
             }
 
-            if(isForgetting) {
-                // TODO: Could show a better loading indicator here
-                Text("Forgetting snapshot...")
+            if (isForgetting) {
+                Spacer(Modifier.height(16.dp))
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                Text("Forgetting snapshot...", modifier = Modifier.align(Alignment.CenterHorizontally))
             }
         }
     }
 }
 
 @Composable
-fun SnapshotDetailsContent(snapshot: SnapshotInfo) {
+fun SnapshotDetailsHeader(snapshot: SnapshotInfo) {
     Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text("ID: ${snapshot.id}", style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(8.dp))
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Snapshot Details", style = MaterialTheme.typography.titleLarge)
+            Divider()
+            Text("ID: ${snapshot.id}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
             Text("Time: ${snapshot.time}", style = MaterialTheme.typography.bodyMedium)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text("Paths:", style = MaterialTheme.typography.bodyMedium)
-            snapshot.paths.forEach { path ->
-                Text("  - $path", style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+@Composable
+fun BackedUpAppsList(details: List<BackupDetail>) {
+    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        item {
+            Text("Backed up Apps (${details.size})", style = MaterialTheme.typography.titleMedium)
+        }
+        items(details) { detail ->
+            BackedUpAppCard(detail = detail)
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun BackedUpAppCard(detail: BackupDetail) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.Top) {
+            Image(
+                painter = rememberAsyncImagePainter(model = detail.appInfo.icon),
+                contentDescription = null,
+                modifier = Modifier.size(48.dp)
+            )
+            Spacer(Modifier.width(16.dp))
+            Column {
+                Text(detail.appInfo.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                Text(detail.appInfo.packageName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(8.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    detail.backedUpItems.forEach { item ->
+                        SuggestionChip(onClick = {}, label = { Text(item, style = MaterialTheme.typography.labelSmall) })
+                    }
+                }
             }
         }
     }
@@ -130,4 +193,3 @@ fun ConfirmForgetDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
         }
     )
 }
-

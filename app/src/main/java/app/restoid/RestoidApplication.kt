@@ -1,6 +1,7 @@
 package app.restoid
 
 import android.app.Application
+import app.restoid.data.AppInfoRepository
 import app.restoid.data.NotificationRepository
 import app.restoid.data.RepositoriesRepository
 import app.restoid.data.ResticRepository
@@ -25,6 +26,8 @@ class RestoidApplication : Application() {
         private set
     lateinit var notificationRepository: NotificationRepository
         private set
+    lateinit var appInfoRepository: AppInfoRepository
+        private set
 
     override fun onCreate() {
         super.onCreate()
@@ -43,6 +46,7 @@ class RestoidApplication : Application() {
         resticRepository = ResticRepository(applicationContext)
         repositoriesRepository = RepositoriesRepository(applicationContext)
         notificationRepository = NotificationRepository(applicationContext)
+        appInfoRepository = AppInfoRepository(applicationContext)
 
         // Create notification channels on app start
         notificationRepository.createNotificationChannels()

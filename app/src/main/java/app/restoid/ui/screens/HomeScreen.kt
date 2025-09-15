@@ -1,12 +1,19 @@
 package app.restoid.ui.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Card
@@ -17,96 +24,56 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.rememberCoroutineScope
-import app.restoid.data.PasswordManager
-import app.restoid.data.RepositoriesRepository
-import app.restoid.data.ResticRepository
+import androidx.lifecycle.viewmodel.compose.viewModel
+import app.restoid.RestoidApplication
 import app.restoid.data.ResticState
 import app.restoid.data.SnapshotInfo
+import app.restoid.model.AppInfo
 import app.restoid.ui.components.PasswordDialog
-import kotlinx.coroutines.launch
+import app.restoid.ui.home.HomeViewModel
+import app.restoid.ui.home.HomeViewModelFactory
+import coil.compose.rememberAsyncImagePainter
 
 @Composable
 fun HomeScreen(
     onNavigateToBackup: () -> Unit,
     onSnapshotClick: (String) -> Unit
 ) {
-    val context = LocalContext.current
-    val repositoriesRepository = remember { RepositoriesRepository(context) }
-    val resticRepository = remember { ResticRepository(context) }
-    val coroutineScope = rememberCoroutineScope()
+    val application = LocalContext.current.applicationContext as RestoidApplication
+    val viewModel: HomeViewModel = viewModel(
+        factory = HomeViewModelFactory(
+            application.repositoriesRepository,
+            application.resticRepository,
+            application.appInfoRepository
+        )
+    )
+    val uiState by viewModel.uiState.collectAsState()
 
-    val selectedRepo by repositoriesRepository.selectedRepository.collectAsState()
-    val resticState by resticRepository.resticState.collectAsState()
-
-    var snapshots by remember { mutableStateOf<List<SnapshotInfo>>(emptyList()) }
-    var isLoadingSnapshots by remember { mutableStateOf(false) }
-    var snapshotError by remember { mutableStateOf<String?>(null) }
-    var showPasswordDialog by remember { mutableStateOf(false) }
-    var repositoryNeedingPassword by remember { mutableStateOf<String?>(null) }
-
-    LaunchedEffect(Unit) {
-        repositoriesRepository.loadRepositories()
-        resticRepository.checkResticStatus()
-    }
-
-    // Load snapshots when we have a selected repo and restic is installed
-    LaunchedEffect(selectedRepo, resticState) {
-        val currentRepo = selectedRepo
-        val currentState = resticState
-        if (currentRepo != null && currentState is ResticState.Installed) {
-            val storedPassword = repositoriesRepository.getRepositoryPassword(currentRepo)
-            if (storedPassword != null) {
-                isLoadingSnapshots = true
-                snapshotError = null
-                try {
-                    val result = resticRepository.getSnapshots(currentRepo, storedPassword)
-                    result.fold(
-                        onSuccess = { snapshots = it },
-                        onFailure = { snapshotError = it.message ?: "Failed to load snapshots" }
-                    )
-                } catch (e: Exception) {
-                    snapshotError = e.message ?: "Failed to load snapshots"
-                } finally {
-                    isLoadingSnapshots = false
-                }
-            } else {
-                // No password stored, show password dialog
-                repositoryNeedingPassword = currentRepo
-                showPasswordDialog = true
-                snapshotError = "Password required for repository"
-            }
-        }
-    }
-
-    // Wrapped in Scaffold to add FAB
     Scaffold(
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 text = { Text("Backup") },
                 icon = { Icon(Icons.Filled.Add, contentDescription = "Backup") },
-                onClick = onNavigateToBackup
+                onClick = onNavigateToBackup,
+                // Only show if a repo is selected and restic is ready
+                expanded = uiState.selectedRepo != null && uiState.resticState is ResticState.Installed
             )
         }
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding) // Apply padding from scaffold
-                .padding(16.dp) // Original padding
+                .padding(innerPadding)
+                .padding(16.dp)
         ) {
-            // Restoid title at top left - Material 3 style
             Text(
                 text = "Restoid",
                 style = MaterialTheme.typography.headlineLarge,
@@ -116,58 +83,53 @@ fun HomeScreen(
             )
 
             when {
-                selectedRepo == null -> {
+                uiState.selectedRepo == null -> {
                     Text(
-                        text = "No repository selected",
+                        "No repository selected. Go to settings to add one.",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                resticState !is ResticState.Installed -> {
+                uiState.resticState !is ResticState.Installed -> {
                     Text(
-                        text = "Restic not available",
+                        "Restic not available. Check settings.",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.error
                     )
                 }
-                isLoadingSnapshots -> {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
+                uiState.isLoading -> {
+                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator()
-                        Text(
-                            text = "Loading snapshots...",
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(top = 8.dp)
-                        )
                     }
                 }
-                snapshotError != null -> {
+                uiState.error != null -> {
                     Text(
-                        text = "Error: $snapshotError",
+                        text = "Error: ${uiState.error}",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.error
                     )
                 }
-                snapshots.isEmpty() -> {
+                uiState.snapshots.isEmpty() -> {
                     Text(
-                        text = "No snapshots found",
+                        text = "No snapshots found for the selected repository.",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 else -> {
                     Text(
-                        text = "Snapshots (${snapshots.size})",
+                        text = "Snapshots (${uiState.snapshots.size})",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
-
-                    LazyColumn {
-                        items(snapshots) { snapshot ->
-                            SnapshotCard(snapshot = snapshot, onClick = { onSnapshotClick(snapshot.id) })
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(uiState.snapshots.sortedByDescending { it.time }) { snapshot ->
+                            SnapshotCard(
+                                snapshot = snapshot,
+                                apps = uiState.appInfoMap[snapshot.id],
+                                onClick = { onSnapshotClick(snapshot.id) }
+                            )
                         }
                     }
                 }
@@ -175,70 +137,76 @@ fun HomeScreen(
         }
     }
 
-    // Password dialog
-    if (showPasswordDialog && repositoryNeedingPassword != null) {
+    if (uiState.showPasswordDialogFor != null) {
         PasswordDialog(
             title = "Repository Password Required",
-            message = "Please enter the password for repository: ${repositoryNeedingPassword}",
-            onPasswordEntered = { password ->
-                val repoPath = repositoryNeedingPassword!!
-                showPasswordDialog = false
-                repositoryNeedingPassword = null
-
-                // Load snapshots with the provided password
-                isLoadingSnapshots = true
-                snapshotError = null
-
-                // Use a coroutine to load snapshots
-                coroutineScope.launch {
-                    try {
-                        val result = resticRepository.getSnapshots(repoPath, password)
-                        result.fold(
-                            onSuccess = { snapshots = it },
-                            onFailure = { snapshotError = it.message ?: "Failed to load snapshots" }
-                        )
-                    } catch (e: Exception) {
-                        snapshotError = e.message ?: "Failed to load snapshots"
-                    } finally {
-                        isLoadingSnapshots = false
-                    }
-                }
-            },
-            onDismiss = {
-                showPasswordDialog = false
-                repositoryNeedingPassword = null
-            }
+            message = "Please enter the password for repository: ${uiState.showPasswordDialogFor}",
+            onPasswordEntered = { password -> viewModel.onPasswordEntered(password) },
+            onDismiss = { viewModel.onDismissPasswordDialog() }
         )
     }
 }
 
 @Composable
-private fun SnapshotCard(snapshot: SnapshotInfo, onClick: () -> Unit) {
+private fun SnapshotCard(snapshot: SnapshotInfo, apps: List<AppInfo>?, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp)
             .clickable(onClick = onClick)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                text = snapshot.id.take(8),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = snapshot.time,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            if (snapshot.paths.isNotEmpty()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    text = "Paths: ${snapshot.paths.take(3).joinToString(", ")}${if (snapshot.paths.size > 3) "..." else ""}",
+                    text = snapshot.id.take(8),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Monospace
+                )
+                Text(
+                    text = snapshot.time.take(10), // Just the date part
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            if (apps != null && apps.isNotEmpty()) {
+                Text("Apps (${apps.size}):", style = MaterialTheme.typography.labelMedium)
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    apps.take(10).forEach { app ->
+                        Image(
+                            painter = rememberAsyncImagePainter(model = app.icon),
+                            contentDescription = app.name,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                    if (apps.size > 10) {
+                        Text(
+                            "+${apps.size - 10} more",
+                            modifier = Modifier.align(Alignment.CenterVertically)
+                        )
+                    }
+                }
+            } else if (snapshot.tags.isEmpty() && snapshot.paths.isNotEmpty()) {
+                Text(
+                    text = "Paths: ${snapshot.paths.firstOrNull() ?: ""}...",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                Text(
+                    text = "No app information available for this snapshot.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

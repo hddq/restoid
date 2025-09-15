@@ -2,21 +2,28 @@ package app.restoid.ui.snapshot
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.restoid.data.AppInfoRepository
 import app.restoid.data.RepositoriesRepository
 import app.restoid.data.ResticRepository
 import app.restoid.data.SnapshotInfo
+import app.restoid.model.BackupDetail
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class SnapshotDetailsViewModel(
     private val repositoriesRepository: RepositoriesRepository,
-    private val resticRepository: ResticRepository
+    private val resticRepository: ResticRepository,
+    private val appInfoRepository: AppInfoRepository
 ) : ViewModel() {
 
     private val _snapshot = MutableStateFlow<SnapshotInfo?>(null)
     val snapshot = _snapshot.asStateFlow()
+
+    private val _backupDetails = MutableStateFlow<List<BackupDetail>>(emptyList())
+    val backupDetails = _backupDetails.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
@@ -35,6 +42,7 @@ class SnapshotDetailsViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
+            _backupDetails.value = emptyList() // Clear previous details
             try {
                 val repoPath = repositoriesRepository.selectedRepository.first()
                 val password = repoPath?.let { repositoriesRepository.getRepositoryPassword(it) }
@@ -43,7 +51,9 @@ class SnapshotDetailsViewModel(
                     val result = resticRepository.getSnapshots(repoPath, password)
                     result.fold(
                         onSuccess = { snapshots ->
-                            _snapshot.value = snapshots.find { it.id.startsWith(snapshotId) }
+                            val foundSnapshot = snapshots.find { it.id.startsWith(snapshotId) }
+                            _snapshot.value = foundSnapshot
+                            foundSnapshot?.let { processSnapshot(it) } // Process the found snapshot
                         },
                         onFailure = { _error.value = it.message }
                     )
@@ -57,6 +67,46 @@ class SnapshotDetailsViewModel(
             }
         }
     }
+
+    private suspend fun processSnapshot(snapshot: SnapshotInfo) {
+        // Use tags as the source of truth for package names. Fallback for older snapshots.
+        val packageNames = snapshot.tags.ifEmpty {
+            snapshot.paths.mapNotNull { path ->
+                val parts = path.split('/')
+                // Infer package name from paths like /data/data/com.example.app
+                if (parts.size >= 4 && parts[1] == "data" && (parts[2] == "data" || parts[2] == "user_de")) {
+                    parts.getOrNull(3)
+                } else {
+                    null
+                }
+            }.distinct()
+        }
+
+        if (packageNames.isEmpty()) {
+            return
+        }
+
+        val appInfos = appInfoRepository.getAppInfoForPackages(packageNames)
+        val details = appInfos.map { appInfo ->
+            val items = mutableListOf<String>()
+            val pkg = appInfo.packageName
+
+            // Infer what was backed up by checking the snapshot's path list
+            snapshot.paths.forEach { path ->
+                when {
+                    (path.startsWith("/data/app/") && path.contains(pkg)) -> if (!items.contains("APK")) items.add("APK")
+                    path == "/data/data/$pkg" -> if (!items.contains("Data")) items.add("Data")
+                    path == "/data/user_de/0/$pkg" -> if (!items.contains("Device Protected Data")) items.add("Device Protected Data")
+                    path == "/storage/emulated/0/Android/data/$pkg" -> if (!items.contains("External Data")) items.add("External Data")
+                    path == "/storage/emulated/0/Android/obb/$pkg" -> if (!items.contains("OBB")) items.add("OBB")
+                    path == "/storage/emulated/0/Android/media/$pkg" -> if (!items.contains("Media")) items.add("Media")
+                }
+            }
+            BackupDetail(appInfo, if (items.isNotEmpty()) items else listOf("Unknown items"))
+        }
+        _backupDetails.value = details.sortedBy { it.appInfo.name }
+    }
+
 
     fun onForgetSnapshot() {
         _showConfirmForgetDialog.value = true
@@ -96,4 +146,3 @@ class SnapshotDetailsViewModel(
         _showConfirmForgetDialog.value = false
     }
 }
-
