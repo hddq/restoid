@@ -46,6 +46,7 @@ import androidx.navigation.NavController
 import app.restoid.RestoidApplication
 import app.restoid.model.AppInfo
 import app.restoid.model.BackupDetail
+import app.restoid.ui.snapshot.RestoreTypes
 import app.restoid.ui.snapshot.SnapshotDetailsViewModel
 import app.restoid.ui.snapshot.SnapshotDetailsViewModelFactory
 import coil.compose.rememberAsyncImagePainter
@@ -66,6 +67,7 @@ fun RestoreScreen(navController: NavController, snapshotId: String?) {
 
     val backupDetails by viewModel.backupDetails.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val restoreTypes by viewModel.restoreTypes.collectAsState()
 
     LaunchedEffect(snapshotId) {
         if (snapshotId != null) {
@@ -96,11 +98,18 @@ fun RestoreScreen(navController: NavController, snapshotId: String?) {
             paddingValues = paddingValues,
             backupDetails = backupDetails,
             isLoading = isLoading,
-            onToggleApp = { packageName ->
-                viewModel.toggleRestoreAppSelection(packageName)
-            },
-            onToggleAll = {
-                viewModel.toggleAllRestoreSelection()
+            restoreTypes = restoreTypes,
+            onToggleApp = viewModel::toggleRestoreAppSelection,
+            onToggleAll = viewModel::toggleAllRestoreSelection,
+            onToggleRestoreType = { type, value ->
+                when (type) {
+                    "APK" -> viewModel.setRestoreApk(value)
+                    "Data" -> viewModel.setRestoreData(value)
+                    "Device Protected Data" -> viewModel.setRestoreDeviceProtectedData(value)
+                    "External Data" -> viewModel.setRestoreExternalData(value)
+                    "OBB Data" -> viewModel.setRestoreObb(value)
+                    "Media Data" -> viewModel.setRestoreMedia(value)
+                }
             }
         )
     }
@@ -111,8 +120,10 @@ fun RestoreSelectionContent(
     paddingValues: PaddingValues,
     backupDetails: List<BackupDetail>,
     isLoading: Boolean,
+    restoreTypes: RestoreTypes,
     onToggleApp: (String) -> Unit,
-    onToggleAll: () -> Unit
+    onToggleAll: () -> Unit,
+    onToggleRestoreType: (String, Boolean) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
@@ -137,13 +148,12 @@ fun RestoreSelectionContent(
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
-                    // TODO: Logic for toggling restore types will be needed
-                    RestoreTypeToggle("APK", checked = true) {}
-                    RestoreTypeToggle("Data", checked = true) {}
-                    RestoreTypeToggle("Device Protected Data", checked = true) {}
-                    RestoreTypeToggle("External Data", checked = false) {}
-                    RestoreTypeToggle("OBB Data", checked = false) {}
-                    RestoreTypeToggle("Media Data", checked = false) {}
+                    RestoreTypeToggle("APK", checked = restoreTypes.apk) { onToggleRestoreType("APK", it) }
+                    RestoreTypeToggle("Data", checked = restoreTypes.data) { onToggleRestoreType("Data", it) }
+                    RestoreTypeToggle("Device Protected Data", checked = restoreTypes.deviceProtectedData) { onToggleRestoreType("Device Protected Data", it) }
+                    RestoreTypeToggle("External Data", checked = restoreTypes.externalData) { onToggleRestoreType("External Data", it) }
+                    RestoreTypeToggle("OBB Data", checked = restoreTypes.obb) { onToggleRestoreType("OBB Data", it) }
+                    RestoreTypeToggle("Media Data", checked = restoreTypes.media) { onToggleRestoreType("Media Data", it) }
                 }
             }
         }

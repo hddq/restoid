@@ -44,11 +44,10 @@ class MainActivity : ComponentActivity() {
 
                 Scaffold(
                     bottomBar = {
-                        // Do not show bottom bar on screens that are not main tabs
-                        val isMainScreen = currentDestination?.hierarchy?.any {
-                            it.route == Screen.Home.route || it.route == Screen.Settings.route
-                        } == true
-                        if (isMainScreen) {
+                        // Do not show bottom bar on screens that take up the full view
+                        if (currentDestination?.route != Screen.Backup.route &&
+                            currentDestination?.route?.startsWith(Screen.SnapshotDetails.route) == false &&
+                            currentDestination?.route?.startsWith(Screen.Restore.route) == false) {
                             val items = listOf(
                                 Screen.Home to Icons.Default.Home,
                                 Screen.Settings to Icons.Default.Settings

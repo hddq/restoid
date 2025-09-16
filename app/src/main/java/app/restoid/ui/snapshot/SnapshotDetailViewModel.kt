@@ -15,6 +15,16 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+// Data class to hold the state of restore types
+data class RestoreTypes(
+    val apk: Boolean = true,
+    val data: Boolean = true,
+    val deviceProtectedData: Boolean = true,
+    val externalData: Boolean = false,
+    val obb: Boolean = false,
+    val media: Boolean = false
+)
+
 class SnapshotDetailsViewModel(
     private val application: Application,
     private val repositoriesRepository: RepositoriesRepository,
@@ -39,6 +49,9 @@ class SnapshotDetailsViewModel(
 
     private val _isForgetting = MutableStateFlow(false)
     val isForgetting = _isForgetting.asStateFlow()
+
+    private val _restoreTypes = MutableStateFlow(RestoreTypes())
+    val restoreTypes = _restoreTypes.asStateFlow()
 
 
     fun loadSnapshotDetails(snapshotId: String) {
@@ -98,7 +111,7 @@ class SnapshotDetailsViewModel(
             val items = findBackedUpItems(snapshot, packageName)
 
             if (appInfo != null) {
-                // App is installed or was found in cache
+                // App is installed or was found in cache, default to selected
                 BackupDetail(appInfo.copy(isSelected = true), items)
             } else {
                 // App not installed and not in cache, create a placeholder
@@ -190,5 +203,13 @@ class SnapshotDetailsViewModel(
     fun cancelForgetSnapshot() {
         _showConfirmForgetDialog.value = false
     }
+
+    // --- Restore Type Toggles ---
+    fun setRestoreApk(value: Boolean) = _restoreTypes.update { it.copy(apk = value) }
+    fun setRestoreData(value: Boolean) = _restoreTypes.update { it.copy(data = value) }
+    fun setRestoreDeviceProtectedData(value: Boolean) = _restoreTypes.update { it.copy(deviceProtectedData = value) }
+    fun setRestoreExternalData(value: Boolean) = _restoreTypes.update { it.copy(externalData = value) }
+    fun setRestoreObb(value: Boolean) = _restoreTypes.update { it.copy(obb = value) }
+    fun setRestoreMedia(value: Boolean) = _restoreTypes.update { it.copy(media = value) }
 }
 
