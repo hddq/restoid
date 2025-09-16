@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import app.restoid.RestoidApplication
+import app.restoid.Screen
 import app.restoid.data.SnapshotInfo
 import app.restoid.model.BackupDetail
 import app.restoid.ui.snapshot.SnapshotDetailsViewModel
@@ -71,17 +73,25 @@ fun SnapshotDetailsScreen(
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
+                },
+                actions = {
+                    if (snapshot != null) {
+                        IconButton(onClick = { viewModel.onForgetSnapshot() }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Forget Snapshot")
+                        }
+                    }
                 }
             )
         },
         floatingActionButton = {
             if (snapshot != null) {
                 ExtendedFloatingActionButton(
-                    text = { Text("Forget") },
-                    icon = { Icon(Icons.Default.Delete, contentDescription = "Forget Snapshot") },
-                    onClick = { viewModel.onForgetSnapshot() },
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                    text = { Text("Restore") },
+                    icon = { Icon(Icons.Default.Restore, contentDescription = "Restore Snapshot") },
+                    onClick = {
+                        // Navigate to the new Restore screen with the current snapshotId
+                        navController.navigate("${Screen.Restore.route}/$snapshotId")
+                    }
                 )
             }
         }

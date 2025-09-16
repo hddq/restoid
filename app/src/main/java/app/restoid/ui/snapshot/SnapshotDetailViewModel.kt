@@ -99,7 +99,7 @@ class SnapshotDetailsViewModel(
 
             if (appInfo != null) {
                 // App is installed or was found in cache
-                BackupDetail(appInfo, items)
+                BackupDetail(appInfo.copy(isSelected = true), items)
             } else {
                 // App not installed and not in cache, create a placeholder
                 val placeholderAppInfo = AppInfo(
@@ -107,7 +107,7 @@ class SnapshotDetailsViewModel(
                     packageName = packageName,
                     icon = application.packageManager.defaultActivityIcon, // Use a generic icon
                     apkPath = "",
-                    isSelected = false
+                    isSelected = true // Default to selected
                 )
                 BackupDetail(placeholderAppInfo, items)
             }
@@ -130,6 +130,28 @@ class SnapshotDetailsViewModel(
         return if (items.isNotEmpty()) items else listOf("Unknown items")
     }
 
+
+    fun toggleRestoreAppSelection(packageName: String) {
+        _backupDetails.update { currentDetails ->
+            currentDetails.map { detail ->
+                if (detail.appInfo.packageName == packageName) {
+                    detail.copy(appInfo = detail.appInfo.copy(isSelected = !detail.appInfo.isSelected))
+                } else {
+                    detail
+                }
+            }
+        }
+    }
+
+    fun toggleAllRestoreSelection() {
+        _backupDetails.update { currentDetails ->
+            // If any app is not selected, select all. Otherwise, deselect all.
+            val shouldSelectAll = currentDetails.any { !it.appInfo.isSelected }
+            currentDetails.map { detail ->
+                detail.copy(appInfo = detail.appInfo.copy(isSelected = shouldSelectAll))
+            }
+        }
+    }
 
     fun onForgetSnapshot() {
         _showConfirmForgetDialog.value = true
@@ -169,3 +191,4 @@ class SnapshotDetailsViewModel(
         _showConfirmForgetDialog.value = false
     }
 }
+

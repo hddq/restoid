@@ -27,6 +27,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import app.restoid.ui.screens.BackupScreen
 import app.restoid.ui.screens.HomeScreen
+import app.restoid.ui.screens.RestoreScreen
 import app.restoid.ui.screens.SettingsScreen
 import app.restoid.ui.screens.SnapshotDetailsScreen
 import app.restoid.ui.theme.RestoidTheme
@@ -43,8 +44,11 @@ class MainActivity : ComponentActivity() {
 
                 Scaffold(
                     bottomBar = {
-                        // Do not show bottom bar on the backup or snapshot details screen
-                        if (currentDestination?.route != Screen.Backup.route && currentDestination?.route?.startsWith(Screen.SnapshotDetails.route) == false) {
+                        // Do not show bottom bar on screens that are not main tabs
+                        val isMainScreen = currentDestination?.hierarchy?.any {
+                            it.route == Screen.Home.route || it.route == Screen.Settings.route
+                        } == true
+                        if (isMainScreen) {
                             val items = listOf(
                                 Screen.Home to Icons.Default.Home,
                                 Screen.Settings to Icons.Default.Settings
@@ -83,18 +87,17 @@ class MainActivity : ComponentActivity() {
                     NavHost(
                         navController = navController,
                         startDestination = Screen.Home.route,
-                        // The padding is applied to each screen's content below
+                        modifier = Modifier.padding(innerPadding)
                     ) {
                         composable(Screen.Home.route) {
                             HomeScreen(
                                 onSnapshotClick = { snapshotId ->
                                     navController.navigate("${Screen.SnapshotDetails.route}/$snapshotId")
-                                },
-                                modifier = Modifier.padding(innerPadding)
+                                }
                             )
                         }
                         composable(Screen.Settings.route) {
-                            SettingsScreen(modifier = Modifier.padding(innerPadding))
+                            SettingsScreen()
                         }
                         composable(Screen.Backup.route) {
                             BackupScreen(onNavigateUp = { navController.navigateUp() })
@@ -104,6 +107,15 @@ class MainActivity : ComponentActivity() {
                             arguments = listOf(navArgument("snapshotId") { type = NavType.StringType })
                         ) { backStackEntry ->
                             SnapshotDetailsScreen(
+                                navController = navController,
+                                snapshotId = backStackEntry.arguments?.getString("snapshotId")
+                            )
+                        }
+                        composable(
+                            route = "${Screen.Restore.route}/{snapshotId}",
+                            arguments = listOf(navArgument("snapshotId") { type = NavType.StringType })
+                        ) { backStackEntry ->
+                            RestoreScreen(
                                 navController = navController,
                                 snapshotId = backStackEntry.arguments?.getString("snapshotId")
                             )
