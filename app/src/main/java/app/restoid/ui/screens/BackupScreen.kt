@@ -250,61 +250,72 @@ fun BackupSelectionContent(
     isLoading: Boolean,
     backupTypes: BackupTypes
 ) {
-    Column(
+    LazyColumn(
         modifier = Modifier
             .padding(paddingValues)
-            .fillMaxSize()
+            .fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Top side: Backup types
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text("Backup Types", style = MaterialTheme.typography.titleMedium)
-            Divider(modifier = Modifier.padding(vertical = 8.dp))
-            BackupTypeCheckbox("APK", backupTypes.apk) { viewModel.setBackupApk(it) }
-            BackupTypeCheckbox("Data", backupTypes.data) { viewModel.setBackupData(it) }
-            BackupTypeCheckbox("Device Protected Data", backupTypes.deviceProtectedData) { viewModel.setBackupDeviceProtectedData(it) }
-            BackupTypeCheckbox("External Data", backupTypes.externalData) { viewModel.setBackupExternalData(it) }
-            BackupTypeCheckbox("OBB Data", backupTypes.obb) { viewModel.setBackupObb(it) }
-            BackupTypeCheckbox("Media Data", backupTypes.media) { viewModel.setBackupMedia(it) }
+        // Backup Types Card
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceBright
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "Backup Types",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    BackupTypeToggle("APK", backupTypes.apk) { viewModel.setBackupApk(it) }
+                    BackupTypeToggle("Data", backupTypes.data) { viewModel.setBackupData(it) }
+                    BackupTypeToggle("Device Protected Data", backupTypes.deviceProtectedData) { viewModel.setBackupDeviceProtectedData(it) }
+                    BackupTypeToggle("External Data", backupTypes.externalData) { viewModel.setBackupExternalData(it) }
+                    BackupTypeToggle("OBB Data", backupTypes.obb) { viewModel.setBackupObb(it) }
+                    BackupTypeToggle("Media Data", backupTypes.media) { viewModel.setBackupMedia(it) }
+                }
+            }
         }
 
-        Divider()
-
-        // Bottom side: App selection
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-        ) {
+        // Apps Header
+        item {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Apps", style = MaterialTheme.typography.titleMedium)
-                Button(onClick = { viewModel.toggleAll() }) {
+                Text(
+                    text = "Apps",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                FilledTonalButton(onClick = { viewModel.toggleAll() }) {
                     Text("Toggle All")
                 }
             }
-            if (isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        }
+
+        // Apps List
+        if (isLoading) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    contentAlignment = Alignment.Center
+                ) {
                     CircularProgressIndicator()
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp)
-                ) {
-                    items(apps, key = { it.packageName }) { app ->
-                        AppListItem(app = app) { viewModel.toggleAppSelection(app.packageName) }
-                    }
-                }
+            }
+        } else {
+            items(apps, key = { it.packageName }) { app ->
+                AppListItem(app = app) { viewModel.toggleAppSelection(app.packageName) }
             }
         }
     }
@@ -312,47 +323,62 @@ fun BackupSelectionContent(
 
 @Composable
 fun AppListItem(app: AppInfo, onToggle: () -> Unit) {
-    Row(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onToggle)
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .clickable(onClick = onToggle),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceBright
+        )
     ) {
-        Image(
-            painter = rememberAsyncImagePainter(model = app.icon),
-            contentDescription = null,
-            modifier = Modifier.size(48.dp)
-        )
-        Spacer(Modifier.width(16.dp))
-        Text(
-            text = app.name,
-            modifier = Modifier.weight(1f),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.bodyLarge
-        )
-        Spacer(Modifier.width(16.dp))
-        Checkbox(
-            checked = app.isSelected,
-            onCheckedChange = { onToggle() }
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Image(
+                painter = rememberAsyncImagePainter(model = app.icon),
+                contentDescription = app.name,
+                modifier = Modifier.size(48.dp)
+            )
+            Spacer(Modifier.width(16.dp))
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = app.name,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            Switch(
+                checked = app.isSelected,
+                onCheckedChange = { onToggle() }
+            )
+        }
     }
 }
 
 @Composable
-fun BackupTypeCheckbox(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+fun BackupTypeToggle(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onCheckedChange(!checked) },
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Checkbox(
+        Text(
+            text = label, 
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f)
+        )
+        Switch(
             checked = checked,
             onCheckedChange = onCheckedChange
         )
-        Spacer(Modifier.width(8.dp))
-        Text(text = label, style = MaterialTheme.typography.bodyLarge)
     }
 }
