@@ -6,8 +6,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -36,12 +38,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             RestoidTheme {
                 val navController = rememberNavController()
+                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentDestination = navBackStackEntry?.destination
 
                 Scaffold(
                     bottomBar = {
-                        val navBackStackEntry by navController.currentBackStackEntryAsState()
-                        val currentDestination = navBackStackEntry?.destination
-
                         // Do not show bottom bar on the backup or snapshot details screen
                         if (currentDestination?.route != Screen.Backup.route && currentDestination?.route?.startsWith(Screen.SnapshotDetails.route) == false) {
                             val items = listOf(
@@ -67,22 +68,34 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         }
+                    },
+                    floatingActionButton = {
+                        // Show FAB only on HomeScreen
+                        if (currentDestination?.route == Screen.Home.route) {
+                            ExtendedFloatingActionButton(
+                                text = { Text("Backup") },
+                                icon = { Icon(Icons.Filled.Add, contentDescription = "Backup") },
+                                onClick = { navController.navigate(Screen.Backup.route) }
+                            )
+                        }
                     }
                 ) { innerPadding ->
                     NavHost(
                         navController = navController,
                         startDestination = Screen.Home.route,
-                        modifier = Modifier.padding(innerPadding)
+                        // The padding is applied to each screen's content below
                     ) {
                         composable(Screen.Home.route) {
                             HomeScreen(
-                                onNavigateToBackup = { navController.navigate(Screen.Backup.route) },
                                 onSnapshotClick = { snapshotId ->
                                     navController.navigate("${Screen.SnapshotDetails.route}/$snapshotId")
-                                }
+                                },
+                                modifier = Modifier.padding(innerPadding)
                             )
                         }
-                        composable(Screen.Settings.route) { SettingsScreen() }
+                        composable(Screen.Settings.route) {
+                            SettingsScreen(modifier = Modifier.padding(innerPadding))
+                        }
                         composable(Screen.Backup.route) {
                             BackupScreen(onNavigateUp = { navController.navigateUp() })
                         }
@@ -101,4 +114,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-

@@ -57,7 +57,7 @@ import app.restoid.ui.settings.SettingsViewModel
 import app.restoid.ui.settings.SettingsViewModelFactory
 
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(modifier: Modifier = Modifier) {
     val application = LocalContext.current.applicationContext as RestoidApplication
     val settingsViewModel: SettingsViewModel = viewModel(
         factory = SettingsViewModelFactory(
@@ -132,7 +132,7 @@ fun SettingsScreen() {
     }
 
     LazyColumn(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -583,4 +583,3 @@ private fun getPathFromTreeUri(treeUri: Uri): String? {
     }
     return null
 }
-

@@ -14,14 +14,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -44,8 +39,8 @@ import coil.compose.rememberAsyncImagePainter
 
 @Composable
 fun HomeScreen(
-    onNavigateToBackup: () -> Unit,
-    onSnapshotClick: (String) -> Unit
+    onSnapshotClick: (String) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val application = LocalContext.current.applicationContext as RestoidApplication
     val viewModel: HomeViewModel = viewModel(
@@ -57,85 +52,73 @@ fun HomeScreen(
     )
     val uiState by viewModel.uiState.collectAsState()
 
-    Scaffold(
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                text = { Text("Backup") },
-                icon = { Icon(Icons.Filled.Add, contentDescription = "Backup") },
-                onClick = onNavigateToBackup,
-                // Only show if a repo is selected and restic is ready
-                expanded = uiState.selectedRepo != null && uiState.resticState is ResticState.Installed
-            )
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(16.dp)
-        ) {
-            Text(
-                text = "Restoid",
-                style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 24.dp)
-            )
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "Restoid",
+            style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 24.dp)
+        )
 
-            when {
-                uiState.selectedRepo == null -> {
-                    Text(
-                        "No repository selected. Go to settings to add one.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+        when {
+            uiState.selectedRepo == null -> {
+                Text(
+                    "No repository selected. Go to settings to add one.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            uiState.resticState !is ResticState.Installed -> {
+                Text(
+                    "Restic not available. Check settings.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+            uiState.isLoading -> {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
                 }
-                uiState.resticState !is ResticState.Installed -> {
-                    Text(
-                        "Restic not available. Check settings.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-                uiState.isLoading -> {
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                }
-                uiState.error != null -> {
-                    Text(
-                        text = "Error: ${uiState.error}",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-                uiState.snapshots.isEmpty() -> {
-                    Text(
-                        text = "No snapshots found for the selected repository.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                else -> {
-                    Text(
-                        text = "Snapshots (${uiState.snapshots.size})",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(uiState.snapshots.sortedByDescending { it.time }) { snapshot ->
-                            SnapshotCard(
-                                snapshot = snapshot,
-                                apps = uiState.appInfoMap[snapshot.id],
-                                onClick = { onSnapshotClick(snapshot.id) }
-                            )
-                        }
+            }
+            uiState.error != null -> {
+                Text(
+                    text = "Error: ${uiState.error}",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+            uiState.snapshots.isEmpty() -> {
+                Text(
+                    text = "No snapshots found for the selected repository.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            else -> {
+                Text(
+                    text = "Snapshots (${uiState.snapshots.size})",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(uiState.snapshots.sortedByDescending { it.time }) { snapshot ->
+                        SnapshotCard(
+                            snapshot = snapshot,
+                            apps = uiState.appInfoMap[snapshot.id],
+                            onClick = { onSnapshotClick(snapshot.id) }
+                        )
                     }
                 }
             }
         }
     }
+
 
     if (uiState.showPasswordDialogFor != null) {
         PasswordDialog(
@@ -221,4 +204,3 @@ private fun SnapshotCard(snapshot: SnapshotInfo, apps: List<AppInfo>?, onClick: 
         }
     }
 }
-
