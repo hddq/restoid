@@ -15,6 +15,7 @@ import java.io.ByteArrayOutputStream
 data class CachedAppInfo(
     val name: String,
     val packageName: String,
+    val versionName: String,
     val apkPath: String,
     val iconBase64: String
 )
@@ -23,6 +24,7 @@ fun CachedAppInfo.toAppInfo(context: Context): AppInfo {
     return AppInfo(
         name = this.name,
         packageName = this.packageName,
+        versionName = this.versionName,
         apkPath = this.apkPath,
         icon = this.iconBase64.base64ToDrawable(context)
     )
@@ -32,6 +34,7 @@ fun AppInfo.toCachedAppInfo(): CachedAppInfo {
     return CachedAppInfo(
         name = this.name,
         packageName = this.packageName,
+        versionName = this.versionName,
         apkPath = this.apkPath,
         iconBase64 = this.icon.toBase64()
     )

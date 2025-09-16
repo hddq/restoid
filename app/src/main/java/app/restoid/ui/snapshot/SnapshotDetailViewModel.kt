@@ -85,18 +85,7 @@ class SnapshotDetailsViewModel(
     }
 
     private suspend fun processSnapshot(snapshot: SnapshotInfo) {
-        // Use tags as the source of truth for package names. Fallback for older snapshots.
-        val packageNames = snapshot.tags.ifEmpty {
-            snapshot.paths.mapNotNull { path ->
-                val parts = path.split('/')
-                // Infer package name from paths like /data/data/com.example.app
-                if (parts.size >= 4 && parts[1] == "data" && (parts[2] == "data" || parts[2] == "user_de")) {
-                    parts.getOrNull(3)
-                } else {
-                    null
-                }
-            }.distinct()
-        }
+        val packageNames = snapshot.tags.map { it.split('|').first() }
 
         if (packageNames.isEmpty()) {
             _backupDetails.value = emptyList()
@@ -106,27 +95,30 @@ class SnapshotDetailsViewModel(
         val appInfos = appInfoRepository.getAppInfoForPackages(packageNames)
         val appInfoMap = appInfos.associateBy { it.packageName }
 
-        val details = packageNames.map { packageName ->
+        val details = snapshot.tags.map { tag ->
+            val parts = tag.split('|')
+            val packageName = parts.getOrNull(0) ?: ""
+            val versionName = parts.getOrNull(1)
+            val backupSize = parts.getOrNull(2)?.toLongOrNull()
+
             val appInfo = appInfoMap[packageName]
             val items = findBackedUpItems(snapshot, packageName)
 
-            if (appInfo != null) {
-                // App is installed or was found in cache, default to selected
-                BackupDetail(appInfo.copy(isSelected = true), items)
-            } else {
-                // App not installed and not in cache, create a placeholder
-                val placeholderAppInfo = AppInfo(
-                    name = packageName, // Use package name as the label
-                    packageName = packageName,
-                    icon = application.packageManager.defaultActivityIcon, // Use a generic icon
-                    apkPath = "",
-                    isSelected = true // Default to selected
-                )
-                BackupDetail(placeholderAppInfo, items)
-            }
+            val finalAppInfo = appInfo ?: AppInfo(
+                name = packageName,
+                packageName = packageName,
+                versionName = versionName ?: "N/A",
+                icon = application.packageManager.defaultActivityIcon,
+                apkPath = "",
+                isSelected = true
+            )
+
+            BackupDetail(finalAppInfo, items, versionName, backupSize)
         }
+
         _backupDetails.value = details.sortedBy { it.appInfo.name.lowercase() }
     }
+
 
     private fun findBackedUpItems(snapshot: SnapshotInfo, pkg: String): List<String> {
         val items = mutableListOf<String>()
@@ -212,4 +204,3 @@ class SnapshotDetailsViewModel(
     fun setRestoreObb(value: Boolean) = _restoreTypes.update { it.copy(obb = value) }
     fun setRestoreMedia(value: Boolean) = _restoreTypes.update { it.copy(media = value) }
 }
-

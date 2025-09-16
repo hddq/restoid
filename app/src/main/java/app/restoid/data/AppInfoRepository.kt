@@ -119,6 +119,7 @@ class AppInfoRepository(private val context: Context) {
                         val info = AppInfo(
                             name = appInfo.loadLabel(pm).toString(),
                             packageName = appInfo.packageName,
+                            versionName = packageInfo.versionName ?: "N/A",
                             icon = appInfo.loadIcon(pm),
                             apkPath = apkPath
                         )
@@ -137,4 +138,3 @@ class AppInfoRepository(private val context: Context) {
         }
     }
 }
-

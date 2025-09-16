@@ -120,21 +120,31 @@ class BackupViewModel(
                 val password = repositoriesRepository.getRepositoryPassword(selectedRepoPath)!!
                 val selectedApps = _apps.value.filter { it.isSelected }
 
-                // --- Generate file list for restic ---
-                updateProgress(currentAction = "Scanning files...")
-                val pathsToBackup = generateFilePathsToBackup(selectedApps)
-                val existingPathsToBackup = pathsToBackup.filter { Shell.cmd("[ -e '$it' ]").exec().isSuccess }
+                // --- Generate file list and tags ---
+                updateProgress(currentAction = "Calculating sizes...")
+                val pathsToBackup = mutableListOf<String>()
+                val tags = selectedApps.map { app ->
+                    val appPaths = generateFilePathsForApp(app)
+                    val existingAppPaths = appPaths.filter { Shell.cmd("[ -e '$it' ]").exec().isSuccess }
+                    pathsToBackup.addAll(existingAppPaths)
+                    val size = getDirectorySize(existingAppPaths)
+                    // Format: "packageName|versionName|sizeInBytes"
+                    // We replace '|' in the version name to avoid parsing issues.
+                    "${app.packageName}|${app.versionName.replace('|', ':')}|$size"
+                }
 
-                if (existingPathsToBackup.isEmpty()) {
+
+                if (pathsToBackup.isEmpty()) {
                     _backupProgress.value = BackupProgress(isFinished = true, error = "No files found to back up for the selected apps.", finalSummary = "No files found to back up.")
                     return@launch
                 }
 
-                fileList.writeText(existingPathsToBackup.joinToString("\n"))
+                fileList.writeText(pathsToBackup.distinct().joinToString("\n"))
 
                 // --- Execute restic backup command ---
                 updateProgress(currentAction = "Starting backup command...")
-                val command = "${resticState.path} -r '$selectedRepoPath' backup --files-from '${fileList.absolutePath}' --json --verbose=2 --tag ${selectedApps.joinToString(",") { it.packageName }}"
+                val tagFlags = tags.joinToString(" ") { "--tag '$it'" }
+                val command = "${resticState.path} -r '$selectedRepoPath' backup --files-from '${fileList.absolutePath}' --json --verbose=2 $tagFlags"
                 val sanitizedPassword = password.replace("'", "'\\''")
 
                 val stdoutCallback = object : CallbackList<String>() {
@@ -216,19 +226,31 @@ class BackupViewModel(
         return null // All checks passed
     }
 
-    private fun generateFilePathsToBackup(selectedApps: List<AppInfo>): List<String> {
+    private fun generateFilePathsForApp(app: AppInfo): List<String> {
         val backupOptions = _backupTypes.value
-        return selectedApps.flatMap { app ->
-            val pkg = app.packageName
-            mutableListOf<String>().apply {
-                if (backupOptions.apk) File(app.apkPath).parentFile?.absolutePath?.let { add(it) }
-                if (backupOptions.data) add("/data/data/$pkg")
-                if (backupOptions.deviceProtectedData) add("/data/user_de/0/$pkg")
-                if (backupOptions.externalData) add("/storage/emulated/0/Android/data/$pkg")
-                if (backupOptions.obb) add("/storage/emulated/0/Android/obb/$pkg")
-                if (backupOptions.media) add("/storage/emulated/0/Android/media/$pkg")
+        return mutableListOf<String>().apply {
+            if (backupOptions.apk) File(app.apkPath).parentFile?.absolutePath?.let { add(it) }
+            if (backupOptions.data) add("/data/data/${app.packageName}")
+            if (backupOptions.deviceProtectedData) add("/data/user_de/0/${app.packageName}")
+            if (backupOptions.externalData) add("/storage/emulated/0/Android/data/${app.packageName}")
+            if (backupOptions.obb) add("/storage/emulated/0/Android/obb/${app.packageName}")
+            if (backupOptions.media) add("/storage/emulated/0/Android/media/${app.packageName}")
+        }
+    }
+
+    private fun getDirectorySize(paths: List<String>): Long {
+        if (paths.isEmpty()) return 0L
+        // Use `du -sb` which gives total size in bytes.
+        val command = "du -sb ${paths.joinToString(" ") { "'$it'" }}"
+        val result = Shell.cmd(command).exec()
+        var totalSize = 0L
+        if (result.isSuccess) {
+            result.out.forEach { line ->
+                // The output is like "12345 /path/to/dir"
+                totalSize += line.trim().split("\\s+".toRegex()).firstOrNull()?.toLongOrNull() ?: 0L
             }
         }
+        return totalSize
     }
 
     private fun updateProgress(currentAction: String) {
@@ -265,4 +287,3 @@ class BackupViewModel(
     fun setBackupObb(value: Boolean) = _backupTypes.update { it.copy(obb = value) }
     fun setBackupMedia(value: Boolean) = _backupTypes.update { it.copy(media = value) }
 }
-

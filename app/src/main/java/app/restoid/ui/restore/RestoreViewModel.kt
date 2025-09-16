@@ -108,16 +108,7 @@ class RestoreViewModel(
     }
 
     private suspend fun processSnapshot(snapshot: SnapshotInfo) {
-        val packageNames = snapshot.tags.ifEmpty {
-            snapshot.paths.mapNotNull { path ->
-                val parts = path.split('/')
-                if (parts.size >= 4 && parts[1] == "data" && (parts[2] == "data" || parts[2] == "user_de")) {
-                    parts.getOrNull(3)
-                } else {
-                    null
-                }
-            }.distinct()
-        }
+        val packageNames = snapshot.tags.map { it.split('|').first() }
 
         if (packageNames.isEmpty()) {
             _backupDetails.value = emptyList()
@@ -127,25 +118,29 @@ class RestoreViewModel(
         val appInfos = appInfoRepository.getAppInfoForPackages(packageNames)
         val appInfoMap = appInfos.associateBy { it.packageName }
 
-        val details = packageNames.map { packageName ->
+        val details = snapshot.tags.map { tag ->
+            val parts = tag.split('|')
+            val packageName = parts.getOrNull(0) ?: ""
+            val versionName = parts.getOrNull(1)
+            val backupSize = parts.getOrNull(2)?.toLongOrNull()
+
             val appInfo = appInfoMap[packageName]
             val items = findBackedUpItems(snapshot, packageName)
 
-            if (appInfo != null) {
-                BackupDetail(appInfo.copy(isSelected = true), items)
-            } else {
-                val placeholderAppInfo = AppInfo(
-                    name = packageName,
-                    packageName = packageName,
-                    icon = application.packageManager.defaultActivityIcon,
-                    apkPath = "",
-                    isSelected = true
-                )
-                BackupDetail(placeholderAppInfo, items)
-            }
+            val finalAppInfo = appInfo ?: AppInfo(
+                name = packageName,
+                packageName = packageName,
+                versionName = versionName ?: "N/A",
+                icon = application.packageManager.defaultActivityIcon,
+                apkPath = "",
+                isSelected = true
+            )
+
+            BackupDetail(finalAppInfo, items, versionName, backupSize)
         }
         _backupDetails.value = details.sortedBy { it.appInfo.name.lowercase() }
     }
+
 
     private fun findBackedUpItems(snapshot: SnapshotInfo, pkg: String): List<String> {
         val items = mutableListOf<String>()
@@ -187,7 +182,7 @@ class RestoreViewModel(
 
                 // --- Restore Logic ---
                 // For now, restore only the first app's APK as requested.
-                val firstAppPkg = currentSnapshot.tags.firstOrNull()
+                val firstAppPkg = currentSnapshot.tags.firstOrNull()?.split("|")?.first()
                     ?: throw IllegalStateException("Snapshot has no tagged apps to restore.")
 
                 val apkPathToRestore = currentSnapshot.paths.find { it.startsWith("/data/app/") && it.contains(firstAppPkg) }

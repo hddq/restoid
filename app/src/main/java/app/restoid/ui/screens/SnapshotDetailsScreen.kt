@@ -1,5 +1,6 @@
 package app.restoid.ui.screens
 
+import android.text.format.Formatter
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -158,6 +159,7 @@ fun BackedUpAppsList(details: List<BackupDetail>) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun BackedUpAppCard(detail: BackupDetail) {
+    val context = LocalContext.current
     Card(modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.Top) {
             Image(
@@ -168,7 +170,14 @@ fun BackedUpAppCard(detail: BackupDetail) {
             Spacer(Modifier.width(16.dp))
             Column {
                 Text(detail.appInfo.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                Text(detail.appInfo.packageName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+                val versionInfo = detail.versionName ?: "N/A"
+                val sizeInfo = detail.backupSize?.let { Formatter.formatShortFileSize(context, it) } ?: "N/A"
+                Text(
+                    "Version: $versionInfo • Size: $sizeInfo",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Spacer(Modifier.height(8.dp))
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
