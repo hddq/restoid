@@ -3,6 +3,7 @@ package app.restoid.data
 import android.content.Context
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
+import android.os.Build
 import app.restoid.model.AppInfo
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
@@ -120,6 +121,12 @@ class AppInfoRepository(private val context: Context) {
                             name = appInfo.loadLabel(pm).toString(),
                             packageName = appInfo.packageName,
                             versionName = packageInfo.versionName ?: "N/A",
+                            versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                                packageInfo.longVersionCode
+                            } else {
+                                @Suppress("DEPRECATION")
+                                packageInfo.versionCode.toLong()
+                            },
                             icon = appInfo.loadIcon(pm),
                             apkPath = apkPath
                         )
@@ -138,3 +145,4 @@ class AppInfoRepository(private val context: Context) {
         }
     }
 }
+

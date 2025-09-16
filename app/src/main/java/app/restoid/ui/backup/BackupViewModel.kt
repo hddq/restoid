@@ -128,9 +128,9 @@ class BackupViewModel(
                     val existingAppPaths = appPaths.filter { Shell.cmd("[ -e '$it' ]").exec().isSuccess }
                     pathsToBackup.addAll(existingAppPaths)
                     val size = getDirectorySize(existingAppPaths)
-                    // Format: "packageName|versionName|sizeInBytes"
+                    // Format: "packageName|versionName|versionCode|sizeInBytes"
                     // We replace '|' in the version name to avoid parsing issues.
-                    "${app.packageName}|${app.versionName.replace('|', ':')}|$size"
+                    "${app.packageName}|${app.versionName.replace('|', ':')}|${app.versionCode}|$size"
                 }
 
 
@@ -287,3 +287,4 @@ class BackupViewModel(
     fun setBackupObb(value: Boolean) = _backupTypes.update { it.copy(obb = value) }
     fun setBackupMedia(value: Boolean) = _backupTypes.update { it.copy(media = value) }
 }
+

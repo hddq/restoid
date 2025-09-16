@@ -1,6 +1,7 @@
 package app.restoid.ui.snapshot
 
 import android.app.Application
+import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.restoid.data.AppInfoRepository
@@ -99,7 +100,8 @@ class SnapshotDetailsViewModel(
             val parts = tag.split('|')
             val packageName = parts.getOrNull(0) ?: ""
             val versionName = parts.getOrNull(1)
-            val backupSize = parts.getOrNull(2)?.toLongOrNull()
+            val versionCode = parts.getOrNull(2)?.toLongOrNull()
+            val backupSize = parts.getOrNull(3)?.toLongOrNull()
 
             val appInfo = appInfoMap[packageName]
             val items = findBackedUpItems(snapshot, packageName)
@@ -108,12 +110,13 @@ class SnapshotDetailsViewModel(
                 name = packageName,
                 packageName = packageName,
                 versionName = versionName ?: "N/A",
+                versionCode = versionCode ?: 0L,
                 icon = application.packageManager.defaultActivityIcon,
                 apkPath = "",
                 isSelected = true
             )
 
-            BackupDetail(finalAppInfo, items, versionName, backupSize)
+            BackupDetail(finalAppInfo, items, versionName, versionCode, backupSize)
         }
 
         _backupDetails.value = details.sortedBy { it.appInfo.name.lowercase() }
@@ -204,3 +207,4 @@ class SnapshotDetailsViewModel(
     fun setRestoreObb(value: Boolean) = _restoreTypes.update { it.copy(obb = value) }
     fun setRestoreMedia(value: Boolean) = _restoreTypes.update { it.copy(media = value) }
 }
+

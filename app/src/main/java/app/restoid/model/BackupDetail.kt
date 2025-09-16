@@ -9,11 +9,14 @@ import android.text.format.Formatter
  * @param appInfo Details about the application (name, icon, etc.).
  * @param backedUpItems A list of strings representing the types of data backed up (e.g., "APK", "Data").
  * @param versionName The version of the app at the time of backup.
+ * @param versionCode The version code of the app at the time of backup.
  * @param backupSize The total size of the backed up files for this app, in bytes.
  */
 data class BackupDetail(
     val appInfo: AppInfo,
     val backedUpItems: List<String>,
     val versionName: String? = null,
+    val versionCode: Long? = null,
     val backupSize: Long? = null
 )
+
