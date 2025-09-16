@@ -83,7 +83,9 @@ class HomeViewModel(
             val appInfoMap = mutableMapOf<String, List<AppInfo>>()
             snapshots.forEach { snapshot ->
                 if (snapshot.tags.isNotEmpty()) {
-                    val appInfos = appInfoRepository.getAppInfoForPackages(snapshot.tags)
+                    // FIX: Parse the tag to get only the package name
+                    val packageNames = snapshot.tags.map { it.split('|').first() }
+                    val appInfos = appInfoRepository.getAppInfoForPackages(packageNames)
                     appInfoMap[snapshot.id] = appInfos
                 }
             }
