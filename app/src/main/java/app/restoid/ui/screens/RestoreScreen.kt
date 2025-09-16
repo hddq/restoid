@@ -1,5 +1,6 @@
 package app.restoid.ui.screens
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,7 +19,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -33,7 +37,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -46,74 +49,135 @@ import androidx.navigation.NavController
 import app.restoid.RestoidApplication
 import app.restoid.model.AppInfo
 import app.restoid.model.BackupDetail
-import app.restoid.ui.snapshot.RestoreTypes
-import app.restoid.ui.snapshot.SnapshotDetailsViewModel
-import app.restoid.ui.snapshot.SnapshotDetailsViewModelFactory
+import app.restoid.ui.restore.RestoreProgress
+import app.restoid.ui.restore.RestoreTypes
+import app.restoid.ui.restore.RestoreViewModel
+import app.restoid.ui.restore.RestoreViewModelFactory
 import coil.compose.rememberAsyncImagePainter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RestoreScreen(navController: NavController, snapshotId: String?) {
     val application = LocalContext.current.applicationContext as RestoidApplication
-    // Re-using SnapshotDetailsViewModel as it can load the details we need for the UI
-    val viewModel: SnapshotDetailsViewModel = viewModel(
-        factory = SnapshotDetailsViewModelFactory(
+    val viewModel: RestoreViewModel = viewModel(
+        factory = RestoreViewModelFactory(
             application,
             application.repositoriesRepository,
             application.resticRepository,
-            application.appInfoRepository
+            application.appInfoRepository,
+            application.notificationRepository,
+            snapshotId ?: ""
         )
     )
 
     val backupDetails by viewModel.backupDetails.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val restoreTypes by viewModel.restoreTypes.collectAsState()
+    val isRestoring by viewModel.isRestoring.collectAsState()
+    val restoreProgress by viewModel.restoreProgress.collectAsState()
 
-    LaunchedEffect(snapshotId) {
-        if (snapshotId != null) {
-            viewModel.loadSnapshotDetails(snapshotId)
-        }
-    }
+    val showProgressScreen = isRestoring || restoreProgress.isFinished
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Restore Snapshot") },
+                title = { Text(if (showProgressScreen) "Restore Progress" else "Restore Snapshot") },
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    if (!isRestoring) {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
                     }
                 }
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { /* TODO: Implement restore logic in the future */ },
-                icon = { Icon(Icons.Default.Restore, contentDescription = "Start Restore") },
-                text = { Text("Start Restore") }
-            )
+            if (!showProgressScreen) {
+                ExtendedFloatingActionButton(
+                    onClick = { viewModel.startRestore() },
+                    icon = { Icon(Icons.Default.Restore, contentDescription = "Start Restore") },
+                    text = { Text("Start Restore") }
+                )
+            }
         }
     ) { paddingValues ->
-        RestoreSelectionContent(
-            paddingValues = paddingValues,
-            backupDetails = backupDetails,
-            isLoading = isLoading,
-            restoreTypes = restoreTypes,
-            onToggleApp = viewModel::toggleRestoreAppSelection,
-            onToggleAll = viewModel::toggleAllRestoreSelection,
-            onToggleRestoreType = { type, value ->
-                when (type) {
-                    "APK" -> viewModel.setRestoreApk(value)
-                    "Data" -> viewModel.setRestoreData(value)
-                    "Device Protected Data" -> viewModel.setRestoreDeviceProtectedData(value)
-                    "External Data" -> viewModel.setRestoreExternalData(value)
-                    "OBB Data" -> viewModel.setRestoreObb(value)
-                    "Media Data" -> viewModel.setRestoreMedia(value)
-                }
+        Crossfade(targetState = showProgressScreen, label = "RestoreScreenCrossfade") { showProgress ->
+            if (showProgress) {
+                RestoreProgressContent(
+                    progress = restoreProgress,
+                    onDone = {
+                        viewModel.onDone()
+                        navController.popBackStack()
+                    },
+                    modifier = Modifier.padding(paddingValues)
+                )
+            } else {
+                RestoreSelectionContent(
+                    paddingValues = paddingValues,
+                    backupDetails = backupDetails,
+                    isLoading = isLoading,
+                    restoreTypes = restoreTypes,
+                    onToggleApp = viewModel::toggleRestoreAppSelection,
+                    onToggleAll = viewModel::toggleAllRestoreSelection,
+                    onToggleRestoreType = { type, value ->
+                        when (type) {
+                            "APK" -> viewModel.setRestoreApk(value)
+                            "Data" -> viewModel.setRestoreData(value)
+                            "Device Protected Data" -> viewModel.setRestoreDeviceProtectedData(value)
+                            "External Data" -> viewModel.setRestoreExternalData(value)
+                            "OBB Data" -> viewModel.setRestoreObb(value)
+                            "Media Data" -> viewModel.setRestoreMedia(value)
+                        }
+                    }
+                )
             }
-        )
+        }
     }
 }
+
+@Composable
+fun RestoreProgressContent(progress: RestoreProgress, onDone: () -> Unit, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        if (progress.isFinished) {
+            val icon = if (progress.error == null) Icons.Default.CheckCircle else Icons.Default.Error
+            val iconColor = if (progress.error == null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(80.dp),
+                tint = iconColor
+            )
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = if (progress.error == null) "Restore Complete" else "Restore Failed",
+                style = MaterialTheme.typography.headlineSmall
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = progress.finalSummary,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(24.dp))
+            Button(onClick = onDone) {
+                Text("Done")
+            }
+        } else {
+            // In-Progress State is simpler for restore for now
+            Text(text = progress.currentAction, style = MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.height(24.dp))
+            CircularProgressIndicator(modifier = Modifier.size(64.dp))
+        }
+    }
+}
+
 
 @Composable
 fun RestoreSelectionContent(
@@ -266,4 +330,3 @@ private fun RestoreAppListItem(app: AppInfo, onToggle: () -> Unit) {
         }
     }
 }
-

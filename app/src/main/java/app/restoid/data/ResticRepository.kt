@@ -161,6 +161,41 @@ class ResticRepository(private val context: Context) {
         }
     }
 
+    suspend fun restore(
+        repoPath: String,
+        password: String,
+        snapshotId: String,
+        targetPath: String,
+        pathsToRestore: List<String>
+    ): Result<String> {
+        return withContext(Dispatchers.IO) {
+            try {
+                if (resticState.value !is ResticState.Installed) {
+                    return@withContext Result.failure(Exception("Restic not installed"))
+                }
+
+                val resticPath = (resticState.value as ResticState.Installed).path
+                // Restic's restore command takes the paths to restore at the end of the command.
+                // We use --include because it's more reliable with weird characters.
+                val includes = pathsToRestore.joinToString(" ") { "--include \"$it\"" }
+                val command = "RESTIC_PASSWORD='$password' $resticPath -r '$repoPath' restore $snapshotId --target '$targetPath' $includes"
+
+                val result = Shell.cmd(command).exec()
+
+                if (result.isSuccess) {
+                    Result.success(result.out.joinToString("\n"))
+                } else {
+                    val errorOutput = result.err.joinToString("\n")
+                    val errorMsg = if (errorOutput.isEmpty()) "Failed to restore snapshot" else errorOutput
+                    Result.failure(Exception(errorMsg))
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
+
+
     private fun parseSnapshotsJson(jsonOutput: String): List<SnapshotInfo> {
         val snapshots = mutableListOf<SnapshotInfo>()
         try {
