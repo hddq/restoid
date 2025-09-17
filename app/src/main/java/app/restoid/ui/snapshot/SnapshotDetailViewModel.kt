@@ -106,6 +106,13 @@ class SnapshotDetailsViewModel(
             val appInfo = appInfoMap[packageName]
             val items = findBackedUpItems(snapshot, packageName)
 
+            val isInstalled = appInfo != null
+            val isDowngrade = if (isInstalled && versionCode != null) {
+                versionCode < appInfo!!.versionCode
+            } else {
+                false
+            }
+
             val finalAppInfo = appInfo ?: AppInfo(
                 name = packageName,
                 packageName = packageName,
@@ -116,7 +123,7 @@ class SnapshotDetailsViewModel(
                 isSelected = true
             )
 
-            BackupDetail(finalAppInfo, items, versionName, versionCode, backupSize)
+            BackupDetail(finalAppInfo, items, versionName, versionCode, backupSize, isDowngrade, isInstalled)
         }
 
         _backupDetails.value = details.sortedBy { it.appInfo.name.lowercase() }
@@ -207,4 +214,3 @@ class SnapshotDetailsViewModel(
     fun setRestoreObb(value: Boolean) = _restoreTypes.update { it.copy(obb = value) }
     fun setRestoreMedia(value: Boolean) = _restoreTypes.update { it.copy(media = value) }
 }
-

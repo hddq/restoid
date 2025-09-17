@@ -11,12 +11,15 @@ import android.text.format.Formatter
  * @param versionName The version of the app at the time of backup.
  * @param versionCode The version code of the app at the time of backup.
  * @param backupSize The total size of the backed up files for this app, in bytes.
+ * @param isDowngrade True if the backed up version is older than the currently installed version.
+ * @param isInstalled True if the app is currently installed on the device.
  */
 data class BackupDetail(
     val appInfo: AppInfo,
     val backedUpItems: List<String>,
     val versionName: String? = null,
     val versionCode: Long? = null,
-    val backupSize: Long? = null
+    val backupSize: Long? = null,
+    val isDowngrade: Boolean,
+    val isInstalled: Boolean
 )
-

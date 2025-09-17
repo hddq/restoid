@@ -47,12 +47,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import app.restoid.RestoidApplication
-import app.restoid.model.AppInfo
 import app.restoid.model.BackupDetail
 import app.restoid.ui.restore.RestoreProgress
 import app.restoid.ui.restore.RestoreTypes
 import app.restoid.ui.restore.RestoreViewModel
 import app.restoid.ui.restore.RestoreViewModelFactory
+import app.restoid.ui.theme.Orange
 import coil.compose.rememberAsyncImagePainter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -258,7 +258,7 @@ fun RestoreSelectionContent(
             }
         } else {
             items(backupDetails, key = { it.appInfo.packageName }) { detail ->
-                RestoreAppListItem(app = detail.appInfo) { onToggleApp(detail.appInfo.packageName) }
+                RestoreAppListItem(detail = detail) { onToggleApp(detail.appInfo.packageName) }
             }
         }
     }
@@ -286,7 +286,8 @@ fun RestoreTypeToggle(label: String, checked: Boolean, onCheckedChange: (Boolean
 }
 
 @Composable
-private fun RestoreAppListItem(app: AppInfo, onToggle: () -> Unit) {
+private fun RestoreAppListItem(detail: BackupDetail, onToggle: () -> Unit) {
+    val app = detail.appInfo
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -308,7 +309,8 @@ private fun RestoreAppListItem(app: AppInfo, onToggle: () -> Unit) {
             )
             Spacer(Modifier.width(16.dp))
             Column(
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
             ) {
                 Text(
                     text = app.name,
@@ -317,10 +319,20 @@ private fun RestoreAppListItem(app: AppInfo, onToggle: () -> Unit) {
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+
+                val versionColor = if (detail.isDowngrade) Orange else MaterialTheme.colorScheme.onSurfaceVariant
+                val versionText = if (detail.isInstalled) {
+                    "Backup: ${detail.versionName ?: "N/A"} → Installed: ${app.versionName}"
+                } else {
+                    "Backup: ${detail.versionName ?: "N/A"}"
+                }
+
                 Text(
-                    text = app.packageName,
+                    text = versionText,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = versionColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
             Switch(
