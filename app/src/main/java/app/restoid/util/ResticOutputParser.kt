@@ -1,12 +1,12 @@
 package app.restoid.util
 
-import app.restoid.ui.backup.BackupProgress
+import app.restoid.ui.shared.OperationProgress
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
 object ResticOutputParser {
 
-    fun parse(jsonLine: String): BackupProgress? {
+    fun parse(jsonLine: String): OperationProgress? {
         return try {
             val json = JSONObject(jsonLine)
             when (json.optString("message_type")) {
@@ -19,8 +19,8 @@ object ResticOutputParser {
         }
     }
 
-    private fun parseStatus(json: JSONObject): BackupProgress {
-        return BackupProgress(
+    private fun parseStatus(json: JSONObject): OperationProgress {
+        return OperationProgress(
             percentage = json.optDouble("percent_done", 0.0).toFloat(),
             totalFiles = json.optInt("total_files", 0),
             filesProcessed = json.optInt("files_done", 0),
@@ -31,13 +31,13 @@ object ResticOutputParser {
         )
     }
 
-    private fun parseSummary(json: JSONObject): BackupProgress {
+    private fun parseSummary(json: JSONObject): OperationProgress {
         val filesNew = json.optInt("files_new", 0)
         val filesChanged = json.optInt("files_changed", 0)
         val dataAdded = json.optLong("data_added", 0)
         val totalDuration = json.optDouble("total_duration", 0.0)
 
-        return BackupProgress(
+        return OperationProgress(
             percentage = 1.0f,
             totalFiles = json.optInt("total_files_processed", 0),
             filesProcessed = json.optInt("total_files_processed", 0),

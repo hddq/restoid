@@ -1,11 +1,6 @@
 package app.restoid.ui.screens
 
-import android.text.format.Formatter
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -14,8 +9,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Backup
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Error
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -25,8 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -34,12 +25,11 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.restoid.RestoidApplication
 import app.restoid.model.AppInfo
-import app.restoid.ui.backup.BackupProgress
 import app.restoid.ui.backup.BackupTypes
 import app.restoid.ui.backup.BackupViewModel
 import app.restoid.ui.backup.BackupViewModelFactory
+import app.restoid.ui.shared.ProgressScreenContent
 import coil.compose.rememberAsyncImagePainter
-import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -102,8 +92,9 @@ fun BackupScreen(onNavigateUp: () -> Unit) {
     ) { paddingValues ->
         Crossfade(targetState = showProgressScreen, label = "BackupScreenCrossfade") { showProgress ->
             if (showProgress) {
-                BackupProgressContent(
+                ProgressScreenContent(
                     progress = backupProgress,
+                    operationType = "Backup",
                     onDone = {
                         viewModel.onDone()
                         onNavigateUp()
@@ -120,125 +111,6 @@ fun BackupScreen(onNavigateUp: () -> Unit) {
                 )
             }
         }
-    }
-}
-
-
-@Composable
-fun BackupProgressContent(progress: BackupProgress, onDone: () -> Unit, modifier: Modifier = Modifier) {
-    val context = LocalContext.current
-
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        if (progress.isFinished) {
-            // Finished State
-            val icon = if (progress.error == null) Icons.Default.CheckCircle else Icons.Default.Error
-            val iconColor = if (progress.error == null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(80.dp),
-                tint = iconColor
-            )
-            Spacer(Modifier.height(16.dp))
-            Text(
-                text = if (progress.error == null) "Backup Complete" else "Backup Failed",
-                style = MaterialTheme.typography.headlineSmall
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = progress.finalSummary,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(24.dp))
-            Button(onClick = onDone) {
-                Text("Done")
-            }
-
-        } else {
-            // In-Progress State
-            Text(text = progress.currentAction, style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(24.dp))
-
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp)) {
-                    // Progress Bar
-                    LinearProgressIndicator(
-                        progress = { progress.percentage },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(Modifier.height(16.dp))
-
-                    // Stats Row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceAround
-                    ) {
-                        ProgressStat(label = "Elapsed", value = formatElapsedTime(progress.elapsedTime))
-                        ProgressStat(
-                            label = "Files",
-                            value = "${progress.filesProcessed}/${progress.totalFiles}"
-                        )
-                        ProgressStat(
-                            label = "Size",
-                            value = "${Formatter.formatFileSize(context, progress.bytesProcessed)} / ${Formatter.formatFileSize(context, progress.totalBytes)}"
-                        )
-                    }
-                    Spacer(Modifier.height(16.dp))
-
-                    // Current File Text
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            "Processing: ",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                        AnimatedContent(
-                            targetState = progress.currentFile,
-                            label = "CurrentFileAnimation",
-                            transitionSpec = {
-                                slideInVertically { height -> height } togetherWith
-                                        slideOutVertically { height -> -height }
-                            }
-                        ) { targetFile ->
-                            Text(
-                                text = targetFile.ifEmpty { "..." },
-                                style = MaterialTheme.typography.bodySmall,
-                                fontFamily = FontFamily.Monospace,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun ProgressStat(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = label, style = MaterialTheme.typography.labelMedium)
-        Text(text = value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-    }
-}
-
-private fun formatElapsedTime(seconds: Long): String {
-    val hours = TimeUnit.SECONDS.toHours(seconds)
-    val minutes = TimeUnit.SECONDS.toMinutes(seconds) % 60
-    val secs = seconds % 60
-    return if (hours > 0) {
-        String.format("%02d:%02d:%02d", hours, minutes, secs)
-    } else {
-        String.format("%02d:%02d", minutes, secs)
     }
 }
 
@@ -372,7 +244,7 @@ fun BackupTypeToggle(label: String, checked: Boolean, onCheckedChange: (Boolean)
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = label, 
+            text = label,
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.weight(1f)
         )

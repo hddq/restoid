@@ -9,6 +9,7 @@ import app.restoid.data.RepositoriesRepository
 import app.restoid.data.ResticRepository
 import app.restoid.data.ResticState
 import app.restoid.model.AppInfo
+import app.restoid.ui.shared.OperationProgress
 import app.restoid.util.ResticOutputParser
 import com.topjohnwu.superuser.CallbackList
 import com.topjohnwu.superuser.Shell
@@ -28,26 +29,6 @@ data class BackupTypes(
     val externalData: Boolean = false,
     val obb: Boolean = false,
     val media: Boolean = false
-)
-
-// Data class to hold structured backup progress
-data class BackupProgress(
-    val percentage: Float = 0f,
-    val totalFiles: Int = 0,
-    val filesProcessed: Int = 0,
-    val totalBytes: Long = 0,
-    val bytesProcessed: Long = 0,
-    val currentFile: String = "",
-    val currentAction: String = "Initializing...",
-    val elapsedTime: Long = 0, // in seconds
-    val error: String? = null,
-    val isFinished: Boolean = false,
-    val finalSummary: String = "",
-    // Detailed summary fields
-    val filesNew: Int = 0,
-    val filesChanged: Int = 0,
-    val dataAdded: Long = 0,
-    val totalDuration: Double = 0.0
 )
 
 class BackupViewModel(
@@ -70,7 +51,7 @@ class BackupViewModel(
     private val _isBackingUp = MutableStateFlow(false)
     val isBackingUp = _isBackingUp.asStateFlow()
 
-    private val _backupProgress = MutableStateFlow(BackupProgress())
+    private val _backupProgress = MutableStateFlow(OperationProgress())
     val backupProgress = _backupProgress.asStateFlow()
 
     private var backupJob: Job? = null
@@ -99,13 +80,13 @@ class BackupViewModel(
         backupJob = viewModelScope.launch(Dispatchers.IO) {
             val startTime = System.currentTimeMillis()
             _isBackingUp.value = true
-            _backupProgress.value = BackupProgress(currentAction = "Starting backup...")
-            notificationRepository.showBackupProgressNotification(_backupProgress.value)
+            _backupProgress.value = OperationProgress(currentAction = "Starting backup...")
+            // notificationRepository.showBackupProgressNotification(_backupProgress.value) // TODO: Update this to new progress type
 
             val fileList = File.createTempFile("restic-files-", ".txt", application.cacheDir)
             var isSuccess = false
             var summary = ""
-            var finalSummaryProgress: BackupProgress? = null
+            var finalSummaryProgress: OperationProgress? = null
 
             try {
                 // --- Pre-flight checks ---
@@ -135,7 +116,7 @@ class BackupViewModel(
 
 
                 if (pathsToBackup.isEmpty()) {
-                    _backupProgress.value = BackupProgress(isFinished = true, error = "No files found to back up for the selected apps.", finalSummary = "No files found to back up.")
+                    _backupProgress.value = OperationProgress(isFinished = true, error = "No files found to back up for the selected apps.", finalSummary = "No files found to back up.")
                     return@launch
                 }
 
@@ -157,7 +138,7 @@ class BackupViewModel(
                             val elapsedTime = (System.currentTimeMillis() - startTime) / 1000
                             val newProgress = it.copy(elapsedTime = elapsedTime)
                             _backupProgress.value = newProgress
-                            notificationRepository.showBackupProgressNotification(newProgress)
+                            // notificationRepository.showBackupProgressNotification(newProgress) // TODO: Update
                         }
                     }
                 }
@@ -199,28 +180,28 @@ class BackupViewModel(
         }
     }
 
-    private fun preflightChecks(): BackupProgress? {
+    private fun preflightChecks(): OperationProgress? {
         val selectedApps = _apps.value.filter { it.isSelected }
         if (selectedApps.isEmpty()) {
-            return BackupProgress(isFinished = true, error = "No apps selected. Pick something!", finalSummary = "No apps were selected.")
+            return OperationProgress(isFinished = true, error = "No apps selected. Pick something!", finalSummary = "No apps were selected.")
         }
 
         val backupOptions = _backupTypes.value
         if (!backupOptions.apk && !backupOptions.data && !backupOptions.deviceProtectedData && !backupOptions.externalData && !backupOptions.obb && !backupOptions.media) {
-            return BackupProgress(isFinished = true, error = "No backup types selected.", finalSummary = "No backup types were selected.")
+            return OperationProgress(isFinished = true, error = "No backup types selected.", finalSummary = "No backup types were selected.")
         }
 
         if (resticRepository.resticState.value !is ResticState.Installed) {
-            return BackupProgress(isFinished = true, error = "Restic is not installed.", finalSummary = "Restic binary is not installed.")
+            return OperationProgress(isFinished = true, error = "Restic is not installed.", finalSummary = "Restic binary is not installed.")
         }
 
         val selectedRepoPath = repositoriesRepository.selectedRepository.value
         if (selectedRepoPath == null) {
-            return BackupProgress(isFinished = true, error = "No backup repository selected.", finalSummary = "No backup repository is selected.")
+            return OperationProgress(isFinished = true, error = "No backup repository selected.", finalSummary = "No backup repository is selected.")
         }
 
         if (repositoriesRepository.getRepositoryPassword(selectedRepoPath) == null) {
-            return BackupProgress(isFinished = true, error = "Password for repository not found.", finalSummary = "Could not find the password for the repository.")
+            return OperationProgress(isFinished = true, error = "Password for repository not found.", finalSummary = "Could not find the password for the repository.")
         }
 
         return null // All checks passed
@@ -277,7 +258,7 @@ class BackupViewModel(
     }
 
     fun onDone() {
-        _backupProgress.value = BackupProgress()
+        _backupProgress.value = OperationProgress()
     }
 
     fun setBackupApk(value: Boolean) = _backupTypes.update { it.copy(apk = value) }
@@ -287,4 +268,3 @@ class BackupViewModel(
     fun setBackupObb(value: Boolean) = _backupTypes.update { it.copy(obb = value) }
     fun setBackupMedia(value: Boolean) = _backupTypes.update { it.copy(media = value) }
 }
-

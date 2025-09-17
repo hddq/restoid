@@ -5,17 +5,15 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.PackageManager
-import android.os.Build
 import android.text.format.Formatter
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import app.restoid.R
-import app.restoid.ui.backup.BackupProgress
+import app.restoid.ui.shared.OperationProgress
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.util.concurrent.TimeUnit
 
 sealed class NotificationPermissionState {
     object Granted : NotificationPermissionState()
@@ -48,7 +46,7 @@ class NotificationRepository(private val context: Context) {
         notificationManager.createNotificationChannel(channel)
     }
 
-    fun showBackupProgressNotification(progress: BackupProgress) {
+    fun showBackupProgressNotification(progress: OperationProgress) {
         if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             return
         }

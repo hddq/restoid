@@ -19,10 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Restore
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -48,10 +45,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import app.restoid.RestoidApplication
 import app.restoid.model.BackupDetail
-import app.restoid.ui.restore.RestoreProgress
 import app.restoid.ui.restore.RestoreTypes
 import app.restoid.ui.restore.RestoreViewModel
 import app.restoid.ui.restore.RestoreViewModelFactory
+import app.restoid.ui.shared.ProgressScreenContent
 import app.restoid.ui.theme.Orange
 import coil.compose.rememberAsyncImagePainter
 
@@ -103,8 +100,9 @@ fun RestoreScreen(navController: NavController, snapshotId: String?) {
     ) { paddingValues ->
         Crossfade(targetState = showProgressScreen, label = "RestoreScreenCrossfade") { showProgress ->
             if (showProgress) {
-                RestoreProgressContent(
+                ProgressScreenContent(
                     progress = restoreProgress,
+                    operationType = "Restore",
                     onDone = {
                         viewModel.onDone()
                         navController.popBackStack()
@@ -134,50 +132,6 @@ fun RestoreScreen(navController: NavController, snapshotId: String?) {
         }
     }
 }
-
-@Composable
-fun RestoreProgressContent(progress: RestoreProgress, onDone: () -> Unit, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        if (progress.isFinished) {
-            val icon = if (progress.error == null) Icons.Default.CheckCircle else Icons.Default.Error
-            val iconColor = if (progress.error == null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(80.dp),
-                tint = iconColor
-            )
-            Spacer(Modifier.height(16.dp))
-            Text(
-                text = if (progress.error == null) "Restore Complete" else "Restore Failed",
-                style = MaterialTheme.typography.headlineSmall
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = progress.finalSummary,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(24.dp))
-            Button(onClick = onDone) {
-                Text("Done")
-            }
-        } else {
-            // In-Progress State is simpler for restore for now
-            Text(text = progress.currentAction, style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(24.dp))
-            CircularProgressIndicator(modifier = Modifier.size(64.dp))
-        }
-    }
-}
-
 
 @Composable
 fun RestoreSelectionContent(
@@ -213,11 +167,14 @@ fun RestoreSelectionContent(
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
                     RestoreTypeToggle("APK", checked = restoreTypes.apk) { onToggleRestoreType("APK", it) }
+                    // Only show APK for now as per the request
+                    /*
                     RestoreTypeToggle("Data", checked = restoreTypes.data) { onToggleRestoreType("Data", it) }
                     RestoreTypeToggle("Device Protected Data", checked = restoreTypes.deviceProtectedData) { onToggleRestoreType("Device Protected Data", it) }
                     RestoreTypeToggle("External Data", checked = restoreTypes.externalData) { onToggleRestoreType("External Data", it) }
                     RestoreTypeToggle("OBB Data", checked = restoreTypes.obb) { onToggleRestoreType("OBB Data", it) }
                     RestoreTypeToggle("Media Data", checked = restoreTypes.media) { onToggleRestoreType("Media Data", it) }
+                    */
                 }
             }
         }

@@ -11,6 +11,7 @@ import app.restoid.data.ResticState
 import app.restoid.data.SnapshotInfo
 import app.restoid.model.AppInfo
 import app.restoid.model.BackupDetail
+import app.restoid.ui.shared.OperationProgress
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -20,14 +21,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
-
-// Simplified progress state for restore
-data class RestoreProgress(
-    val currentAction: String = "Initializing...",
-    val error: String? = null,
-    val isFinished: Boolean = false,
-    val finalSummary: String = ""
-)
 
 // UI state for selecting what to restore
 data class RestoreTypes(
@@ -66,7 +59,7 @@ class RestoreViewModel(
     private val _isRestoring = MutableStateFlow(false)
     val isRestoring = _isRestoring.asStateFlow()
 
-    private val _restoreProgress = MutableStateFlow(RestoreProgress())
+    private val _restoreProgress = MutableStateFlow(OperationProgress())
     val restoreProgress = _restoreProgress.asStateFlow()
 
     private var restoreJob: Job? = null
@@ -170,92 +163,126 @@ class RestoreViewModel(
         if (_isRestoring.value) return
 
         restoreJob = viewModelScope.launch(Dispatchers.IO) {
+            val startTime = System.currentTimeMillis()
             _isRestoring.value = true
-            updateProgress("Starting restore...")
+            _restoreProgress.value = OperationProgress(currentAction = "Starting restore...")
 
-            var isSuccess = false
-            var summary = ""
             var tempRestoreDir: File? = null
+            var successes = 0
+            var failures = 0
+            val failureDetails = mutableListOf<String>()
 
             try {
                 // --- Pre-flight checks ---
                 val resticState = resticRepository.resticState.value
                 val selectedRepoPath = repositoriesRepository.selectedRepository.value
                 val currentSnapshot = _snapshot.value
+                val selectedApps = _backupDetails.value.filter { it.appInfo.isSelected }
 
                 if (resticState !is ResticState.Installed || selectedRepoPath == null || currentSnapshot == null) {
                     throw IllegalStateException("Pre-restore checks failed: Restic not ready or no repo/snapshot selected.")
                 }
+                if (selectedApps.isEmpty()) {
+                    throw IllegalStateException("No apps selected for restore.")
+                }
                 val password = repositoriesRepository.getRepositoryPassword(selectedRepoPath)
                     ?: throw IllegalStateException("Password not found for repository.")
 
-                // --- Restore Logic ---
-                // For now, restore only the first app's APK as requested.
-                val firstAppPkg = currentSnapshot.tags.firstOrNull()?.split("|")?.first()
-                    ?: throw IllegalStateException("Snapshot has no tagged apps to restore.")
-
-                val apkPathToRestore = currentSnapshot.paths.find { it.startsWith("/data/app/") && it.contains(firstAppPkg) }
-                    ?: throw IllegalStateException("Could not find APK path for $firstAppPkg in snapshot.")
-
                 tempRestoreDir = File(application.cacheDir, "restic-restore-${System.currentTimeMillis()}").also { it.mkdirs() }
-                updateProgress("Restoring APK for $firstAppPkg...")
 
-                val restoreResult = resticRepository.restore(
-                    repoPath = selectedRepoPath,
-                    password = password,
-                    snapshotId = currentSnapshot.id,
-                    targetPath = tempRestoreDir.absolutePath,
-                    pathsToRestore = listOf(apkPathToRestore)
-                )
+                // --- Restore Loop ---
+                for ((index, detail) in selectedApps.withIndex()) {
+                    val appName = detail.appInfo.name
+                    val pkg = detail.appInfo.packageName
+                    val progressPercentage = (index + 1f) / selectedApps.size
 
-                restoreResult.fold(
-                    onSuccess = {
-                        updateProgress("Installing app...")
-                        // The restored files will be in tempRestoreDir/<original_path>
-                        val restoredContentDir = File(tempRestoreDir, apkPathToRestore.drop(1))
-                        val apkFile = restoredContentDir.walk().find { it.isFile && it.extension == "apk" }
-
-                        if (apkFile != null) {
-                            val installResult = Shell.cmd("pm install -r -d '${apkFile.absolutePath}'").exec()
-                            if (installResult.isSuccess) {
-                                isSuccess = true
-                                summary = "Successfully restored and installed $firstAppPkg."
-                            } else {
-                                isSuccess = false
-                                summary = "Restore successful, but failed to install APK. Error: ${installResult.err.joinToString("\\n")}"
-                            }
-                        } else {
-                            isSuccess = false
-                            summary = "Restore successful, but couldn't find APK in the restored files."
-                        }
-                    },
-                    onFailure = {
-                        isSuccess = false
-                        summary = "Restic restore command failed: ${it.message}"
+                    // 1. Find APK in snapshot and restore it
+                    val apkPathToRestore = currentSnapshot.paths.find { it.startsWith("/data/app/") && (it.contains("-$pkg-") || it.contains("/$pkg-")) }
+                    if (apkPathToRestore == null) {
+                        failures++
+                        failureDetails.add("$appName: APK path not found in snapshot.")
+                        _restoreProgress.value = _restoreProgress.value.copy(percentage = progressPercentage, currentAction = "Skipping $appName")
+                        continue
                     }
+
+                    _restoreProgress.value = _restoreProgress.value.copy(
+                        percentage = progressPercentage - (1f / selectedApps.size / 2f), // Halfway through this app's progress bar
+                        currentAction = "Restoring $appName (${index + 1}/${selectedApps.size})"
+                    )
+
+                    val restoreResult = resticRepository.restore(
+                        repoPath = selectedRepoPath,
+                        password = password,
+                        snapshotId = currentSnapshot.id,
+                        targetPath = tempRestoreDir.absolutePath,
+                        pathsToRestore = listOf(apkPathToRestore)
+                    )
+
+                    restoreResult.fold(
+                        onSuccess = {
+                            _restoreProgress.value = _restoreProgress.value.copy(currentAction = "Installing $appName...")
+
+                            val restoredContentDir = File(tempRestoreDir, apkPathToRestore.drop(1))
+                            val apkFiles = restoredContentDir.walk().filter { it.isFile && it.extension == "apk" }.toList()
+
+                            if (apkFiles.isNotEmpty()) {
+                                // Use pm install-multiple for split APKs
+                                val apkPaths = apkFiles.joinToString(" ") { "'${it.absolutePath}'" }
+                                val installCommand = if (apkFiles.size > 1) "pm install-multiple -r -d $apkPaths" else "pm install -r -d $apkPaths"
+                                val installResult = Shell.cmd(installCommand).exec()
+                                if (installResult.isSuccess) {
+                                    successes++
+                                } else {
+                                    failures++
+                                    failureDetails.add("$appName: Install failed: ${installResult.err.joinToString(" ")}")
+                                }
+                            } else {
+                                failures++
+                                failureDetails.add("$appName: No APK files found after restore.")
+                            }
+                            // Clean up this app's restored files to save space for the next one
+                            restoredContentDir.parentFile?.deleteRecursively()
+
+                        },
+                        onFailure = {
+                            failures++
+                            failureDetails.add("$appName: Restic restore command failed: ${it.message}")
+                        }
+                    )
+                    _restoreProgress.value = _restoreProgress.value.copy(percentage = progressPercentage)
+                }
+
+                val summary = buildString {
+                    append("Restore finished. ")
+                    append("Successfully installed $successes app(s).")
+                    if (failures > 0) {
+                        append(" Failed to restore $failures app(s).\n\nErrors:\n- ${failureDetails.joinToString("\n- ")}")
+                    }
+                }
+                _restoreProgress.value = OperationProgress(
+                    isFinished = true,
+                    percentage = 1f,
+                    finalSummary = summary,
+                    error = if (failures > 0) failureDetails.joinToString(", ") else null,
+                    elapsedTime = (System.currentTimeMillis() - startTime) / 1000
                 )
+
             } catch (e: Exception) {
-                isSuccess = false
-                summary = "A fatal error occurred: ${e.message}"
+                _restoreProgress.value = _restoreProgress.value.copy(
+                    isFinished = true,
+                    error = "A fatal error occurred: ${e.message}",
+                    finalSummary = "A fatal error occurred: ${e.message}",
+                    elapsedTime = (System.currentTimeMillis() - startTime) / 1000
+                )
             } finally {
                 tempRestoreDir?.deleteRecursively()
                 _isRestoring.value = false
-                val finalProgress = _restoreProgress.value.copy(
-                    isFinished = true,
-                    error = if (!isSuccess) summary else null,
-                    finalSummary = summary
-                )
-                _restoreProgress.value = finalProgress
             }
         }
     }
 
-    private fun updateProgress(currentAction: String) {
-        _restoreProgress.update { it.copy(currentAction = currentAction) }
-    }
-
     fun onDone() {
-        _restoreProgress.value = RestoreProgress()
+        _restoreProgress.value = OperationProgress()
     }
 
     fun toggleRestoreAppSelection(packageName: String) {
