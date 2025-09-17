@@ -171,6 +171,7 @@ class RestoreViewModel(
             var successes = 0
             var failures = 0
             val failureDetails = mutableListOf<String>()
+            var bytesRestoredSoFar = 0L
 
             try {
                 // --- Pre-flight checks ---
@@ -178,6 +179,7 @@ class RestoreViewModel(
                 val selectedRepoPath = repositoriesRepository.selectedRepository.value
                 val currentSnapshot = _snapshot.value
                 val selectedApps = _backupDetails.value.filter { it.appInfo.isSelected }
+                val totalBytesToRestore = selectedApps.sumOf { it.backupSize ?: 0L }
 
                 if (resticState !is ResticState.Installed || selectedRepoPath == null || currentSnapshot == null) {
                     throw IllegalStateException("Pre-restore checks failed: Restic not ready or no repo/snapshot selected.")
@@ -193,22 +195,28 @@ class RestoreViewModel(
                 // --- Restore Loop ---
                 for ((index, detail) in selectedApps.withIndex()) {
                     val appName = detail.appInfo.name
-                    val pkg = detail.appInfo.packageName
-                    val progressPercentage = (index + 1f) / selectedApps.size
+                    val appSize = detail.backupSize ?: 0L
+
+                    val elapsedTime = (System.currentTimeMillis() - startTime) / 1000
+                    val percentage = if (totalBytesToRestore > 0) bytesRestoredSoFar.toFloat() / totalBytesToRestore.toFloat() else 0f
+
+                    _restoreProgress.value = _restoreProgress.value.copy(
+                        percentage = percentage,
+                        currentAction = "Restoring $appName (${index + 1}/${selectedApps.size})",
+                        elapsedTime = elapsedTime,
+                        filesProcessed = index, // Using filesProcessed for app count
+                        totalFiles = selectedApps.size,
+                        bytesProcessed = bytesRestoredSoFar,
+                        totalBytes = totalBytesToRestore
+                    )
 
                     // 1. Find APK in snapshot and restore it
-                    val apkPathToRestore = currentSnapshot.paths.find { it.startsWith("/data/app/") && (it.contains("-$pkg-") || it.contains("/$pkg-")) }
+                    val apkPathToRestore = currentSnapshot.paths.find { it.startsWith("/data/app/") && (it.contains("-$appName-") || it.contains("/$appName-") || it.contains(detail.appInfo.packageName)) }
                     if (apkPathToRestore == null) {
                         failures++
                         failureDetails.add("$appName: APK path not found in snapshot.")
-                        _restoreProgress.value = _restoreProgress.value.copy(percentage = progressPercentage, currentAction = "Skipping $appName")
                         continue
                     }
-
-                    _restoreProgress.value = _restoreProgress.value.copy(
-                        percentage = progressPercentage - (1f / selectedApps.size / 2f), // Halfway through this app's progress bar
-                        currentAction = "Restoring $appName (${index + 1}/${selectedApps.size})"
-                    )
 
                     val restoreResult = resticRepository.restore(
                         repoPath = selectedRepoPath,
@@ -226,12 +234,12 @@ class RestoreViewModel(
                             val apkFiles = restoredContentDir.walk().filter { it.isFile && it.extension == "apk" }.toList()
 
                             if (apkFiles.isNotEmpty()) {
-                                // Use pm install-multiple for split APKs
                                 val apkPaths = apkFiles.joinToString(" ") { "'${it.absolutePath}'" }
-                                val installCommand = if (apkFiles.size > 1) "pm install-multiple -r -d $apkPaths" else "pm install -r -d $apkPaths"
+                                val installCommand = if (apkFiles.size > 1) "pm install-create -r -d; pm install-write -S ${apkFiles.sumOf { it.length() }} 0 base.apk $apkPaths; pm install-commit 0" else "pm install -r -d $apkPaths"
                                 val installResult = Shell.cmd(installCommand).exec()
                                 if (installResult.isSuccess) {
                                     successes++
+                                    bytesRestoredSoFar += appSize
                                 } else {
                                     failures++
                                     failureDetails.add("$appName: Install failed: ${installResult.err.joinToString(" ")}")
@@ -240,20 +248,18 @@ class RestoreViewModel(
                                 failures++
                                 failureDetails.add("$appName: No APK files found after restore.")
                             }
-                            // Clean up this app's restored files to save space for the next one
                             restoredContentDir.parentFile?.deleteRecursively()
-
                         },
                         onFailure = {
                             failures++
                             failureDetails.add("$appName: Restic restore command failed: ${it.message}")
                         }
                     )
-                    _restoreProgress.value = _restoreProgress.value.copy(percentage = progressPercentage)
                 }
 
+                val finalElapsedTime = (System.currentTimeMillis() - startTime) / 1000
                 val summary = buildString {
-                    append("Restore finished. ")
+                    append("Restore finished in ${formatElapsedTime(finalElapsedTime)}. ")
                     append("Successfully installed $successes app(s).")
                     if (failures > 0) {
                         append(" Failed to restore $failures app(s).\n\nErrors:\n- ${failureDetails.joinToString("\n- ")}")
@@ -264,7 +270,11 @@ class RestoreViewModel(
                     percentage = 1f,
                     finalSummary = summary,
                     error = if (failures > 0) failureDetails.joinToString(", ") else null,
-                    elapsedTime = (System.currentTimeMillis() - startTime) / 1000
+                    elapsedTime = finalElapsedTime,
+                    filesProcessed = successes,
+                    totalFiles = selectedApps.size,
+                    bytesProcessed = bytesRestoredSoFar,
+                    totalBytes = totalBytesToRestore
                 )
 
             } catch (e: Exception) {
@@ -280,6 +290,18 @@ class RestoreViewModel(
             }
         }
     }
+
+    private fun formatElapsedTime(seconds: Long): String {
+        val hours = java.util.concurrent.TimeUnit.SECONDS.toHours(seconds)
+        val minutes = java.util.concurrent.TimeUnit.SECONDS.toMinutes(seconds) % 60
+        val secs = seconds % 60
+        return if (hours > 0) {
+            String.format("%02d:%02d:%02d", hours, minutes, secs)
+        } else {
+            String.format("%02d:%02d", minutes, secs)
+        }
+    }
+
 
     fun onDone() {
         _restoreProgress.value = OperationProgress()
@@ -313,3 +335,5 @@ class RestoreViewModel(
     fun setRestoreObb(value: Boolean) = _restoreTypes.update { it.copy(obb = value) }
     fun setRestoreMedia(value: Boolean) = _restoreTypes.update { it.copy(media = value) }
 }
+
+

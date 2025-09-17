@@ -177,7 +177,7 @@ class ResticRepository(private val context: Context) {
                 val resticPath = (resticState.value as ResticState.Installed).path
                 // Restic's restore command takes the paths to restore at the end of the command.
                 // We use --include because it's more reliable with weird characters.
-                val includes = pathsToRestore.joinToString(" ") { "--include \"$it\"" }
+                val includes = pathsToRestore.joinToString(" ") { "--include '$it'" }
                 val command = "RESTIC_PASSWORD='$password' $resticPath -r '$repoPath' restore $snapshotId --target '$targetPath' $includes"
 
                 val result = Shell.cmd(command).exec()
