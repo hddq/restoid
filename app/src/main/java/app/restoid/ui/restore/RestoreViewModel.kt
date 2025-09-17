@@ -192,69 +192,83 @@ class RestoreViewModel(
 
                 tempRestoreDir = File(application.cacheDir, "restic-restore-${System.currentTimeMillis()}").also { it.mkdirs() }
 
-                // --- Restore Loop ---
+                // --- OPTIMIZATION: Bulk Restore ---
+                // 1. Collect all APK paths to restore in one go.
+                _restoreProgress.value = _restoreProgress.value.copy(currentAction = "Finding APKs in backup...")
+                val pathsToRestore = selectedApps.mapNotNull { detail ->
+                    currentSnapshot.paths.find { path ->
+                        path.startsWith("/data/app/") && (path.contains("-${detail.appInfo.name}-") || path.contains("/${detail.appInfo.name}-") || path.contains(detail.appInfo.packageName))
+                    }
+                }
+
+                if (pathsToRestore.isEmpty()) {
+                    throw IllegalStateException("No APK paths found in the snapshot for the selected apps.")
+                }
+
+                // 2. Execute a single restore command for all APKs.
+                val elapsedTime = (System.currentTimeMillis() - startTime) / 1000
+                _restoreProgress.value = _restoreProgress.value.copy(
+                    currentAction = "Restoring all APK files...",
+                    elapsedTime = elapsedTime
+                )
+
+                val bulkRestoreResult = resticRepository.restore(
+                    repoPath = selectedRepoPath,
+                    password = password,
+                    snapshotId = currentSnapshot.id,
+                    targetPath = tempRestoreDir.absolutePath,
+                    pathsToRestore = pathsToRestore
+                )
+
+                if (bulkRestoreResult.isFailure) {
+                    throw IllegalStateException("Restic restore command failed: ${bulkRestoreResult.exceptionOrNull()?.message}")
+                }
+
+
+                // --- Installation Loop ---
                 for ((index, detail) in selectedApps.withIndex()) {
                     val appName = detail.appInfo.name
                     val appSize = detail.backupSize ?: 0L
 
-                    val elapsedTime = (System.currentTimeMillis() - startTime) / 1000
+                    val currentElapsedTime = (System.currentTimeMillis() - startTime) / 1000
                     val percentage = if (totalBytesToRestore > 0) bytesRestoredSoFar.toFloat() / totalBytesToRestore.toFloat() else 0f
 
                     _restoreProgress.value = _restoreProgress.value.copy(
                         percentage = percentage,
-                        currentAction = "Restoring $appName (${index + 1}/${selectedApps.size})",
-                        elapsedTime = elapsedTime,
-                        filesProcessed = index, // Using filesProcessed for app count
+                        currentAction = "Installing $appName (${index + 1}/${selectedApps.size})",
+                        elapsedTime = currentElapsedTime,
+                        filesProcessed = index,
                         totalFiles = selectedApps.size,
                         bytesProcessed = bytesRestoredSoFar,
                         totalBytes = totalBytesToRestore
                     )
 
-                    // 1. Find APK in snapshot and restore it
-                    val apkPathToRestore = currentSnapshot.paths.find { it.startsWith("/data/app/") && (it.contains("-$appName-") || it.contains("/$appName-") || it.contains(detail.appInfo.packageName)) }
-                    if (apkPathToRestore == null) {
+                    val originalApkPath = pathsToRestore.find { it.contains(detail.appInfo.packageName) || it.contains(appName) }
+                    if (originalApkPath == null) {
                         failures++
-                        failureDetails.add("$appName: APK path not found in snapshot.")
+                        failureDetails.add("$appName: Could not find its path in the restored files list.")
                         continue
                     }
 
-                    val restoreResult = resticRepository.restore(
-                        repoPath = selectedRepoPath,
-                        password = password,
-                        snapshotId = currentSnapshot.id,
-                        targetPath = tempRestoreDir.absolutePath,
-                        pathsToRestore = listOf(apkPathToRestore)
-                    )
+                    val restoredContentDir = File(tempRestoreDir, originalApkPath.drop(1))
+                    val apkFiles = restoredContentDir.walk().filter { it.isFile && it.extension == "apk" }.toList()
 
-                    restoreResult.fold(
-                        onSuccess = {
-                            _restoreProgress.value = _restoreProgress.value.copy(currentAction = "Installing $appName...")
+                    if (apkFiles.isNotEmpty()) {
+                        val apkPaths = apkFiles.joinToString(" ") { "'${it.absolutePath}'" }
+                        val installCommand = if (apkFiles.size > 1) "pm install-create -r -d; pm install-write -S ${apkFiles.sumOf { it.length() }} 0 base.apk $apkPaths; pm install-commit 0" else "pm install -r -d $apkPaths"
+                        val installResult = Shell.cmd(installCommand).exec()
 
-                            val restoredContentDir = File(tempRestoreDir, apkPathToRestore.drop(1))
-                            val apkFiles = restoredContentDir.walk().filter { it.isFile && it.extension == "apk" }.toList()
-
-                            if (apkFiles.isNotEmpty()) {
-                                val apkPaths = apkFiles.joinToString(" ") { "'${it.absolutePath}'" }
-                                val installCommand = if (apkFiles.size > 1) "pm install-create -r -d; pm install-write -S ${apkFiles.sumOf { it.length() }} 0 base.apk $apkPaths; pm install-commit 0" else "pm install -r -d $apkPaths"
-                                val installResult = Shell.cmd(installCommand).exec()
-                                if (installResult.isSuccess) {
-                                    successes++
-                                    bytesRestoredSoFar += appSize
-                                } else {
-                                    failures++
-                                    failureDetails.add("$appName: Install failed: ${installResult.err.joinToString(" ")}")
-                                }
-                            } else {
-                                failures++
-                                failureDetails.add("$appName: No APK files found after restore.")
-                            }
-                            restoredContentDir.parentFile?.deleteRecursively()
-                        },
-                        onFailure = {
+                        if (installResult.isSuccess) {
+                            successes++
+                            bytesRestoredSoFar += appSize
+                        } else {
                             failures++
-                            failureDetails.add("$appName: Restic restore command failed: ${it.message}")
+                            failureDetails.add("$appName: Install failed: ${installResult.err.joinToString(" ")}")
                         }
-                    )
+                    } else {
+                        failures++
+                        failureDetails.add("$appName: No APK files found after restore.")
+                    }
                 }
 
                 val finalElapsedTime = (System.currentTimeMillis() - startTime) / 1000
@@ -335,5 +349,4 @@ class RestoreViewModel(
     fun setRestoreObb(value: Boolean) = _restoreTypes.update { it.copy(obb = value) }
     fun setRestoreMedia(value: Boolean) = _restoreTypes.update { it.copy(media = value) }
 }
-
 
