@@ -28,6 +28,9 @@ class ResticRepository(private val context: Context) {
     private val _resticState = MutableStateFlow<ResticState>(ResticState.Idle)
     val resticState = _resticState.asStateFlow()
 
+    private val _snapshots = MutableStateFlow<List<SnapshotInfo>>(emptyList())
+    val snapshots = _snapshots.asStateFlow()
+
     private val resticFile = File(context.filesDir, "restic")
     private val resticReleaseVersion = "0.18.0"
 
@@ -111,6 +114,12 @@ class ResticRepository(private val context: Context) {
         }
     }
 
+    suspend fun refreshSnapshots(repoPath: String, password: String) {
+        withContext(Dispatchers.IO) {
+            getSnapshots(repoPath, password)
+        }
+    }
+
     // Execute restic snapshots command for a repository
     suspend fun getSnapshots(repoPath: String, password: String): Result<List<SnapshotInfo>> {
         return withContext(Dispatchers.IO) {
@@ -125,6 +134,7 @@ class ResticRepository(private val context: Context) {
 
                 if (result.isSuccess) {
                     val snapshots = parseSnapshotsJson(result.out.joinToString("\n"))
+                    _snapshots.value = snapshots
                     Result.success(snapshots)
                 } else {
                     val errorOutput = result.err.joinToString("\n")
@@ -149,6 +159,7 @@ class ResticRepository(private val context: Context) {
                 val result = Shell.cmd(command).exec()
 
                 if (result.isSuccess) {
+                    refreshSnapshots(repoPath, password)
                     Result.success(Unit)
                 } else {
                     val errorOutput = result.err.joinToString("\n")

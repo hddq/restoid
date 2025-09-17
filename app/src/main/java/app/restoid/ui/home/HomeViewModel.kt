@@ -40,12 +40,15 @@ class HomeViewModel(
         // React to changes in selected repository or restic status
         combine(
             repositoriesRepository.selectedRepository,
-            resticRepository.resticState
-        ) { repo, restic -> repo to restic }
-            .onEach { (repo, restic) ->
-                _uiState.update { it.copy(selectedRepo = repo, resticState = restic) }
-                loadSnapshots(repo, restic)
-            }.launchIn(viewModelScope)
+            resticRepository.resticState,
+            resticRepository.snapshots
+        ) { repo, restic, snapshots ->
+            Triple(repo, restic, snapshots)
+        }.onEach { (repo, restic, snapshots) ->
+            _uiState.update { it.copy(selectedRepo = repo, resticState = restic, snapshots = snapshots) }
+            loadSnapshots(repo, restic)
+            loadAppInfoForSnapshots(snapshots)
+        }.launchIn(viewModelScope)
     }
 
     fun loadSnapshots(repoPath: String?, resticState: ResticState) {
@@ -68,9 +71,8 @@ class HomeViewModel(
 
     private suspend fun handleSnapshotResult(result: Result<List<SnapshotInfo>>) {
         result.fold(
-            onSuccess = { snapshots ->
-                _uiState.update { it.copy(snapshots = snapshots, isLoading = false) }
-                loadAppInfoForSnapshots(snapshots)
+            onSuccess = {
+                _uiState.update { it.copy(isLoading = false) }
             },
             onFailure = { throwable ->
                 _uiState.update { it.copy(error = throwable.message, isLoading = false) }

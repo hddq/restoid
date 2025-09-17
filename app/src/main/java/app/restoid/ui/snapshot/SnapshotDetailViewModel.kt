@@ -186,7 +186,7 @@ class SnapshotDetailsViewModel(
                     val result = resticRepository.forgetSnapshot(repoPath, password, snapshotToForget.id)
                     result.fold(
                         onSuccess = {
-                            // The list will be refreshed on the home screen automatically.
+                            // The list is now refreshed automatically via the repository.
                         },
                         onFailure = { _error.value = it.message }
                     )
