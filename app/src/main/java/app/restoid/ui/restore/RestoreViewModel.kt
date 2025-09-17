@@ -174,7 +174,7 @@ class RestoreViewModel(
             var successes = 0
             var failures = 0
             val failureDetails = mutableListOf<String>()
-            val totalStages = 2 // 1 for file restore, 1 for app install
+            val totalStages = 3 // 1 for file restore, 1 for app install, 1 for cleanup
 
             try {
                 // --- Pre-flight checks ---
@@ -312,6 +312,37 @@ class RestoreViewModel(
                     }
                 }
 
+                // --- Stage 3: Cleanup ---
+                val cleanupStartTime = System.currentTimeMillis()
+                _restoreProgress.update {
+                    it.copy(
+                        stageTitle = "Stage 3/$totalStages: Cleaning up...",
+                        stagePercentage = 0f,
+                        overallPercentage = (2f / totalStages)
+                    )
+                }
+                delay(500) // Give UI time to update
+
+                var cleanupSuccess = false
+                var cleanupMessage = ""
+                tempRestoreDir?.let { dir ->
+                    cleanupSuccess = Shell.cmd("rm -rf '${dir.absolutePath}'").exec().isSuccess
+                    cleanupMessage = if (cleanupSuccess) {
+                        "\n\nTemporary restore data cleaned up successfully."
+                    } else {
+                        "\n\nWarning: Failed to clean up temporary restore data. Please clear the app cache manually."
+                    }
+                }
+
+                _restoreProgress.update {
+                    it.copy(
+                        stagePercentage = 1f,
+                        overallPercentage = 1f
+                    )
+                }
+                delay(200)
+
+                // --- Final Summary ---
                 val finalElapsedTime = (System.currentTimeMillis() - startTime) / 1000
                 val summary = buildString {
                     append("Restore finished in ${formatElapsedTime(finalElapsedTime)}. ")
@@ -319,7 +350,9 @@ class RestoreViewModel(
                     if (failures > 0) {
                         append(" Failed to restore $failures app(s).\n\nErrors:\n- ${failureDetails.joinToString("\n- ")}")
                     }
+                    append(cleanupMessage)
                 }
+
                 _restoreProgress.value = OperationProgress(
                     isFinished = true,
                     overallPercentage = 1f,
@@ -340,28 +373,6 @@ class RestoreViewModel(
                     elapsedTime = (System.currentTimeMillis() - startTime) / 1000
                 )
             } finally {
-                var cleanupSuccess = false
-                tempRestoreDir?.let { dir ->
-                    // Wait a bit before deleting, to allow files to be released
-                    delay(500)
-                    cleanupSuccess = Shell.cmd("rm -rf '${dir.absolutePath}'").exec().isSuccess
-                }
-
-                val originalSummary = _restoreProgress.value.finalSummary ?: ""
-                val cleanupMessage = if (tempRestoreDir == null) {
-                    "" // No directory was created, so no cleanup message needed.
-                } else if (cleanupSuccess) {
-                    "\n\nTemporary restore data cleaned up successfully."
-                } else {
-                    "\n\nWarning: Failed to clean up temporary restore data. Please clear the app cache manually."
-                }
-
-                if (_restoreProgress.value.isFinished) {
-                    _restoreProgress.update {
-                        it.copy(finalSummary = originalSummary + cleanupMessage)
-                    }
-                }
-
                 _isRestoring.value = false
             }
         }
