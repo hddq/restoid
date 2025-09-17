@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
+import kotlinx.coroutines.delay
 
 // UI state for selecting what to restore
 data class RestoreTypes(
@@ -339,7 +340,28 @@ class RestoreViewModel(
                     elapsedTime = (System.currentTimeMillis() - startTime) / 1000
                 )
             } finally {
-                tempRestoreDir?.deleteRecursively()
+                var cleanupSuccess = false
+                tempRestoreDir?.let { dir ->
+                    // Wait a bit before deleting, to allow files to be released
+                    delay(500)
+                    cleanupSuccess = Shell.cmd("rm -rf '${dir.absolutePath}'").exec().isSuccess
+                }
+
+                val originalSummary = _restoreProgress.value.finalSummary ?: ""
+                val cleanupMessage = if (tempRestoreDir == null) {
+                    "" // No directory was created, so no cleanup message needed.
+                } else if (cleanupSuccess) {
+                    "\n\nTemporary restore data cleaned up successfully."
+                } else {
+                    "\n\nWarning: Failed to clean up temporary restore data. Please clear the app cache manually."
+                }
+
+                if (_restoreProgress.value.isFinished) {
+                    _restoreProgress.update {
+                        it.copy(finalSummary = originalSummary + cleanupMessage)
+                    }
+                }
+
                 _isRestoring.value = false
             }
         }
