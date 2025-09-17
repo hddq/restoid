@@ -133,7 +133,7 @@ class SnapshotDetailsViewModel(
         val items = mutableListOf<String>()
         snapshot.paths.forEach { path ->
             when {
-                (path.startsWith("/data/app/") && path.contains(pkg)) -> if (!items.contains("APK")) items.add("APK")
+                (path.startsWith("/data/app/") && path.contains("/${pkg}-")) -> if (!items.contains("APK")) items.add("APK")
                 path == "/data/data/$pkg" -> if (!items.contains("Data")) items.add("Data")
                 path == "/data/user_de/0/$pkg" -> if (!items.contains("Device Protected Data")) items.add("Device Protected Data")
                 path == "/storage/emulated/0/Android/data/$pkg" -> if (!items.contains("External Data")) items.add("External Data")

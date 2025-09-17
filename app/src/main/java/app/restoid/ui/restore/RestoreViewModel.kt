@@ -150,7 +150,7 @@ class RestoreViewModel(
         val items = mutableListOf<String>()
         snapshot.paths.forEach { path ->
             when {
-                (path.startsWith("/data/app/") && path.contains(pkg)) -> if (!items.contains("APK")) items.add("APK")
+                (path.startsWith("/data/app/") && path.contains("/${pkg}-")) -> if (!items.contains("APK")) items.add("APK")
                 path == "/data/data/$pkg" -> if (!items.contains("Data")) items.add("Data")
                 path == "/data/user_de/0/$pkg" -> if (!items.contains("Device Protected Data")) items.add("Device Protected Data")
                 path == "/storage/emulated/0/Android/data/$pkg" -> if (!items.contains("External Data")) items.add("External Data")
@@ -196,7 +196,7 @@ class RestoreViewModel(
                 // --- Find APKs to restore ---
                 val pathsToRestore = selectedApps.mapNotNull { detail ->
                     currentSnapshot.paths.find { path ->
-                        path.startsWith("/data/app/") && (path.contains("-${detail.appInfo.name}-") || path.contains("/${detail.appInfo.name}-") || path.contains(detail.appInfo.packageName))
+                        path.startsWith("/data/app/") && path.contains("/${detail.appInfo.packageName}-")
                     }
                 }
 
@@ -207,7 +207,8 @@ class RestoreViewModel(
                 // --- Stage 1: Execute restic restore with real-time progress ---
                 val includes = pathsToRestore.joinToString(" ") { "--include '$it'" }
                 val sanitizedPassword = password.replace("'", "'\\''")
-                val command = "RESTIC_PASSWORD='$sanitizedPassword' ${resticState.path} -r '$selectedRepoPath' restore ${currentSnapshot.id} --target '${tempRestoreDir.absolutePath}' $includes --json"
+                val env = "HOME='${application.filesDir.absolutePath}' TMPDIR='${application.cacheDir.absolutePath}'"
+                val command = "$env RESTIC_PASSWORD='$sanitizedPassword' ${resticState.path} -r '$selectedRepoPath' restore ${currentSnapshot.id} --target '${tempRestoreDir.absolutePath}' $includes --json"
 
                 val stdoutCallback = object : CallbackList<String>() {
                     override fun onAddElement(line: String) {
@@ -255,7 +256,7 @@ class RestoreViewModel(
                         bytesProcessed = bytesInstalledSoFar
                     )
 
-                    val originalApkPath = pathsToRestore.find { it.contains(detail.appInfo.packageName) || it.contains(appName) }
+                    val originalApkPath = pathsToRestore.find { it.contains("/${detail.appInfo.packageName}-") }
                     if (originalApkPath == null) {
                         failures++
                         failureDetails.add("$appName: Could not find its path in the restored files list.")
@@ -266,17 +267,44 @@ class RestoreViewModel(
                     val apkFiles = restoredContentDir.walk().filter { it.isFile && it.extension == "apk" }.toList()
 
                     if (apkFiles.isNotEmpty()) {
-                        val apkPaths = apkFiles.joinToString(" ") { "'${it.absolutePath}'" }
-                        val installCommand = if (apkFiles.size > 1) "pm install-create -r -d; pm install-write -S ${apkFiles.sumOf { it.length() }} 0 base.apk $apkPaths; pm install-commit 0" else "pm install -r -d $apkPaths"
-                        val installResult = Shell.cmd(installCommand).exec()
+                        // 1. Create install session
+                        val createResult = Shell.cmd("pm install-create -r -d").exec()
+                        val sessionId = createResult.out.firstOrNull()?.substringAfterLast('[')?.substringBefore(']')
 
-                        if (installResult.isSuccess) {
-                            successes++
-                            bytesInstalledSoFar += appSize
+                        if (createResult.isSuccess && sessionId != null) {
+                            var allWritesSucceeded = true
+                            // 2. Write all APKs to the session
+                            for ((splitIndex, apkFile) in apkFiles.withIndex()) {
+                                // Split name needs to be unique. Using index + name.
+                                val splitName = "${splitIndex}_${apkFile.name}"
+                                val writeCommand = "pm install-write -S ${apkFile.length()} $sessionId '$splitName' '${apkFile.absolutePath}'"
+                                val writeResult = Shell.cmd(writeCommand).exec()
+                                if (!writeResult.isSuccess) {
+                                    allWritesSucceeded = false
+                                    failures++
+                                    failureDetails.add("$appName: Failed to write ${apkFile.name}: ${writeResult.err.joinToString(" ")}")
+                                    // Abandon this session if one write fails
+                                    Shell.cmd("pm install-abandon $sessionId").exec()
+                                    break
+                                }
+                            }
+
+                            if (allWritesSucceeded) {
+                                // 3. Commit the session
+                                val commitResult = Shell.cmd("pm install-commit $sessionId").exec()
+                                if (commitResult.isSuccess && commitResult.out.any { it.contains("Success") }) {
+                                    successes++
+                                    bytesInstalledSoFar += appSize
+                                } else {
+                                    failures++
+                                    failureDetails.add("$appName: Install commit failed: ${commitResult.err.joinToString(" ")}")
+                                }
+                            }
                         } else {
                             failures++
-                            failureDetails.add("$appName: Install failed: ${installResult.err.joinToString(" ")}")
+                            failureDetails.add("$appName: Failed to create install session: ${createResult.err.joinToString(" ")}")
                         }
+
                     } else {
                         failures++
                         failureDetails.add("$appName: No APK files found after restore.")
@@ -361,3 +389,4 @@ class RestoreViewModel(
     fun setRestoreObb(value: Boolean) = _restoreTypes.update { it.copy(obb = value) }
     fun setRestoreMedia(value: Boolean) = _restoreTypes.update { it.copy(media = value) }
 }
+
