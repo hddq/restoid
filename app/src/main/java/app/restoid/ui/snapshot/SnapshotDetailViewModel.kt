@@ -15,6 +15,12 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+sealed class ForgetResult {
+    object Idle : ForgetResult()
+    object Success : ForgetResult()
+    data class Error(val message: String) : ForgetResult()
+}
+
 // Data class to hold the state of restore types
 data class RestoreTypes(
     val apk: Boolean = true,
@@ -49,6 +55,9 @@ class SnapshotDetailsViewModel(
 
     private val _isForgetting = MutableStateFlow(false)
     val isForgetting = _isForgetting.asStateFlow()
+
+    private val _forgetResult = MutableStateFlow<ForgetResult>(ForgetResult.Idle)
+    val forgetResult = _forgetResult.asStateFlow()
 
     private val _restoreTypes = MutableStateFlow(RestoreTypes())
     val restoreTypes = _restoreTypes.asStateFlow()
@@ -186,9 +195,12 @@ class SnapshotDetailsViewModel(
                     val result = resticRepository.forgetSnapshot(repoPath, password, snapshotToForget.id)
                     result.fold(
                         onSuccess = {
-                            // The list is now refreshed automatically via the repository.
+                            _forgetResult.value = ForgetResult.Success
                         },
-                        onFailure = { _error.value = it.message }
+                        onFailure = {
+                            _error.value = it.message
+                            _forgetResult.value = ForgetResult.Error(it.message ?: "Unknown error")
+                        }
                     )
                 } else {
                     _error.value = "Repository or password not found"

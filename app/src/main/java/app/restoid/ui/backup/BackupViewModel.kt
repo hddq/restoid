@@ -87,6 +87,8 @@ class BackupViewModel(
             var isSuccess = false
             var summary = ""
             var finalSummaryProgress: OperationProgress? = null
+            var repoPath: String? = null
+            var password: String? = null
 
             try {
                 // --- Pre-flight checks ---
@@ -98,7 +100,8 @@ class BackupViewModel(
 
                 val resticState = resticRepository.resticState.value as ResticState.Installed
                 val selectedRepoPath = repositoriesRepository.selectedRepository.value!!
-                val password = repositoriesRepository.getRepositoryPassword(selectedRepoPath)!!
+                repoPath = selectedRepoPath
+                password = repositoriesRepository.getRepositoryPassword(selectedRepoPath)!!
                 val selectedApps = _apps.value.filter { it.isSelected }
 
                 // --- Generate file list and tags ---
@@ -188,6 +191,12 @@ class BackupViewModel(
                 )
                 _backupProgress.value = finalProgress
                 notificationRepository.showBackupFinishedNotification(isSuccess, summary)
+
+                if (isSuccess && repoPath != null && password != null) {
+                    launch {
+                        resticRepository.refreshSnapshots(repoPath, password)
+                    }
+                }
             }
         }
     }

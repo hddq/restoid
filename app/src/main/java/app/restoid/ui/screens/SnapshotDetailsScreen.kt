@@ -23,6 +23,7 @@ import app.restoid.RestoidApplication
 import app.restoid.Screen
 import app.restoid.data.SnapshotInfo
 import app.restoid.model.BackupDetail
+import app.restoid.ui.snapshot.ForgetResult
 import app.restoid.ui.snapshot.SnapshotDetailsViewModel
 import app.restoid.ui.snapshot.SnapshotDetailsViewModelFactory
 import coil.compose.rememberAsyncImagePainter
@@ -49,6 +50,13 @@ fun SnapshotDetailsScreen(
     val error by viewModel.error.collectAsState()
     val showConfirmDialog by viewModel.showConfirmForgetDialog.collectAsState()
     val isForgetting by viewModel.isForgetting.collectAsState()
+    val forgetResult by viewModel.forgetResult.collectAsState()
+
+    LaunchedEffect(forgetResult) {
+        if (forgetResult is ForgetResult.Success) {
+            navController.popBackStack()
+        }
+    }
 
     LaunchedEffect(snapshotId) {
         if (snapshotId != null) {
@@ -60,7 +68,6 @@ fun SnapshotDetailsScreen(
         ConfirmForgetDialog(
             onConfirm = {
                 viewModel.confirmForgetSnapshot()
-                navController.popBackStack()
             },
             onDismiss = { viewModel.cancelForgetSnapshot() }
         )
