@@ -35,26 +35,33 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Shared data class for representing the progress of a long-running operation
- * like backup or restore.
+ * like backup or restore. It now supports multi-stage operations.
  */
 data class OperationProgress(
-    val percentage: Float = 0f,
+    val stageTitle: String = "Initializing...", // e.g., "Stage 1/2: Restoring Files"
+    val stagePercentage: Float = 0f, // progress of the current stage (0.0 to 1.0)
+    val overallPercentage: Float = 0f, // overall progress (0.0 to 1.0)
+
+    // Details for the current stage
     val totalFiles: Int = 0,
     val filesProcessed: Int = 0,
     val totalBytes: Long = 0,
     val bytesProcessed: Long = 0,
     val currentFile: String = "",
-    val currentAction: String = "Initializing...",
+
+    // General Info
     val elapsedTime: Long = 0, // in seconds
     val error: String? = null,
     val isFinished: Boolean = false,
     val finalSummary: String = "",
+
     // Detailed summary fields (mostly for backup)
     val filesNew: Int = 0,
     val filesChanged: Int = 0,
     val dataAdded: Long = 0,
     val totalDuration: Double = 0.0
 )
+
 
 /**
  * A generalized composable to display the progress and final summary of
@@ -105,17 +112,27 @@ fun ProgressScreenContent(
 
         } else {
             // In-Progress State
-            Text(text = progress.currentAction, style = MaterialTheme.typography.titleLarge)
+            Text(text = progress.stageTitle, style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(24.dp))
 
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
-                    // Progress Bar
+                    // Overall Progress
+                    Text("Overall Progress", style = MaterialTheme.typography.labelMedium)
                     LinearProgressIndicator(
-                        progress = { progress.percentage },
+                        progress = { progress.overallPercentage },
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(Modifier.height(16.dp))
+
+                    // Stage Progress
+                    Text("Stage Progress", style = MaterialTheme.typography.labelMedium)
+                    LinearProgressIndicator(
+                        progress = { progress.stagePercentage },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(16.dp))
+
 
                     // Stats Row
                     Row(
@@ -124,18 +141,21 @@ fun ProgressScreenContent(
                     ) {
                         ProgressStat(label = "Elapsed", value = formatElapsedTime(progress.elapsedTime))
                         ProgressStat(
-                            label = "Files",
+                            label = "Items",
                             value = "${progress.filesProcessed}/${progress.totalFiles}"
                         )
-                        ProgressStat(
-                            label = "Size",
-                            value = "${Formatter.formatFileSize(context, progress.bytesProcessed)} / ${Formatter.formatFileSize(context, progress.totalBytes)}"
-                        )
+                        // Only show size if it's relevant (not 0)
+                        if (progress.totalBytes > 0) {
+                            ProgressStat(
+                                label = "Size",
+                                value = "${Formatter.formatFileSize(context, progress.bytesProcessed)} / ${Formatter.formatFileSize(context, progress.totalBytes)}"
+                            )
+                        }
                     }
                     Spacer(Modifier.height(16.dp))
 
                     // Current File Text (only show for backup as restore is app-based)
-                    if (operationType == "Backup") {
+                    if (operationType == "Backup" && progress.currentFile.isNotBlank()) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 "Processing: ",

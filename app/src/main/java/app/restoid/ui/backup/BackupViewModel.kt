@@ -80,7 +80,7 @@ class BackupViewModel(
         backupJob = viewModelScope.launch(Dispatchers.IO) {
             val startTime = System.currentTimeMillis()
             _isBackingUp.value = true
-            _backupProgress.value = OperationProgress(currentAction = "Starting backup...")
+            _backupProgress.value = OperationProgress(stageTitle = "Starting backup...")
             // notificationRepository.showBackupProgressNotification(_backupProgress.value) // TODO: Update this to new progress type
 
             val fileList = File.createTempFile("restic-files-", ".txt", application.cacheDir)
@@ -102,7 +102,7 @@ class BackupViewModel(
                 val selectedApps = _apps.value.filter { it.isSelected }
 
                 // --- Generate file list and tags ---
-                updateProgress(currentAction = "Calculating sizes...")
+                updateProgress(stageTitle = "Calculating sizes...")
                 val pathsToBackup = mutableListOf<String>()
                 val tags = selectedApps.map { app ->
                     val appPaths = generateFilePathsForApp(app)
@@ -123,7 +123,7 @@ class BackupViewModel(
                 fileList.writeText(pathsToBackup.distinct().joinToString("\n"))
 
                 // --- Execute restic backup command ---
-                updateProgress(currentAction = "Starting backup command...")
+                updateProgress(stageTitle = "Starting backup command...")
                 val tagFlags = tags.joinToString(" ") { "--tag '$it'" }
                 val command = "${resticState.path} -r '$selectedRepoPath' backup --files-from '${fileList.absolutePath}' --json --verbose=2 $tagFlags"
                 val sanitizedPassword = password.replace("'", "'\\''")
@@ -234,8 +234,8 @@ class BackupViewModel(
         return totalSize
     }
 
-    private fun updateProgress(currentAction: String) {
-        _backupProgress.update { it.copy(currentAction = currentAction) }
+    private fun updateProgress(stageTitle: String) {
+        _backupProgress.update { it.copy(stageTitle = stageTitle) }
     }
 
     fun toggleAppSelection(packageName: String) {
@@ -268,3 +268,4 @@ class BackupViewModel(
     fun setBackupObb(value: Boolean) = _backupTypes.update { it.copy(obb = value) }
     fun setBackupMedia(value: Boolean) = _backupTypes.update { it.copy(media = value) }
 }
+

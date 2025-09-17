@@ -51,7 +51,7 @@ class NotificationRepository(private val context: Context) {
             return
         }
 
-        val percentage = (progress.percentage * 100).toInt()
+        val percentage = (progress.stagePercentage * 100).toInt()
         val processedSize = Formatter.formatFileSize(context, progress.bytesProcessed)
         val totalSize = Formatter.formatFileSize(context, progress.totalBytes)
         val filesText = "${progress.filesProcessed}/${progress.totalFiles} files"

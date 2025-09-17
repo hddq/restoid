@@ -12,6 +12,8 @@ import app.restoid.data.SnapshotInfo
 import app.restoid.model.AppInfo
 import app.restoid.model.BackupDetail
 import app.restoid.ui.shared.OperationProgress
+import app.restoid.util.ResticOutputParser
+import com.topjohnwu.superuser.CallbackList
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -165,13 +167,13 @@ class RestoreViewModel(
         restoreJob = viewModelScope.launch(Dispatchers.IO) {
             val startTime = System.currentTimeMillis()
             _isRestoring.value = true
-            _restoreProgress.value = OperationProgress(currentAction = "Starting restore...")
+            _restoreProgress.value = OperationProgress()
 
             var tempRestoreDir: File? = null
             var successes = 0
             var failures = 0
             val failureDetails = mutableListOf<String>()
-            var bytesRestoredSoFar = 0L
+            val totalStages = 2 // 1 for file restore, 1 for app install
 
             try {
                 // --- Pre-flight checks ---
@@ -179,7 +181,6 @@ class RestoreViewModel(
                 val selectedRepoPath = repositoriesRepository.selectedRepository.value
                 val currentSnapshot = _snapshot.value
                 val selectedApps = _backupDetails.value.filter { it.appInfo.isSelected }
-                val totalBytesToRestore = selectedApps.sumOf { it.backupSize ?: 0L }
 
                 if (resticState !is ResticState.Installed || selectedRepoPath == null || currentSnapshot == null) {
                     throw IllegalStateException("Pre-restore checks failed: Restic not ready or no repo/snapshot selected.")
@@ -192,9 +193,7 @@ class RestoreViewModel(
 
                 tempRestoreDir = File(application.cacheDir, "restic-restore-${System.currentTimeMillis()}").also { it.mkdirs() }
 
-                // --- OPTIMIZATION: Bulk Restore ---
-                // 1. Collect all APK paths to restore in one go.
-                _restoreProgress.value = _restoreProgress.value.copy(currentAction = "Finding APKs in backup...")
+                // --- Find APKs to restore ---
                 val pathsToRestore = selectedApps.mapNotNull { detail ->
                     currentSnapshot.paths.find { path ->
                         path.startsWith("/data/app/") && (path.contains("-${detail.appInfo.name}-") || path.contains("/${detail.appInfo.name}-") || path.contains(detail.appInfo.packageName))
@@ -205,42 +204,55 @@ class RestoreViewModel(
                     throw IllegalStateException("No APK paths found in the snapshot for the selected apps.")
                 }
 
-                // 2. Execute a single restore command for all APKs.
-                val elapsedTime = (System.currentTimeMillis() - startTime) / 1000
-                _restoreProgress.value = _restoreProgress.value.copy(
-                    currentAction = "Restoring all APK files...",
-                    elapsedTime = elapsedTime
-                )
+                // --- Stage 1: Execute restic restore with real-time progress ---
+                val includes = pathsToRestore.joinToString(" ") { "--include '$it'" }
+                val sanitizedPassword = password.replace("'", "'\\''")
+                val command = "RESTIC_PASSWORD='$sanitizedPassword' ${resticState.path} -r '$selectedRepoPath' restore ${currentSnapshot.id} --target '${tempRestoreDir.absolutePath}' $includes --json"
 
-                val bulkRestoreResult = resticRepository.restore(
-                    repoPath = selectedRepoPath,
-                    password = password,
-                    snapshotId = currentSnapshot.id,
-                    targetPath = tempRestoreDir.absolutePath,
-                    pathsToRestore = pathsToRestore
-                )
+                val stdoutCallback = object : CallbackList<String>() {
+                    override fun onAddElement(line: String) {
+                        ResticOutputParser.parse(line)?.let { progressUpdate ->
+                            val elapsedTime = (System.currentTimeMillis() - startTime) / 1000
+                            _restoreProgress.value = progressUpdate.copy(
+                                elapsedTime = elapsedTime,
+                                stageTitle = "Stage 1/$totalStages: Restoring Files",
+                                stagePercentage = progressUpdate.stagePercentage,
+                                overallPercentage = progressUpdate.stagePercentage / totalStages
+                            )
+                        }
+                    }
+                }
+                val stderr = mutableListOf<String>()
+                val restoreResult = Shell.cmd(command).to(stdoutCallback, stderr).exec()
 
-                if (bulkRestoreResult.isFailure) {
-                    throw IllegalStateException("Restic restore command failed: ${bulkRestoreResult.exceptionOrNull()?.message}")
+                if (!restoreResult.isSuccess) {
+                    val errorOutput = stderr.joinToString("\n")
+                    val errorMsg = if (errorOutput.isEmpty()) "Restic restore command failed with exit code ${restoreResult.code}." else errorOutput
+                    throw IllegalStateException(errorMsg)
                 }
 
+                // --- Stage 2: Installation Loop ---
+                var bytesInstalledSoFar = 0L
+                val totalBytesToRestore = selectedApps.sumOf { it.backupSize ?: 0L }
 
-                // --- Installation Loop ---
                 for ((index, detail) in selectedApps.withIndex()) {
                     val appName = detail.appInfo.name
                     val appSize = detail.backupSize ?: 0L
 
                     val currentElapsedTime = (System.currentTimeMillis() - startTime) / 1000
-                    val percentage = if (totalBytesToRestore > 0) bytesRestoredSoFar.toFloat() / totalBytesToRestore.toFloat() else 0f
+                    val installStagePercentage = (index + 1).toFloat() / selectedApps.size.toFloat()
+                    val overallPercentage = (1f / totalStages) + (installStagePercentage / totalStages)
 
-                    _restoreProgress.value = _restoreProgress.value.copy(
-                        percentage = percentage,
-                        currentAction = "Installing $appName (${index + 1}/${selectedApps.size})",
+
+                    _restoreProgress.value = OperationProgress(
+                        stageTitle = "Stage 2/$totalStages: Installing Apps",
+                        stagePercentage = installStagePercentage,
+                        overallPercentage = overallPercentage,
                         elapsedTime = currentElapsedTime,
-                        filesProcessed = index,
                         totalFiles = selectedApps.size,
-                        bytesProcessed = bytesRestoredSoFar,
-                        totalBytes = totalBytesToRestore
+                        filesProcessed = index + 1,
+                        totalBytes = totalBytesToRestore,
+                        bytesProcessed = bytesInstalledSoFar
                     )
 
                     val originalApkPath = pathsToRestore.find { it.contains(detail.appInfo.packageName) || it.contains(appName) }
@@ -260,7 +272,7 @@ class RestoreViewModel(
 
                         if (installResult.isSuccess) {
                             successes++
-                            bytesRestoredSoFar += appSize
+                            bytesInstalledSoFar += appSize
                         } else {
                             failures++
                             failureDetails.add("$appName: Install failed: ${installResult.err.joinToString(" ")}")
@@ -281,13 +293,13 @@ class RestoreViewModel(
                 }
                 _restoreProgress.value = OperationProgress(
                     isFinished = true,
-                    percentage = 1f,
+                    overallPercentage = 1f,
                     finalSummary = summary,
                     error = if (failures > 0) failureDetails.joinToString(", ") else null,
                     elapsedTime = finalElapsedTime,
                     filesProcessed = successes,
                     totalFiles = selectedApps.size,
-                    bytesProcessed = bytesRestoredSoFar,
+                    bytesProcessed = bytesInstalledSoFar,
                     totalBytes = totalBytesToRestore
                 )
 
@@ -349,4 +361,5 @@ class RestoreViewModel(
     fun setRestoreObb(value: Boolean) = _restoreTypes.update { it.copy(obb = value) }
     fun setRestoreMedia(value: Boolean) = _restoreTypes.update { it.copy(media = value) }
 }
+
 

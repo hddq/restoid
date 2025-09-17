@@ -20,15 +20,33 @@ object ResticOutputParser {
     }
 
     private fun parseStatus(json: JSONObject): OperationProgress {
-        return OperationProgress(
-            percentage = json.optDouble("percent_done", 0.0).toFloat(),
-            totalFiles = json.optInt("total_files", 0),
-            filesProcessed = json.optInt("files_done", 0),
-            totalBytes = json.optLong("total_bytes", 0),
-            bytesProcessed = json.optLong("bytes_done", 0),
-            currentFile = json.optJSONArray("current_files")?.optString(0) ?: "",
-            currentAction = "Backing up..."
-        )
+        // Restore status has "bytes_restored", backup has "bytes_done"
+        val isRestore = json.has("bytes_restored")
+        val percentDone = json.optDouble("percent_done", 0.0).toFloat()
+
+        return if (isRestore) {
+            OperationProgress(
+                stagePercentage = percentDone,
+                totalFiles = json.optInt("total_files", 0),
+                filesProcessed = json.optInt("files_restored", 0),
+                totalBytes = json.optLong("total_bytes", 0),
+                bytesProcessed = json.optLong("bytes_restored", 0),
+                currentFile = "", // Not available in restore status
+                stageTitle = "Restoring files..."
+            )
+        } else {
+            // Assume backup
+            OperationProgress(
+                stagePercentage = percentDone,
+                overallPercentage = percentDone, // For backup, stage and overall are the same
+                totalFiles = json.optInt("total_files", 0),
+                filesProcessed = json.optInt("files_done", 0),
+                totalBytes = json.optLong("total_bytes", 0),
+                bytesProcessed = json.optLong("bytes_done", 0),
+                currentFile = json.optJSONArray("current_files")?.optString(0) ?: "",
+                stageTitle = "Backing up..."
+            )
+        }
     }
 
     private fun parseSummary(json: JSONObject): OperationProgress {
@@ -38,12 +56,13 @@ object ResticOutputParser {
         val totalDuration = json.optDouble("total_duration", 0.0)
 
         return OperationProgress(
-            percentage = 1.0f,
+            stagePercentage = 1.0f,
+            overallPercentage = 1.0f,
             totalFiles = json.optInt("total_files_processed", 0),
             filesProcessed = json.optInt("total_files_processed", 0),
             totalBytes = json.optLong("total_bytes_processed", 0),
             bytesProcessed = json.optLong("total_bytes_processed", 0),
-            currentAction = "Finishing...",
+            stageTitle = "Finishing...",
             isFinished = true,
             finalSummary = formatSummary(json), // Use the helper to create the string
             // Add the new fields
@@ -80,3 +99,4 @@ object ResticOutputParser {
         return regex.find(log)?.value
     }
 }
+
