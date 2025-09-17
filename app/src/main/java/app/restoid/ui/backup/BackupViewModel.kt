@@ -104,10 +104,21 @@ class BackupViewModel(
                 // --- Generate file list and tags ---
                 updateProgress(stageTitle = "Calculating sizes...")
                 val pathsToBackup = mutableListOf<String>()
+                val excludePatterns = mutableListOf<String>()
                 val tags = selectedApps.map { app ->
                     val appPaths = generateFilePathsForApp(app)
                     val existingAppPaths = appPaths.filter { Shell.cmd("[ -e '$it' ]").exec().isSuccess }
                     pathsToBackup.addAll(existingAppPaths)
+
+                    // Exclude cache folders
+                    if (_backupTypes.value.data) {
+                        excludePatterns.add("'/data/data/${app.packageName}/cache'")
+                        excludePatterns.add("'/data/data/${app.packageName}/code_cache'")
+                    }
+                    if (_backupTypes.value.externalData) {
+                        excludePatterns.add("'/storage/emulated/0/Android/data/${app.packageName}/cache'")
+                    }
+
                     val size = getDirectorySize(existingAppPaths)
                     // Format: "packageName|versionName|versionCode|sizeInBytes"
                     // We replace '|' in the version name to avoid parsing issues.
@@ -125,7 +136,8 @@ class BackupViewModel(
                 // --- Execute restic backup command ---
                 updateProgress(stageTitle = "Starting backup command...")
                 val tagFlags = tags.joinToString(" ") { "--tag '$it'" }
-                val command = "${resticState.path} -r '$selectedRepoPath' backup --files-from '${fileList.absolutePath}' --json --verbose=2 $tagFlags"
+                val excludeFlags = excludePatterns.distinct().joinToString(" ") { pattern -> "--exclude $pattern" }
+                val command = "${resticState.path} -r '$selectedRepoPath' backup --files-from '${fileList.absolutePath}' --json --verbose=2 $tagFlags $excludeFlags"
                 val sanitizedPassword = password.replace("'", "'\\''")
 
                 val stdoutCallback = object : CallbackList<String>() {
