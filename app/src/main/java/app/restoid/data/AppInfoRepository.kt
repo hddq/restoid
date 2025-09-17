@@ -93,55 +93,74 @@ class AppInfoRepository(private val context: Context) {
      * 1. Checks hot (in-memory) cache.
      * 2. Checks warm (disk-backed) cache.
      * 3. Fetches from the system if not found in any cache.
+     * It now includes a version check to invalidate stale cache entries.
      */
     private suspend fun getAppInfo(packageName: String): AppInfo? {
+        val pm = context.packageManager
+        val currentPackageInfo: PackageInfo? = try {
+            pm.getPackageInfo(packageName, PackageManager.GET_META_DATA)
+        } catch (e: PackageManager.NameNotFoundException) {
+            // App isn't installed. Clean up cache if it exists.
+            var wasCached = false
+            cacheMutex.withLock {
+                if (appInfoCache.remove(packageName) != null) wasCached = true
+                if (diskCache.remove(packageName) != null) wasCached = true
+            }
+            if (wasCached) saveCacheToDisk()
+            return null
+        }
+
+        val currentVersionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            currentPackageInfo!!.longVersionCode
+        } else {
+            @Suppress("DEPRECATION")
+            currentPackageInfo!!.versionCode.toLong()
+        }
+
         // 1. Check hot in-memory cache.
-        appInfoCache[packageName]?.let { return it }
+        appInfoCache[packageName]?.let {
+            if (it.versionCode == currentVersionCode) return it
+        }
 
         // 2. Check warm disk-backed cache.
         diskCache[packageName]?.let { cachedInfo ->
-            val appInfo = cachedInfo.toAppInfo(context)
-            appInfoCache[packageName] = appInfo // Promote to hot cache.
-            return appInfo
+            if (cachedInfo.versionCode == currentVersionCode) {
+                val appInfo = cachedInfo.toAppInfo(context)
+                // Preserve selection state if available in hot cache
+                val finalInfo = appInfoCache[packageName]?.isSelected?.let { isSelected ->
+                    appInfo.copy(isSelected = isSelected)
+                } ?: appInfo
+                appInfoCache[packageName] = finalInfo // Promote to hot cache.
+                return finalInfo
+            }
         }
 
-        // 3. Not in any cache, fetch from source using root.
-        return withContext(Dispatchers.IO) {
-            try {
-                val pm = context.packageManager
-                val pathResult = Shell.cmd("pm path $packageName").exec()
-                if (pathResult.isSuccess && pathResult.out.isNotEmpty()) {
-                    val apkPath = pathResult.out.first().removePrefix("package:").trim()
-                    val packageInfo: PackageInfo? = pm.getPackageArchiveInfo(apkPath, PackageManager.GET_META_DATA)
-                    packageInfo?.applicationInfo?.let { appInfo ->
-                        // Required to load icon and label correctly from an APK path.
-                        appInfo.sourceDir = apkPath
-                        appInfo.publicSourceDir = apkPath
-                        val info = AppInfo(
-                            name = appInfo.loadLabel(pm).toString(),
-                            packageName = appInfo.packageName,
-                            versionName = packageInfo.versionName ?: "N/A",
-                            versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                                packageInfo.longVersionCode
-                            } else {
-                                @Suppress("DEPRECATION")
-                                packageInfo.versionCode.toLong()
-                            },
-                            icon = appInfo.loadIcon(pm),
-                            apkPath = apkPath
-                        )
-                        // Update caches and save to disk.
-                        appInfoCache[packageName] = info
-                        diskCache[packageName] = info.toCachedAppInfo()
-                        saveCacheToDisk()
-                        return@withContext info
-                    }
+        // 3. Not in any cache or cache is stale, so fetch fresh info.
+        // We can use the PackageInfo we already retrieved. This is faster and doesn't need root.
+        return try {
+            currentPackageInfo!!.applicationInfo?.let { app ->
+                val info = AppInfo(
+                    name = app.loadLabel(pm).toString(),
+                    packageName = app.packageName,
+                    versionName = currentPackageInfo.versionName ?: "N/A",
+                    versionCode = currentVersionCode,
+                    icon = app.loadIcon(pm),
+                    apkPath = app.sourceDir, // This is the path to the base APK
+                    // Preserve selection state if it was in the hot cache before being found stale
+                    isSelected = appInfoCache[packageName]?.isSelected ?: true
+                )
+
+                // Update caches and save to disk.
+                cacheMutex.withLock {
+                    appInfoCache[packageName] = info
+                    diskCache[packageName] = info.toCachedAppInfo()
                 }
-                null
-            } catch (e: Exception) {
-                // Package not found or other error.
-                null
+                saveCacheToDisk()
+                info
             }
+        } catch (e: Exception) {
+            // Something went wrong while building AppInfo.
+            null
         }
     }
 }
