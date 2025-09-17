@@ -210,7 +210,13 @@ class BackupViewModel(
     private fun generateFilePathsForApp(app: AppInfo): List<String> {
         val backupOptions = _backupTypes.value
         return mutableListOf<String>().apply {
-            if (backupOptions.apk) File(app.apkPath).parentFile?.absolutePath?.let { add(it) }
+            if (backupOptions.apk) {
+                app.apkPaths.firstOrNull()?.let { path ->
+                    File(path).parentFile?.absolutePath?.let {
+                        add(it)
+                    }
+                }
+            }
             if (backupOptions.data) add("/data/data/${app.packageName}")
             if (backupOptions.deviceProtectedData) add("/data/user_de/0/${app.packageName}")
             if (backupOptions.externalData) add("/storage/emulated/0/Android/data/${app.packageName}")
@@ -268,4 +274,3 @@ class BackupViewModel(
     fun setBackupObb(value: Boolean) = _backupTypes.update { it.copy(obb = value) }
     fun setBackupMedia(value: Boolean) = _backupTypes.update { it.copy(media = value) }
 }
-

@@ -17,7 +17,7 @@ data class CachedAppInfo(
     val packageName: String,
     val versionName: String,
     val versionCode: Long,
-    val apkPath: String,
+    val apkPaths: List<String>,
     val iconBase64: String
 )
 
@@ -27,7 +27,7 @@ fun CachedAppInfo.toAppInfo(context: Context): AppInfo {
         packageName = this.packageName,
         versionName = this.versionName,
         versionCode = this.versionCode,
-        apkPath = this.apkPath,
+        apkPaths = this.apkPaths,
         icon = this.iconBase64.base64ToDrawable(context)
     )
 }
@@ -38,7 +38,7 @@ fun AppInfo.toCachedAppInfo(): CachedAppInfo {
         packageName = this.packageName,
         versionName = this.versionName,
         versionCode = this.versionCode,
-        apkPath = this.apkPath,
+        apkPaths = this.apkPaths,
         iconBase64 = this.icon.toBase64()
     )
 }
@@ -56,4 +56,3 @@ private fun String.base64ToDrawable(context: Context): Drawable {
     val bitmap = BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
     return BitmapDrawable(context.resources, bitmap)
 }
-

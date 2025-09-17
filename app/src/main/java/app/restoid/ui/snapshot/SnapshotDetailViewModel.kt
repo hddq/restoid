@@ -1,7 +1,6 @@
 package app.restoid.ui.snapshot
 
 import android.app.Application
-import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.restoid.data.AppInfoRepository
@@ -119,7 +118,7 @@ class SnapshotDetailsViewModel(
                 versionName = versionName ?: "N/A",
                 versionCode = versionCode ?: 0L,
                 icon = application.packageManager.defaultActivityIcon,
-                apkPath = "",
+                apkPaths = emptyList(),
                 isSelected = true
             )
 

@@ -139,13 +139,17 @@ class AppInfoRepository(private val context: Context) {
         // We can use the PackageInfo we already retrieved. This is faster and doesn't need root.
         return try {
             currentPackageInfo!!.applicationInfo?.let { app ->
+                val apkPaths = mutableListOf<String>()
+                apkPaths.add(app.sourceDir)
+                app.splitSourceDirs?.let { apkPaths.addAll(it) }
+
                 val info = AppInfo(
                     name = app.loadLabel(pm).toString(),
                     packageName = app.packageName,
                     versionName = currentPackageInfo.versionName ?: "N/A",
                     versionCode = currentVersionCode,
                     icon = app.loadIcon(pm),
-                    apkPath = app.sourceDir, // This is the path to the base APK
+                    apkPaths = apkPaths.distinct(),
                     // Preserve selection state if it was in the hot cache before being found stale
                     isSelected = appInfoCache[packageName]?.isSelected ?: true
                 )
@@ -164,4 +168,3 @@ class AppInfoRepository(private val context: Context) {
         }
     }
 }
-

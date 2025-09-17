@@ -136,7 +136,7 @@ class RestoreViewModel(
                 versionName = versionName ?: "N/A",
                 versionCode = versionCode ?: 0L,
                 icon = application.packageManager.defaultActivityIcon,
-                apkPath = "",
+                apkPaths = emptyList(),
                 isSelected = true
             )
 
@@ -361,5 +361,3 @@ class RestoreViewModel(
     fun setRestoreObb(value: Boolean) = _restoreTypes.update { it.copy(obb = value) }
     fun setRestoreMedia(value: Boolean) = _restoreTypes.update { it.copy(media = value) }
 }
-
-
