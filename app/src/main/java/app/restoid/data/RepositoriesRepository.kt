@@ -21,9 +21,11 @@ sealed class AddRepositoryState {
     data class Error(val message: String) : AddRepositoryState()
 }
 
-class RepositoriesRepository(private val context: Context) {
+class RepositoriesRepository(
+    private val context: Context,
+    private val passwordManager: PasswordManager
+) {
     private val prefs = context.getSharedPreferences("repositories", Context.MODE_PRIVATE)
-    private val passwordManager = PasswordManager(context)
     private val REPO_PATHS_KEY = "repo_paths"
     private val SELECTED_REPO_PATH_KEY = "selected_repo_path"
 
@@ -51,6 +53,21 @@ class RepositoriesRepository(private val context: Context) {
     // Gets the stored password for a repository
     fun getRepositoryPassword(path: String): String? {
         return passwordManager.getPassword(path)
+    }
+
+    // Checks if a password exists for a repository (either temporary or permanent)
+    fun hasRepositoryPassword(path: String): Boolean {
+        return passwordManager.hasPassword(path)
+    }
+
+    // Saves a password temporarily for the session
+    fun saveRepositoryPasswordTemporary(path: String, password: String) {
+        passwordManager.savePasswordTemporary(path, password)
+    }
+
+    // Saves a password permanently
+    fun saveRepositoryPassword(path: String, password: String) {
+        passwordManager.savePassword(path, password)
     }
 
     /**
@@ -89,6 +106,8 @@ class RepositoriesRepository(private val context: Context) {
                     prefs.edit().putStringSet(REPO_PATHS_KEY, currentPaths).apply()
                     if (savePassword) {
                         passwordManager.savePassword(path, password)
+                    } else {
+                        passwordManager.savePasswordTemporary(path, password)
                     }
                     loadRepositories()
                     if (wasEmpty) selectRepository(path)
@@ -115,6 +134,8 @@ class RepositoriesRepository(private val context: Context) {
                 prefs.edit().putStringSet(REPO_PATHS_KEY, currentPaths).apply()
                 if (savePassword) {
                     passwordManager.savePassword(path, password)
+                } else {
+                    passwordManager.savePasswordTemporary(path, password)
                 }
                 loadRepositories()
                 if (wasEmpty) selectRepository(path)

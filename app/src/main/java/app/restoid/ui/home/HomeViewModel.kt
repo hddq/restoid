@@ -59,13 +59,12 @@ class HomeViewModel(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            val password = repositoriesRepository.getRepositoryPassword(repoPath)
-            if (password == null) {
+            if (repositoriesRepository.hasRepositoryPassword(repoPath)) {
+                val password = repositoriesRepository.getRepositoryPassword(repoPath)!!
+                handleSnapshotResult(resticRepository.getSnapshots(repoPath, password))
+            } else {
                 _uiState.update { it.copy(isLoading = false, showPasswordDialogFor = repoPath) }
-                return@launch
             }
-
-            handleSnapshotResult(resticRepository.getSnapshots(repoPath, password))
         }
     }
 
@@ -95,9 +94,17 @@ class HomeViewModel(
         }
     }
 
-    fun onPasswordEntered(password: String) {
+    fun onPasswordEntered(password: String, save: Boolean) {
         val repoPath = _uiState.value.showPasswordDialogFor ?: return
         _uiState.update { it.copy(showPasswordDialogFor = null, isLoading = true, error = null) }
+
+        // Save the password
+        if (save) {
+            repositoriesRepository.saveRepositoryPassword(repoPath, password)
+        } else {
+            repositoriesRepository.saveRepositoryPasswordTemporary(repoPath, password)
+        }
+
         viewModelScope.launch {
             handleSnapshotResult(resticRepository.getSnapshots(repoPath, password))
         }

@@ -124,7 +124,7 @@ fun HomeScreen(
         PasswordDialog(
             title = "Repository Password Required",
             message = "Please enter the password for repository: ${uiState.showPasswordDialogFor}",
-            onPasswordEntered = { password -> viewModel.onPasswordEntered(password) },
+            onPasswordEntered = { password, save -> viewModel.onPasswordEntered(password, save) },
             onDismiss = { viewModel.onDismissPasswordDialog() }
         )
     }
