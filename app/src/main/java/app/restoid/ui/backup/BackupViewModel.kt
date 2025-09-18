@@ -81,7 +81,6 @@ class BackupViewModel(
             val startTime = System.currentTimeMillis()
             _isBackingUp.value = true
             _backupProgress.value = OperationProgress(stageTitle = "Starting backup...")
-            // notificationRepository.showBackupProgressNotification(_backupProgress.value) // TODO: Update this to new progress type
 
             val fileList = File.createTempFile("restic-files-", ".txt", application.cacheDir)
             var isSuccess = false
@@ -153,7 +152,7 @@ class BackupViewModel(
                             val elapsedTime = (System.currentTimeMillis() - startTime) / 1000
                             val newProgress = it.copy(elapsedTime = elapsedTime)
                             _backupProgress.value = newProgress
-                            // notificationRepository.showBackupProgressNotification(newProgress) // TODO: Update
+                            notificationRepository.showOperationProgressNotification("Backup", newProgress)
                         }
                     }
                 }
@@ -190,7 +189,7 @@ class BackupViewModel(
                     totalDuration = finalSummaryProgress?.totalDuration ?: ((System.currentTimeMillis() - startTime) / 1000.0)
                 )
                 _backupProgress.value = finalProgress
-                notificationRepository.showBackupFinishedNotification(isSuccess, summary)
+                notificationRepository.showOperationFinishedNotification("Backup", isSuccess, summary)
 
                 if (isSuccess && repoPath != null && password != null) {
                     launch {

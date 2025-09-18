@@ -27,26 +27,26 @@ class NotificationRepository(private val context: Context) {
     val permissionState = _permissionState.asStateFlow()
 
     companion object {
-        const val BACKUP_CHANNEL_ID = "backup_channel"
-        private const val BACKUP_CHANNEL_NAME = "Backups"
-        private const val BACKUP_PROGRESS_NOTIFICATION_ID = 1
-        private const val BACKUP_FINISHED_NOTIFICATION_ID = 2
+        const val OPERATION_CHANNEL_ID = "operation_channel"
+        private const val OPERATION_CHANNEL_NAME = "Operations"
+        private const val PROGRESS_NOTIFICATION_ID = 1
+        private const val FINISHED_NOTIFICATION_ID = 2
     }
 
     fun createNotificationChannels() {
         val channel = NotificationChannel(
-            BACKUP_CHANNEL_ID,
-            BACKUP_CHANNEL_NAME,
+            OPERATION_CHANNEL_ID,
+            OPERATION_CHANNEL_NAME,
             NotificationManager.IMPORTANCE_LOW
         ).apply {
-            description = "Notifications for backup status"
+            description = "Notifications for backup and restore status"
         }
         val notificationManager: NotificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.createNotificationChannel(channel)
     }
 
-    fun showBackupProgressNotification(progress: OperationProgress) {
+    fun showOperationProgressNotification(operationName: String, progress: OperationProgress) {
         if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             return
         }
@@ -62,8 +62,10 @@ class NotificationRepository(private val context: Context) {
             "Scanning files..."
         }
 
-        val builder = NotificationCompat.Builder(context, BACKUP_CHANNEL_ID)
-            .setContentTitle("Backup in progress ($percentage%)")
+        val title = progress.stageTitle?.let { "$it ($percentage%)" } ?: "$operationName in progress ($percentage%)"
+
+        val builder = NotificationCompat.Builder(context, OPERATION_CHANNEL_ID)
+            .setContentTitle(title)
             .setContentText(contentText)
             .setSmallIcon(R.drawable.ic_launcher_foreground) // TODO: Use a proper backup icon
             .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -71,11 +73,11 @@ class NotificationRepository(private val context: Context) {
             .setOnlyAlertOnce(true)
             .setProgress(100, percentage, false)
 
-        NotificationManagerCompat.from(context).notify(BACKUP_PROGRESS_NOTIFICATION_ID, builder.build())
+        NotificationManagerCompat.from(context).notify(PROGRESS_NOTIFICATION_ID, builder.build())
     }
 
 
-    fun showBackupFinishedNotification(success: Boolean, summary: String) {
+    fun showOperationFinishedNotification(operationName: String, success: Boolean, summary: String) {
         if (ActivityCompat.checkSelfPermission(
                 context,
                 Manifest.permission.POST_NOTIFICATIONS
@@ -84,11 +86,11 @@ class NotificationRepository(private val context: Context) {
             return
         }
         // Cancel the ongoing progress notification
-        NotificationManagerCompat.from(context).cancel(BACKUP_PROGRESS_NOTIFICATION_ID)
+        NotificationManagerCompat.from(context).cancel(PROGRESS_NOTIFICATION_ID)
 
-        val title = if (success) "Backup finished successfully" else "Backup failed"
+        val title = if (success) "$operationName finished successfully" else "$operationName failed"
 
-        val builder = NotificationCompat.Builder(context, BACKUP_CHANNEL_ID)
+        val builder = NotificationCompat.Builder(context, OPERATION_CHANNEL_ID)
             .setContentTitle(title)
             .setContentText(summary)
             .setStyle(NotificationCompat.BigTextStyle().bigText(summary))
@@ -96,7 +98,7 @@ class NotificationRepository(private val context: Context) {
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
 
-        NotificationManagerCompat.from(context).notify(BACKUP_FINISHED_NOTIFICATION_ID, builder.build())
+        NotificationManagerCompat.from(context).notify(FINISHED_NOTIFICATION_ID, builder.build())
     }
 
 

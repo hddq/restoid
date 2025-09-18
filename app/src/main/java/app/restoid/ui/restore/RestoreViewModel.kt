@@ -215,12 +215,14 @@ class RestoreViewModel(
                     override fun onAddElement(line: String) {
                         ResticOutputParser.parse(line)?.let { progressUpdate ->
                             val elapsedTime = (System.currentTimeMillis() - startTime) / 1000
-                            _restoreProgress.value = progressUpdate.copy(
+                            val newProgress = progressUpdate.copy(
                                 elapsedTime = elapsedTime,
-                                stageTitle = "Stage 1/$totalStages: Restoring Files",
+                                stageTitle = "[1/$totalStages] Restoring Files",
                                 stagePercentage = progressUpdate.stagePercentage,
                                 overallPercentage = progressUpdate.stagePercentage / totalStages
                             )
+                            _restoreProgress.value = newProgress
+                            notificationRepository.showOperationProgressNotification("Restore", newProgress)
                         }
                     }
                 }
@@ -247,7 +249,7 @@ class RestoreViewModel(
 
 
                     _restoreProgress.value = OperationProgress(
-                        stageTitle = "Stage 2/$totalStages: Installing Apps",
+                        stageTitle = "[2/$totalStages] Installing Apps",
                         stagePercentage = installStagePercentage,
                         overallPercentage = overallPercentage,
                         elapsedTime = currentElapsedTime,
@@ -256,6 +258,7 @@ class RestoreViewModel(
                         totalBytes = totalBytesToRestore,
                         bytesProcessed = bytesInstalledSoFar
                     )
+                    notificationRepository.showOperationProgressNotification("Restore", _restoreProgress.value)
 
                     val originalApkPath = pathsToRestore.find { it.contains("/${detail.appInfo.packageName}-") }
                     if (originalApkPath == null) {
@@ -316,12 +319,12 @@ class RestoreViewModel(
                 val cleanupStartTime = System.currentTimeMillis()
                 _restoreProgress.update {
                     it.copy(
-                        stageTitle = "Stage 3/$totalStages: Cleaning up...",
+                        stageTitle = "[3/$totalStages] Cleaning up...",
                         stagePercentage = 0f,
                         overallPercentage = (2f / totalStages)
                     )
                 }
-                delay(500) // Give UI time to update
+                notificationRepository.showOperationProgressNotification("Restore", _restoreProgress.value)
 
                 var cleanupSuccess = false
                 var cleanupMessage = ""
@@ -340,7 +343,6 @@ class RestoreViewModel(
                         overallPercentage = 1f
                     )
                 }
-                delay(200)
 
                 // --- Final Summary ---
                 val finalElapsedTime = (System.currentTimeMillis() - startTime) / 1000
@@ -365,12 +367,23 @@ class RestoreViewModel(
                     totalBytes = totalBytesToRestore
                 )
 
+                notificationRepository.showOperationFinishedNotification(
+                    "Restore",
+                    failures == 0,
+                    summary
+                )
+
             } catch (e: Exception) {
                 _restoreProgress.value = _restoreProgress.value.copy(
                     isFinished = true,
                     error = "A fatal error occurred: ${e.message}",
                     finalSummary = "A fatal error occurred: ${e.message}",
                     elapsedTime = (System.currentTimeMillis() - startTime) / 1000
+                )
+                notificationRepository.showOperationFinishedNotification(
+                    "Restore",
+                    failures == 0,
+                    _restoreProgress.value.finalSummary ?: "Restore finished."
                 )
             } finally {
                 _isRestoring.value = false
