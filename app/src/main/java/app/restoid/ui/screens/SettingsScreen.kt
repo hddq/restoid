@@ -52,6 +52,7 @@ import app.restoid.data.LocalRepository
 import app.restoid.data.NotificationPermissionState
 import app.restoid.data.ResticState
 import app.restoid.data.RootState
+import androidx.compose.material.icons.filled.MoreVert
 import app.restoid.ui.settings.AddRepoUiState
 import app.restoid.ui.settings.SettingsViewModel
 import app.restoid.ui.settings.SettingsViewModelFactory
@@ -230,7 +231,8 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
                                     SelectableRepositoryRow(
                                         repo = repo,
                                         isSelected = repo.path == selectedRepository,
-                                        onSelected = { settingsViewModel.selectRepository(repo.path) }
+                                        onSelected = { settingsViewModel.selectRepository(repo.path) },
+                                        viewModel = settingsViewModel
                                     )
                                 }
                             }
@@ -310,8 +312,11 @@ fun NotificationPermissionRow(
 fun SelectableRepositoryRow(
     repo: LocalRepository,
     isSelected: Boolean,
-    onSelected: () -> Unit
+    onSelected: () -> Unit,
+    viewModel: SettingsViewModel
 ) {
+    var showMenu by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -330,7 +335,69 @@ fun SelectableRepositoryRow(
         Spacer(Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(repo.name, style = MaterialTheme.typography.bodyLarge)
-            Text(repo.path, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                repo.path,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Box {
+            IconButton(onClick = { showMenu = true }) {
+                Icon(Icons.Default.MoreVert, contentDescription = "More options")
+            }
+            DropdownMenu(
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Delete") },
+                    onClick = {
+                        viewModel.deleteRepository(repo.path)
+                        showMenu = false
+                    }
+                )
+                var showSavePasswordDialog by remember { mutableStateOf(false) }
+                DropdownMenuItem(
+                    text = {
+                        if (viewModel.hasRepositoryPassword(repo.path)) {
+                            Text("Forget Password")
+                        } else {
+                            Text("Save Password")
+                        }
+                    },
+                    onClick = {
+                        if (viewModel.hasRepositoryPassword(repo.path)) {
+                            viewModel.forgetPassword(repo.path)
+                        } else {
+                            showSavePasswordDialog = true
+                        }
+                        showMenu = false
+                    }
+                )
+                if (showSavePasswordDialog) {
+                    SavePasswordDialog(
+                        viewModel = viewModel,
+                        repoPath = repo.path,
+                        onDismiss = { showSavePasswordDialog = false }
+                    )
+                }
+                var showChangePasswordDialog by remember { mutableStateOf(false) }
+                DropdownMenuItem(
+                    text = { Text("Change password") },
+                    onClick = {
+                        showChangePasswordDialog = true
+                        showMenu = false
+                    }
+                )
+                if (showChangePasswordDialog) {
+                    ChangePasswordDialog(
+                        viewModel = viewModel,
+                        repoPath = repo.path,
+                        onDismiss = { showChangePasswordDialog = false }
+                    )
+                }
+            }
         }
     }
 }
@@ -420,6 +487,54 @@ fun AddRepositoryDialog(
                 } else {
                     Text("Add")
                 }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+fun SavePasswordDialog(
+    viewModel: SettingsViewModel,
+    repoPath: String,
+    onDismiss: () -> Unit
+) {
+    var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Save Password") },
+        text = {
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Password") },
+                singleLine = true,
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = {
+                    val image = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
+                    val description = if (passwordVisible) "Hide password" else "Show password"
+                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                        Icon(imageVector = image, contentDescription = description)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    viewModel.savePassword(repoPath, password)
+                    onDismiss()
+                },
+                enabled = password.isNotEmpty()
+            ) {
+                Text("Save")
             }
         },
         dismissButton = {
@@ -582,4 +697,92 @@ private fun getPathFromTreeUri(treeUri: Uri): String? {
         }
     }
     return null
+}
+
+@Composable
+fun ChangePasswordDialog(
+    viewModel: SettingsViewModel,
+    repoPath: String,
+    onDismiss: () -> Unit
+) {
+    var oldPassword by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
+
+    val hasOldPassword = viewModel.hasRepositoryPassword(repoPath)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Change Password") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (!hasOldPassword) {
+                    OutlinedTextField(
+                        value = oldPassword,
+                        onValueChange = { oldPassword = it },
+                        label = { Text("Old Password") },
+                        singleLine = true,
+                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            val image = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
+                            val description = if (passwordVisible) "Hide password" else "Show password"
+                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                Icon(imageVector = image, contentDescription = description)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                OutlinedTextField(
+                    value = newPassword,
+                    onValueChange = { newPassword = it },
+                    label = { Text("New Password") },
+                    singleLine = true,
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        val image = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
+                        val description = if (passwordVisible) "Hide password" else "Show password"
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(imageVector = image, contentDescription = description)
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = confirmPassword,
+                    onValueChange = { confirmPassword = it },
+                    label = { Text("Confirm New Password") },
+                    singleLine = true,
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        val image = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
+                        val description = if (passwordVisible) "Hide password" else "Show password"
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(imageVector = image, contentDescription = description)
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (newPassword == confirmPassword) {
+                        viewModel.changePassword(repoPath, oldPassword, newPassword)
+                        onDismiss()
+                    }
+                },
+                enabled = newPassword.isNotEmpty() && confirmPassword.isNotEmpty() && (hasOldPassword || oldPassword.isNotEmpty())
+            ) {
+                Text("Change")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }

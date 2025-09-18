@@ -55,6 +55,36 @@ class ResticRepository(private val context: Context) {
         }
     }
 
+    suspend fun changePassword(
+        repoPath: String,
+        oldPassword: String,
+        newPassword: String
+    ): Result<Unit> {
+        return withContext(Dispatchers.IO) {
+            try {
+                if (resticState.value !is ResticState.Installed) {
+                    return@withContext Result.failure(Exception("Restic not installed"))
+                }
+
+                val resticPath = (resticState.value as ResticState.Installed).path
+                val command = "RESTIC_PASSWORD='$oldPassword' RESTIC_NEW_PASSWORD='$newPassword' " +
+                        "$resticPath -r '$repoPath' key passwd"
+
+                val result = Shell.cmd(command).exec()
+
+                if (result.isSuccess) {
+                    Result.success(Unit)
+                } else {
+                    val errorOutput = result.err.joinToString("\n")
+                    val errorMsg = if (errorOutput.isEmpty()) "Failed to change password" else errorOutput
+                    Result.failure(Exception(errorMsg))
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
+
     // Download, decompress, and verify the restic binary
     suspend fun downloadAndInstallRestic() {
         withContext(Dispatchers.IO) {

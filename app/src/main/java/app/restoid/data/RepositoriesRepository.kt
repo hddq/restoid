@@ -70,6 +70,26 @@ class RepositoriesRepository(
         passwordManager.savePassword(path, password)
     }
 
+    fun forgetPassword(path: String) {
+        passwordManager.removePassword(path)
+    }
+
+    fun deleteRepository(path: String) {
+        val currentPaths = prefs.getStringSet(REPO_PATHS_KEY, mutableSetOf())?.toMutableSet() ?: mutableSetOf()
+        if (currentPaths.remove(path)) {
+            prefs.edit().putStringSet(REPO_PATHS_KEY, currentPaths).apply()
+            passwordManager.removePassword(path)
+
+            // If the deleted repository was the selected one, clear the selection
+            if (_selectedRepository.value == path) {
+                prefs.edit().remove(SELECTED_REPO_PATH_KEY).apply()
+                _selectedRepository.value = null
+            }
+
+            loadRepositories() // Refresh the list
+        }
+    }
+
     /**
      * Adds a new repository. Before initializing, it checks if a valid restic repository
      * already exists at the given path with the provided password.

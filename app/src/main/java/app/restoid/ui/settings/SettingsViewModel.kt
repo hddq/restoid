@@ -48,6 +48,34 @@ class SettingsViewModel(
         }
     }
 
+    fun hasRepositoryPassword(path: String): Boolean {
+        return repositoriesRepository.hasRepositoryPassword(path)
+    }
+
+    fun forgetPassword(path: String) {
+        repositoriesRepository.forgetPassword(path)
+    }
+
+    fun savePassword(path: String, password: String) {
+        repositoriesRepository.saveRepositoryPassword(path, password)
+    }
+
+    fun deleteRepository(path: String) {
+        viewModelScope.launch {
+            repositoriesRepository.deleteRepository(path)
+        }
+    }
+
+    fun changePassword(path: String, oldPassword: String, newPassword: String) {
+        viewModelScope.launch {
+            val actualOldPassword = repositoriesRepository.getRepositoryPassword(path) ?: oldPassword
+            val result = resticRepository.changePassword(path, actualOldPassword, newPassword)
+            if (result.isSuccess) {
+                repositoriesRepository.saveRepositoryPassword(path, newPassword)
+            }
+        }
+    }
+
     fun checkNotificationPermission() {
         notificationRepository.checkPermissionStatus()
     }
