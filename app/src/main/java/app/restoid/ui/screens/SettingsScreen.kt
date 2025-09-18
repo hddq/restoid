@@ -53,7 +53,9 @@ import app.restoid.data.NotificationPermissionState
 import app.restoid.data.ResticState
 import app.restoid.data.RootState
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.runtime.LaunchedEffect
 import app.restoid.ui.settings.AddRepoUiState
+import app.restoid.ui.settings.ChangePasswordState
 import app.restoid.ui.settings.SettingsViewModel
 import app.restoid.ui.settings.SettingsViewModelFactory
 
@@ -713,9 +715,33 @@ fun ChangePasswordDialog(
     var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+
+    val changePasswordState by viewModel.changePasswordState.collectAsStateWithLifecycle()
+
+
+    LaunchedEffect(changePasswordState) {
+        when (changePasswordState) {
+            ChangePasswordState.Success -> {
+                viewModel.resetChangePasswordState()
+                onDismiss()
+            }
+            ChangePasswordState.Error -> {
+                error = "Failed to change password."
+                viewModel.resetChangePasswordState()
+            }
+            else -> {}
+        }
+    }
+
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = {
+            if (changePasswordState != ChangePasswordState.InProgress) {
+                onDismiss()
+            }
+        },
         title = { Text("Change Password") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -727,12 +753,12 @@ fun ChangePasswordDialog(
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         val image = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
-                        val description = if (passwordVisible) "Hide password" else "Show password"
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(imageVector = image, contentDescription = description)
+                            Icon(imageVector = image, contentDescription = if (passwordVisible) "Hide" else "Show")
                         }
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = changePasswordState != ChangePasswordState.InProgress
                 )
                 OutlinedTextField(
                     value = newPassword,
@@ -742,12 +768,12 @@ fun ChangePasswordDialog(
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         val image = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
-                        val description = if (passwordVisible) "Hide password" else "Show password"
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(imageVector = image, contentDescription = description)
+                            Icon(imageVector = image, contentDescription = if (passwordVisible) "Hide" else "Show")
                         }
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = changePasswordState != ChangePasswordState.InProgress
                 )
                 OutlinedTextField(
                     value = confirmPassword,
@@ -757,30 +783,48 @@ fun ChangePasswordDialog(
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         val image = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
-                        val description = if (passwordVisible) "Hide password" else "Show password"
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(imageVector = image, contentDescription = description)
+                            Icon(imageVector = image, contentDescription = if (passwordVisible) "Hide" else "Show")
                         }
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = changePasswordState != ChangePasswordState.InProgress,
+                    isError = newPassword != confirmPassword
                 )
+                if (newPassword != confirmPassword) {
+                    Text("Passwords do not match.", color = MaterialTheme.colorScheme.error)
+                }
+                error?.let {
+                    Text(it, color = MaterialTheme.colorScheme.error)
+                }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
+                    error = null
                     if (newPassword == confirmPassword) {
                         viewModel.changePassword(repoPath, oldPassword, newPassword)
-                        onDismiss()
                     }
                 },
-                enabled = oldPassword.isNotEmpty() && newPassword.isNotEmpty() && confirmPassword.isNotEmpty()
+                enabled = oldPassword.isNotEmpty() &&
+                        newPassword.isNotEmpty() &&
+                        confirmPassword.isNotEmpty() &&
+                        newPassword == confirmPassword &&
+                        changePasswordState != ChangePasswordState.InProgress
             ) {
-                Text("Change")
+                if (changePasswordState == ChangePasswordState.InProgress) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                } else {
+                    Text("Change")
+                }
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                enabled = changePasswordState != ChangePasswordState.InProgress
+            ) {
                 Text("Cancel")
             }
         }

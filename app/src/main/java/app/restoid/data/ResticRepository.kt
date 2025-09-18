@@ -61,14 +61,25 @@ class ResticRepository(private val context: Context) {
         newPassword: String
     ): Result<Unit> {
         return withContext(Dispatchers.IO) {
-            try {
-                if (resticState.value !is ResticState.Installed) {
-                    return@withContext Result.failure(Exception("Restic not installed"))
-                }
+            if (resticState.value !is ResticState.Installed) {
+                return@withContext Result.failure(Exception("Restic not installed"))
+            }
 
-                val resticPath = (resticState.value as ResticState.Installed).path
-                val command = "RESTIC_PASSWORD='$oldPassword' RESTIC_NEW_PASSWORD='$newPassword' " +
-                        "$resticPath -r '$repoPath' key passwd"
+            val resticPath = (resticState.value as ResticState.Installed).path
+
+            // Create temporary files for passwords to avoid exposing them in logs or process list
+            val oldPasswordFile = File.createTempFile("restic-old-pass", ".tmp", context.cacheDir)
+            val newPasswordFile = File.createTempFile("restic-new-pass", ".tmp", context.cacheDir)
+
+            try {
+                // Write passwords to the temporary files
+                oldPasswordFile.writeText(oldPassword)
+                newPasswordFile.writeText(newPassword)
+
+                // Construct the command using --password-file and --new-password-file
+                val command = "$resticPath -r '$repoPath' " +
+                        "--password-file '${oldPasswordFile.absolutePath}' " +
+                        "key passwd --new-password-file '${newPasswordFile.absolutePath}'"
 
                 val result = Shell.cmd(command).exec()
 
@@ -81,6 +92,10 @@ class ResticRepository(private val context: Context) {
                 }
             } catch (e: Exception) {
                 Result.failure(e)
+            } finally {
+                // Ensure temporary files are deleted
+                oldPasswordFile.delete()
+                newPasswordFile.delete()
             }
         }
     }

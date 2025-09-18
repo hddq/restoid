@@ -23,6 +23,13 @@ data class AddRepoUiState(
     val state: AddRepositoryState = AddRepositoryState.Idle
 )
 
+enum class ChangePasswordState {
+    Idle,
+    InProgress,
+    Success,
+    Error
+}
+
 class SettingsViewModel(
     private val rootRepository: RootRepository,
     private val resticRepository: ResticRepository,
@@ -41,6 +48,9 @@ class SettingsViewModel(
     // Internal and exposed UI State for adding a new repository
     private val _addRepoUiState = MutableStateFlow(AddRepoUiState())
     val addRepoUiState = _addRepoUiState.asStateFlow()
+
+    private val _changePasswordState = MutableStateFlow(ChangePasswordState.Idle)
+    val changePasswordState = _changePasswordState.asStateFlow()
 
     fun requestRootAccess() {
         viewModelScope.launch {
@@ -72,15 +82,22 @@ class SettingsViewModel(
 
     fun changePassword(path: String, oldPassword: String, newPassword: String) {
         viewModelScope.launch {
+            _changePasswordState.value = ChangePasswordState.InProgress
             val result = resticRepository.changePassword(path, oldPassword, newPassword)
             if (result.isSuccess) {
-                // If there was a stored password, update it. Otherwise, the user might want
-                // to save the new password now. For now, we just update if it exists.
+                // If there was a stored password, update it.
                 if (repositoriesRepository.hasStoredRepositoryPassword(path)) {
                     repositoriesRepository.saveRepositoryPassword(path, newPassword)
                 }
+                _changePasswordState.value = ChangePasswordState.Success
+            } else {
+                _changePasswordState.value = ChangePasswordState.Error
             }
         }
+    }
+
+    fun resetChangePasswordState() {
+        _changePasswordState.value = ChangePasswordState.Idle
     }
 
     fun checkNotificationPermission() {
