@@ -59,6 +59,9 @@ class RestoreViewModel(
     private val _restoreTypes = MutableStateFlow(RestoreTypes())
     val restoreTypes = _restoreTypes.asStateFlow()
 
+    private val _allowDowngrade = MutableStateFlow(false)
+    val allowDowngrade = _allowDowngrade.asStateFlow()
+
     private val _isRestoring = MutableStateFlow(false)
     val isRestoring = _isRestoring.asStateFlow()
 
@@ -181,7 +184,7 @@ class RestoreViewModel(
                 val resticState = resticRepository.resticState.value
                 val selectedRepoPath = repositoriesRepository.selectedRepository.value
                 val currentSnapshot = _snapshot.value
-                val selectedApps = _backupDetails.value.filter { it.appInfo.isSelected }
+                val selectedApps = _backupDetails.value.filter { it.appInfo.isSelected && (_allowDowngrade.value || !it.isDowngrade) }
 
                 if (resticState !is ResticState.Installed || selectedRepoPath == null || currentSnapshot == null) {
                     throw IllegalStateException("Pre-restore checks failed: Restic not ready or no repo/snapshot selected.")
@@ -272,7 +275,8 @@ class RestoreViewModel(
 
                     if (apkFiles.isNotEmpty()) {
                         // 1. Create install session
-                        val createResult = Shell.cmd("pm install-create -r -d").exec()
+                        val installFlags = if (_allowDowngrade.value) "-r -d" else "-r"
+                        val createResult = Shell.cmd("pm install-create $installFlags").exec()
                         val sessionId = createResult.out.firstOrNull()?.substringAfterLast('[')?.substringBefore(']')
 
                         if (createResult.isSuccess && sessionId != null) {
@@ -411,7 +415,13 @@ class RestoreViewModel(
         _backupDetails.update { currentDetails ->
             currentDetails.map { detail ->
                 if (detail.appInfo.packageName == packageName) {
-                    detail.copy(appInfo = detail.appInfo.copy(isSelected = !detail.appInfo.isSelected))
+                    // Prevent selecting a downgrade if not allowed
+                    val canBeSelected = _allowDowngrade.value || !detail.isDowngrade
+                    if (canBeSelected) {
+                        detail.copy(appInfo = detail.appInfo.copy(isSelected = !detail.appInfo.isSelected))
+                    } else {
+                        detail // Return unchanged if selection is not allowed
+                    }
                 } else {
                     detail
                 }
@@ -421,9 +431,27 @@ class RestoreViewModel(
 
     fun toggleAllRestoreSelection() {
         _backupDetails.update { currentDetails ->
+            // If any app is not selected, the action is to select all possible. Otherwise, deselect all.
             val shouldSelectAll = currentDetails.any { !it.appInfo.isSelected }
             currentDetails.map { detail ->
-                detail.copy(appInfo = detail.appInfo.copy(isSelected = shouldSelectAll))
+                val canBeSelected = _allowDowngrade.value || !detail.isDowngrade
+                detail.copy(appInfo = detail.appInfo.copy(isSelected = if (shouldSelectAll) canBeSelected else false))
+            }
+        }
+    }
+
+    fun setAllowDowngrade(value: Boolean) {
+        _allowDowngrade.value = value
+        // If downgrades are now disallowed, deselect any selected apps that are downgrades
+        if (!value) {
+            _backupDetails.update { currentDetails ->
+                currentDetails.map { detail ->
+                    if (detail.isDowngrade) {
+                        detail.copy(appInfo = detail.appInfo.copy(isSelected = false))
+                    } else {
+                        detail
+                    }
+                }
             }
         }
     }

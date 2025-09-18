@@ -70,6 +70,7 @@ fun RestoreScreen(navController: NavController, snapshotId: String?) {
     val backupDetails by viewModel.backupDetails.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val restoreTypes by viewModel.restoreTypes.collectAsState()
+    val allowDowngrade by viewModel.allowDowngrade.collectAsState()
     val isRestoring by viewModel.isRestoring.collectAsState()
     val restoreProgress by viewModel.restoreProgress.collectAsState()
 
@@ -115,6 +116,7 @@ fun RestoreScreen(navController: NavController, snapshotId: String?) {
                     backupDetails = backupDetails,
                     isLoading = isLoading,
                     restoreTypes = restoreTypes,
+                    allowDowngrade = allowDowngrade,
                     onToggleApp = viewModel::toggleRestoreAppSelection,
                     onToggleAll = viewModel::toggleAllRestoreSelection,
                     onToggleRestoreType = { type, value ->
@@ -126,7 +128,8 @@ fun RestoreScreen(navController: NavController, snapshotId: String?) {
                             "OBB Data" -> viewModel.setRestoreObb(value)
                             "Media Data" -> viewModel.setRestoreMedia(value)
                         }
-                    }
+                    },
+                    onToggleAllowDowngrade = viewModel::setAllowDowngrade
                 )
             }
         }
@@ -139,9 +142,11 @@ fun RestoreSelectionContent(
     backupDetails: List<BackupDetail>,
     isLoading: Boolean,
     restoreTypes: RestoreTypes,
+    allowDowngrade: Boolean,
     onToggleApp: (String) -> Unit,
     onToggleAll: () -> Unit,
-    onToggleRestoreType: (String, Boolean) -> Unit
+    onToggleRestoreType: (String, Boolean) -> Unit,
+    onToggleAllowDowngrade: (Boolean) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier
@@ -167,6 +172,7 @@ fun RestoreSelectionContent(
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
                     RestoreTypeToggle("APK", checked = restoreTypes.apk) { onToggleRestoreType("APK", it) }
+                    RestoreTypeToggle("Allow Downgrade", checked = allowDowngrade) { onToggleAllowDowngrade(it) }
                     // Only show APK for now as per the request
                     /*
                     RestoreTypeToggle("Data", checked = restoreTypes.data) { onToggleRestoreType("Data", it) }
@@ -215,7 +221,11 @@ fun RestoreSelectionContent(
             }
         } else {
             items(backupDetails, key = { it.appInfo.packageName }) { detail ->
-                RestoreAppListItem(detail = detail) { onToggleApp(detail.appInfo.packageName) }
+                RestoreAppListItem(
+                    detail = detail,
+                    allowDowngrade = allowDowngrade,
+                    onToggle = { onToggleApp(detail.appInfo.packageName) }
+                )
             }
         }
     }
@@ -243,12 +253,14 @@ fun RestoreTypeToggle(label: String, checked: Boolean, onCheckedChange: (Boolean
 }
 
 @Composable
-private fun RestoreAppListItem(detail: BackupDetail, onToggle: () -> Unit) {
+private fun RestoreAppListItem(detail: BackupDetail, allowDowngrade: Boolean, onToggle: () -> Unit) {
     val app = detail.appInfo
+    val isEnabled = allowDowngrade || !detail.isDowngrade
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onToggle),
+            .clickable(enabled = isEnabled, onClick = onToggle),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceBright
         )
@@ -274,7 +286,7 @@ private fun RestoreAppListItem(detail: BackupDetail, onToggle: () -> Unit) {
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = if (isEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                 )
 
                 val versionColor = if (detail.isDowngrade) Orange else MaterialTheme.colorScheme.onSurfaceVariant
@@ -287,14 +299,15 @@ private fun RestoreAppListItem(detail: BackupDetail, onToggle: () -> Unit) {
                 Text(
                     text = versionText,
                     style = MaterialTheme.typography.bodySmall,
-                    color = versionColor,
+                    color = if (isEnabled) versionColor else versionColor.copy(alpha = 0.38f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
             Switch(
                 checked = app.isSelected,
-                onCheckedChange = { onToggle() }
+                onCheckedChange = { onToggle() },
+                enabled = isEnabled
             )
         }
     }
