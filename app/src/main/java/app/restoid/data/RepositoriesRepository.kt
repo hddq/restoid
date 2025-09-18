@@ -60,6 +60,11 @@ class RepositoriesRepository(
         return passwordManager.hasPassword(path)
     }
 
+    // Checks if a password exists for a repository (permanent only)
+    fun hasStoredRepositoryPassword(path: String): Boolean {
+        return passwordManager.hasStoredPassword(path)
+    }
+
     // Saves a password temporarily for the session
     fun saveRepositoryPasswordTemporary(path: String, password: String) {
         passwordManager.savePasswordTemporary(path, password)
@@ -71,7 +76,7 @@ class RepositoriesRepository(
     }
 
     fun forgetPassword(path: String) {
-        passwordManager.removePassword(path)
+        passwordManager.removeStoredPassword(path)
     }
 
     fun deleteRepository(path: String) {

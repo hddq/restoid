@@ -46,6 +46,16 @@ class PasswordManager(private val context: Context) {
         return temporaryPasswords.containsKey(repositoryPath) || encryptedPrefs.contains(repositoryPath)
     }
 
+    fun hasStoredPassword(repositoryPath: String): Boolean {
+        return encryptedPrefs.contains(repositoryPath)
+    }
+
+    fun removeStoredPassword(repositoryPath: String) {
+        encryptedPrefs.edit()
+            .remove(repositoryPath)
+            .apply()
+    }
+
     fun clearTemporaryPasswords() {
         temporaryPasswords.clear()
     }

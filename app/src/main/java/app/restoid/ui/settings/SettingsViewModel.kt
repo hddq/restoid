@@ -52,6 +52,10 @@ class SettingsViewModel(
         return repositoriesRepository.hasRepositoryPassword(path)
     }
 
+    fun hasStoredRepositoryPassword(path: String): Boolean {
+        return repositoriesRepository.hasStoredRepositoryPassword(path)
+    }
+
     fun forgetPassword(path: String) {
         repositoriesRepository.forgetPassword(path)
     }
@@ -68,10 +72,13 @@ class SettingsViewModel(
 
     fun changePassword(path: String, oldPassword: String, newPassword: String) {
         viewModelScope.launch {
-            val actualOldPassword = repositoriesRepository.getRepositoryPassword(path) ?: oldPassword
-            val result = resticRepository.changePassword(path, actualOldPassword, newPassword)
+            val result = resticRepository.changePassword(path, oldPassword, newPassword)
             if (result.isSuccess) {
-                repositoriesRepository.saveRepositoryPassword(path, newPassword)
+                // If there was a stored password, update it. Otherwise, the user might want
+                // to save the new password now. For now, we just update if it exists.
+                if (repositoriesRepository.hasStoredRepositoryPassword(path)) {
+                    repositoriesRepository.saveRepositoryPassword(path, newPassword)
+                }
             }
         }
     }

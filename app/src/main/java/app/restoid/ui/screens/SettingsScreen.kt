@@ -342,6 +342,25 @@ fun SelectableRepositoryRow(
                 overflow = TextOverflow.Ellipsis
             )
         }
+        var showChangePasswordDialog by remember { mutableStateOf(false) }
+        var showSavePasswordDialog by remember { mutableStateOf(false) }
+
+        if (showChangePasswordDialog) {
+            ChangePasswordDialog(
+                viewModel = viewModel,
+                repoPath = repo.path,
+                onDismiss = { showChangePasswordDialog = false }
+            )
+        }
+
+        if (showSavePasswordDialog) {
+            SavePasswordDialog(
+                viewModel = viewModel,
+                repoPath = repo.path,
+                onDismiss = { showSavePasswordDialog = false }
+            )
+        }
+
         Box {
             IconButton(onClick = { showMenu = true }) {
                 Icon(Icons.Default.MoreVert, contentDescription = "More options")
@@ -357,32 +376,24 @@ fun SelectableRepositoryRow(
                         showMenu = false
                     }
                 )
-                var showSavePasswordDialog by remember { mutableStateOf(false) }
-                DropdownMenuItem(
-                    text = {
-                        if (viewModel.hasRepositoryPassword(repo.path)) {
-                            Text("Forget Password")
-                        } else {
-                            Text("Save Password")
-                        }
-                    },
-                    onClick = {
-                        if (viewModel.hasRepositoryPassword(repo.path)) {
+                // Logic for saving or forgetting a password
+                if (viewModel.hasStoredRepositoryPassword(repo.path)) {
+                    DropdownMenuItem(
+                        text = { Text("Forget Password") },
+                        onClick = {
                             viewModel.forgetPassword(repo.path)
-                        } else {
-                            showSavePasswordDialog = true
+                            showMenu = false
                         }
-                        showMenu = false
-                    }
-                )
-                if (showSavePasswordDialog) {
-                    SavePasswordDialog(
-                        viewModel = viewModel,
-                        repoPath = repo.path,
-                        onDismiss = { showSavePasswordDialog = false }
+                    )
+                } else {
+                    DropdownMenuItem(
+                        text = { Text("Save Password") },
+                        onClick = {
+                            showSavePasswordDialog = true
+                            showMenu = false
+                        }
                     )
                 }
-                var showChangePasswordDialog by remember { mutableStateOf(false) }
                 DropdownMenuItem(
                     text = { Text("Change password") },
                     onClick = {
@@ -390,13 +401,6 @@ fun SelectableRepositoryRow(
                         showMenu = false
                     }
                 )
-                if (showChangePasswordDialog) {
-                    ChangePasswordDialog(
-                        viewModel = viewModel,
-                        repoPath = repo.path,
-                        onDismiss = { showChangePasswordDialog = false }
-                    )
-                }
             }
         }
     }
@@ -710,30 +714,26 @@ fun ChangePasswordDialog(
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
 
-    val hasOldPassword = viewModel.hasRepositoryPassword(repoPath)
-
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Change Password") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (!hasOldPassword) {
-                    OutlinedTextField(
-                        value = oldPassword,
-                        onValueChange = { oldPassword = it },
-                        label = { Text("Old Password") },
-                        singleLine = true,
-                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            val image = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
-                            val description = if (passwordVisible) "Hide password" else "Show password"
-                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                Icon(imageVector = image, contentDescription = description)
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+                OutlinedTextField(
+                    value = oldPassword,
+                    onValueChange = { oldPassword = it },
+                    label = { Text("Old Password") },
+                    singleLine = true,
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        val image = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
+                        val description = if (passwordVisible) "Hide password" else "Show password"
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(imageVector = image, contentDescription = description)
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
                 OutlinedTextField(
                     value = newPassword,
                     onValueChange = { newPassword = it },
@@ -774,7 +774,7 @@ fun ChangePasswordDialog(
                         onDismiss()
                     }
                 },
-                enabled = newPassword.isNotEmpty() && confirmPassword.isNotEmpty() && (hasOldPassword || oldPassword.isNotEmpty())
+                enabled = oldPassword.isNotEmpty() && newPassword.isNotEmpty() && confirmPassword.isNotEmpty()
             ) {
                 Text("Change")
             }
