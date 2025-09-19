@@ -23,7 +23,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
-import kotlinx.coroutines.delay
 
 // UI state for selecting what to restore
 data class RestoreTypes(
@@ -165,6 +164,36 @@ class RestoreViewModel(
         return if (items.isNotEmpty()) items else listOf("Unknown items")
     }
 
+    private fun generatePathsToRestore(
+        selectedApps: List<BackupDetail>,
+        snapshot: SnapshotInfo
+    ): List<String> {
+        val paths = mutableListOf<String>()
+        val types = restoreTypes.value
+
+        selectedApps.forEach { detail ->
+            val pkg = detail.appInfo.packageName
+            // A helper to find a path and add it if it exists in the snapshot's path list
+            fun addPathIfExists(path: String) {
+                if (snapshot.paths.contains(path)) {
+                    paths.add(path)
+                }
+            }
+            // A helper for APKs since the path is not exact
+            fun addApkPathIfExists() {
+                snapshot.paths.find { it.startsWith("/data/app/") && it.contains("/$pkg-") }?.let { paths.add(it) }
+            }
+
+            if (types.apk) addApkPathIfExists()
+            if (types.data) addPathIfExists("/data/data/$pkg")
+            if (types.deviceProtectedData) addPathIfExists("/data/user_de/0/$pkg")
+            if (types.externalData) addPathIfExists("/storage/emulated/0/Android/data/$pkg")
+            if (types.obb) addPathIfExists("/storage/emulated/0/Android/obb/$pkg")
+            if (types.media) addPathIfExists("/storage/emulated/0/Android/media/$pkg")
+        }
+        return paths.distinct()
+    }
+
     fun startRestore() {
         if (_isRestoring.value) return
 
@@ -178,7 +207,10 @@ class RestoreViewModel(
             var successes = 0
             var failures = 0
             val failureDetails = mutableListOf<String>()
-            val totalStages = 3 // 1 for file restore, 1 for app install, 1 for cleanup
+
+            val apkRestoreSelected = restoreTypes.value.apk
+            // Stages: 1. Restore Files, 2. Install APKs (optional), 3. Cleanup
+            val totalStages = if (apkRestoreSelected) 3 else 2
 
             try {
                 // --- Pre-flight checks ---
@@ -201,15 +233,11 @@ class RestoreViewModel(
 
                 tempRestoreDir = File(application.cacheDir, "restic-restore-${System.currentTimeMillis()}").also { it.mkdirs() }
 
-                // --- Find APKs to restore ---
-                val pathsToRestore = selectedApps.mapNotNull { detail ->
-                    currentSnapshot.paths.find { path ->
-                        path.startsWith("/data/app/") && path.contains("/${detail.appInfo.packageName}-")
-                    }
-                }
+                // --- Generate list of paths to restore based on user selection ---
+                val pathsToRestore = generatePathsToRestore(selectedApps, currentSnapshot)
 
                 if (pathsToRestore.isEmpty()) {
-                    throw IllegalStateException("No APK paths found in the snapshot for the selected apps.")
+                    throw IllegalStateException("No files found in the snapshot for the selected apps and types.")
                 }
 
                 // --- Stage 1: Execute restic restore with real-time progress ---
@@ -241,102 +269,96 @@ class RestoreViewModel(
                     throw IllegalStateException(errorMsg)
                 }
 
-                // --- Stage 2: Installation Loop ---
-                var bytesInstalledSoFar = 0L
-                val totalBytesToRestore = selectedApps.sumOf { it.backupSize ?: 0L }
+                // --- Stage 2: Installation Loop (if APKs were selected) ---
+                if (apkRestoreSelected) {
+                    var bytesInstalledSoFar = 0L
+                    val totalBytesToRestore = selectedApps.sumOf { it.backupSize ?: 0L }
 
-                for ((index, detail) in selectedApps.withIndex()) {
-                    val appName = detail.appInfo.name
-                    val appSize = detail.backupSize ?: 0L
+                    for ((index, detail) in selectedApps.withIndex()) {
+                        val appName = detail.appInfo.name
+                        val appSize = detail.backupSize ?: 0L
 
-                    val currentElapsedTime = (System.currentTimeMillis() - startTime) / 1000
-                    val installStagePercentage = (index + 1).toFloat() / selectedApps.size.toFloat()
-                    val overallPercentage = (1f / totalStages) + (installStagePercentage / totalStages)
+                        val currentElapsedTime = (System.currentTimeMillis() - startTime) / 1000
+                        val installStagePercentage = (index + 1).toFloat() / selectedApps.size.toFloat()
+                        val overallPercentage = (1f / totalStages) + (installStagePercentage / totalStages)
 
+                        _restoreProgress.value = OperationProgress(
+                            stageTitle = "[2/$totalStages] Installing Apps",
+                            stagePercentage = installStagePercentage,
+                            overallPercentage = overallPercentage,
+                            elapsedTime = currentElapsedTime,
+                            totalFiles = selectedApps.size,
+                            filesProcessed = index + 1,
+                            totalBytes = totalBytesToRestore,
+                            bytesProcessed = bytesInstalledSoFar
+                        )
+                        notificationRepository.showOperationProgressNotification("Restore", _restoreProgress.value)
 
-                    _restoreProgress.value = OperationProgress(
-                        stageTitle = "[2/$totalStages] Installing Apps",
-                        stagePercentage = installStagePercentage,
-                        overallPercentage = overallPercentage,
-                        elapsedTime = currentElapsedTime,
-                        totalFiles = selectedApps.size,
-                        filesProcessed = index + 1,
-                        totalBytes = totalBytesToRestore,
-                        bytesProcessed = bytesInstalledSoFar
-                    )
-                    notificationRepository.showOperationProgressNotification("Restore", _restoreProgress.value)
+                        val originalApkPath = pathsToRestore.find { it.startsWith("/data/app/") && it.contains("/${detail.appInfo.packageName}-") }
+                        if (originalApkPath == null) {
+                            failures++
+                            failureDetails.add("$appName: Could not find its path in the restored files list.")
+                            continue
+                        }
 
-                    val originalApkPath = pathsToRestore.find { it.contains("/${detail.appInfo.packageName}-") }
-                    if (originalApkPath == null) {
-                        failures++
-                        failureDetails.add("$appName: Could not find its path in the restored files list.")
-                        continue
-                    }
+                        val restoredContentDir = File(tempRestoreDir, originalApkPath.drop(1))
+                        val apkFiles = restoredContentDir.walk().filter { it.isFile && it.extension == "apk" }.toList()
 
-                    val restoredContentDir = File(tempRestoreDir, originalApkPath.drop(1))
-                    val apkFiles = restoredContentDir.walk().filter { it.isFile && it.extension == "apk" }.toList()
+                        if (apkFiles.isNotEmpty()) {
+                            val installFlags = if (_allowDowngrade.value) "-r -d" else "-r"
+                            val createResult = Shell.cmd("pm install-create $installFlags").exec()
+                            val sessionId = createResult.out.firstOrNull()?.substringAfterLast('[')?.substringBefore(']')
 
-                    if (apkFiles.isNotEmpty()) {
-                        // 1. Create install session
-                        val installFlags = if (_allowDowngrade.value) "-r -d" else "-r"
-                        val createResult = Shell.cmd("pm install-create $installFlags").exec()
-                        val sessionId = createResult.out.firstOrNull()?.substringAfterLast('[')?.substringBefore(']')
-
-                        if (createResult.isSuccess && sessionId != null) {
-                            var allWritesSucceeded = true
-                            // 2. Write all APKs to the session
-                            for ((splitIndex, apkFile) in apkFiles.withIndex()) {
-                                // Split name needs to be unique. Using index + name.
-                                val splitName = "${splitIndex}_${apkFile.name}"
-                                val writeCommand = "pm install-write -S ${apkFile.length()} $sessionId '$splitName' '${apkFile.absolutePath}'"
-                                val writeResult = Shell.cmd(writeCommand).exec()
-                                if (!writeResult.isSuccess) {
-                                    allWritesSucceeded = false
-                                    failures++
-                                    failureDetails.add("$appName: Failed to write ${apkFile.name}: ${writeResult.err.joinToString(" ")}")
-                                    // Abandon this session if one write fails
-                                    Shell.cmd("pm install-abandon $sessionId").exec()
-                                    break
+                            if (createResult.isSuccess && sessionId != null) {
+                                var allWritesSucceeded = true
+                                for ((splitIndex, apkFile) in apkFiles.withIndex()) {
+                                    val splitName = "${splitIndex}_${apkFile.name}"
+                                    val writeCommand = "pm install-write -S ${apkFile.length()} $sessionId '$splitName' '${apkFile.absolutePath}'"
+                                    val writeResult = Shell.cmd(writeCommand).exec()
+                                    if (!writeResult.isSuccess) {
+                                        allWritesSucceeded = false
+                                        failures++
+                                        failureDetails.add("$appName: Failed to write ${apkFile.name}: ${writeResult.err.joinToString(" ")}")
+                                        Shell.cmd("pm install-abandon $sessionId").exec()
+                                        break
+                                    }
                                 }
-                            }
 
-                            if (allWritesSucceeded) {
-                                // 3. Commit the session
-                                val commitResult = Shell.cmd("pm install-commit $sessionId").exec()
-                                if (commitResult.isSuccess && commitResult.out.any { it.contains("Success") }) {
-                                    successes++
-                                    bytesInstalledSoFar += appSize
-                                } else {
-                                    failures++
-                                    failureDetails.add("$appName: Install commit failed: ${commitResult.err.joinToString(" ")}")
+                                if (allWritesSucceeded) {
+                                    val commitResult = Shell.cmd("pm install-commit $sessionId").exec()
+                                    if (commitResult.isSuccess && commitResult.out.any { it.contains("Success") }) {
+                                        successes++
+                                        bytesInstalledSoFar += appSize
+                                    } else {
+                                        failures++
+                                        failureDetails.add("$appName: Install commit failed: ${commitResult.err.joinToString(" ")}")
+                                    }
                                 }
+                            } else {
+                                failures++
+                                failureDetails.add("$appName: Failed to create install session: ${createResult.err.joinToString(" ")}")
                             }
                         } else {
                             failures++
-                            failureDetails.add("$appName: Failed to create install session: ${createResult.err.joinToString(" ")}")
+                            failureDetails.add("$appName: No APK files found after restore.")
                         }
-
-                    } else {
-                        failures++
-                        failureDetails.add("$appName: No APK files found after restore.")
                     }
                 }
 
-                // --- Stage 3: Cleanup ---
-                val cleanupStartTime = System.currentTimeMillis()
+                // --- Final Stage: Cleanup ---
+                val cleanupStage = if (apkRestoreSelected) 3 else 2
                 _restoreProgress.update {
                     it.copy(
-                        stageTitle = "[3/$totalStages] Cleaning up...",
+                        stageTitle = "[$cleanupStage/$totalStages] Cleaning up...",
                         stagePercentage = 0f,
-                        overallPercentage = (2f / totalStages)
+                        overallPercentage = (cleanupStage - 1).toFloat() / totalStages
                     )
                 }
                 notificationRepository.showOperationProgressNotification("Restore", _restoreProgress.value)
 
-                var cleanupSuccess = false
                 var cleanupMessage = ""
                 tempRestoreDir?.let { dir ->
-                    cleanupSuccess = Shell.cmd("rm -rf '${dir.absolutePath}'").exec().isSuccess
+                    val cleanupSuccess = Shell.cmd("rm -rf '${dir.absolutePath}'").exec().isSuccess
                     cleanupMessage = if (cleanupSuccess) {
                         "\n\nTemporary restore data cleaned up successfully."
                     } else {
@@ -355,9 +377,27 @@ class RestoreViewModel(
                 val finalElapsedTime = (System.currentTimeMillis() - startTime) / 1000
                 val summary = buildString {
                     append("Restore finished in ${formatElapsedTime(finalElapsedTime)}. ")
-                    append("Successfully installed $successes app(s).")
+                    if (apkRestoreSelected) {
+                        append("Successfully installed $successes app(s).")
+                        if (failures > 0) {
+                            append(" Failed to restore $failures app(s).")
+                        }
+                    } else {
+                        append("Successfully restored data for ${selectedApps.size} app(s) to cache.")
+                    }
+                    val otherDataTypes = mutableListOf<String>()
+                    if (restoreTypes.value.data) otherDataTypes.add("Data")
+                    if (restoreTypes.value.deviceProtectedData) otherDataTypes.add("Device Protected Data")
+                    if (restoreTypes.value.externalData) otherDataTypes.add("External Data")
+                    if (restoreTypes.value.obb) otherDataTypes.add("OBB")
+                    if (restoreTypes.value.media) otherDataTypes.add("Media")
+
+                    if (otherDataTypes.isNotEmpty()) {
+                        append("\n\nRestored ${otherDataTypes.joinToString()} is located in:\n${tempRestoreDir?.absolutePath}")
+                    }
+
                     if (failures > 0) {
-                        append(" Failed to restore $failures app(s).\n\nErrors:\n- ${failureDetails.joinToString("\n- ")}")
+                        append("\n\nErrors:\n- ${failureDetails.joinToString("\n- ")}")
                     }
                     append(cleanupMessage)
                 }
@@ -369,9 +409,7 @@ class RestoreViewModel(
                     error = if (failures > 0) failureDetails.joinToString(", ") else null,
                     elapsedTime = finalElapsedTime,
                     filesProcessed = successes,
-                    totalFiles = selectedApps.size,
-                    bytesProcessed = bytesInstalledSoFar,
-                    totalBytes = totalBytesToRestore
+                    totalFiles = selectedApps.size
                 )
 
                 notificationRepository.showOperationFinishedNotification(
@@ -389,8 +427,8 @@ class RestoreViewModel(
                 )
                 notificationRepository.showOperationFinishedNotification(
                     "Restore",
-                    failures == 0,
-                    _restoreProgress.value.finalSummary ?: "Restore finished."
+                    false,
+                    _restoreProgress.value.finalSummary ?: "Restore failed."
                 )
             } finally {
                 passwordFile?.delete()
@@ -467,4 +505,3 @@ class RestoreViewModel(
     fun setRestoreObb(value: Boolean) = _restoreTypes.update { it.copy(obb = value) }
     fun setRestoreMedia(value: Boolean) = _restoreTypes.update { it.copy(media = value) }
 }
-
