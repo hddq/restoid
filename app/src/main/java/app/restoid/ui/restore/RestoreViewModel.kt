@@ -294,7 +294,7 @@ class RestoreViewModel(
             if (anyDataRestoreSelected) stageList.add("Restore Data")
             stageList.add("Cleanup")
             val totalStages = stageList.size
-            var currentStage = 1
+            var currentStageNum = 1
 
             try {
                 // --- Pre-flight checks ---
@@ -325,7 +325,7 @@ class RestoreViewModel(
                 }
 
                 // --- Stage 1: Execute restic restore ---
-                val restoreStageTitle = "[${currentStage++}/${totalStages}] ${stageList[0]}"
+                val restoreStageTitle = "[${currentStageNum}/${totalStages}] ${stageList[0]}"
                 val includes = pathsToRestore.joinToString(" ") { "--include '$it'" }
                 val env = "HOME='${application.filesDir.absolutePath}' TMPDIR='${application.cacheDir.absolutePath}'"
                 val command = "$env RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' ${resticState.path} -r '$selectedRepoPath' restore ${currentSnapshot.id} --target '${tempRestoreDir.absolutePath}' $includes --json"
@@ -334,12 +334,26 @@ class RestoreViewModel(
                     override fun onAddElement(line: String) {
                         ResticOutputParser.parse(line)?.let { progressUpdate ->
                             val elapsedTime = (System.currentTimeMillis() - startTime) / 1000
-                            val newProgress = progressUpdate.copy(
-                                elapsedTime = elapsedTime,
-                                stageTitle = restoreStageTitle,
-                                stagePercentage = progressUpdate.stagePercentage,
-                                overallPercentage = (currentStage - 1 + progressUpdate.stagePercentage) / totalStages
-                            )
+                            val newProgress: OperationProgress
+
+                            if (progressUpdate.isFinished) {
+                                // This is the summary from restic, marks the end of THIS STAGE.
+                                newProgress = _restoreProgress.value.copy(
+                                    isFinished = false, // DO NOT finish the whole operation
+                                    stageTitle = restoreStageTitle,
+                                    stagePercentage = 1.0f,
+                                    overallPercentage = currentStageNum.toFloat() / totalStages.toFloat(),
+                                    elapsedTime = elapsedTime,
+                                    finalSummary = "" // Clear summary from parser, we'll build our own at the end
+                                )
+                            } else {
+                                // Regular progress update for the current stage.
+                                newProgress = progressUpdate.copy(
+                                    stageTitle = restoreStageTitle,
+                                    overallPercentage = ((currentStageNum - 1) + progressUpdate.stagePercentage) / totalStages.toFloat(),
+                                    elapsedTime = elapsedTime
+                                )
+                            }
                             _restoreProgress.value = newProgress
                             notificationRepository.showOperationProgressNotification("Restore", newProgress)
                         }
@@ -353,22 +367,27 @@ class RestoreViewModel(
                     throw IllegalStateException(if (errorOutput.isEmpty()) "Restic restore command failed with code ${restoreResult.code}." else errorOutput)
                 }
 
-                // --- Stage 2 & 3: Process each app (Install APKs and/or Restore Data) ---
+                // --- Subsequent Stages ---
+                val apkInstallStageIndex = stageList.indexOf("Install APKs")
+                val dataRestoreStageIndex = stageList.indexOf("Restore Data")
+
+                // --- Process each app ---
                 for ((index, detail) in selectedApps.withIndex()) {
                     val appName = detail.appInfo.name
                     var appProcessSuccess = true
-
                     val processProgress = (index + 1).toFloat() / selectedApps.size.toFloat()
 
                     // Install APK if selected
                     if (apkRestoreSelected) {
-                        val installStageTitle = "[${currentStage}/${totalStages}] ${stageList.indexOf("Install APKs") + 1}/${totalStages}] Install APKs"
-                        _restoreProgress.value = _restoreProgress.value.copy(
-                            stageTitle = installStageTitle,
-                            stagePercentage = processProgress,
-                            overallPercentage = (stageList.indexOf("Install APKs") + processProgress) / totalStages,
-                            currentFile = appName
-                        )
+                        currentStageNum = apkInstallStageIndex + 1
+                        val installStageTitle = "[${currentStageNum}/${totalStages}] Install APKs"
+                        _restoreProgress.update {
+                            it.copy(
+                                stageTitle = installStageTitle, stagePercentage = processProgress,
+                                overallPercentage = (apkInstallStageIndex + processProgress) / totalStages.toFloat(),
+                                currentFile = appName, filesProcessed = index + 1, totalFiles = selectedApps.size
+                            )
+                        }
                         notificationRepository.showOperationProgressNotification("Restore", _restoreProgress.value)
 
                         val originalApkPath = pathsToRestore.find { it.startsWith("/data/app/") && it.contains("/${detail.appInfo.packageName}-") }
@@ -389,7 +408,6 @@ class RestoreViewModel(
                                         return@forEachIndexed
                                     }
                                 }
-
                                 if (allWritesSucceeded) {
                                     val commitResult = Shell.cmd("pm install-commit $sessionId").exec()
                                     if (!commitResult.isSuccess || !commitResult.out.any { it.contains("Success") }) {
@@ -411,23 +429,20 @@ class RestoreViewModel(
                         }
                     }
 
-                    // Restore Data if selected and APK install was successful (or skipped)
+                    // Restore Data if selected and app is considered "successfully processed" so far
                     if (appProcessSuccess && anyDataRestoreSelected) {
-                        val dataStageIdx = stageList.indexOf("Restore Data")
-                        if (dataStageIdx != -1) {
-                            val dataStageTitle = "[${dataStageIdx + 1}/${totalStages}] Restore Data"
-                            _restoreProgress.value = _restoreProgress.value.copy(
-                                stageTitle = dataStageTitle,
-                                stagePercentage = processProgress,
-                                overallPercentage = (dataStageIdx + processProgress) / totalStages,
-                                currentFile = "$appName (data)"
+                        currentStageNum = dataRestoreStageIndex + 1
+                        val dataStageTitle = "[${currentStageNum}/${totalStages}] Restore Data"
+                        _restoreProgress.update {
+                            it.copy(
+                                stageTitle = dataStageTitle, stagePercentage = processProgress,
+                                overallPercentage = (dataRestoreStageIndex + processProgress) / totalStages.toFloat(),
+                                currentFile = "$appName (data)", filesProcessed = index + 1, totalFiles = selectedApps.size
                             )
-                            notificationRepository.showOperationProgressNotification("Restore", _restoreProgress.value)
                         }
+                        notificationRepository.showOperationProgressNotification("Restore", _restoreProgress.value)
 
                         if (!moveRestoredDataAndFixPerms(detail, tempRestoreDir, restoreTypes.value)) {
-                            // This indicates a partial failure; data didn't restore correctly.
-                            // We will still count the app as a "success" if the APK installed, but log this failure.
                             failureDetails.add("$appName: Data restore failed or incomplete. Check logs.")
                         }
                     }
@@ -435,10 +450,10 @@ class RestoreViewModel(
                     if (appProcessSuccess) successes++ else failures++
                 }
 
-
                 // --- Final Stage: Cleanup ---
-                val cleanupStageTitle = "[${totalStages}/${totalStages}] Cleanup"
-                _restoreProgress.update { it.copy(stageTitle = cleanupStageTitle, stagePercentage = 0f, overallPercentage = (totalStages - 1).toFloat() / totalStages) }
+                currentStageNum = totalStages
+                val cleanupStageTitle = "[${currentStageNum}/${totalStages}] Cleanup"
+                _restoreProgress.update { it.copy(stageTitle = cleanupStageTitle, stagePercentage = 0f, overallPercentage = (totalStages - 1).toFloat() / totalStages.toFloat()) }
                 notificationRepository.showOperationProgressNotification("Restore", _restoreProgress.value)
 
                 var cleanupMessage = ""
@@ -555,3 +570,4 @@ class RestoreViewModel(
     fun setRestoreObb(value: Boolean) = _restoreTypes.update { it.copy(obb = value) }
     fun setRestoreMedia(value: Boolean) = _restoreTypes.update { it.copy(media = value) }
 }
+
