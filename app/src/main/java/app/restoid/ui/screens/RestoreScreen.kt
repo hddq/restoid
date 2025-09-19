@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
@@ -167,20 +168,18 @@ fun RestoreSelectionContent(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
-                        text = "Restore Types",
+                        text = "Restore Options",
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
                     RestoreTypeToggle("APK", checked = restoreTypes.apk) { onToggleRestoreType("APK", it) }
-                    RestoreTypeToggle("Allow Downgrade", checked = allowDowngrade) { onToggleAllowDowngrade(it) }
-                    // Only show APK for now as per the request
-                    /*
                     RestoreTypeToggle("Data", checked = restoreTypes.data) { onToggleRestoreType("Data", it) }
                     RestoreTypeToggle("Device Protected Data", checked = restoreTypes.deviceProtectedData) { onToggleRestoreType("Device Protected Data", it) }
                     RestoreTypeToggle("External Data", checked = restoreTypes.externalData) { onToggleRestoreType("External Data", it) }
                     RestoreTypeToggle("OBB Data", checked = restoreTypes.obb) { onToggleRestoreType("OBB Data", it) }
                     RestoreTypeToggle("Media Data", checked = restoreTypes.media) { onToggleRestoreType("Media Data", it) }
-                    */
+                    Divider(modifier = Modifier.padding(vertical = 8.dp))
+                    RestoreTypeToggle("Allow Downgrade", checked = allowDowngrade) { onToggleAllowDowngrade(it) }
                 }
             }
         }
