@@ -121,12 +121,47 @@ class RepositoriesRepository(
             }
             val wasEmpty = currentPaths.isEmpty()
 
-            // Check if it's an existing repository by trying to list keys
-            if (repoDir.exists() && configFile.exists()) {
-                val checkCommand = "RESTIC_PASSWORD='$password' $resticBinaryPath -r '$path' list keys --no-lock"
-                val checkResult = Shell.cmd(checkCommand).exec()
-                if (checkResult.isSuccess) {
-                    // Valid existing repo, add it
+            val passwordFile = File.createTempFile("restic-pass", ".tmp", context.cacheDir)
+            try {
+                passwordFile.writeText(password)
+
+                // Check if it's an existing repository by trying to list keys
+                if (repoDir.exists() && configFile.exists()) {
+                    val checkCommand =
+                        "RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' $resticBinaryPath -r '$path' list keys --no-lock"
+                    val checkResult = Shell.cmd(checkCommand).exec()
+                    if (checkResult.isSuccess) {
+                        // Valid existing repo, add it
+                        currentPaths.add(path)
+                        prefs.edit().putStringSet(REPO_PATHS_KEY, currentPaths).apply()
+                        if (savePassword) {
+                            passwordManager.savePassword(path, password)
+                        } else {
+                            passwordManager.savePasswordTemporary(path, password)
+                        }
+                        loadRepositories()
+                        if (wasEmpty) selectRepository(path)
+                        return@withContext AddRepositoryState.Success
+                    } else {
+                        val errorOutput = checkResult.err.joinToString("\n")
+                        val errorMsg =
+                            if (errorOutput.isEmpty()) "Invalid password or corrupted repository." else errorOutput
+                        return@withContext AddRepositoryState.Error(errorMsg)
+                    }
+                }
+
+                // It's not an existing repo, so try to initialize it.
+                if (!repoDir.exists()) {
+                    if (!repoDir.mkdirs()) {
+                        return@withContext AddRepositoryState.Error("Failed to create directory at $path")
+                    }
+                }
+
+                val initCommand =
+                    "RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' $resticBinaryPath -r '$path' init"
+                val initResult = Shell.cmd(initCommand).exec()
+
+                if (initResult.isSuccess) {
                     currentPaths.add(path)
                     prefs.edit().putStringSet(REPO_PATHS_KEY, currentPaths).apply()
                     if (savePassword) {
@@ -138,38 +173,13 @@ class RepositoriesRepository(
                     if (wasEmpty) selectRepository(path)
                     return@withContext AddRepositoryState.Success
                 } else {
-                    val errorOutput = checkResult.err.joinToString("\n")
-                    val errorMsg = if (errorOutput.isEmpty()) "Invalid password or corrupted repository." else errorOutput
+                    repoDir.deleteRecursively() // Clean up failed init
+                    val errorOutput = initResult.err.joinToString("\n")
+                    val errorMsg = if (errorOutput.isEmpty()) "Failed to initialize repository." else errorOutput
                     return@withContext AddRepositoryState.Error(errorMsg)
                 }
-            }
-
-            // It's not an existing repo, so try to initialize it.
-            if (!repoDir.exists()) {
-                if (!repoDir.mkdirs()) {
-                    return@withContext AddRepositoryState.Error("Failed to create directory at $path")
-                }
-            }
-
-            val initCommand = "RESTIC_PASSWORD='$password' $resticBinaryPath -r '$path' init"
-            val initResult = Shell.cmd(initCommand).exec()
-
-            if (initResult.isSuccess) {
-                currentPaths.add(path)
-                prefs.edit().putStringSet(REPO_PATHS_KEY, currentPaths).apply()
-                if (savePassword) {
-                    passwordManager.savePassword(path, password)
-                } else {
-                    passwordManager.savePasswordTemporary(path, password)
-                }
-                loadRepositories()
-                if (wasEmpty) selectRepository(path)
-                return@withContext AddRepositoryState.Success
-            } else {
-                repoDir.deleteRecursively() // Clean up failed init
-                val errorOutput = initResult.err.joinToString("\n")
-                val errorMsg = if (errorOutput.isEmpty()) "Failed to initialize repository." else errorOutput
-                return@withContext AddRepositoryState.Error(errorMsg)
+            } finally {
+                passwordFile.delete()
             }
         }
     }

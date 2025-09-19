@@ -174,6 +174,7 @@ class RestoreViewModel(
             _restoreProgress.value = OperationProgress()
 
             var tempRestoreDir: File? = null
+            var passwordFile: File? = null
             var successes = 0
             var failures = 0
             val failureDetails = mutableListOf<String>()
@@ -195,6 +196,9 @@ class RestoreViewModel(
                 val password = repositoriesRepository.getRepositoryPassword(selectedRepoPath)
                     ?: throw IllegalStateException("Password not found for repository.")
 
+                passwordFile = File.createTempFile("restic-pass", ".tmp", application.cacheDir)
+                passwordFile.writeText(password)
+
                 tempRestoreDir = File(application.cacheDir, "restic-restore-${System.currentTimeMillis()}").also { it.mkdirs() }
 
                 // --- Find APKs to restore ---
@@ -210,9 +214,8 @@ class RestoreViewModel(
 
                 // --- Stage 1: Execute restic restore with real-time progress ---
                 val includes = pathsToRestore.joinToString(" ") { "--include '$it'" }
-                val sanitizedPassword = password.replace("'", "'\\''")
                 val env = "HOME='${application.filesDir.absolutePath}' TMPDIR='${application.cacheDir.absolutePath}'"
-                val command = "$env RESTIC_PASSWORD='$sanitizedPassword' ${resticState.path} -r '$selectedRepoPath' restore ${currentSnapshot.id} --target '${tempRestoreDir.absolutePath}' $includes --json"
+                val command = "$env RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' ${resticState.path} -r '$selectedRepoPath' restore ${currentSnapshot.id} --target '${tempRestoreDir.absolutePath}' $includes --json"
 
                 val stdoutCallback = object : CallbackList<String>() {
                     override fun onAddElement(line: String) {
@@ -390,6 +393,7 @@ class RestoreViewModel(
                     _restoreProgress.value.finalSummary ?: "Restore finished."
                 )
             } finally {
+                passwordFile?.delete()
                 _isRestoring.value = false
             }
         }

@@ -168,13 +168,17 @@ class ResticRepository(private val context: Context) {
     // Execute restic snapshots command for a repository
     suspend fun getSnapshots(repoPath: String, password: String): Result<List<SnapshotInfo>> {
         return withContext(Dispatchers.IO) {
-            try {
-                if (resticState.value !is ResticState.Installed) {
-                    return@withContext Result.failure(Exception("Restic not installed"))
-                }
+            if (resticState.value !is ResticState.Installed) {
+                return@withContext Result.failure(Exception("Restic not installed"))
+            }
 
-                val resticPath = (resticState.value as ResticState.Installed).path
-                val command = "RESTIC_PASSWORD='$password' $resticPath -r '$repoPath' snapshots --json"
+            val resticPath = (resticState.value as ResticState.Installed).path
+            val passwordFile = File.createTempFile("restic-pass", ".tmp", context.cacheDir)
+
+            try {
+                passwordFile.writeText(password)
+                val command =
+                    "RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' $resticPath -r '$repoPath' snapshots --json"
                 val result = Shell.cmd(command).exec()
 
                 if (result.isSuccess) {
@@ -183,24 +187,31 @@ class ResticRepository(private val context: Context) {
                     Result.success(snapshots)
                 } else {
                     val errorOutput = result.err.joinToString("\n")
-                    val errorMsg = if (errorOutput.isEmpty()) "Failed to load snapshots" else errorOutput
+                    val errorMsg =
+                        if (errorOutput.isEmpty()) "Failed to load snapshots" else errorOutput
                     Result.failure(Exception(errorMsg))
                 }
             } catch (e: Exception) {
                 Result.failure(e)
+            } finally {
+                passwordFile.delete()
             }
         }
     }
 
     suspend fun forgetSnapshot(repoPath: String, password: String, snapshotId: String): Result<Unit> {
         return withContext(Dispatchers.IO) {
-            try {
-                if (resticState.value !is ResticState.Installed) {
-                    return@withContext Result.failure(Exception("Restic not installed"))
-                }
+            if (resticState.value !is ResticState.Installed) {
+                return@withContext Result.failure(Exception("Restic not installed"))
+            }
 
-                val resticPath = (resticState.value as ResticState.Installed).path
-                val command = "RESTIC_PASSWORD='$password' $resticPath -r '$repoPath' forget $snapshotId"
+            val resticPath = (resticState.value as ResticState.Installed).path
+            val passwordFile = File.createTempFile("restic-pass", ".tmp", context.cacheDir)
+
+            try {
+                passwordFile.writeText(password)
+                val command =
+                    "RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' $resticPath -r '$repoPath' forget $snapshotId"
                 val result = Shell.cmd(command).exec()
 
                 if (result.isSuccess) {
@@ -208,11 +219,14 @@ class ResticRepository(private val context: Context) {
                     Result.success(Unit)
                 } else {
                     val errorOutput = result.err.joinToString("\n")
-                    val errorMsg = if (errorOutput.isEmpty()) "Failed to delete snapshot" else errorOutput
+                    val errorMsg =
+                        if (errorOutput.isEmpty()) "Failed to delete snapshot" else errorOutput
                     Result.failure(Exception(errorMsg))
                 }
             } catch (e: Exception) {
                 Result.failure(e)
+            } finally {
+                passwordFile.delete()
             }
         }
     }
@@ -225,16 +239,21 @@ class ResticRepository(private val context: Context) {
         pathsToRestore: List<String>
     ): Result<String> {
         return withContext(Dispatchers.IO) {
-            try {
-                if (resticState.value !is ResticState.Installed) {
-                    return@withContext Result.failure(Exception("Restic not installed"))
-                }
+            if (resticState.value !is ResticState.Installed) {
+                return@withContext Result.failure(Exception("Restic not installed"))
+            }
 
-                val resticPath = (resticState.value as ResticState.Installed).path
+            val resticPath = (resticState.value as ResticState.Installed).path
+            val passwordFile = File.createTempFile("restic-pass", ".tmp", context.cacheDir)
+
+            try {
+                passwordFile.writeText(password)
+
                 // Restic's restore command takes the paths to restore at the end of the command.
                 // We use --include because it's more reliable with weird characters.
                 val includes = pathsToRestore.joinToString(" ") { "--include \"$it\"" }
-                val command = "RESTIC_PASSWORD='$password' $resticPath -r '$repoPath' restore $snapshotId --target '$targetPath' $includes"
+                val command =
+                    "RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' $resticPath -r '$repoPath' restore $snapshotId --target '$targetPath' $includes"
 
                 val result = Shell.cmd(command).exec()
 
@@ -242,11 +261,14 @@ class ResticRepository(private val context: Context) {
                     Result.success(result.out.joinToString("\n"))
                 } else {
                     val errorOutput = result.err.joinToString("\n")
-                    val errorMsg = if (errorOutput.isEmpty()) "Failed to restore snapshot" else errorOutput
+                    val errorMsg =
+                        if (errorOutput.isEmpty()) "Failed to restore snapshot" else errorOutput
                     Result.failure(Exception(errorMsg))
                 }
             } catch (e: Exception) {
                 Result.failure(e)
+            } finally {
+                passwordFile.delete()
             }
         }
     }

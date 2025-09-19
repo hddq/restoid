@@ -83,6 +83,7 @@ class BackupViewModel(
             _backupProgress.value = OperationProgress(stageTitle = "Starting backup...")
 
             val fileList = File.createTempFile("restic-files-", ".txt", application.cacheDir)
+            var passwordFile: File? = null
             var isSuccess = false
             var summary = ""
             var finalSummaryProgress: OperationProgress? = null
@@ -139,8 +140,11 @@ class BackupViewModel(
                 updateProgress(stageTitle = "Starting backup command...")
                 val tagFlags = tags.joinToString(" ") { "--tag '$it'" }
                 val excludeFlags = excludePatterns.distinct().joinToString(" ") { pattern -> "--exclude $pattern" }
-                val command = "${resticState.path} -r '$selectedRepoPath' backup --files-from '${fileList.absolutePath}' --json --verbose=2 $tagFlags $excludeFlags"
-                val sanitizedPassword = password.replace("'", "'\\''")
+
+                passwordFile = File.createTempFile("restic-pass", ".tmp", application.cacheDir)
+                passwordFile.writeText(password)
+
+                val command = "RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' ${resticState.path} -r '$selectedRepoPath' backup --files-from '${fileList.absolutePath}' --json --verbose=2 $tagFlags $excludeFlags"
 
                 val stdoutCallback = object : CallbackList<String>() {
                     override fun onAddElement(line: String) {
@@ -159,7 +163,7 @@ class BackupViewModel(
 
                 val stderr = mutableListOf<String>()
 
-                val result = Shell.cmd("RESTIC_PASSWORD='$sanitizedPassword' $command")
+                val result = Shell.cmd(command)
                     .to(stdoutCallback, stderr)
                     .exec()
 
@@ -177,6 +181,7 @@ class BackupViewModel(
                 summary = "A fatal error occurred: ${e.message}"
             } finally {
                 fileList.delete()
+                passwordFile?.delete()
                 _isBackingUp.value = false
                 val finalProgress = _backupProgress.value.copy(
                     isFinished = true,
