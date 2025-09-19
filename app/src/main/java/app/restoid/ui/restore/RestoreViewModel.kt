@@ -1,6 +1,7 @@
 package app.restoid.ui.restore
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.restoid.data.AppInfoRepository
@@ -329,6 +330,21 @@ class RestoreViewModel(
                                     if (commitResult.isSuccess && commitResult.out.any { it.contains("Success") }) {
                                         successes++
                                         bytesInstalledSoFar += appSize
+
+                                        // Get UID for debugging using the stat command
+                                        try {
+                                            val statCommand = "stat -c '%U' /data/data/${detail.appInfo.packageName}"
+                                            val userResult = Shell.cmd(statCommand).exec()
+                                            if (userResult.isSuccess && userResult.out.isNotEmpty()) {
+                                                val user = userResult.out.first().trim()
+                                                Log.d("RestoreViewModel", "Successfully installed ${detail.appInfo.packageName}. Data directory owner is: $user")
+                                            } else {
+                                                Log.w("RestoreViewModel", "Installed ${detail.appInfo.packageName} but could not verify data directory owner. Error: ${userResult.err.joinToString(" ")}")
+                                            }
+                                        } catch (e: Exception) {
+                                            Log.e("RestoreViewModel", "Error getting owner for ${detail.appInfo.packageName}", e)
+                                        }
+
                                     } else {
                                         failures++
                                         failureDetails.add("$appName: Install commit failed: ${commitResult.err.joinToString(" ")}")
@@ -505,3 +521,4 @@ class RestoreViewModel(
     fun setRestoreObb(value: Boolean) = _restoreTypes.update { it.copy(obb = value) }
     fun setRestoreMedia(value: Boolean) = _restoreTypes.update { it.copy(media = value) }
 }
+
