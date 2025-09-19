@@ -3,59 +3,30 @@ package app.restoid.ui.screens
 import android.Manifest
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.os.Environment
 import android.provider.DocumentsContract
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.restoid.RestoidApplication
-import app.restoid.data.AddRepositoryState
-import app.restoid.data.LocalRepository
-import app.restoid.data.NotificationPermissionState
-import app.restoid.data.ResticState
-import app.restoid.data.RootState
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.runtime.LaunchedEffect
-import app.restoid.ui.settings.AddRepoUiState
-import app.restoid.ui.settings.ChangePasswordState
+import app.restoid.ui.screens.settings.AddRepositoryDialog
+import app.restoid.ui.screens.settings.DependencySettings
+import app.restoid.ui.screens.settings.RepositorySettings
+import app.restoid.ui.screens.settings.SystemSettings
 import app.restoid.ui.settings.SettingsViewModel
 import app.restoid.ui.settings.SettingsViewModelFactory
 
@@ -71,13 +42,7 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
         )
     )
 
-    val rootState by settingsViewModel.rootState.collectAsStateWithLifecycle()
-    val resticState by settingsViewModel.resticState.collectAsStateWithLifecycle()
-    val repositories by settingsViewModel.repositories.collectAsStateWithLifecycle()
-    val selectedRepository by settingsViewModel.selectedRepository.collectAsStateWithLifecycle()
     val addRepoUiState by settingsViewModel.addRepoUiState.collectAsStateWithLifecycle()
-    val notificationPermissionState by settingsViewModel.notificationPermissionState.collectAsStateWithLifecycle()
-
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -98,7 +63,6 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
         onResult = { uri ->
             uri?.let {
                 try {
-                    // Persist access permissions for the selected directory.
                     val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or
                             Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                     context.contentResolver.takePersistableUriPermission(it, takeFlags)
@@ -108,7 +72,6 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
                     }
                 } catch (e: SecurityException) {
                     e.printStackTrace()
-                    // Handle cases where permission couldn't be persisted.
                 }
             }
         }
@@ -121,8 +84,6 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
         }
     )
 
-
-    // Show dialog for adding a new repo when requested by the state
     if (addRepoUiState.showDialog) {
         AddRepositoryDialog(
             uiState = addRepoUiState,
@@ -141,550 +102,30 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Card for Root Access status
         item {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp)) {
-                    Text("System", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.height(12.dp))
-                    AnimatedContent(targetState = rootState, label = "RootStatusAnimation") { state ->
-                        when (state) {
-                            RootState.Denied -> RootRequestRow(
-                                text = "Root access denied",
-                                buttonText = "Try Again",
-                                icon = Icons.Default.Error,
-                                onClick = { settingsViewModel.requestRootAccess() }
-                            )
-                            RootState.Checking -> {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("Checking for root...")
-                                }
-                            }
-                            RootState.Granted -> RootStatusRow(
-                                text = "Root access granted",
-                                icon = Icons.Default.CheckCircle
-                            )
-                        }
-                    }
-                    Divider(modifier = Modifier.padding(vertical = 8.dp))
-                    NotificationPermissionRow(
-                        state = notificationPermissionState,
-                        onRequestPermission = {
-                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                        },
-                        onOpenSettings = {
-                            val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-                                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                            }
-                            context.startActivity(intent)
-                        }
-                    )
-                }
-            }
-        }
-
-        // Card for Restic Dependency management
-        item {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp)) {
-                    Text("Dependencies", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.height(12.dp))
-                    ResticDependencyRow(
-                        state = resticState,
-                        onDownloadClick = { settingsViewModel.downloadRestic() }
-                    )
-                }
-            }
-        }
-
-        // Card for Repositories
-        item {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp)) {
-                    // Title row is always visible, but the add button is conditional
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Backup Repositories", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                        // Show "Add" button only if restic is installed
-                        if (resticState is ResticState.Installed) {
-                            IconButton(onClick = { settingsViewModel.onShowAddRepoDialog() }) {
-                                Icon(Icons.Default.Add, contentDescription = "Add Repository")
-                            }
-                        }
-                    }
-                    Spacer(Modifier.height(4.dp))
-
-                    // Content depends on whether restic is installed
-                    if (resticState is ResticState.Installed) {
-                        if (repositories.isEmpty()) {
-                            Text(
-                                "No repositories configured. Add one to get started.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-                        } else {
-                            Column {
-                                repositories.forEach { repo ->
-                                    SelectableRepositoryRow(
-                                        repo = repo,
-                                        isSelected = repo.path == selectedRepository,
-                                        onSelected = { settingsViewModel.selectRepository(repo.path) },
-                                        viewModel = settingsViewModel
-                                    )
-                                }
-                            }
-                        }
-                    } else {
-                        // Show a message asking the user to install restic first
-                        Row(
-                            modifier = Modifier.padding(vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Default.Info,
-                                contentDescription = null,
-                                modifier = Modifier.padding(end = 8.dp),
-                                tint = LocalContentColor.current.copy(alpha = 0.6f)
-                            )
-                            Text(
-                                "Install restic to manage repositories.",
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun NotificationPermissionRow(
-    state: NotificationPermissionState,
-    onRequestPermission: () -> Unit,
-    onOpenSettings: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1f)
-        ) {
-            val icon = when (state) {
-                NotificationPermissionState.Granted -> Icons.Default.CheckCircle
-                NotificationPermissionState.Denied -> Icons.Default.Error
-                NotificationPermissionState.NotRequested -> Icons.Default.Notifications
-            }
-            val iconColor = when (state) {
-                NotificationPermissionState.Granted -> MaterialTheme.colorScheme.primary
-                NotificationPermissionState.Denied -> MaterialTheme.colorScheme.error
-                NotificationPermissionState.NotRequested -> LocalContentColor.current
-            }
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.padding(end = 8.dp),
-                tint = iconColor
-            )
-            Text(
-                text = when (state) {
-                    NotificationPermissionState.Granted -> "Notifications enabled"
-                    NotificationPermissionState.Denied -> "Notifications disabled"
-                    NotificationPermissionState.NotRequested -> "Notification permission"
-                }
-            )
-        }
-        if (state != NotificationPermissionState.Granted) {
-            Button(onClick = if (state == NotificationPermissionState.NotRequested) onRequestPermission else onOpenSettings) {
-                Text(if (state == NotificationPermissionState.Denied) "Settings" else "Grant")
-            }
-        }
-    }
-}
-
-@Composable
-fun SelectableRepositoryRow(
-    repo: LocalRepository,
-    isSelected: Boolean,
-    onSelected: () -> Unit,
-    viewModel: SettingsViewModel
-) {
-    var showMenu by remember { mutableStateOf(false) }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .selectable(
-                selected = isSelected,
-                onClick = onSelected,
-                role = Role.RadioButton
-            )
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        RadioButton(
-            selected = isSelected,
-            onClick = null // Handled by Row's selectable modifier
-        )
-        Spacer(Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(repo.name, style = MaterialTheme.typography.bodyLarge)
-            Text(
-                repo.path,
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        var showChangePasswordDialog by remember { mutableStateOf(false) }
-        var showSavePasswordDialog by remember { mutableStateOf(false) }
-
-        if (showChangePasswordDialog) {
-            ChangePasswordDialog(
-                viewModel = viewModel,
-                repoPath = repo.path,
-                onDismiss = { showChangePasswordDialog = false }
-            )
-        }
-
-        if (showSavePasswordDialog) {
-            SavePasswordDialog(
-                viewModel = viewModel,
-                repoPath = repo.path,
-                onDismiss = { showSavePasswordDialog = false }
-            )
-        }
-
-        Box {
-            IconButton(onClick = { showMenu = true }) {
-                Icon(Icons.Default.MoreVert, contentDescription = "More options")
-            }
-            DropdownMenu(
-                expanded = showMenu,
-                onDismissRequest = { showMenu = false }
-            ) {
-                DropdownMenuItem(
-                    text = { Text("Delete") },
-                    onClick = {
-                        viewModel.deleteRepository(repo.path)
-                        showMenu = false
-                    }
-                )
-                // Logic for saving or forgetting a password
-                if (viewModel.hasStoredRepositoryPassword(repo.path)) {
-                    DropdownMenuItem(
-                        text = { Text("Forget Password") },
-                        onClick = {
-                            viewModel.forgetPassword(repo.path)
-                            showMenu = false
-                        }
-                    )
-                } else {
-                    DropdownMenuItem(
-                        text = { Text("Save Password") },
-                        onClick = {
-                            showSavePasswordDialog = true
-                            showMenu = false
-                        }
-                    )
-                }
-                DropdownMenuItem(
-                    text = { Text("Change password") },
-                    onClick = {
-                        showChangePasswordDialog = true
-                        showMenu = false
-                    }
-                )
-            }
-        }
-    }
-}
-
-
-@Composable
-fun AddRepositoryDialog(
-    uiState: AddRepoUiState,
-    onDismiss: () -> Unit,
-    onPasswordChange: (String) -> Unit,
-    onSavePasswordChange: (Boolean) -> Unit,
-    onConfirm: () -> Unit,
-    onSelectPath: () -> Unit
-) {
-    var passwordVisible by remember { mutableStateOf(false) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Add Local Repository") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                // Path Selector Field (read-only)
-                OutlinedTextField(
-                    value = uiState.path,
-                    onValueChange = {}, // Path is selected via picker, not typed
-                    label = { Text("Path") },
-                    placeholder = { Text("Select a directory...") },
-                    singleLine = true,
-                    readOnly = true,
-                    isError = uiState.state is AddRepositoryState.Error,
-                    trailingIcon = {
-                        IconButton(onClick = onSelectPath) {
-                            Icon(Icons.Default.FolderOpen, contentDescription = "Select Folder")
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                // Password Field
-                OutlinedTextField(
-                    value = uiState.password,
-                    onValueChange = onPasswordChange,
-                    label = { Text("Password") },
-                    singleLine = true,
-                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = {
-                        val image = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
-                        val description = if (passwordVisible) "Hide password" else "Show password"
-                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(imageVector = image, contentDescription = description)
-                        }
-                    },
-                    isError = uiState.state is AddRepositoryState.Error,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(
-                        checked = uiState.savePassword,
-                        onCheckedChange = onSavePasswordChange
-                    )
-                    Text(
-                        text = "Save password",
-                        modifier = Modifier.clickable(onClick = { onSavePasswordChange(!uiState.savePassword) })
-                    )
-                }
-
-                if (uiState.state is AddRepositoryState.Error) {
-                    Text(
-                        text = uiState.state.message,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = onConfirm,
-                enabled = uiState.state !is AddRepositoryState.Initializing && uiState.path.isNotBlank()
-            ) {
-                if (uiState.state is AddRepositoryState.Initializing) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-                } else {
-                    Text("Add")
-                }
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
-}
-
-@Composable
-fun SavePasswordDialog(
-    viewModel: SettingsViewModel,
-    repoPath: String,
-    onDismiss: () -> Unit
-) {
-    var password by remember { mutableStateOf("") }
-    var passwordVisible by remember { mutableStateOf(false) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Save Password") },
-        text = {
-            OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
-                label = { Text("Password") },
-                singleLine = true,
-                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                trailingIcon = {
-                    val image = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
-                    val description = if (passwordVisible) "Hide password" else "Show password"
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                        Icon(imageVector = image, contentDescription = description)
-                    }
+            SystemSettings(
+                viewModel = settingsViewModel,
+                notificationPermissionLauncher = {
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 },
-                modifier = Modifier.fillMaxWidth()
+                onOpenSettings = {
+                    val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                        putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                    }
+                    context.startActivity(intent)
+                }
             )
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    viewModel.savePassword(repoPath, password)
-                    onDismiss()
-                },
-                enabled = password.isNotEmpty()
-            ) {
-                Text("Save")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
         }
-    )
-}
-
-// ResticDependencyRow, RootRequestRow, RootStatusRow are unchanged from the previous version.
-
-@Composable
-fun ResticDependencyRow(
-    state: ResticState,
-    onDownloadClick: () -> Unit
-) {
-    AnimatedContent(targetState = state, label = "ResticStatusAnimation") { targetState ->
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    val icon = when (targetState) {
-                        is ResticState.Installed -> Icons.Default.CheckCircle
-                        is ResticState.Error -> Icons.Default.Error
-                        else -> Icons.Default.CloudDownload
-                    }
-                    val iconColor = when (targetState) {
-                        is ResticState.Installed -> MaterialTheme.colorScheme.primary
-                        is ResticState.Error -> MaterialTheme.colorScheme.error
-                        else -> LocalContentColor.current
-                    }
-                    Icon(imageVector = icon, contentDescription = null, modifier = Modifier.padding(end = 16.dp), tint = iconColor)
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Restic Binary", style = MaterialTheme.typography.bodyLarge)
-                        val supportingText = when (targetState) {
-                            ResticState.Idle -> "Checking status..."
-                            ResticState.NotInstalled -> "Required for backups"
-                            is ResticState.Downloading -> "Downloading..."
-                            ResticState.Extracting -> "Extracting binary..."
-                            is ResticState.Installed -> targetState.version
-                            is ResticState.Error -> "Error: ${targetState.message}"
-                        }
-                        Text(
-                            text = supportingText,
-                            style = MaterialTheme.typography.bodySmall,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-
-                when (targetState) {
-                    ResticState.NotInstalled, is ResticState.Error -> {
-                        Button(onClick = onDownloadClick) {
-                            Text(if (targetState is ResticState.Error) "Retry" else "Download")
-                        }
-                    }
-                    ResticState.Extracting -> CircularProgressIndicator()
-                    is ResticState.Downloading -> {
-                        Text(
-                            text = "${(targetState.progress * 100).toInt()}%",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    is ResticState.Installed, ResticState.Idle -> {
-                        // Nothing to show here for these states
-                    }
-                }
-            }
-
-            if (targetState is ResticState.Downloading) {
-                LinearProgressIndicator(
-                    progress = { targetState.progress },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
+        item {
+            DependencySettings(viewModel = settingsViewModel)
+        }
+        item {
+            RepositorySettings(viewModel = settingsViewModel)
         }
     }
 }
 
-@Composable
-fun RootRequestRow(
-    text: String,
-    buttonText: String,
-    icon: ImageVector?,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1f)
-        ) {
-            if (icon != null) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 8.dp),
-                    tint = MaterialTheme.colorScheme.error
-                )
-            }
-            Text(text = text)
-        }
-        Button(onClick = onClick) {
-            Text(buttonText)
-        }
-    }
-}
-
-@Composable
-fun RootStatusRow(text: String, icon: ImageVector) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(end = 8.dp)
-        )
-        Text(text = text, style = MaterialTheme.typography.bodyLarge)
-    }
-}
-
-/**
- * A helper function to convert a tree URI from ACTION_OPEN_DOCUMENT_TREE
- * into a file path. This is a simplified implementation and mainly works for
- * primary external storage. More complex cases like SD cards may require
- * additional logic.
- */
 private fun getPathFromTreeUri(treeUri: Uri): String? {
-    // Check if the authority is the External Storage provider.
     if (treeUri.authority != "com.android.externalstorage.documents") {
         return null
     }
@@ -695,138 +136,9 @@ private fun getPathFromTreeUri(treeUri: Uri): String? {
         val type = split[0]
         val path = split[1]
         return when (type) {
-            // "primary" refers to the primary shared/external storage volume.
             "primary" -> "${Environment.getExternalStorageDirectory()}/$path"
-            // TODO: Handle other storage volumes (e.g., SD cards) if needed.
-            // This would require iterating through storage volumes to match the type.
             else -> null
         }
     }
     return null
-}
-
-@Composable
-fun ChangePasswordDialog(
-    viewModel: SettingsViewModel,
-    repoPath: String,
-    onDismiss: () -> Unit
-) {
-    var oldPassword by remember { mutableStateOf("") }
-    var newPassword by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
-    var passwordVisible by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
-
-
-    val changePasswordState by viewModel.changePasswordState.collectAsStateWithLifecycle()
-
-
-    LaunchedEffect(changePasswordState) {
-        when (changePasswordState) {
-            ChangePasswordState.Success -> {
-                viewModel.resetChangePasswordState()
-                onDismiss()
-            }
-            ChangePasswordState.Error -> {
-                error = "Failed to change password."
-                viewModel.resetChangePasswordState()
-            }
-            else -> {}
-        }
-    }
-
-
-    AlertDialog(
-        onDismissRequest = {
-            if (changePasswordState != ChangePasswordState.InProgress) {
-                onDismiss()
-            }
-        },
-        title = { Text("Change Password") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = oldPassword,
-                    onValueChange = { oldPassword = it },
-                    label = { Text("Old Password") },
-                    singleLine = true,
-                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = {
-                        val image = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
-                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(imageVector = image, contentDescription = if (passwordVisible) "Hide" else "Show")
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = changePasswordState != ChangePasswordState.InProgress
-                )
-                OutlinedTextField(
-                    value = newPassword,
-                    onValueChange = { newPassword = it },
-                    label = { Text("New Password") },
-                    singleLine = true,
-                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = {
-                        val image = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
-                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(imageVector = image, contentDescription = if (passwordVisible) "Hide" else "Show")
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = changePasswordState != ChangePasswordState.InProgress
-                )
-                OutlinedTextField(
-                    value = confirmPassword,
-                    onValueChange = { confirmPassword = it },
-                    label = { Text("Confirm New Password") },
-                    singleLine = true,
-                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = {
-                        val image = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
-                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(imageVector = image, contentDescription = if (passwordVisible) "Hide" else "Show")
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = changePasswordState != ChangePasswordState.InProgress,
-                    isError = newPassword != confirmPassword
-                )
-                if (newPassword != confirmPassword) {
-                    Text("Passwords do not match.", color = MaterialTheme.colorScheme.error)
-                }
-                error?.let {
-                    Text(it, color = MaterialTheme.colorScheme.error)
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    error = null
-                    if (newPassword == confirmPassword) {
-                        viewModel.changePassword(repoPath, oldPassword, newPassword)
-                    }
-                },
-                enabled = oldPassword.isNotEmpty() &&
-                        newPassword.isNotEmpty() &&
-                        confirmPassword.isNotEmpty() &&
-                        newPassword == confirmPassword &&
-                        changePasswordState != ChangePasswordState.InProgress
-            ) {
-                if (changePasswordState == ChangePasswordState.InProgress) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                } else {
-                    Text("Change")
-                }
-            }
-        },
-        dismissButton = {
-            TextButton(
-                onClick = onDismiss,
-                enabled = changePasswordState != ChangePasswordState.InProgress
-            ) {
-                Text("Cancel")
-            }
-        }
-    )
 }
