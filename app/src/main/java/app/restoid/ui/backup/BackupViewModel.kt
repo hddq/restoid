@@ -283,7 +283,7 @@ class BackupViewModel(
 
         var passwordFile: File? = null
         try {
-            val metadataDir = File(application.filesDir, "metadata")
+            val metadataDir = File(application.filesDir, "metadata/$repositoryId")
             if (!metadataDir.exists() || !metadataDir.isDirectory) return
 
             passwordFile = File.createTempFile("restic-pass-meta", ".tmp", application.cacheDir)
