@@ -2,6 +2,7 @@ package app.restoid
 
 import android.app.Application
 import app.restoid.data.AppInfoRepository
+import app.restoid.data.MetadataRepository
 import app.restoid.data.NotificationRepository
 import app.restoid.data.PasswordManager
 import app.restoid.data.RepositoriesRepository
@@ -31,6 +32,8 @@ class RestoidApplication : Application() {
         private set
     lateinit var passwordManager: PasswordManager
         private set
+    lateinit var metadataRepository: MetadataRepository
+        private set
 
     override fun onCreate() {
         super.onCreate()
@@ -51,6 +54,8 @@ class RestoidApplication : Application() {
         repositoriesRepository = RepositoriesRepository(applicationContext, passwordManager)
         notificationRepository = NotificationRepository(applicationContext)
         appInfoRepository = AppInfoRepository(applicationContext)
+        metadataRepository = MetadataRepository(applicationContext)
+
 
         // Clear any temporary passwords from previous sessions
         passwordManager.clearTemporaryPasswords()

@@ -1,0 +1,58 @@
+package app.restoid.data
+
+import android.content.Context
+import app.restoid.model.RestoidMetadata
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import java.io.File
+
+class MetadataRepository(private val context: Context) {
+
+    private val metadataRoot = File(context.filesDir, "metadata")
+    private val json = Json { ignoreUnknownKeys = true }
+
+    suspend fun getMetadataForSnapshot(repoId: String, snapshotId: String): RestoidMetadata? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val repoDir = File(metadataRoot, repoId)
+                if (!repoDir.exists() || !repoDir.isDirectory) return@withContext null
+
+                // Find the metadata file that starts with the snapshot's short ID.
+                // This correctly matches the file saved with the full ID.
+                val metadataFile = repoDir.listFiles { _, name ->
+                    name.startsWith(snapshotId) && name.endsWith(".json")
+                }?.firstOrNull()
+
+                metadataFile?.let {
+                    val content = it.readText()
+                    json.decodeFromString<RestoidMetadata>(content)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            }
+        }
+    }
+
+    suspend fun getAllMetadata(repoId: String): Map<String, RestoidMetadata> {
+        return withContext(Dispatchers.IO) {
+            val repoDir = File(metadataRoot, repoId)
+            if (!repoDir.exists() || !repoDir.isDirectory) return@withContext emptyMap()
+
+            repoDir.listFiles { _, name -> name.endsWith(".json") }
+                ?.associate { file ->
+                    val snapshotId = file.nameWithoutExtension
+                    val metadata = try {
+                        json.decodeFromString<RestoidMetadata>(file.readText())
+                    } catch (e: Exception) {
+                        null
+                    }
+                    snapshotId to metadata
+                }
+                ?.filterValues { it != null }
+                ?.mapValues { it.value!! } ?: emptyMap()
+        }
+    }
+}
+

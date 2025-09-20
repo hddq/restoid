@@ -40,7 +40,8 @@ fun SnapshotDetailsScreen(
             application,
             application.repositoriesRepository,
             application.resticRepository,
-            application.appInfoRepository
+            application.appInfoRepository,
+            application.metadataRepository
         )
     )
 

@@ -30,11 +30,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.restoid.RestoidApplication
 import app.restoid.data.ResticState
-import app.restoid.data.SnapshotInfo
 import app.restoid.model.AppInfo
 import app.restoid.ui.components.PasswordDialog
 import app.restoid.ui.home.HomeViewModel
 import app.restoid.ui.home.HomeViewModelFactory
+import app.restoid.ui.home.SnapshotWithMetadata
 import coil.compose.rememberAsyncImagePainter
 
 @Composable
@@ -47,7 +47,8 @@ fun HomeScreen(
         factory = HomeViewModelFactory(
             application.repositoriesRepository,
             application.resticRepository,
-            application.appInfoRepository
+            application.appInfoRepository,
+            application.metadataRepository
         )
     )
     val uiState by viewModel.uiState.collectAsState()
@@ -92,7 +93,7 @@ fun HomeScreen(
                     color = MaterialTheme.colorScheme.error
                 )
             }
-            uiState.snapshots.isEmpty() -> {
+            uiState.snapshotsWithMetadata.isEmpty() && !uiState.isLoading -> {
                 Text(
                     text = "No snapshots found for the selected repository.",
                     style = MaterialTheme.typography.bodyLarge,
@@ -101,17 +102,17 @@ fun HomeScreen(
             }
             else -> {
                 Text(
-                    text = "Snapshots (${uiState.snapshots.size})",
+                    text = "Snapshots (${uiState.snapshotsWithMetadata.size})",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(uiState.snapshots.sortedByDescending { it.time }) { snapshot ->
+                    items(uiState.snapshotsWithMetadata.sortedByDescending { it.snapshotInfo.time }) { item ->
                         SnapshotCard(
-                            snapshot = snapshot,
-                            apps = uiState.appInfoMap[snapshot.id],
-                            onClick = { onSnapshotClick(snapshot.id) }
+                            snapshotWithMetadata = item,
+                            apps = uiState.appInfoMap[item.snapshotInfo.id],
+                            onClick = { onSnapshotClick(item.snapshotInfo.id) }
                         )
                     }
                 }
@@ -131,7 +132,8 @@ fun HomeScreen(
 }
 
 @Composable
-private fun SnapshotCard(snapshot: SnapshotInfo, apps: List<AppInfo>?, onClick: () -> Unit) {
+private fun SnapshotCard(snapshotWithMetadata: SnapshotWithMetadata, apps: List<AppInfo>?, onClick: () -> Unit) {
+    val snapshot = snapshotWithMetadata.snapshotInfo
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -159,11 +161,9 @@ private fun SnapshotCard(snapshot: SnapshotInfo, apps: List<AppInfo>?, onClick: 
                 )
             }
 
-            // Prioritize tags for the app count as it's the source of truth.
-            val appCount = snapshot.tags.size
+            val appCount = snapshotWithMetadata.metadata?.apps?.size ?: 0
             if (appCount > 0) {
                 Text("Apps ($appCount):", style = MaterialTheme.typography.labelMedium)
-                // Show icons for apps that are still installed.
                 if (apps != null && apps.isNotEmpty()) {
                     Row(
                         modifier = Modifier.horizontalScroll(rememberScrollState()),
@@ -178,8 +178,6 @@ private fun SnapshotCard(snapshot: SnapshotInfo, apps: List<AppInfo>?, onClick: 
                                 modifier = Modifier.size(32.dp)
                             )
                         }
-                        // If the total count is greater than the number of icons shown,
-                        // display a "+X more" badge.
                         val moreCount = appCount - shownApps.size
                         if (moreCount > 0) {
                             Text(
@@ -188,7 +186,7 @@ private fun SnapshotCard(snapshot: SnapshotInfo, apps: List<AppInfo>?, onClick: 
                         }
                     }
                 }
-            } else if (snapshot.tags.isEmpty() && snapshot.paths.isNotEmpty()) {
+            } else if (snapshot.paths.isNotEmpty()) {
                 Text(
                     text = "Paths: ${snapshot.paths.firstOrNull() ?: ""}...",
                     style = MaterialTheme.typography.bodySmall,

@@ -4,11 +4,13 @@ import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.restoid.data.AppInfoRepository
+import app.restoid.data.MetadataRepository
 import app.restoid.data.RepositoriesRepository
 import app.restoid.data.ResticRepository
 import app.restoid.data.SnapshotInfo
 import app.restoid.model.AppInfo
 import app.restoid.model.BackupDetail
+import app.restoid.model.RestoidMetadata
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
@@ -35,11 +37,15 @@ class SnapshotDetailsViewModel(
     private val application: Application,
     private val repositoriesRepository: RepositoriesRepository,
     private val resticRepository: ResticRepository,
-    private val appInfoRepository: AppInfoRepository
+    private val appInfoRepository: AppInfoRepository,
+    private val metadataRepository: MetadataRepository
 ) : ViewModel() {
 
     private val _snapshot = MutableStateFlow<SnapshotInfo?>(null)
     val snapshot = _snapshot.asStateFlow()
+
+    private val _metadata = MutableStateFlow<RestoidMetadata?>(null)
+    val metadata = _metadata.asStateFlow()
 
     private val _backupDetails = MutableStateFlow<List<BackupDetail>>(emptyList())
     val backupDetails = _backupDetails.asStateFlow()
@@ -71,19 +77,24 @@ class SnapshotDetailsViewModel(
             try {
                 val repoPath = repositoriesRepository.selectedRepository.first()
                 val password = repoPath?.let { repositoriesRepository.getRepositoryPassword(it) }
+                val repo = repositoriesRepository.repositories.value.find { it.path == repoPath }
 
-                if (repoPath != null && password != null) {
+
+                if (repoPath != null && password != null && repo?.id != null) {
+                    val loadedMetadata = metadataRepository.getMetadataForSnapshot(repo.id, snapshotId)
+                    _metadata.value = loadedMetadata
+
                     val result = resticRepository.getSnapshots(repoPath, password)
                     result.fold(
                         onSuccess = { snapshots ->
                             val foundSnapshot = snapshots.find { it.id.startsWith(snapshotId) }
                             _snapshot.value = foundSnapshot
-                            foundSnapshot?.let { processSnapshot(it) } // Process the found snapshot
+                            foundSnapshot?.let { processSnapshot(it, loadedMetadata) }
                         },
                         onFailure = { _error.value = it.message }
                     )
                 } else {
-                    _error.value = "Repository or password not found"
+                    _error.value = "Repository, password, or repo ID not found"
                 }
             } catch (e: Exception) {
                 _error.value = e.message
@@ -93,8 +104,9 @@ class SnapshotDetailsViewModel(
         }
     }
 
-    private suspend fun processSnapshot(snapshot: SnapshotInfo) {
-        val packageNames = snapshot.tags.map { it.split('|').first() }
+    private suspend fun processSnapshot(snapshot: SnapshotInfo, metadata: RestoidMetadata?) {
+        val appMetadataMap = metadata?.apps ?: emptyMap()
+        val packageNames = appMetadataMap.keys.toList()
 
         if (packageNames.isEmpty()) {
             _backupDetails.value = emptyList()
@@ -104,19 +116,13 @@ class SnapshotDetailsViewModel(
         val appInfos = appInfoRepository.getAppInfoForPackages(packageNames)
         val appInfoMap = appInfos.associateBy { it.packageName }
 
-        val details = snapshot.tags.map { tag ->
-            val parts = tag.split('|')
-            val packageName = parts.getOrNull(0) ?: ""
-            val versionName = parts.getOrNull(1)
-            val versionCode = parts.getOrNull(2)?.toLongOrNull()
-            val backupSize = parts.getOrNull(3)?.toLongOrNull()
-
+        val details = appMetadataMap.map { (packageName, appMeta) ->
             val appInfo = appInfoMap[packageName]
             val items = findBackedUpItems(snapshot, packageName)
 
             val isInstalled = appInfo != null
-            val isDowngrade = if (isInstalled && versionCode != null) {
-                versionCode < appInfo!!.versionCode
+            val isDowngrade = if (isInstalled) {
+                appMeta.versionCode < appInfo!!.versionCode
             } else {
                 false
             }
@@ -124,14 +130,14 @@ class SnapshotDetailsViewModel(
             val finalAppInfo = appInfo ?: AppInfo(
                 name = packageName,
                 packageName = packageName,
-                versionName = versionName ?: "N/A",
-                versionCode = versionCode ?: 0L,
+                versionName = appMeta.versionName,
+                versionCode = appMeta.versionCode,
                 icon = application.packageManager.defaultActivityIcon,
                 apkPaths = emptyList(),
                 isSelected = true
             )
 
-            BackupDetail(finalAppInfo, items, versionName, versionCode, backupSize, isDowngrade, isInstalled)
+            BackupDetail(finalAppInfo, items, appMeta.versionName, appMeta.versionCode, appMeta.size, isDowngrade, isInstalled)
         }
 
         _backupDetails.value = details.sortedBy { it.appInfo.name.lowercase() }
