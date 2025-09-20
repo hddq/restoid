@@ -6,6 +6,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.io.File
 
 /**
@@ -26,7 +28,7 @@ class RepositoriesRepository(
     private val passwordManager: PasswordManager
 ) {
     private val prefs = context.getSharedPreferences("repositories", Context.MODE_PRIVATE)
-    private val REPO_PATHS_KEY = "repo_paths"
+    private val REPOS_KEY = "repositories_json_v1"
     private val SELECTED_REPO_PATH_KEY = "selected_repo_path"
 
     private val _repositories = MutableStateFlow<List<LocalRepository>>(emptyList())
@@ -35,11 +37,17 @@ class RepositoriesRepository(
     private val _selectedRepository = MutableStateFlow<String?>(null)
     val selectedRepository = _selectedRepository.asStateFlow()
 
+    private val json = Json { ignoreUnknownKeys = true }
+
     // Loads the repository paths from SharedPreferences and updates the state flow.
     fun loadRepositories() {
-        val paths = prefs.getStringSet(REPO_PATHS_KEY, emptySet()) ?: emptySet()
-        _repositories.value = paths.map { path ->
-            LocalRepository(path = path)
+        val repoJsonSet = prefs.getStringSet(REPOS_KEY, emptySet()) ?: emptySet()
+        _repositories.value = repoJsonSet.mapNotNull { jsonString ->
+            try {
+                json.decodeFromString<LocalRepository>(jsonString)
+            } catch (e: Exception) {
+                null
+            }
         }.sortedBy { it.name }
         _selectedRepository.value = prefs.getString(SELECTED_REPO_PATH_KEY, null)
     }
@@ -80,12 +88,15 @@ class RepositoriesRepository(
     }
 
     fun deleteRepository(path: String) {
-        val currentPaths = prefs.getStringSet(REPO_PATHS_KEY, mutableSetOf())?.toMutableSet() ?: mutableSetOf()
-        if (currentPaths.remove(path)) {
-            prefs.edit().putStringSet(REPO_PATHS_KEY, currentPaths).apply()
+        val currentJsonSet = prefs.getStringSet(REPOS_KEY, emptySet())?.toMutableSet() ?: mutableSetOf()
+        val repoToRemoveJson = currentJsonSet.find {
+            try { json.decodeFromString<LocalRepository>(it).path == path } catch (e: Exception) { false }
+        }
+
+        if (repoToRemoveJson != null && currentJsonSet.remove(repoToRemoveJson)) {
+            prefs.edit().putStringSet(REPOS_KEY, currentJsonSet).apply()
             passwordManager.removePassword(path)
 
-            // If the deleted repository was the selected one, clear the selection
             if (_selectedRepository.value == path) {
                 prefs.edit().remove(SELECTED_REPO_PATH_KEY).apply()
                 _selectedRepository.value = null
@@ -101,86 +112,94 @@ class RepositoriesRepository(
      *
      * @param path The local file system path for the repository.
      * @param password The password for the new or existing repository.
-     * @param resticBinaryPath The absolute path to the restic executable.
+     * @param resticRepository The repository to execute restic commands.
      * @param savePassword Whether to store the password securely on the device.
      * @return An [AddRepositoryState] indicating the result of the operation.
      */
     suspend fun addRepository(
         path: String,
         password: String,
-        resticBinaryPath: String,
+        resticRepository: ResticRepository,
         savePassword: Boolean
     ): AddRepositoryState {
         return withContext(Dispatchers.IO) {
             val repoDir = File(path)
             val configFile = File(repoDir, "config")
 
-            val currentPaths = prefs.getStringSet(REPO_PATHS_KEY, mutableSetOf())?.toMutableSet() ?: mutableSetOf()
-            if (currentPaths.contains(path)) {
+            if (repositories.value.any { it.path == path }) {
                 return@withContext AddRepositoryState.Error("Repository already exists.")
             }
-            val wasEmpty = currentPaths.isEmpty()
-
+            val wasEmpty = repositories.value.isEmpty()
             val passwordFile = File.createTempFile("restic-pass", ".tmp", context.cacheDir)
+
             try {
                 passwordFile.writeText(password)
+                val resticPath = (resticRepository.resticState.value as ResticState.Installed).path
 
                 // Check if it's an existing repository by trying to list keys
                 if (repoDir.exists() && configFile.exists()) {
-                    val checkCommand =
-                        "RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' $resticBinaryPath -r '$path' list keys --no-lock"
+                    val checkCommand = "RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' $resticPath -r '$path' list keys --no-lock"
                     val checkResult = Shell.cmd(checkCommand).exec()
                     if (checkResult.isSuccess) {
-                        // Valid existing repo, add it
-                        currentPaths.add(path)
-                        prefs.edit().putStringSet(REPO_PATHS_KEY, currentPaths).apply()
-                        if (savePassword) {
-                            passwordManager.savePassword(path, password)
+                        val configResult = resticRepository.getConfig(path, password)
+                        if (configResult.isSuccess) {
+                            val repoId = configResult.getOrNull()?.id
+                            saveNewRepository(LocalRepository(path = path, id = repoId), password, savePassword, wasEmpty)
+                            return@withContext AddRepositoryState.Success
                         } else {
-                            passwordManager.savePasswordTemporary(path, password)
+                            return@withContext AddRepositoryState.Error("Repo valid, but failed to get ID.")
                         }
-                        loadRepositories()
-                        if (wasEmpty) selectRepository(path)
-                        return@withContext AddRepositoryState.Success
                     } else {
                         val errorOutput = checkResult.err.joinToString("\n")
-                        val errorMsg =
-                            if (errorOutput.isEmpty()) "Invalid password or corrupted repository." else errorOutput
-                        return@withContext AddRepositoryState.Error(errorMsg)
+                        return@withContext AddRepositoryState.Error(if (errorOutput.isEmpty()) "Invalid password or corrupted repository." else errorOutput)
                     }
                 }
 
-                // It's not an existing repo, so try to initialize it.
-                if (!repoDir.exists()) {
-                    if (!repoDir.mkdirs()) {
-                        return@withContext AddRepositoryState.Error("Failed to create directory at $path")
-                    }
+                if (!repoDir.exists() && !repoDir.mkdirs()) {
+                    return@withContext AddRepositoryState.Error("Failed to create directory at $path")
                 }
 
-                val initCommand =
-                    "RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' $resticBinaryPath -r '$path' init"
+                val initCommand = "RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' $resticPath -r '$path' init"
                 val initResult = Shell.cmd(initCommand).exec()
 
                 if (initResult.isSuccess) {
-                    currentPaths.add(path)
-                    prefs.edit().putStringSet(REPO_PATHS_KEY, currentPaths).apply()
-                    if (savePassword) {
-                        passwordManager.savePassword(path, password)
+                    val configResult = resticRepository.getConfig(path, password)
+                    if (configResult.isSuccess) {
+                        val repoId = configResult.getOrNull()?.id
+                        saveNewRepository(LocalRepository(path = path, id = repoId), password, savePassword, wasEmpty)
+                        return@withContext AddRepositoryState.Success
                     } else {
-                        passwordManager.savePasswordTemporary(path, password)
+                        repoDir.deleteRecursively()
+                        return@withContext AddRepositoryState.Error("Initialized, but failed to get ID.")
                     }
-                    loadRepositories()
-                    if (wasEmpty) selectRepository(path)
-                    return@withContext AddRepositoryState.Success
                 } else {
-                    repoDir.deleteRecursively() // Clean up failed init
+                    repoDir.deleteRecursively()
                     val errorOutput = initResult.err.joinToString("\n")
-                    val errorMsg = if (errorOutput.isEmpty()) "Failed to initialize repository." else errorOutput
-                    return@withContext AddRepositoryState.Error(errorMsg)
+                    return@withContext AddRepositoryState.Error(if (errorOutput.isEmpty()) "Failed to initialize repository." else errorOutput)
                 }
             } finally {
                 passwordFile.delete()
             }
         }
+    }
+
+    private fun saveNewRepository(repo: LocalRepository, password: String, save: Boolean, wasEmpty: Boolean) {
+        saveRepository(repo)
+        if (save) {
+            passwordManager.savePassword(repo.path, password)
+        } else {
+            passwordManager.savePasswordTemporary(repo.path, password)
+        }
+        loadRepositories()
+        if (wasEmpty) {
+            selectRepository(repo.path)
+        }
+    }
+
+    private fun saveRepository(repository: LocalRepository) {
+        val currentJsonSet = prefs.getStringSet(REPOS_KEY, emptySet())?.toMutableSet() ?: mutableSetOf()
+        val repoJson = json.encodeToString(repository)
+        currentJsonSet.add(repoJson)
+        prefs.edit().putStringSet(REPOS_KEY, currentJsonSet).apply()
     }
 }

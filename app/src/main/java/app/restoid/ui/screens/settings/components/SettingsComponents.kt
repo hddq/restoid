@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.restoid.data.LocalRepository
@@ -105,6 +106,14 @@ fun SelectableRepositoryRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            repo.id?.let {
+                Text(
+                    "ID: ${it.take(12)}...",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = LocalContentColor.current.copy(alpha = 0.7f)
+                )
+            }
         }
         var showChangePasswordDialog by remember { mutableStateOf(false) }
         var showSavePasswordDialog by remember { mutableStateOf(false) }

@@ -2,11 +2,13 @@ package app.restoid.data
 
 import android.content.Context
 import android.os.Build
+import app.restoid.model.ResticConfig
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream
 import java.io.File
 import java.io.FileInputStream
@@ -51,6 +53,43 @@ class ResticRepository(private val context: Context) {
                 }
             } else {
                 _resticState.value = ResticState.NotInstalled
+            }
+        }
+    }
+
+    suspend fun getConfig(repoPath: String, password: String): Result<ResticConfig> {
+        return withContext(Dispatchers.IO) {
+            if (resticState.value !is ResticState.Installed) {
+                return@withContext Result.failure(Exception("Restic not installed"))
+            }
+
+            val resticPath = (resticState.value as ResticState.Installed).path
+            val passwordFile = File.createTempFile("restic-pass", ".tmp", context.cacheDir)
+
+            try {
+                passwordFile.writeText(password)
+                val command =
+                    "RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' $resticPath -r '$repoPath' cat config --json"
+                val result = Shell.cmd(command).exec()
+
+                if (result.isSuccess) {
+                    val configJson = result.out.joinToString("\n")
+                    try {
+                        val config = Json { ignoreUnknownKeys = true }.decodeFromString<ResticConfig>(configJson)
+                        Result.success(config)
+                    } catch (e: Exception) {
+                        Result.failure(Exception("Failed to parse repo config: ${e.message}"))
+                    }
+                } else {
+                    val errorOutput = result.err.joinToString("\n")
+                    val errorMsg =
+                        if (errorOutput.isEmpty()) "Failed to get repo config" else errorOutput
+                    Result.failure(Exception(errorMsg))
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            } finally {
+                passwordFile.delete()
             }
         }
     }

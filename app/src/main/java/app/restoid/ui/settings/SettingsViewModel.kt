@@ -160,7 +160,7 @@ class SettingsViewModel(
             val result = repositoriesRepository.addRepository(
                 path = path,
                 password = password,
-                resticBinaryPath = currentResticState.path,
+                resticRepository = resticRepository,
                 savePassword = savePassword
             )
             _addRepoUiState.update { it.copy(state = result) }
