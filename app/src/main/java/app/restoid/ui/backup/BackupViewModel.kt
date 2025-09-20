@@ -9,6 +9,8 @@ import app.restoid.data.RepositoriesRepository
 import app.restoid.data.ResticRepository
 import app.restoid.data.ResticState
 import app.restoid.model.AppInfo
+import app.restoid.model.AppMetadata
+import app.restoid.model.RestoidMetadata
 import app.restoid.ui.shared.OperationProgress
 import app.restoid.util.ResticOutputParser
 import com.topjohnwu.superuser.CallbackList
@@ -19,6 +21,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.io.File
 
 // Data class to hold the state of backup types
@@ -84,6 +88,7 @@ class BackupViewModel(
 
             val fileList = File.createTempFile("restic-files-", ".txt", application.cacheDir)
             var passwordFile: File? = null
+            var restoidMetadataFile: File? = null
             var isSuccess = false
             var summary = ""
             var finalSummaryProgress: OperationProgress? = null
@@ -104,9 +109,41 @@ class BackupViewModel(
                 password = repositoriesRepository.getRepositoryPassword(selectedRepoPath)!!
                 val selectedApps = _apps.value.filter { it.isSelected }
 
+                // --- Generate restoid.json metadata ---
+                updateProgress(stageTitle = "Generating metadata...")
+                val appMetadataMap = mutableMapOf<String, AppMetadata>()
+                val backupTypesList = mutableListOf<String>().apply {
+                    if (_backupTypes.value.apk) add("apk")
+                    if (_backupTypes.value.data) add("data")
+                    if (_backupTypes.value.deviceProtectedData) add("user_de")
+                    if (_backupTypes.value.externalData) add("external_data")
+                    if (_backupTypes.value.obb) add("obb")
+                    if (_backupTypes.value.media) add("media")
+                }
+
+                selectedApps.forEach { app ->
+                    val appPaths = generateFilePathsForApp(app)
+                    val existingAppPaths = appPaths.filter { Shell.cmd("[ -e '$it' ]").exec().isSuccess }
+                    val size = getDirectorySize(existingAppPaths)
+                    appMetadataMap[app.packageName] = AppMetadata(
+                        size = size,
+                        types = backupTypesList,
+                        versionCode = app.versionCode,
+                        versionName = app.versionName
+                    )
+                }
+
+                val metadata = RestoidMetadata(apps = appMetadataMap)
+                restoidMetadataFile = File(application.cacheDir, "restoid.json")
+                val json = Json { prettyPrint = true }
+                val metadataJsonString = json.encodeToString(metadata)
+                restoidMetadataFile.writeText(metadataJsonString)
+
+
                 // --- Generate file list and tags ---
                 updateProgress(stageTitle = "Calculating sizes...")
                 val pathsToBackup = mutableListOf<String>()
+                pathsToBackup.add(restoidMetadataFile.absolutePath)
                 val excludePatterns = mutableListOf<String>()
                 val tags = selectedApps.map { app ->
                     val appPaths = generateFilePathsForApp(app)
@@ -182,6 +219,7 @@ class BackupViewModel(
             } finally {
                 fileList.delete()
                 passwordFile?.delete()
+                restoidMetadataFile?.delete()
                 _isBackingUp.value = false
                 val finalProgress = _backupProgress.value.copy(
                     isFinished = true,
