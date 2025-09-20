@@ -43,7 +43,10 @@ class HomeViewModel(
             resticRepository.resticState,
             resticRepository.snapshots
         ) { repo, restic, snapshots ->
-            Triple(repo, restic, snapshots)
+            val filteredSnapshots = snapshots.filter {
+                it.tags.contains("restoid") && it.tags.contains("backup")
+            }
+            Triple(repo, restic, filteredSnapshots)
         }.onEach { (repo, restic, snapshots) ->
             _uiState.update { it.copy(selectedRepo = repo, resticState = restic, snapshots = snapshots) }
             loadSnapshots(repo, restic)
