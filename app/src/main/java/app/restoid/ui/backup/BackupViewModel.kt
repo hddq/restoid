@@ -145,7 +145,7 @@ class BackupViewModel(
                 val pathsToBackup = mutableListOf<String>()
                 pathsToBackup.add(restoidMetadataFile.absolutePath)
                 val excludePatterns = mutableListOf<String>()
-                val tags = selectedApps.map { app ->
+                selectedApps.forEach { app ->
                     val appPaths = generateFilePathsForApp(app)
                     val existingAppPaths = appPaths.filter { Shell.cmd("[ -e '$it' ]").exec().isSuccess }
                     pathsToBackup.addAll(existingAppPaths)
@@ -158,12 +158,9 @@ class BackupViewModel(
                     if (_backupTypes.value.externalData) {
                         excludePatterns.add("'/storage/emulated/0/Android/data/${app.packageName}/cache'")
                     }
-
-                    val size = getDirectorySize(existingAppPaths)
-                    // Format: "packageName|versionName|versionCode|sizeInBytes"
-                    // We replace '|' in the version name to avoid parsing issues.
-                    "${app.packageName}|${app.versionName.replace('|', ':')}|${app.versionCode}|$size"
                 }
+
+                val tags = listOf("restoid", "backup")
 
 
                 if (pathsToBackup.isEmpty()) {
@@ -337,3 +334,4 @@ class BackupViewModel(
     fun setBackupObb(value: Boolean) = _backupTypes.update { it.copy(obb = value) }
     fun setBackupMedia(value: Boolean) = _backupTypes.update { it.copy(media = value) }
 }
+
