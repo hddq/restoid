@@ -95,6 +95,7 @@ class BackupViewModel(
             var repoPath: String? = null
             var password: String? = null
             var snapshotId: String? = null
+            var repositoryId: String? = null
 
             try {
                 // --- Pre-flight checks ---
@@ -107,7 +108,7 @@ class BackupViewModel(
                 val resticState = resticRepository.resticState.value as ResticState.Installed
                 val selectedRepoPath = repositoriesRepository.selectedRepository.value!!
                 val repository = repositoriesRepository.repositories.value.find { it.path == selectedRepoPath }
-                val repositoryId = repository?.id
+                repositoryId = repository?.id
 
                 if (repositoryId == null) {
                     _backupProgress.value = OperationProgress(isFinished = true, error = "Repository ID not found. Cannot save metadata.", finalSummary = "Repository ID not found.")
@@ -180,7 +181,7 @@ class BackupViewModel(
                 fileList.writeText(pathsToBackup.distinct().joinToString("\n"))
 
                 // --- Execute restic backup command ---
-                updateProgress(stageTitle = "Starting backup command...")
+                updateProgress(stageTitle = "Backing up apps...")
                 val tagFlags = tags.joinToString(" ") { "--tag '$it'" }
                 val excludeFlags = excludePatterns.distinct().joinToString(" ") { pattern -> "--exclude $pattern" }
 
@@ -200,7 +201,7 @@ class BackupViewModel(
                                 }
                             }
                             val elapsedTime = (System.currentTimeMillis() - startTime) / 1000
-                            val newProgress = it.copy(elapsedTime = elapsedTime)
+                            val newProgress = it.copy(elapsedTime = elapsedTime, stageTitle = "Backing up apps...")
                             _backupProgress.value = newProgress
                             notificationRepository.showOperationProgressNotification("Backup", newProgress)
                         }
@@ -222,18 +223,8 @@ class BackupViewModel(
                     "Backup failed: $error"
                 }
 
-            } catch (e: Exception) {
-                isSuccess = false
-                summary = "A fatal error occurred: ${e.message}"
-            } finally {
-                fileList.delete()
-                passwordFile?.delete()
-
-                val selectedRepoPath = repositoriesRepository.selectedRepository.value
-                val repository = selectedRepoPath?.let { path -> repositoriesRepository.repositories.value.find { it.path == path } }
-                val repositoryId = repository?.id
-
                 if (isSuccess && repositoryId != null && snapshotId != null && restoidMetadataFile != null && restoidMetadataFile.exists()) {
+                    updateProgress(stageTitle = "Saving metadata...")
                     try {
                         val metadataDir = File(application.filesDir, "metadata/$repositoryId")
                         if (!metadataDir.exists()) {
@@ -241,25 +232,34 @@ class BackupViewModel(
                         }
                         val destFile = File(metadataDir, "$snapshotId.json")
                         if (!restoidMetadataFile.renameTo(destFile)) {
-                            // Fallback to copy and delete if rename fails
                             restoidMetadataFile.copyTo(destFile, overwrite = true)
                             restoidMetadataFile.delete()
                         }
+                        updateProgress(stageTitle = "Backing up metadata...")
+                        backupMetadata(repositoryId, selectedRepoPath, password)
+
                     } catch (e: Exception) {
                         summary += "\nWarning: Could not save backup metadata file."
-                        restoidMetadataFile.delete() // Clean up if move failed
+                        restoidMetadataFile.delete()
                     }
                 } else {
-                    // Delete if backup failed or conditions not met
                     restoidMetadataFile?.delete()
                 }
+
+            } catch (e: Exception) {
+                isSuccess = false
+                summary = "A fatal error occurred: ${e.message}"
+            } finally {
+                fileList.delete()
+                passwordFile?.delete()
+                restoidMetadataFile?.delete() // Should be moved or deleted by now, but just in case.
+
 
                 _isBackingUp.value = false
                 val finalProgress = _backupProgress.value.copy(
                     isFinished = true,
                     error = if (!isSuccess) summary else null,
                     finalSummary = summary,
-                    // Copy over the detailed stats if they exist
                     filesNew = finalSummaryProgress?.filesNew ?: 0,
                     filesChanged = finalSummaryProgress?.filesChanged ?: 0,
                     dataAdded = finalSummaryProgress?.dataAdded ?: 0,
@@ -274,6 +274,33 @@ class BackupViewModel(
                     }
                 }
             }
+        }
+    }
+
+    private suspend fun backupMetadata(repositoryId: String, repoPath: String, password: String) {
+        val resticState = resticRepository.resticState.value
+        if (resticState !is ResticState.Installed) return
+
+        var passwordFile: File? = null
+        try {
+            val metadataDir = File(application.filesDir, "metadata")
+            if (!metadataDir.exists() || !metadataDir.isDirectory) return
+
+            passwordFile = File.createTempFile("restic-pass-meta", ".tmp", application.cacheDir)
+            passwordFile.writeText(password)
+
+            val tags = listOf("restoid", "metadata")
+            val tagFlags = tags.joinToString(" ") { "--tag '$it'" }
+            val command = "RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' ${resticState.path} -r '$repoPath' backup '${metadataDir.absolutePath}' --json $tagFlags"
+
+            // We don't need detailed progress here, just run it
+            Shell.cmd(command).exec()
+
+        } catch (e: Exception) {
+            // Log this error, but don't fail the whole backup process
+            e.printStackTrace()
+        } finally {
+            passwordFile?.delete()
         }
     }
 
