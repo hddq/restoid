@@ -18,15 +18,14 @@ class MetadataRepository(private val context: Context) {
                 val repoDir = File(metadataRoot, repoId)
                 if (!repoDir.exists() || !repoDir.isDirectory) return@withContext null
 
-                // Find the metadata file that starts with the snapshot's short ID.
-                // This correctly matches the file saved with the full ID.
-                val metadataFile = repoDir.listFiles { _, name ->
-                    name.startsWith(snapshotId) && name.endsWith(".json")
-                }?.firstOrNull()
+                // Look for an exact match using the full snapshot ID.
+                val metadataFile = File(repoDir, "$snapshotId.json")
 
-                metadataFile?.let {
-                    val content = it.readText()
+                if (metadataFile.exists()) {
+                    val content = metadataFile.readText()
                     json.decodeFromString<RestoidMetadata>(content)
+                } else {
+                    null
                 }
             } catch (e: Exception) {
                 e.printStackTrace()

@@ -379,7 +379,8 @@ class ResticRepository(private val context: Context) {
 
     private fun parseSnapshotObject(jsonObj: String): SnapshotInfo? {
         try {
-            val id = extractJsonField(jsonObj, "short_id") ?: extractJsonField(jsonObj, "id")?.take(8) ?: return null
+            // Prioritize the full ID for accuracy. Fallback to short_id if 'id' is missing.
+            val id = extractJsonField(jsonObj, "id") ?: extractJsonField(jsonObj, "short_id") ?: return null
             val time = extractJsonField(jsonObj, "time") ?: "unknown"
             val paths = extractJsonArrayField(jsonObj, "paths")
             val tags = extractJsonArrayField(jsonObj, "tags")
