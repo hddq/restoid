@@ -94,6 +94,7 @@ class BackupViewModel(
             var finalSummaryProgress: OperationProgress? = null
             var repoPath: String? = null
             var password: String? = null
+            var snapshotId: String? = null
 
             try {
                 // --- Pre-flight checks ---
@@ -105,6 +106,14 @@ class BackupViewModel(
 
                 val resticState = resticRepository.resticState.value as ResticState.Installed
                 val selectedRepoPath = repositoriesRepository.selectedRepository.value!!
+                val repository = repositoriesRepository.repositories.value.find { it.path == selectedRepoPath }
+                val repositoryId = repository?.id
+
+                if (repositoryId == null) {
+                    _backupProgress.value = OperationProgress(isFinished = true, error = "Repository ID not found. Cannot save metadata.", finalSummary = "Repository ID not found.")
+                    return@launch
+                }
+
                 repoPath = selectedRepoPath
                 password = repositoriesRepository.getRepositoryPassword(selectedRepoPath)!!
                 val selectedApps = _apps.value.filter { it.isSelected }
@@ -186,6 +195,9 @@ class BackupViewModel(
                         progressUpdate?.let {
                             if (it.isFinished) {
                                 finalSummaryProgress = it
+                                if (it.snapshotId != null) {
+                                    snapshotId = it.snapshotId
+                                }
                             }
                             val elapsedTime = (System.currentTimeMillis() - startTime) / 1000
                             val newProgress = it.copy(elapsedTime = elapsedTime)
@@ -216,7 +228,32 @@ class BackupViewModel(
             } finally {
                 fileList.delete()
                 passwordFile?.delete()
-                restoidMetadataFile?.delete()
+
+                val selectedRepoPath = repositoriesRepository.selectedRepository.value
+                val repository = selectedRepoPath?.let { path -> repositoriesRepository.repositories.value.find { it.path == path } }
+                val repositoryId = repository?.id
+
+                if (isSuccess && repositoryId != null && snapshotId != null && restoidMetadataFile != null && restoidMetadataFile.exists()) {
+                    try {
+                        val metadataDir = File(application.filesDir, "metadata/$repositoryId")
+                        if (!metadataDir.exists()) {
+                            metadataDir.mkdirs()
+                        }
+                        val destFile = File(metadataDir, "$snapshotId.json")
+                        if (!restoidMetadataFile.renameTo(destFile)) {
+                            // Fallback to copy and delete if rename fails
+                            restoidMetadataFile.copyTo(destFile, overwrite = true)
+                            restoidMetadataFile.delete()
+                        }
+                    } catch (e: Exception) {
+                        summary += "\nWarning: Could not save backup metadata file."
+                        restoidMetadataFile.delete() // Clean up if move failed
+                    }
+                } else {
+                    // Delete if backup failed or conditions not met
+                    restoidMetadataFile?.delete()
+                }
+
                 _isBackingUp.value = false
                 val finalProgress = _backupProgress.value.copy(
                     isFinished = true,
@@ -334,4 +371,3 @@ class BackupViewModel(
     fun setBackupObb(value: Boolean) = _backupTypes.update { it.copy(obb = value) }
     fun setBackupMedia(value: Boolean) = _backupTypes.update { it.copy(media = value) }
 }
-

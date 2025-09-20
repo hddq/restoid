@@ -54,6 +54,7 @@ object ResticOutputParser {
         val filesChanged = json.optInt("files_changed", 0)
         val dataAdded = json.optLong("data_added", 0)
         val totalDuration = json.optDouble("total_duration", 0.0)
+        val snapshotId = json.optString("snapshot_id", null)
 
         return OperationProgress(
             stagePercentage = 1.0f,
@@ -65,6 +66,7 @@ object ResticOutputParser {
             stageTitle = "Finishing...",
             isFinished = true,
             finalSummary = formatSummary(json), // Use the helper to create the string
+            snapshotId = snapshotId,
             // Add the new fields
             filesNew = filesNew,
             filesChanged = filesChanged,
@@ -99,4 +101,3 @@ object ResticOutputParser {
         return regex.find(log)?.value
     }
 }
-

@@ -54,6 +54,7 @@ data class OperationProgress(
     val error: String? = null,
     val isFinished: Boolean = false,
     val finalSummary: String = "",
+    val snapshotId: String? = null,
 
     // Detailed summary fields (mostly for backup)
     val filesNew: Int = 0,
