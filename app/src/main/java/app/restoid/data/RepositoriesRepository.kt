@@ -1,6 +1,7 @@
 package app.restoid.data
 
 import android.content.Context
+import android.util.Log
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,6 +51,18 @@ class RepositoriesRepository(
             }
         }.sortedBy { it.name }
         _selectedRepository.value = prefs.getString(SELECTED_REPO_PATH_KEY, null)
+
+        // Also check if metadata folder exists for the selected repository
+        val selectedRepoPath = _selectedRepository.value
+        if (selectedRepoPath != null) {
+            val repo = _repositories.value.find { it.path == selectedRepoPath }
+            if (repo?.id != null) {
+                val metadataDir = File(context.filesDir, "metadata/${repo.id}")
+                if (!metadataDir.exists()) {
+                    Log.w("RepoRepo", "Metadata directory for selected repo ${repo.id} is missing!")
+                }
+            }
+        }
     }
 
     // Saves the selected repository path to SharedPreferences.
@@ -108,7 +121,8 @@ class RepositoriesRepository(
 
     /**
      * Adds a new repository. Before initializing, it checks if a valid restic repository
-     * already exists at the given path with the provided password.
+     * already exists at the given path with the provided password. After adding, it attempts
+     * to restore the latest metadata backup from the repository.
      *
      * @param path The local file system path for the repository.
      * @param password The password for the new or existing repository.
@@ -141,45 +155,116 @@ class RepositoriesRepository(
                     val checkCommand = "RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' $resticPath -r '$path' list keys --no-lock"
                     val checkResult = Shell.cmd(checkCommand).exec()
                     if (checkResult.isSuccess) {
-                        val configResult = resticRepository.getConfig(path, password)
-                        if (configResult.isSuccess) {
-                            val repoId = configResult.getOrNull()?.id
-                            saveNewRepository(LocalRepository(path = path, id = repoId), password, savePassword, wasEmpty)
-                            return@withContext AddRepositoryState.Success
-                        } else {
-                            return@withContext AddRepositoryState.Error("Repo valid, but failed to get ID.")
-                        }
+                        handleSuccessfulRepoAdd(path, password, resticRepository, savePassword, wasEmpty)
                     } else {
                         val errorOutput = checkResult.err.joinToString("\n")
-                        return@withContext AddRepositoryState.Error(if (errorOutput.isEmpty()) "Invalid password or corrupted repository." else errorOutput)
-                    }
-                }
-
-                if (!repoDir.exists() && !repoDir.mkdirs()) {
-                    return@withContext AddRepositoryState.Error("Failed to create directory at $path")
-                }
-
-                val initCommand = "RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' $resticPath -r '$path' init"
-                val initResult = Shell.cmd(initCommand).exec()
-
-                if (initResult.isSuccess) {
-                    val configResult = resticRepository.getConfig(path, password)
-                    if (configResult.isSuccess) {
-                        val repoId = configResult.getOrNull()?.id
-                        saveNewRepository(LocalRepository(path = path, id = repoId), password, savePassword, wasEmpty)
-                        return@withContext AddRepositoryState.Success
-                    } else {
-                        repoDir.deleteRecursively()
-                        return@withContext AddRepositoryState.Error("Initialized, but failed to get ID.")
+                        AddRepositoryState.Error(if (errorOutput.isEmpty()) "Invalid password or corrupted repository." else errorOutput)
                     }
                 } else {
-                    repoDir.deleteRecursively()
-                    val errorOutput = initResult.err.joinToString("\n")
-                    return@withContext AddRepositoryState.Error(if (errorOutput.isEmpty()) "Failed to initialize repository." else errorOutput)
+                    // It's a new repository, initialize it
+                    if (!repoDir.exists() && !repoDir.mkdirs()) {
+                        return@withContext AddRepositoryState.Error("Failed to create directory at $path")
+                    }
+
+                    val initCommand = "RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' $resticPath -r '$path' init"
+                    val initResult = Shell.cmd(initCommand).exec()
+
+                    if (initResult.isSuccess) {
+                        handleSuccessfulRepoAdd(path, password, resticRepository, savePassword, wasEmpty)
+                    } else {
+                        repoDir.deleteRecursively() // Clean up failed init
+                        val errorOutput = initResult.err.joinToString("\n")
+                        AddRepositoryState.Error(if (errorOutput.isEmpty()) "Failed to initialize repository." else errorOutput)
+                    }
                 }
             } finally {
                 passwordFile.delete()
             }
+        }
+    }
+
+    private suspend fun handleSuccessfulRepoAdd(path: String, password: String, resticRepository: ResticRepository, savePassword: Boolean, wasEmpty: Boolean): AddRepositoryState {
+        val configResult = resticRepository.getConfig(path, password)
+        if (configResult.isSuccess) {
+            val repoId = configResult.getOrNull()?.id
+            saveNewRepository(LocalRepository(path = path, id = repoId), password, savePassword, wasEmpty)
+
+            // After successfully adding, attempt to restore metadata. This is a "best-effort" operation.
+            if (repoId != null) {
+                restoreMetadataForRepo(repoId, path, password, resticRepository)
+            }
+            return AddRepositoryState.Success
+        } else {
+            return AddRepositoryState.Error("Repo valid, but failed to get ID.")
+        }
+    }
+
+
+    private suspend fun restoreMetadataForRepo(repoId: String, repoPath: String, password: String, resticRepository: ResticRepository) {
+        // This whole operation is best-effort. It should not crash the main addRepository flow.
+        val tempRestoreDir = File(context.cacheDir, "metadata_restore_${System.currentTimeMillis()}").also { it.mkdirs() }
+        try {
+            Log.d("RepoRepo", "Attempting to restore metadata for repoId: $repoId")
+            val snapshots = resticRepository.getSnapshots(repoPath, password).getOrNull()
+            val metadataSnapshot = snapshots
+                ?.filter { it.tags.contains("restoid") && it.tags.contains("metadata") }
+                ?.maxByOrNull { it.time }
+
+            if (metadataSnapshot != null) {
+                Log.d("RepoRepo", "Found metadata snapshot: ${metadataSnapshot.id}")
+
+                // 1. Restore to a temporary directory.
+                val restoreResult = resticRepository.restore(
+                    repoPath = repoPath,
+                    password = password,
+                    snapshotId = metadataSnapshot.id,
+                    targetPath = tempRestoreDir.absolutePath,
+                    pathsToRestore = emptyList() // Restore everything from snapshot root
+                )
+
+                if (restoreResult.isSuccess) {
+                    Log.d("RepoRepo", "Successfully restored snapshot to ${tempRestoreDir.absolutePath}")
+
+                    // **THE FIX IS HERE**: The destination is the parent `metadata` folder.
+                    // The `REPO_ID` folder will be copied *into* it.
+                    val finalMetadataParentDir = File(context.filesDir, "metadata")
+                    if (!finalMetadataParentDir.exists()) {
+                        finalMetadataParentDir.mkdirs()
+                    }
+
+                    // 2. Determine the correct owner for the app's files ('u0_a123:u0_a123')
+                    val ownerResult = Shell.cmd("stat -c '%u:%g' ${context.filesDir.absolutePath}").exec()
+                    val owner = if (ownerResult.isSuccess) ownerResult.out.firstOrNull()?.trim() else null
+                    Log.d("RepoRepo", "App data owner is: $owner")
+
+                    if (owner != null) {
+                        // 3. Copy everything from the temp restore dir into the final parent dir.
+                        val copyCmd = "cp -a '${tempRestoreDir.absolutePath}/.' '${finalMetadataParentDir.absolutePath}/'"
+                        val copyResult = Shell.cmd(copyCmd).exec()
+                        Log.d("RepoRepo", "Copy command executed. Success: ${copyResult.isSuccess}")
+
+                        // 4. Fix ownership on the newly copied directory inside the final destination.
+                        val finalRepoMetadataPath = File(finalMetadataParentDir, repoId)
+                        val chownCmd = "chown -R $owner '${finalRepoMetadataPath.absolutePath}'"
+                        val chownResult = Shell.cmd(chownCmd).exec()
+                        Log.d("RepoRepo", "Chown command on final dir executed. Success: ${chownResult.isSuccess}")
+
+                    } else {
+                        Log.e("RepoRepo", "Could not determine file owner. Skipping copy and chown.")
+                    }
+                } else {
+                    Log.e("RepoRepo", "Restic restore command failed: ${restoreResult.exceptionOrNull()?.message}")
+                }
+            } else {
+                Log.d("RepoRepo", "No metadata snapshot found in the repository.")
+            }
+        } catch (e: Exception) {
+            // Log the exception but don't fail the addRepository operation
+            Log.e("RepoRepo", "Error during metadata restore", e)
+        } finally {
+            // 5. Clean up the temp directory using a root shell to avoid permission issues.
+            val cleanupResult = Shell.cmd("rm -rf '${tempRestoreDir.absolutePath}'").exec()
+            Log.d("RepoRepo", "Cleaned up temp directory. Success: ${cleanupResult.isSuccess}")
         }
     }
 

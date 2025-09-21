@@ -247,7 +247,11 @@ class SnapshotDetailsViewModel(
 
             val tags = listOf("restoid", "metadata")
             val tagFlags = tags.joinToString(" ") { "--tag '$it'" }
-            val command = "RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' ${resticState.path} -r '$repoPath' backup '${metadataDir.absolutePath}' --json $tagFlags"
+
+            // Backup with a relative path to simplify restore
+            val parentDir = metadataDir.parentFile?.absolutePath ?: return
+            val dirToBackup = metadataDir.name
+            val command = "cd '$parentDir' && RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' ${resticState.path} -r '$repoPath' backup '$dirToBackup' --json $tagFlags"
 
             Shell.cmd(command).exec()
 
@@ -267,4 +271,3 @@ class SnapshotDetailsViewModel(
     fun setRestoreObb(value: Boolean) = _restoreTypes.update { it.copy(obb = value) }
     fun setRestoreMedia(value: Boolean) = _restoreTypes.update { it.copy(media = value) }
 }
-
