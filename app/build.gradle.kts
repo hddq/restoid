@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "app.restoid"
+    namespace = "io.github.hddq.restoid"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "app.restoid"
+        applicationId = "io.github.hddq.restoid"
         minSdk = 35
         targetSdk = 36
         versionCode = 1
