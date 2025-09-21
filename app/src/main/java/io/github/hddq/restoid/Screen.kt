@@ -7,4 +7,5 @@ sealed class Screen(val route: String, val title: String) {
     object SnapshotDetails : Screen("snapshot_details", "Snapshot Details")
     object Restore : Screen("restore", "Restore")
     object Licenses : Screen("licenses", "Licenses")
+    object Maintenance : Screen("maintenance", "Maintenance")
 }

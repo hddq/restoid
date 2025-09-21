@@ -28,6 +28,7 @@ import androidx.navigation.navArgument
 import io.github.hddq.restoid.ui.screens.BackupScreen
 import io.github.hddq.restoid.ui.screens.HomeScreen
 import io.github.hddq.restoid.ui.screens.LicensesScreen
+import io.github.hddq.restoid.ui.screens.MaintenanceScreen
 import io.github.hddq.restoid.ui.screens.RestoreScreen
 import io.github.hddq.restoid.ui.screens.SettingsScreen
 import io.github.hddq.restoid.ui.screens.SnapshotDetailsScreen
@@ -49,7 +50,8 @@ class MainActivity : ComponentActivity() {
                         if (currentDestination?.route != Screen.Backup.route &&
                             currentDestination?.route?.startsWith(Screen.SnapshotDetails.route) == false &&
                             currentDestination?.route?.startsWith(Screen.Restore.route) == false &&
-                            currentDestination?.route != Screen.Licenses.route
+                            currentDestination?.route != Screen.Licenses.route &&
+                            currentDestination?.route != Screen.Maintenance.route
                         ) {
                             val items = listOf(
                                 Screen.Home to Icons.Default.Home,
@@ -95,6 +97,9 @@ class MainActivity : ComponentActivity() {
                             HomeScreen(
                                 onSnapshotClick = { snapshotId ->
                                     navController.navigate("${Screen.SnapshotDetails.route}/$snapshotId")
+                                },
+                                onMaintenanceClick = {
+                                    navController.navigate(Screen.Maintenance.route)
                                 }
                             )
                         }
@@ -126,6 +131,9 @@ class MainActivity : ComponentActivity() {
                         }
                         composable(Screen.Licenses.route) {
                             LicensesScreen(onNavigateUp = { navController.navigateUp() })
+                        }
+                        composable(Screen.Maintenance.route) {
+                            MaintenanceScreen()
                         }
                     }
                 }

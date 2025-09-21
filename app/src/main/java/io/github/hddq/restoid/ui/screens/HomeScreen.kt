@@ -7,16 +7,23 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -28,6 +35,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.rememberAsyncImagePainter
 import io.github.hddq.restoid.RestoidApplication
 import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.model.AppInfo
@@ -35,11 +43,11 @@ import io.github.hddq.restoid.ui.components.PasswordDialog
 import io.github.hddq.restoid.ui.home.HomeViewModel
 import io.github.hddq.restoid.ui.home.HomeViewModelFactory
 import io.github.hddq.restoid.ui.home.SnapshotWithMetadata
-import coil.compose.rememberAsyncImagePainter
 
 @Composable
 fun HomeScreen(
     onSnapshotClick: (String) -> Unit,
+    onMaintenanceClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val application = LocalContext.current.applicationContext as RestoidApplication
@@ -58,13 +66,25 @@ fun HomeScreen(
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        Text(
-            text = "Restoid",
-            style = MaterialTheme.typography.headlineLarge,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 24.dp)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Restoid",
+                style = MaterialTheme.typography.headlineLarge,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold,
+            )
+            OutlinedButton(onClick = onMaintenanceClick) {
+                Icon(Icons.Default.Build, contentDescription = "Maintenance")
+                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                Text("Maintenance")
+            }
+        }
+        Spacer(Modifier.height(24.dp))
+
 
         when {
             uiState.selectedRepo == null -> {
