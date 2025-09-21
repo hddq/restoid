@@ -64,6 +64,7 @@ fun RestoreScreen(navController: NavController, snapshotId: String?) {
             application.resticRepository,
             application.appInfoRepository,
             application.notificationRepository,
+            application.metadataRepository,
             snapshotId ?: ""
         )
     )

@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import app.restoid.data.AppInfoRepository
+import app.restoid.data.MetadataRepository
 import app.restoid.data.NotificationRepository
 import app.restoid.data.RepositoriesRepository
 import app.restoid.data.ResticRepository
@@ -14,6 +15,7 @@ class RestoreViewModelFactory(
     private val resticRepository: ResticRepository,
     private val appInfoRepository: AppInfoRepository,
     private val notificationRepository: NotificationRepository,
+    private val metadataRepository: MetadataRepository,
     private val snapshotId: String
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -25,6 +27,7 @@ class RestoreViewModelFactory(
                 resticRepository,
                 appInfoRepository,
                 notificationRepository,
+                metadataRepository,
                 snapshotId
             ) as T
         }

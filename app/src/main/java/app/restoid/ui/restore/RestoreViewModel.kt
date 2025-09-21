@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.restoid.data.AppInfoRepository
+import app.restoid.data.MetadataRepository
 import app.restoid.data.NotificationRepository
 import app.restoid.data.RepositoriesRepository
 import app.restoid.data.ResticRepository
@@ -12,6 +13,7 @@ import app.restoid.data.ResticState
 import app.restoid.data.SnapshotInfo
 import app.restoid.model.AppInfo
 import app.restoid.model.BackupDetail
+import app.restoid.model.RestoidMetadata
 import app.restoid.ui.shared.OperationProgress
 import app.restoid.util.ResticOutputParser
 import com.topjohnwu.superuser.CallbackList
@@ -41,6 +43,7 @@ class RestoreViewModel(
     private val resticRepository: ResticRepository,
     private val appInfoRepository: AppInfoRepository,
     private val notificationRepository: NotificationRepository,
+    private val metadataRepository: MetadataRepository,
     val snapshotId: String
 ) : ViewModel() {
 
@@ -84,19 +87,25 @@ class RestoreViewModel(
             try {
                 val repoPath = repositoriesRepository.selectedRepository.first()
                 val password = repoPath?.let { repositoriesRepository.getRepositoryPassword(it) }
+                val repo = repositoriesRepository.repositories.value.find { it.path == repoPath }
 
-                if (repoPath != null && password != null) {
+                if (repoPath != null && password != null && repo?.id != null) {
                     val result = resticRepository.getSnapshots(repoPath, password)
                     result.fold(
                         onSuccess = { snapshots ->
                             val foundSnapshot = snapshots.find { it.id.startsWith(snapshotId) }
                             _snapshot.value = foundSnapshot
-                            foundSnapshot?.let { processSnapshot(it) }
+                            if (foundSnapshot != null) {
+                                val metadata = metadataRepository.getMetadataForSnapshot(repo.id, foundSnapshot.id)
+                                processSnapshot(foundSnapshot, metadata)
+                            } else {
+                                _error.value = "Snapshot not found."
+                            }
                         },
                         onFailure = { _error.value = it.message }
                     )
                 } else {
-                    _error.value = "Repository or password not found"
+                    _error.value = "Repository, password, or repo ID not found"
                 }
             } catch (e: Exception) {
                 _error.value = e.message
@@ -106,8 +115,10 @@ class RestoreViewModel(
         }
     }
 
-    private suspend fun processSnapshot(snapshot: SnapshotInfo) {
-        val packageNames = snapshot.tags.map { it.split('|').first() }
+    private suspend fun processSnapshot(snapshot: SnapshotInfo, metadata: RestoidMetadata?) {
+        val appMetadataMap = metadata?.apps ?: emptyMap()
+        val packageNames = appMetadataMap.keys.toList()
+
 
         if (packageNames.isEmpty()) {
             _backupDetails.value = emptyList()
@@ -117,19 +128,13 @@ class RestoreViewModel(
         val appInfos = appInfoRepository.getAppInfoForPackages(packageNames)
         val appInfoMap = appInfos.associateBy { it.packageName }
 
-        val details = snapshot.tags.map { tag ->
-            val parts = tag.split('|')
-            val packageName = parts.getOrNull(0) ?: ""
-            val versionName = parts.getOrNull(1)
-            val versionCode = parts.getOrNull(2)?.toLongOrNull()
-            val backupSize = parts.getOrNull(3)?.toLongOrNull()
-
+        val details = appMetadataMap.map { (packageName, appMeta) ->
             val appInfo = appInfoMap[packageName]
             val items = findBackedUpItems(snapshot, packageName)
 
             val isInstalled = appInfo != null
-            val isDowngrade = if (isInstalled && versionCode != null) {
-                versionCode < appInfo!!.versionCode
+            val isDowngrade = if (isInstalled) {
+                appMeta.versionCode < appInfo!!.versionCode
             } else {
                 false
             }
@@ -137,14 +142,14 @@ class RestoreViewModel(
             val finalAppInfo = appInfo ?: AppInfo(
                 name = packageName,
                 packageName = packageName,
-                versionName = versionName ?: "N/A",
-                versionCode = versionCode ?: 0L,
+                versionName = appMeta.versionName,
+                versionCode = appMeta.versionCode,
                 icon = application.packageManager.defaultActivityIcon,
                 apkPaths = emptyList(),
                 isSelected = true
             )
 
-            BackupDetail(finalAppInfo, items, versionName, versionCode, backupSize, isDowngrade, isInstalled)
+            BackupDetail(finalAppInfo, items, appMeta.versionName, appMeta.versionCode, appMeta.size, isDowngrade, isInstalled)
         }
         _backupDetails.value = details.sortedBy { it.appInfo.name.lowercase() }
     }
@@ -569,4 +574,3 @@ class RestoreViewModel(
     fun setRestoreObb(value: Boolean) = _restoreTypes.update { it.copy(obb = value) }
     fun setRestoreMedia(value: Boolean) = _restoreTypes.update { it.copy(media = value) }
 }
-
