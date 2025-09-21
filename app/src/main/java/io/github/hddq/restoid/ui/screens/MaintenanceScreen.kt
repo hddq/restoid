@@ -33,6 +33,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.hddq.restoid.RestoidApplication
+import io.github.hddq.restoid.ui.maintenance.MaintenanceUiState
 import io.github.hddq.restoid.ui.maintenance.MaintenanceViewModel
 import io.github.hddq.restoid.ui.maintenance.MaintenanceViewModelFactory
 import io.github.hddq.restoid.ui.shared.ProgressScreenContent
@@ -88,10 +89,10 @@ fun MaintenanceScreen(onNavigateUp: () -> Unit) {
             } else {
                 MaintenanceSelectionContent(
                     paddingValues = paddingValues,
-                    checkRepo = uiState.checkRepo,
-                    pruneRepo = uiState.pruneRepo,
+                    uiState = uiState, // Pass the whole state
                     onSetCheckRepo = viewModel::setCheckRepo,
-                    onSetPruneRepo = viewModel::setPruneRepo
+                    onSetPruneRepo = viewModel::setPruneRepo,
+                    onSetReadData = viewModel::setReadData // Add this
                 )
             }
         }
@@ -101,10 +102,10 @@ fun MaintenanceScreen(onNavigateUp: () -> Unit) {
 @Composable
 fun MaintenanceSelectionContent(
     paddingValues: PaddingValues,
-    checkRepo: Boolean,
-    pruneRepo: Boolean,
+    uiState: MaintenanceUiState, // Use the specific type
     onSetCheckRepo: (Boolean) -> Unit,
-    onSetPruneRepo: (Boolean) -> Unit
+    onSetPruneRepo: (Boolean) -> Unit,
+    onSetReadData: (Boolean) -> Unit // Add this
 ) {
     LazyColumn(
         modifier = Modifier
@@ -131,12 +132,22 @@ fun MaintenanceSelectionContent(
                     )
                     MaintenanceTaskToggle(
                         label = "Check repository integrity",
-                        checked = checkRepo,
+                        checked = uiState.checkRepo,
                         onCheckedChange = onSetCheckRepo
                     )
+                    // Indent the read-data option and only show if check is enabled
+                    if (uiState.checkRepo) {
+                        Row(Modifier.padding(start = 16.dp)) {
+                            MaintenanceTaskToggle(
+                                label = "Read all data",
+                                checked = uiState.readData,
+                                onCheckedChange = onSetReadData
+                            )
+                        }
+                    }
                     MaintenanceTaskToggle(
                         label = "Prune repository",
-                        checked = pruneRepo,
+                        checked = uiState.pruneRepo,
                         onCheckedChange = onSetPruneRepo
                     )
                 }
@@ -165,4 +176,3 @@ fun MaintenanceTaskToggle(label: String, checked: Boolean, onCheckedChange: (Boo
         )
     }
 }
-

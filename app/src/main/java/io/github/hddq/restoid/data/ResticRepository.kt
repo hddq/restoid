@@ -57,12 +57,13 @@ class ResticRepository(private val context: Context) {
         }
     }
 
-    suspend fun check(repoPath: String, password: String): Result<String> {
+    suspend fun check(repoPath: String, password: String, readAllData: Boolean): Result<String> {
         return withContext(Dispatchers.IO) {
+            val command = if (readAllData) "check --read-data" else "check"
             executeResticCommand(
                 repoPath = repoPath,
                 password = password,
-                command = "check",
+                command = command,
                 failureMessage = "Failed to check repository"
             )
         }

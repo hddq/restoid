@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 data class MaintenanceUiState(
     val checkRepo: Boolean = true,
     val pruneRepo: Boolean = false,
+    val readData: Boolean = false, // Add this
     val isRunning: Boolean = false,
     val progress: OperationProgress = OperationProgress(),
 )
@@ -55,7 +56,7 @@ class MaintenanceViewModel(
 
                 val tasksToRun = mutableListOf<suspend () -> Pair<String, Result<String>>>()
                 if (_uiState.value.checkRepo) {
-                    tasksToRun.add { "Check" to resticRepository.check(selectedRepoPath, password) }
+                    tasksToRun.add { "Check" to resticRepository.check(selectedRepoPath, password, _uiState.value.readData) }
                 }
                 if (_uiState.value.pruneRepo) {
                     tasksToRun.add { "Prune" to resticRepository.prune(selectedRepoPath, password) }
@@ -142,5 +143,8 @@ class MaintenanceViewModel(
     fun setPruneRepo(value: Boolean) {
         _uiState.update { it.copy(pruneRepo = value) }
     }
-}
 
+    fun setReadData(value: Boolean) {
+        _uiState.update { it.copy(readData = value) }
+    }
+}
