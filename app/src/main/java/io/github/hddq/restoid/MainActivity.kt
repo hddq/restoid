@@ -133,7 +133,7 @@ class MainActivity : ComponentActivity() {
                             LicensesScreen(onNavigateUp = { navController.navigateUp() })
                         }
                         composable(Screen.Maintenance.route) {
-                            MaintenanceScreen()
+                            MaintenanceScreen(onNavigateUp = { navController.navigateUp() })
                         }
                     }
                 }
@@ -141,3 +141,4 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
