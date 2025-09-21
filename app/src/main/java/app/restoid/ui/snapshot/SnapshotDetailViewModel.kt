@@ -196,11 +196,14 @@ class SnapshotDetailsViewModel(
             try {
                 val repoPath = repositoriesRepository.selectedRepository.first()
                 val password = repoPath?.let { repositoriesRepository.getRepositoryPassword(it) }
+                val repo = repositoriesRepository.repositories.value.find { it.path == repoPath }
 
-                if (repoPath != null && password != null) {
+                if (repoPath != null && password != null && repo?.id != null) {
                     val result = resticRepository.forgetSnapshot(repoPath, password, snapshotToForget.id)
                     result.fold(
                         onSuccess = {
+                            // Also delete the metadata file
+                            metadataRepository.deleteMetadataForSnapshot(repo.id, snapshotToForget.id)
                             _forgetResult.value = ForgetResult.Success
                         },
                         onFailure = {
@@ -209,7 +212,7 @@ class SnapshotDetailsViewModel(
                         }
                     )
                 } else {
-                    _error.value = "Repository or password not found"
+                    _error.value = "Repository, password, or repo ID not found"
                 }
             } catch (e: Exception) {
                 _error.value = e.message

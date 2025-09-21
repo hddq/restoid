@@ -53,5 +53,24 @@ class MetadataRepository(private val context: Context) {
                 ?.mapValues { it.value!! } ?: emptyMap()
         }
     }
+
+    suspend fun deleteMetadataForSnapshot(repoId: String, snapshotId: String): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                val repoDir = File(metadataRoot, repoId)
+                if (!repoDir.exists()) return@withContext true // Nothing to delete
+
+                val metadataFile = File(repoDir, "$snapshotId.json")
+                if (metadataFile.exists()) {
+                    metadataFile.delete()
+                } else {
+                    true // File doesn't exist, so it's already "deleted"
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                false
+            }
+        }
+    }
 }
 
