@@ -2,8 +2,8 @@ package io.github.hddq.restoid.data
 
 import android.content.Context
 import android.os.Build
-import io.github.hddq.restoid.model.ResticConfig
 import com.topjohnwu.superuser.Shell
+import io.github.hddq.restoid.model.ResticConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -54,6 +54,61 @@ class ResticRepository(private val context: Context) {
             } else {
                 _resticState.value = ResticState.NotInstalled
             }
+        }
+    }
+
+    suspend fun check(repoPath: String, password: String): Result<String> {
+        return withContext(Dispatchers.IO) {
+            executeResticCommand(
+                repoPath = repoPath,
+                password = password,
+                command = "check",
+                failureMessage = "Failed to check repository"
+            )
+        }
+    }
+
+    suspend fun prune(repoPath: String, password: String): Result<String> {
+        return withContext(Dispatchers.IO) {
+            executeResticCommand(
+                repoPath = repoPath,
+                password = password,
+                command = "prune",
+                failureMessage = "Failed to prune repository"
+            )
+        }
+    }
+
+    private suspend fun executeResticCommand(
+        repoPath: String,
+        password: String,
+        command: String,
+        failureMessage: String
+    ): Result<String> {
+        if (resticState.value !is ResticState.Installed) {
+            return Result.failure(Exception("Restic not installed"))
+        }
+
+        val resticPath = (resticState.value as ResticState.Installed).path
+        val passwordFile = File.createTempFile("restic-pass", ".tmp", context.cacheDir)
+
+        try {
+            passwordFile.writeText(password)
+            val cmd =
+                "RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' $resticPath -r '$repoPath' $command"
+            val result = Shell.cmd(cmd).exec()
+
+            return if (result.isSuccess) {
+                Result.success(result.out.joinToString("\n"))
+            } else {
+                val errorOutput = result.err.joinToString("\n")
+                val errorMsg = if (errorOutput.isEmpty()) failureMessage else errorOutput
+                Result.failure(Exception(errorMsg))
+            }
+        } catch (e: Exception) {
+            return Result.failure(e)
+        } finally {
+            passwordFile.delete()
         }
     }
 

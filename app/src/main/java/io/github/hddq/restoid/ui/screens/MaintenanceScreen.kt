@@ -1,5 +1,6 @@
 package io.github.hddq.restoid.ui.screens
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -34,69 +35,110 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.hddq.restoid.RestoidApplication
 import io.github.hddq.restoid.ui.maintenance.MaintenanceViewModel
 import io.github.hddq.restoid.ui.maintenance.MaintenanceViewModelFactory
+import io.github.hddq.restoid.ui.shared.ProgressScreenContent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MaintenanceScreen(onNavigateUp: () -> Unit) {
     val application = LocalContext.current.applicationContext as RestoidApplication
     val viewModel: MaintenanceViewModel = viewModel(
-        factory = MaintenanceViewModelFactory() // Add dependencies later if needed
+        factory = MaintenanceViewModelFactory(
+            application.repositoriesRepository,
+            application.resticRepository,
+            application.notificationRepository
+        )
     )
     val uiState by viewModel.uiState.collectAsState()
+    val showProgressScreen = uiState.isRunning || uiState.progress.isFinished
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Maintenance") },
+                title = { Text(if (showProgressScreen) "Running Maintenance" else "Maintenance") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateUp) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    if (!uiState.isRunning) {
+                        IconButton(onClick = onNavigateUp) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
                     }
                 }
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { /* TODO: Implement FAB logic */ },
-                icon = { Icon(Icons.Default.PlayArrow, contentDescription = "Run Tasks") },
-                text = { Text("Run Tasks") }
-            )
+            if (!showProgressScreen) {
+                ExtendedFloatingActionButton(
+                    onClick = { viewModel.runTasks() },
+                    icon = { Icon(Icons.Default.PlayArrow, contentDescription = "Run Tasks") },
+                    text = { Text("Run Tasks") }
+                )
+            }
         }
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .padding(paddingValues)
-                .fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceBright
-                    )
+        Crossfade(targetState = showProgressScreen, label = "MaintenanceScreenCrossfade") { showProgress ->
+            if (showProgress) {
+                ProgressScreenContent(
+                    progress = uiState.progress,
+                    operationType = "Maintenance",
+                    onDone = {
+                        viewModel.onDone()
+                        onNavigateUp()
+                    },
+                    modifier = Modifier.padding(paddingValues)
+                )
+            } else {
+                MaintenanceSelectionContent(
+                    paddingValues = paddingValues,
+                    checkRepo = uiState.checkRepo,
+                    pruneRepo = uiState.pruneRepo,
+                    onSetCheckRepo = viewModel::setCheckRepo,
+                    onSetPruneRepo = viewModel::setPruneRepo
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun MaintenanceSelectionContent(
+    paddingValues: PaddingValues,
+    checkRepo: Boolean,
+    pruneRepo: Boolean,
+    onSetCheckRepo: (Boolean) -> Unit,
+    onSetPruneRepo: (Boolean) -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier
+            .padding(paddingValues)
+            .fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceBright
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = "Tasks",
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                        MaintenanceTaskToggle(
-                            label = "Check repository integrity",
-                            checked = uiState.checkRepo,
-                            onCheckedChange = { viewModel.setCheckRepo(it) }
-                        )
-                        MaintenanceTaskToggle(
-                            label = "Prune repository",
-                            checked = uiState.pruneRepo,
-                            onCheckedChange = { viewModel.setPruneRepo(it) }
-                        )
-                    }
+                    Text(
+                        text = "Tasks",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    MaintenanceTaskToggle(
+                        label = "Check repository integrity",
+                        checked = checkRepo,
+                        onCheckedChange = onSetCheckRepo
+                    )
+                    MaintenanceTaskToggle(
+                        label = "Prune repository",
+                        checked = pruneRepo,
+                        onCheckedChange = onSetPruneRepo
+                    )
                 }
             }
         }
