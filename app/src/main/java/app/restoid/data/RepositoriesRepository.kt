@@ -225,8 +225,6 @@ class RepositoriesRepository(
                 if (restoreResult.isSuccess) {
                     Log.d("RepoRepo", "Successfully restored snapshot to ${tempRestoreDir.absolutePath}")
 
-                    // **THE FIX IS HERE**: The destination is the parent `metadata` folder.
-                    // The `REPO_ID` folder will be copied *into* it.
                     val finalMetadataParentDir = File(context.filesDir, "metadata")
                     if (!finalMetadataParentDir.exists()) {
                         finalMetadataParentDir.mkdirs()
@@ -238,16 +236,16 @@ class RepositoriesRepository(
                     Log.d("RepoRepo", "App data owner is: $owner")
 
                     if (owner != null) {
-                        // 3. Copy everything from the temp restore dir into the final parent dir.
+                        // 3. Fix ownership on the restored files inside the temporary directory FIRST.
+                        val chownCmd = "chown -R $owner '${tempRestoreDir.absolutePath}'"
+                        val chownResult = Shell.cmd(chownCmd).exec()
+                        Log.d("RepoRepo", "Chown command on temp dir executed. Success: ${chownResult.isSuccess}")
+
+                        // 4. Copy everything from the temp restore dir (now with correct owner) into the final parent dir.
+                        // 'cp -a' will preserve the ownership we just set.
                         val copyCmd = "cp -a '${tempRestoreDir.absolutePath}/.' '${finalMetadataParentDir.absolutePath}/'"
                         val copyResult = Shell.cmd(copyCmd).exec()
                         Log.d("RepoRepo", "Copy command executed. Success: ${copyResult.isSuccess}")
-
-                        // 4. Fix ownership on the newly copied directory inside the final destination.
-                        val finalRepoMetadataPath = File(finalMetadataParentDir, repoId)
-                        val chownCmd = "chown -R $owner '${finalRepoMetadataPath.absolutePath}'"
-                        val chownResult = Shell.cmd(chownCmd).exec()
-                        Log.d("RepoRepo", "Chown command on final dir executed. Success: ${chownResult.isSuccess}")
 
                     } else {
                         Log.e("RepoRepo", "Could not determine file owner. Skipping copy and chown.")
@@ -288,3 +286,4 @@ class RepositoriesRepository(
         prefs.edit().putStringSet(REPOS_KEY, currentJsonSet).apply()
     }
 }
+
