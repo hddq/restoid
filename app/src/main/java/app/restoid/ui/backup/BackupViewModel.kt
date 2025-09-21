@@ -1,6 +1,7 @@
 package app.restoid.ui.backup
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.restoid.data.AppInfoRepository
@@ -84,9 +85,9 @@ class BackupViewModel(
         backupJob = viewModelScope.launch(Dispatchers.IO) {
             val startTime = System.currentTimeMillis()
             _isBackingUp.value = true
-            _backupProgress.value = OperationProgress(stageTitle = "Starting backup...")
+            _backupProgress.value = OperationProgress(stageTitle = "Initializing...")
 
-            val fileList = File.createTempFile("restic-files-", ".txt", application.cacheDir)
+            var fileList: File? = null
             var passwordFile: File? = null
             var restoidMetadataFile: File? = null
             var isSuccess = false
@@ -96,6 +97,7 @@ class BackupViewModel(
             var password: String? = null
             var snapshotId: String? = null
             var repositoryId: String? = null
+            val totalStages = 3 // 1. App Backup, 2. Save Metadata, 3. Metadata Backup
 
             try {
                 // --- Pre-flight checks ---
@@ -111,149 +113,125 @@ class BackupViewModel(
                 repositoryId = repository?.id
 
                 if (repositoryId == null) {
-                    _backupProgress.value = OperationProgress(isFinished = true, error = "Repository ID not found. Cannot save metadata.", finalSummary = "Repository ID not found.")
-                    return@launch
+                    throw IllegalStateException("Repository ID not found. Cannot save metadata.")
                 }
 
                 repoPath = selectedRepoPath
                 password = repositoriesRepository.getRepositoryPassword(selectedRepoPath)!!
                 val selectedApps = _apps.value.filter { it.isSelected }
 
-                // --- Generate restoid.json metadata ---
-                updateProgress(stageTitle = "Generating metadata...")
-                val appMetadataMap = mutableMapOf<String, AppMetadata>()
-                val backupTypesList = mutableListOf<String>().apply {
-                    if (_backupTypes.value.apk) add("apk")
-                    if (_backupTypes.value.data) add("data")
-                    if (_backupTypes.value.deviceProtectedData) add("user_de")
-                    if (_backupTypes.value.externalData) add("external_data")
-                    if (_backupTypes.value.obb) add("obb")
-                    if (_backupTypes.value.media) add("media")
-                }
+                // --- STAGE 1: Main Backup ---
+                var currentStage = 1
+                updateProgress(
+                    stageTitle = "[${currentStage}/${totalStages}] Backing up apps...",
+                    overallPercentage = 0f,
+                    startTime = startTime
+                )
 
-                selectedApps.forEach { app ->
-                    val appPaths = generateFilePathsForApp(app)
-                    val existingAppPaths = appPaths.filter { Shell.cmd("[ -e '$it' ]").exec().isSuccess }
-                    val size = getDirectorySize(existingAppPaths)
-                    appMetadataMap[app.packageName] = AppMetadata(
-                        size = size,
-                        types = backupTypesList,
-                        versionCode = app.versionCode,
-                        versionName = app.versionName
-                    )
-                }
-
-                val metadata = RestoidMetadata(apps = appMetadataMap)
+                // Generate file list, tags, and metadata
+                val (pathsToBackup, excludePatterns, metadata) = prepareBackupData(selectedApps)
                 restoidMetadataFile = File(application.cacheDir, "restoid.json")
                 val json = Json { prettyPrint = true }
-                val metadataJsonString = json.encodeToString(metadata)
-                restoidMetadataFile.writeText(metadataJsonString)
+                restoidMetadataFile.writeText(json.encodeToString(metadata))
+                pathsToBackup.add(0, restoidMetadataFile.absolutePath) // Add metadata file to main backup
 
-
-                // --- Generate file list and tags ---
-                updateProgress(stageTitle = "Calculating sizes...")
-                val pathsToBackup = mutableListOf<String>()
-                pathsToBackup.add(restoidMetadataFile.absolutePath)
-                val excludePatterns = mutableListOf<String>()
-                selectedApps.forEach { app ->
-                    val appPaths = generateFilePathsForApp(app)
-                    val existingAppPaths = appPaths.filter { Shell.cmd("[ -e '$it' ]").exec().isSuccess }
-                    pathsToBackup.addAll(existingAppPaths)
-
-                    // Exclude cache folders
-                    if (_backupTypes.value.data) {
-                        excludePatterns.add("'/data/data/${app.packageName}/cache'")
-                        excludePatterns.add("'/data/data/${app.packageName}/code_cache'")
-                    }
-                    if (_backupTypes.value.externalData) {
-                        excludePatterns.add("'/storage/emulated/0/Android/data/${app.packageName}/cache'")
-                    }
+                if (pathsToBackup.size <= 1) { // Only metadata file
+                    throw IllegalStateException("No files found to back up for the selected apps.")
                 }
 
-                val tags = listOf("restoid", "backup")
-
-
-                if (pathsToBackup.isEmpty()) {
-                    _backupProgress.value = OperationProgress(isFinished = true, error = "No files found to back up for the selected apps.", finalSummary = "No files found to back up.")
-                    return@launch
-                }
-
+                fileList = File.createTempFile("restic-files-", ".txt", application.cacheDir)
                 fileList.writeText(pathsToBackup.distinct().joinToString("\n"))
-
-                // --- Execute restic backup command ---
-                updateProgress(stageTitle = "Backing up apps...")
-                val tagFlags = tags.joinToString(" ") { "--tag '$it'" }
-                val excludeFlags = excludePatterns.distinct().joinToString(" ") { pattern -> "--exclude $pattern" }
 
                 passwordFile = File.createTempFile("restic-pass", ".tmp", application.cacheDir)
                 passwordFile.writeText(password)
 
+                val tags = listOf("restoid", "backup")
+                val tagFlags = tags.joinToString(" ") { "--tag '$it'" }
+                val excludeFlags = excludePatterns.distinct().joinToString(" ") { pattern -> "--exclude $pattern" }
                 val command = "RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' ${resticState.path} -r '$selectedRepoPath' backup --files-from '${fileList.absolutePath}' --json --verbose=2 $tagFlags $excludeFlags"
 
                 val stdoutCallback = object : CallbackList<String>() {
                     override fun onAddElement(line: String) {
-                        val progressUpdate = ResticOutputParser.parse(line)
-                        progressUpdate?.let {
-                            if (it.isFinished) {
-                                finalSummaryProgress = it
-                                if (it.snapshotId != null) {
-                                    snapshotId = it.snapshotId
-                                }
+                        ResticOutputParser.parse(line)?.let { progressUpdate ->
+                            if (progressUpdate.isFinished) {
+                                finalSummaryProgress = progressUpdate
+                                snapshotId = progressUpdate.snapshotId
                             }
-                            val elapsedTime = (System.currentTimeMillis() - startTime) / 1000
-                            val newProgress = it.copy(elapsedTime = elapsedTime, stageTitle = "Backing up apps...")
-                            _backupProgress.value = newProgress
-                            notificationRepository.showOperationProgressNotification("Backup", newProgress)
+                            _backupProgress.update {
+                                // IMPORTANT FIX: Do not let the parser's 'isFinished' state for stage 1
+                                // prematurely end the entire multi-stage operation. The 'finally' block
+                                // is the single source of truth for the final finished state.
+                                progressUpdate.copy(
+                                    isFinished = false,
+                                    stageTitle = "[${currentStage}/${totalStages}] Backing up apps...",
+                                    overallPercentage = (currentStage - 1 + progressUpdate.stagePercentage) / totalStages,
+                                    elapsedTime = (System.currentTimeMillis() - startTime) / 1000
+                                )
+                            }
+                            notificationRepository.showOperationProgressNotification("Backup", _backupProgress.value)
                         }
                     }
                 }
-
                 val stderr = mutableListOf<String>()
+                val result = Shell.cmd(command).to(stdoutCallback, stderr).exec()
 
-                val result = Shell.cmd(command)
-                    .to(stdoutCallback, stderr)
-                    .exec()
-
-                isSuccess = result.isSuccess
-                summary = if (isSuccess) {
-                    finalSummaryProgress?.finalSummary ?: "Backed up ${selectedApps.size} app(s)."
-                } else {
+                if (!result.isSuccess || snapshotId == null) {
                     val errorOutput = stderr.joinToString("\n")
-                    val error = if (errorOutput.isEmpty()) "Restic command failed with exit code ${result.code}." else errorOutput
-                    "Backup failed: $error"
+                    throw IllegalStateException(if (errorOutput.isEmpty()) "Restic command failed with exit code ${result.code}." else errorOutput)
                 }
 
-                if (isSuccess && repositoryId != null && snapshotId != null && restoidMetadataFile != null && restoidMetadataFile.exists()) {
-                    updateProgress(stageTitle = "Saving metadata...")
-                    try {
-                        val metadataDir = File(application.filesDir, "metadata/$repositoryId")
-                        if (!metadataDir.exists()) {
-                            metadataDir.mkdirs()
-                        }
-                        val destFile = File(metadataDir, "$snapshotId.json")
-                        if (!restoidMetadataFile.renameTo(destFile)) {
-                            restoidMetadataFile.copyTo(destFile, overwrite = true)
-                            restoidMetadataFile.delete()
-                        }
-                        updateProgress(stageTitle = "Backing up metadata...")
-                        backupMetadata(repositoryId, selectedRepoPath, password)
+                // --- STAGE 2: Save Metadata Locally ---
+                currentStage = 2
+                updateProgress(
+                    stageTitle = "[${currentStage}/${totalStages}] Saving metadata...",
+                    overallPercentage = (currentStage - 1f) / totalStages,
+                    startTime = startTime
+                )
+                try {
+                    val metadataDir = File(application.filesDir, "metadata/$repositoryId")
+                    if (!metadataDir.exists()) metadataDir.mkdirs()
+                    val destFile = File(metadataDir, "$snapshotId.json")
 
-                    } catch (e: Exception) {
-                        summary += "\nWarning: Could not save backup metadata file."
-                        restoidMetadataFile.delete()
-                    }
-                } else {
-                    restoidMetadataFile?.delete()
+                    // The metadata file is already in the backup, so we can just copy it from cache
+                    restoidMetadataFile.copyTo(destFile, overwrite = true)
+                    Log.d("BackupVM", "Successfully saved metadata to ${destFile.absolutePath}")
+                } catch (e: Exception) {
+                    summary += "\nWarning: Could not save backup metadata file locally."
+                    Log.e("BackupVM", "Failed to save metadata", e)
                 }
+                updateProgress(
+                    stageTitle = "[${currentStage}/${totalStages}] Saving metadata...",
+                    overallPercentage = (currentStage.toFloat()) / totalStages,
+                    stagePercentage = 1.0f,
+                    startTime = startTime
+                )
+
+
+                // --- STAGE 3: Backup Metadata Directory ---
+                currentStage = 3
+                updateProgress(
+                    stageTitle = "[${currentStage}/${totalStages}] Backing up metadata...",
+                    overallPercentage = (currentStage - 1f) / totalStages,
+                    startTime = startTime
+                )
+                backupMetadata(repositoryId, selectedRepoPath, password)
+                updateProgress(
+                    stageTitle = "[${currentStage}/${totalStages}] Backing up metadata...",
+                    overallPercentage = 1.0f,
+                    stagePercentage = 1.0f,
+                    startTime = startTime
+                )
+
+                isSuccess = true
+                summary = finalSummaryProgress?.finalSummary ?: "Backed up ${selectedApps.size} app(s)."
 
             } catch (e: Exception) {
                 isSuccess = false
                 summary = "A fatal error occurred: ${e.message}"
             } finally {
-                fileList.delete()
+                fileList?.delete()
                 passwordFile?.delete()
-                restoidMetadataFile?.delete() // Should be moved or deleted by now, but just in case.
-
+                restoidMetadataFile?.delete()
 
                 _isBackingUp.value = false
                 val finalProgress = _backupProgress.value.copy(
@@ -277,13 +255,52 @@ class BackupViewModel(
         }
     }
 
+    private suspend fun prepareBackupData(selectedApps: List<AppInfo>): Triple<MutableList<String>, List<String>, RestoidMetadata> {
+        val pathsToBackup = mutableListOf<String>()
+        val excludePatterns = mutableListOf<String>()
+        val appMetadataMap = mutableMapOf<String, AppMetadata>()
+        val backupTypesList = mutableListOf<String>().apply {
+            if (_backupTypes.value.apk) add("apk")
+            if (_backupTypes.value.data) add("data")
+            if (_backupTypes.value.deviceProtectedData) add("user_de")
+            if (_backupTypes.value.externalData) add("external_data")
+            if (_backupTypes.value.obb) add("obb")
+            if (_backupTypes.value.media) add("media")
+        }
+
+        selectedApps.forEach { app ->
+            val appPaths = generateFilePathsForApp(app)
+            val existingAppPaths = appPaths.filter { Shell.cmd("[ -e '$it' ]").exec().isSuccess }
+            pathsToBackup.addAll(existingAppPaths)
+
+            // Exclude cache folders
+            if (_backupTypes.value.data) {
+                excludePatterns.add("'/data/data/${app.packageName}/cache'")
+                excludePatterns.add("'/data/data/${app.packageName}/code_cache'")
+            }
+            if (_backupTypes.value.externalData) {
+                excludePatterns.add("'/storage/emulated/0/Android/data/${app.packageName}/cache'")
+            }
+
+            val size = getDirectorySize(existingAppPaths)
+            appMetadataMap[app.packageName] = AppMetadata(
+                size = size,
+                types = backupTypesList,
+                versionCode = app.versionCode,
+                versionName = app.versionName
+            )
+        }
+        val metadata = RestoidMetadata(apps = appMetadataMap)
+        return Triple(pathsToBackup, excludePatterns, metadata)
+    }
+
     private suspend fun backupMetadata(repositoryId: String, repoPath: String, password: String) {
         val resticState = resticRepository.resticState.value
         if (resticState !is ResticState.Installed) return
 
         var passwordFile: File? = null
         try {
-            val metadataDir = File(application.filesDir, "metadata/$repositoryId")
+            val metadataDir = File(application.filesDir, "metadata")
             if (!metadataDir.exists() || !metadataDir.isDirectory) return
 
             passwordFile = File.createTempFile("restic-pass-meta", ".tmp", application.cacheDir)
@@ -291,19 +308,17 @@ class BackupViewModel(
 
             val tags = listOf("restoid", "metadata")
             val tagFlags = tags.joinToString(" ") { "--tag '$it'" }
-
-            // Backup with a relative path to simplify restore
-            val parentDir = metadataDir.parentFile?.absolutePath ?: return
-            val dirToBackup = metadataDir.name
-            val command = "cd '$parentDir' && RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' ${resticState.path} -r '$repoPath' backup '$dirToBackup' --json $tagFlags"
-
+            // Use 'cd' to ensure relative paths in the backup for simpler restore
+            val command = "cd '${metadataDir.absolutePath}' && RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' ${resticState.path} -r '$repoPath' backup '$repositoryId' --json $tagFlags"
 
             // We don't need detailed progress here, just run it
-            Shell.cmd(command).exec()
-
+            val result = Shell.cmd(command).exec()
+            if (!result.isSuccess) {
+                Log.e("BackupVM", "Metadata backup failed: ${result.err.joinToString("\n")}")
+            }
         } catch (e: Exception) {
             // Log this error, but don't fail the whole backup process
-            e.printStackTrace()
+            Log.e("BackupVM", "Exception during metadata backup", e)
         } finally {
             passwordFile?.delete()
         }
@@ -369,8 +384,15 @@ class BackupViewModel(
         return totalSize
     }
 
-    private fun updateProgress(stageTitle: String) {
-        _backupProgress.update { it.copy(stageTitle = stageTitle) }
+    private fun updateProgress(stageTitle: String, stagePercentage: Float = 0f, overallPercentage: Float = 0f, startTime: Long) {
+        _backupProgress.update {
+            it.copy(
+                stageTitle = stageTitle,
+                stagePercentage = stagePercentage,
+                overallPercentage = overallPercentage,
+                elapsedTime = (System.currentTimeMillis() - startTime) / 1000
+            )
+        }
     }
 
     fun toggleAppSelection(packageName: String) {
@@ -403,3 +425,4 @@ class BackupViewModel(
     fun setBackupObb(value: Boolean) = _backupTypes.update { it.copy(obb = value) }
     fun setBackupMedia(value: Boolean) = _backupTypes.update { it.copy(media = value) }
 }
+
