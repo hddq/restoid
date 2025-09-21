@@ -27,6 +27,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import io.github.hddq.restoid.ui.screens.BackupScreen
 import io.github.hddq.restoid.ui.screens.HomeScreen
+import io.github.hddq.restoid.ui.screens.LicensesScreen
 import io.github.hddq.restoid.ui.screens.RestoreScreen
 import io.github.hddq.restoid.ui.screens.SettingsScreen
 import io.github.hddq.restoid.ui.screens.SnapshotDetailsScreen
@@ -47,7 +48,9 @@ class MainActivity : ComponentActivity() {
                         // Do not show bottom bar on screens that take up the full view
                         if (currentDestination?.route != Screen.Backup.route &&
                             currentDestination?.route?.startsWith(Screen.SnapshotDetails.route) == false &&
-                            currentDestination?.route?.startsWith(Screen.Restore.route) == false) {
+                            currentDestination?.route?.startsWith(Screen.Restore.route) == false &&
+                            currentDestination?.route != Screen.Licenses.route
+                        ) {
                             val items = listOf(
                                 Screen.Home to Icons.Default.Home,
                                 Screen.Settings to Icons.Default.Settings
@@ -96,7 +99,9 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         composable(Screen.Settings.route) {
-                            SettingsScreen()
+                            SettingsScreen(
+                                onNavigateToLicenses = { navController.navigate(Screen.Licenses.route) }
+                            )
                         }
                         composable(Screen.Backup.route) {
                             BackupScreen(onNavigateUp = { navController.navigateUp() })
@@ -118,6 +123,9 @@ class MainActivity : ComponentActivity() {
                                 navController = navController,
                                 snapshotId = backStackEntry.arguments?.getString("snapshotId")
                             )
+                        }
+                        composable(Screen.Licenses.route) {
+                            LicensesScreen(onNavigateUp = { navController.navigateUp() })
                         }
                     }
                 }

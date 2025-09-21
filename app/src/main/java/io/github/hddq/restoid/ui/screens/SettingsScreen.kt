@@ -22,7 +22,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import io.github.hddq.restoid.RestoidApplication
+import io.github.hddq.restoid.ui.screens.settings.AboutSettings
 import io.github.hddq.restoid.ui.screens.settings.AddRepositoryDialog
 import io.github.hddq.restoid.ui.screens.settings.DependencySettings
 import io.github.hddq.restoid.ui.screens.settings.RepositorySettings
@@ -31,7 +33,7 @@ import io.github.hddq.restoid.ui.settings.SettingsViewModel
 import io.github.hddq.restoid.ui.settings.SettingsViewModelFactory
 
 @Composable
-fun SettingsScreen(modifier: Modifier = Modifier) {
+fun SettingsScreen(onNavigateToLicenses: () -> Unit, modifier: Modifier = Modifier) {
     val application = LocalContext.current.applicationContext as RestoidApplication
     val settingsViewModel: SettingsViewModel = viewModel(
         factory = SettingsViewModelFactory(
@@ -121,6 +123,9 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
         }
         item {
             RepositorySettings(viewModel = settingsViewModel)
+        }
+        item {
+            AboutSettings(onNavigateToLicenses = onNavigateToLicenses)
         }
     }
 }
