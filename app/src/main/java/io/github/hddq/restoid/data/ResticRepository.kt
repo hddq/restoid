@@ -30,7 +30,7 @@ class ResticRepository(private val context: Context) {
     private val _resticState = MutableStateFlow<ResticState>(ResticState.Idle)
     val resticState = _resticState.asStateFlow()
 
-    private val _snapshots = MutableStateFlow<List<SnapshotInfo>>(emptyList())
+    private val _snapshots = MutableStateFlow<List<SnapshotInfo>?>(null)
     val snapshots = _snapshots.asStateFlow()
 
     private val resticFile = File(context.filesDir, "restic")
@@ -258,6 +258,10 @@ class ResticRepository(private val context: Context) {
         withContext(Dispatchers.IO) {
             getSnapshots(repoPath, password)
         }
+    }
+
+    fun clearSnapshots() {
+        _snapshots.value = null
     }
 
     // Execute restic snapshots command for a repository

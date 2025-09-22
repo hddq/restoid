@@ -57,26 +57,28 @@ class HomeViewModel(
             repositoriesRepository.repositories
         ) { repoPath, restic, snapshots, repos ->
 
-            _uiState.update { it.copy(selectedRepo = repoPath, resticState = restic, isLoading = true) }
+            _uiState.update { it.copy(selectedRepo = repoPath, resticState = restic) }
 
             if (repoPath == null || restic !is ResticState.Installed) {
-                _uiState.update { it.copy(snapshotsWithMetadata = emptyList(), isLoading = false) }
+                resticRepository.clearSnapshots()
+                _uiState.update { it.copy(snapshotsWithMetadata = emptyList(), isLoading = false, error = null) }
                 return@combine
             }
 
-            // If we have no snapshots, try to load them if we have a password, or prompt for one if we don't.
-            if (snapshots.isEmpty()) {
-                if (repositoriesRepository.hasRepositoryPassword(repoPath)) {
-                    loadSnapshots(repoPath, restic)
-                } else {
-                    _uiState.update { it.copy(isLoading = false, showPasswordDialogFor = repoPath) }
-                }
+            if (snapshots == null) {
+                // State is "not loaded yet". Trigger the load and show spinner.
+                _uiState.update { it.copy(isLoading = true, error = null) }
+                loadSnapshots(repoPath, restic)
+                return@combine // Wait for flow to be updated by loadSnapshots
             }
+
+            // If we're here, snapshots are loaded (could be an empty list). Stop the spinner.
+            _uiState.update { it.copy(isLoading = false) }
 
             val repo = repos.find { it.path == repoPath }
             if (repo?.id == null) {
                 val errorMsg = if (repoPath != null) "Repository ID not found" else null
-                _uiState.update { it.copy(snapshotsWithMetadata = emptyList(), isLoading = false, error = errorMsg) }
+                _uiState.update { it.copy(snapshotsWithMetadata = emptyList(), error = errorMsg) }
                 return@combine
             }
 
@@ -91,25 +93,24 @@ class HomeViewModel(
 
             _uiState.update { it.copy(snapshotsWithMetadata = snapshotsWithMetadata) }
             loadAppInfoForSnapshots(snapshotsWithMetadata)
-            _uiState.update { it.copy(isLoading = false) }
 
         }.launchIn(viewModelScope)
     }
 
-    fun loadSnapshots(repoPath: String?, resticState: ResticState) {
+    private fun loadSnapshots(repoPath: String?, resticState: ResticState) {
         if (repoPath == null || resticState !is ResticState.Installed) {
             _uiState.update { it.copy(snapshotsWithMetadata = emptyList(), isLoading = false) }
             return
         }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
             if (repositoriesRepository.hasRepositoryPassword(repoPath)) {
                 val password = repositoriesRepository.getRepositoryPassword(repoPath)!!
                 val result = resticRepository.getSnapshots(repoPath, password)
                 if (result.isFailure) {
                     _uiState.update { it.copy(error = result.exceptionOrNull()?.message, isLoading = false) }
                 }
+                // On success, the `snapshots` flow is updated, which the `combine` block will handle.
             } else {
                 _uiState.update { it.copy(isLoading = false, showPasswordDialogFor = repoPath) }
             }
@@ -140,11 +141,10 @@ class HomeViewModel(
             repositoriesRepository.saveRepositoryPasswordTemporary(repoPath, password)
         }
 
-        loadSnapshots(repoPath, _uiState.value.resticState)
+        // The combine block will automatically trigger loadSnapshots now
     }
 
     fun onDismissPasswordDialog() {
         _uiState.update { it.copy(showPasswordDialogFor = null, isLoading = false) }
     }
 }
-
