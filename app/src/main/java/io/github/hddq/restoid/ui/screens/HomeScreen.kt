@@ -77,7 +77,10 @@ fun HomeScreen(
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold,
             )
-            OutlinedButton(onClick = onMaintenanceClick) {
+            OutlinedButton(
+                onClick = onMaintenanceClick,
+                enabled = uiState.selectedRepo != null
+            ) {
                 Icon(Icons.Default.Build, contentDescription = "Maintenance")
                 Spacer(Modifier.size(ButtonDefaults.IconSpacing))
                 Text("Maintenance")

@@ -11,12 +11,15 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
@@ -37,12 +40,14 @@ import io.github.hddq.restoid.ui.theme.RestoidTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val application = applicationContext as RestoidApplication
         enableEdgeToEdge()
         setContent {
             RestoidTheme {
                 val navController = rememberNavController()
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentDestination = navBackStackEntry?.destination
+                val selectedRepo by application.repositoriesRepository.selectedRepository.collectAsState()
 
                 Scaffold(
                     bottomBar = {
@@ -80,10 +85,18 @@ class MainActivity : ComponentActivity() {
                     floatingActionButton = {
                         // Show FAB only on HomeScreen
                         if (currentDestination?.route == Screen.Home.route) {
+                            val isRepoSelected = selectedRepo != null
                             ExtendedFloatingActionButton(
                                 text = { Text("Backup") },
                                 icon = { Icon(Icons.Filled.Add, contentDescription = "Backup") },
-                                onClick = { navController.navigate(Screen.Backup.route) }
+                                onClick = {
+                                    if (isRepoSelected) {
+                                        navController.navigate(Screen.Backup.route)
+                                    }
+                                },
+                                // Visually disable the FAB when no repo is selected
+                                containerColor = if (isRepoSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                                contentColor = if (isRepoSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                             )
                         }
                     }
@@ -141,4 +154,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
