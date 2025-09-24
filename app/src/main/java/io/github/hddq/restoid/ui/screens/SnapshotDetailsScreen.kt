@@ -5,6 +5,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -79,7 +81,9 @@ fun SnapshotDetailsScreen(
             isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             error != null -> Text("Error: $error", color = MaterialTheme.colorScheme.error)
             snapshot != null -> {
-                SnapshotDetailsHeader(snapshot!!)
+                SnapshotDetailsHeader(
+                    snapshot = snapshot!!
+                )
                 Spacer(Modifier.height(16.dp))
                 if (backupDetails.isNotEmpty()) {
                     BackedUpAppsList(backupDetails)
@@ -107,8 +111,6 @@ fun SnapshotDetailsScreen(
 fun SnapshotDetailsHeader(snapshot: SnapshotInfo) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Snapshot Details", style = MaterialTheme.typography.titleLarge)
-            Divider()
             Text("ID: ${snapshot.id}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
             Text("Time: ${snapshot.time}", style = MaterialTheme.typography.bodyMedium)
         }
@@ -184,3 +186,4 @@ fun ConfirmForgetDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
         }
     )
 }
+

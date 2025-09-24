@@ -85,10 +85,15 @@ class MainActivity : ComponentActivity() {
                                     // Actions are specific to certain screens
                                     if (currentDestination?.route?.startsWith(Screen.SnapshotDetails.route) == true) {
                                         val viewModel: SnapshotDetailsViewModel = viewModel(
+                                            viewModelStoreOwner = navBackStackEntry!!,
                                             factory = SnapshotDetailsViewModelFactory(application, application.repositoriesRepository, application.resticRepository, application.appInfoRepository, application.metadataRepository)
                                         )
                                         IconButton(onClick = { viewModel.onForgetSnapshot() }) {
-                                            Icon(Icons.Default.Delete, contentDescription = "Forget Snapshot")
+                                            Icon(
+                                                Icons.Default.Delete,
+                                                contentDescription = "Forget Snapshot",
+                                                tint = MaterialTheme.colorScheme.error
+                                            )
                                         }
                                     }
                                 }
@@ -134,7 +139,11 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             Screen.Backup.route -> {
-                                val viewModel: BackupViewModel = viewModel(factory = BackupViewModelFactory(application, application.repositoriesRepository, application.resticRepository, application.notificationRepository, application.appInfoRepository))
+                                // FIX: Scope the ViewModel to the NavBackStackEntry to ensure a single instance is shared with the screen.
+                                val viewModel: BackupViewModel = viewModel(
+                                    viewModelStoreOwner = navBackStackEntry!!,
+                                    factory = BackupViewModelFactory(application, application.repositoriesRepository, application.resticRepository, application.notificationRepository, application.appInfoRepository)
+                                )
                                 val isBackingUp by viewModel.isBackingUp.collectAsState()
                                 val backupProgress by viewModel.backupProgress.collectAsState()
                                 if (!isBackingUp && !backupProgress.isFinished) {
@@ -146,7 +155,11 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                             Screen.Maintenance.route -> {
-                                val viewModel: MaintenanceViewModel = viewModel(factory = MaintenanceViewModelFactory(application.repositoriesRepository, application.resticRepository, application.notificationRepository))
+                                // FIX: Scope the ViewModel to the NavBackStackEntry.
+                                val viewModel: MaintenanceViewModel = viewModel(
+                                    viewModelStoreOwner = navBackStackEntry!!,
+                                    factory = MaintenanceViewModelFactory(application.repositoriesRepository, application.resticRepository, application.notificationRepository)
+                                )
                                 val uiState by viewModel.uiState.collectAsState()
                                 if (!uiState.isRunning && !uiState.progress.isFinished) {
                                     ExtendedFloatingActionButton(
@@ -164,7 +177,11 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             Screen.Restore.route + "/{snapshotId}" -> {
-                                val viewModel: RestoreViewModel = viewModel(factory = RestoreViewModelFactory(application, application.repositoriesRepository, application.resticRepository, application.appInfoRepository, application.notificationRepository, application.metadataRepository, navBackStackEntry?.arguments?.getString("snapshotId") ?: ""))
+                                // FIX: Scope the ViewModel to the NavBackStackEntry.
+                                val viewModel: RestoreViewModel = viewModel(
+                                    viewModelStoreOwner = navBackStackEntry!!,
+                                    factory = RestoreViewModelFactory(application, application.repositoriesRepository, application.resticRepository, application.appInfoRepository, application.notificationRepository, application.metadataRepository, navBackStackEntry?.arguments?.getString("snapshotId") ?: "")
+                                )
                                 val isRestoring by viewModel.isRestoring.collectAsState()
                                 val restoreProgress by viewModel.restoreProgress.collectAsState()
                                 if (!isRestoring && !restoreProgress.isFinished) {
@@ -227,3 +244,4 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
