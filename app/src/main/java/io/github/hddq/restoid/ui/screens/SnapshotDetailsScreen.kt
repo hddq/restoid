@@ -5,10 +5,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,7 +16,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import io.github.hddq.restoid.RestoidApplication
-import io.github.hddq.restoid.Screen
 import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.model.BackupDetail
 import io.github.hddq.restoid.ui.snapshot.ForgetResult
@@ -28,11 +23,11 @@ import io.github.hddq.restoid.ui.snapshot.SnapshotDetailsViewModel
 import io.github.hddq.restoid.ui.snapshot.SnapshotDetailsViewModelFactory
 import coil.compose.rememberAsyncImagePainter
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SnapshotDetailsScreen(
     navController: NavController,
-    snapshotId: String?
+    snapshotId: String?,
+    modifier: Modifier = Modifier
 ) {
     val application = LocalContext.current.applicationContext as RestoidApplication
     val viewModel: SnapshotDetailsViewModel = viewModel(
@@ -74,68 +69,36 @@ fun SnapshotDetailsScreen(
         )
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Snapshot Details") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    if (snapshot != null) {
-                        IconButton(onClick = { viewModel.onForgetSnapshot() }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Forget Snapshot")
-                        }
-                    }
-                }
-            )
-        },
-        floatingActionButton = {
-            if (snapshot != null) {
-                ExtendedFloatingActionButton(
-                    text = { Text("Restore") },
-                    icon = { Icon(Icons.Default.Restore, contentDescription = "Restore Snapshot") },
-                    onClick = {
-                        // Navigate to the new Restore screen with the current snapshotId
-                        navController.navigate("${Screen.Restore.route}/$snapshotId")
-                    }
-                )
-            }
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .padding(16.dp)
-        ) {
-            when {
-                isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-                error != null -> Text("Error: $error", color = MaterialTheme.colorScheme.error)
-                snapshot != null -> {
-                    SnapshotDetailsHeader(snapshot!!)
-                    Spacer(Modifier.height(16.dp))
-                    if (backupDetails.isNotEmpty()) {
-                        BackedUpAppsList(backupDetails)
-                    } else if (!isLoading) {
-                        // For legacy snapshots or if processing fails
-                        Text("Backed up paths:", style = MaterialTheme.typography.titleMedium)
-                        LazyColumn {
-                            items(snapshot!!.paths) { path ->
-                                Text(path, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
-                            }
-                        }
-                    }
-                }
-                else -> if (!isLoading) Text("No snapshot found.")
-            }
-
-            if (isForgetting) {
+    // The Scaffold is gone. The root Column now receives the modifier from NavHost.
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(start = 16.dp, end = 16.dp, bottom = 80.dp) // Add padding for content and FAB
+    ) {
+        when {
+            isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            error != null -> Text("Error: $error", color = MaterialTheme.colorScheme.error)
+            snapshot != null -> {
+                SnapshotDetailsHeader(snapshot!!)
                 Spacer(Modifier.height(16.dp))
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                Text("Forgetting snapshot...", modifier = Modifier.align(Alignment.CenterHorizontally))
+                if (backupDetails.isNotEmpty()) {
+                    BackedUpAppsList(backupDetails)
+                } else if (!isLoading) {
+                    Text("Backed up paths:", style = MaterialTheme.typography.titleMedium)
+                    LazyColumn {
+                        items(snapshot!!.paths) { path ->
+                            Text(path, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
+                        }
+                    }
+                }
             }
+            else -> if (!isLoading) Text("No snapshot found.")
+        }
+
+        if (isForgetting) {
+            Spacer(Modifier.height(16.dp))
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            Text("Forgetting snapshot...", modifier = Modifier.align(Alignment.CenterHorizontally))
         }
     }
 }

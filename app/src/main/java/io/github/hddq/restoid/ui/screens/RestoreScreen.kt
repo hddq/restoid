@@ -3,37 +3,10 @@ package io.github.hddq.restoid.ui.screens
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Restore
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -53,9 +26,8 @@ import io.github.hddq.restoid.ui.shared.ProgressScreenContent
 import io.github.hddq.restoid.ui.theme.Orange
 import coil.compose.rememberAsyncImagePainter
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RestoreScreen(navController: NavController, snapshotId: String?) {
+fun RestoreScreen(navController: NavController, snapshotId: String?, modifier: Modifier = Modifier) {
     val application = LocalContext.current.applicationContext as RestoidApplication
     val viewModel: RestoreViewModel = viewModel(
         factory = RestoreViewModelFactory(
@@ -78,69 +50,46 @@ fun RestoreScreen(navController: NavController, snapshotId: String?) {
 
     val showProgressScreen = isRestoring || restoreProgress.isFinished
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(if (showProgressScreen) "Restore Progress" else "Restore Snapshot") },
-                navigationIcon = {
-                    if (!isRestoring) {
-                        IconButton(onClick = { navController.popBackStack() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                        }
-                    }
+    Crossfade(
+        targetState = showProgressScreen,
+        label = "RestoreScreenCrossfade",
+        modifier = modifier.fillMaxSize()
+    ) { showProgress ->
+        if (showProgress) {
+            ProgressScreenContent(
+                progress = restoreProgress,
+                operationType = "Restore",
+                onDone = {
+                    viewModel.onDone()
+                    navController.popBackStack()
                 }
             )
-        },
-        floatingActionButton = {
-            if (!showProgressScreen) {
-                ExtendedFloatingActionButton(
-                    onClick = { viewModel.startRestore() },
-                    icon = { Icon(Icons.Default.Restore, contentDescription = "Start Restore") },
-                    text = { Text("Start Restore") }
-                )
-            }
-        }
-    ) { paddingValues ->
-        Crossfade(targetState = showProgressScreen, label = "RestoreScreenCrossfade") { showProgress ->
-            if (showProgress) {
-                ProgressScreenContent(
-                    progress = restoreProgress,
-                    operationType = "Restore",
-                    onDone = {
-                        viewModel.onDone()
-                        navController.popBackStack()
-                    },
-                    modifier = Modifier.padding(paddingValues)
-                )
-            } else {
-                RestoreSelectionContent(
-                    paddingValues = paddingValues,
-                    backupDetails = backupDetails,
-                    isLoading = isLoading,
-                    restoreTypes = restoreTypes,
-                    allowDowngrade = allowDowngrade,
-                    onToggleApp = viewModel::toggleRestoreAppSelection,
-                    onToggleAll = viewModel::toggleAllRestoreSelection,
-                    onToggleRestoreType = { type, value ->
-                        when (type) {
-                            "APK" -> viewModel.setRestoreApk(value)
-                            "Data" -> viewModel.setRestoreData(value)
-                            "Device Protected Data" -> viewModel.setRestoreDeviceProtectedData(value)
-                            "External Data" -> viewModel.setRestoreExternalData(value)
-                            "OBB Data" -> viewModel.setRestoreObb(value)
-                            "Media Data" -> viewModel.setRestoreMedia(value)
-                        }
-                    },
-                    onToggleAllowDowngrade = viewModel::setAllowDowngrade
-                )
-            }
+        } else {
+            RestoreSelectionContent(
+                backupDetails = backupDetails,
+                isLoading = isLoading,
+                restoreTypes = restoreTypes,
+                allowDowngrade = allowDowngrade,
+                onToggleApp = viewModel::toggleRestoreAppSelection,
+                onToggleAll = viewModel::toggleAllRestoreSelection,
+                onToggleRestoreType = { type, value ->
+                    when (type) {
+                        "APK" -> viewModel.setRestoreApk(value)
+                        "Data" -> viewModel.setRestoreData(value)
+                        "Device Protected Data" -> viewModel.setRestoreDeviceProtectedData(value)
+                        "External Data" -> viewModel.setRestoreExternalData(value)
+                        "OBB Data" -> viewModel.setRestoreObb(value)
+                        "Media Data" -> viewModel.setRestoreMedia(value)
+                    }
+                },
+                onToggleAllowDowngrade = viewModel::setAllowDowngrade
+            )
         }
     }
 }
 
 @Composable
 fun RestoreSelectionContent(
-    paddingValues: PaddingValues,
     backupDetails: List<BackupDetail>,
     isLoading: Boolean,
     restoreTypes: RestoreTypes,
@@ -151,10 +100,8 @@ fun RestoreSelectionContent(
     onToggleAllowDowngrade: (Boolean) -> Unit
 ) {
     LazyColumn(
-        modifier = Modifier
-            .padding(paddingValues)
-            .fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp, top = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
