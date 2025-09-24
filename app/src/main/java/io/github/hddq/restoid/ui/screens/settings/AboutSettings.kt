@@ -1,5 +1,7 @@
 package io.github.hddq.restoid.ui.screens.settings
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -41,6 +43,8 @@ fun AboutSettings(onNavigateToLicenses: () -> Unit) {
             "N/A"
         }
     }
+    val githubIntent = remember { Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/hddq/restoid")) }
+
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
@@ -66,6 +70,7 @@ fun AboutSettings(onNavigateToLicenses: () -> Unit) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .clickable { context.startActivity(githubIntent) }
                     .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -86,4 +91,3 @@ fun AboutSettings(onNavigateToLicenses: () -> Unit) {
         }
     }
 }
-
