@@ -80,6 +80,17 @@ class ResticRepository(private val context: Context) {
         }
     }
 
+    suspend fun unlock(repoPath: String, password: String): Result<String> {
+        return withContext(Dispatchers.IO) {
+            executeResticCommand(
+                repoPath = repoPath,
+                password = password,
+                command = "unlock",
+                failureMessage = "Failed to unlock repository"
+            )
+        }
+    }
+
     private suspend fun executeResticCommand(
         repoPath: String,
         password: String,
@@ -485,3 +496,4 @@ data class SnapshotInfo(
     val paths: List<String>,
     val tags: List<String>
 )
+

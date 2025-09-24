@@ -61,6 +61,7 @@ fun MaintenanceScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
                 uiState = uiState,
                 onSetCheckRepo = viewModel::setCheckRepo,
                 onSetPruneRepo = viewModel::setPruneRepo,
+                onSetUnlockRepo = viewModel::setUnlockRepo,
                 onSetReadData = viewModel::setReadData
             )
         }
@@ -72,6 +73,7 @@ fun MaintenanceSelectionContent(
     uiState: MaintenanceUiState,
     onSetCheckRepo: (Boolean) -> Unit,
     onSetPruneRepo: (Boolean) -> Unit,
+    onSetUnlockRepo: (Boolean) -> Unit,
     onSetReadData: (Boolean) -> Unit
 ) {
     LazyColumn(
@@ -94,6 +96,11 @@ fun MaintenanceSelectionContent(
                         text = "Tasks",
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    MaintenanceTaskToggle(
+                        label = "Unlock repository",
+                        checked = uiState.unlockRepo,
+                        onCheckedChange = onSetUnlockRepo
                     )
                     MaintenanceTaskToggle(
                         label = "Check repository integrity",
@@ -140,3 +147,4 @@ fun MaintenanceTaskToggle(label: String, checked: Boolean, onCheckedChange: (Boo
         )
     }
 }
+

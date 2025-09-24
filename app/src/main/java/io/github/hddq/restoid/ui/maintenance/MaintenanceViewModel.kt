@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 data class MaintenanceUiState(
     val checkRepo: Boolean = true,
     val pruneRepo: Boolean = false,
+    val unlockRepo: Boolean = false,
     val readData: Boolean = false, // Add this
     val isRunning: Boolean = false,
     val progress: OperationProgress = OperationProgress(),
@@ -55,6 +56,9 @@ class MaintenanceViewModel(
                 val password = repositoriesRepository.getRepositoryPassword(selectedRepoPath)!!
 
                 val tasksToRun = mutableListOf<suspend () -> Pair<String, Result<String>>>()
+                if (_uiState.value.unlockRepo) {
+                    tasksToRun.add { "Unlock" to resticRepository.unlock(selectedRepoPath, password) }
+                }
                 if (_uiState.value.checkRepo) {
                     tasksToRun.add { "Check" to resticRepository.check(selectedRepoPath, password, _uiState.value.readData) }
                 }
@@ -115,7 +119,7 @@ class MaintenanceViewModel(
     }
 
     private fun preflightChecks(): OperationProgress? {
-        if (!_uiState.value.checkRepo && !_uiState.value.pruneRepo) {
+        if (!_uiState.value.checkRepo && !_uiState.value.pruneRepo && !_uiState.value.unlockRepo) {
             return OperationProgress(isFinished = true, error = "No tasks selected.", finalSummary = "No maintenance tasks were selected.")
         }
         if (resticRepository.resticState.value !is ResticState.Installed) {
@@ -144,7 +148,12 @@ class MaintenanceViewModel(
         _uiState.update { it.copy(pruneRepo = value) }
     }
 
+    fun setUnlockRepo(value: Boolean) {
+        _uiState.update { it.copy(unlockRepo = value) }
+    }
+
     fun setReadData(value: Boolean) {
         _uiState.update { it.copy(readData = value) }
     }
 }
+
