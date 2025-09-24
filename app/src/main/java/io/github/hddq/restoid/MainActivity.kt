@@ -6,20 +6,20 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Backup
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
@@ -28,6 +28,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import io.github.hddq.restoid.ui.backup.BackupViewModel
+import io.github.hddq.restoid.ui.backup.BackupViewModelFactory
+import io.github.hddq.restoid.ui.maintenance.MaintenanceViewModel
+import io.github.hddq.restoid.ui.maintenance.MaintenanceViewModelFactory
+import io.github.hddq.restoid.ui.restore.RestoreViewModel
+import io.github.hddq.restoid.ui.restore.RestoreViewModelFactory
 import io.github.hddq.restoid.ui.screens.BackupScreen
 import io.github.hddq.restoid.ui.screens.HomeScreen
 import io.github.hddq.restoid.ui.screens.LicensesScreen
@@ -35,9 +41,12 @@ import io.github.hddq.restoid.ui.screens.MaintenanceScreen
 import io.github.hddq.restoid.ui.screens.RestoreScreen
 import io.github.hddq.restoid.ui.screens.SettingsScreen
 import io.github.hddq.restoid.ui.screens.SnapshotDetailsScreen
+import io.github.hddq.restoid.ui.snapshot.SnapshotDetailsViewModel
+import io.github.hddq.restoid.ui.snapshot.SnapshotDetailsViewModelFactory
 import io.github.hddq.restoid.ui.theme.RestoidTheme
 
 class MainActivity : ComponentActivity() {
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val application = applicationContext as RestoidApplication
@@ -47,17 +56,47 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentDestination = navBackStackEntry?.destination
-                val selectedRepo by application.repositoriesRepository.selectedRepository.collectAsState()
+
+                // Determine if the bottom bar should be shown
+                val showBottomBar = currentDestination?.route in listOf(Screen.Home.route, Screen.Settings.route)
 
                 Scaffold(
+                    topBar = {
+                        // Dynamic TopAppBar: Show only on screens that need it
+                        if (!showBottomBar) { // A good proxy for "detail" screens
+                            TopAppBar(
+                                title = {
+                                    val title = when {
+                                        currentDestination?.route == Screen.Backup.route -> "New Backup"
+                                        currentDestination?.route == Screen.Maintenance.route -> "Maintenance"
+                                        currentDestination?.route == Screen.Licenses.route -> "Open Source Licenses"
+                                        currentDestination?.route?.startsWith(Screen.SnapshotDetails.route) == true -> "Snapshot Details"
+                                        currentDestination?.route?.startsWith(Screen.Restore.route) == true -> "Restore Snapshot"
+                                        else -> ""
+                                    }
+                                    Text(title)
+                                },
+                                navigationIcon = {
+                                    IconButton(onClick = { navController.navigateUp() }) {
+                                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                                    }
+                                },
+                                actions = {
+                                    // Actions are specific to certain screens
+                                    if (currentDestination?.route?.startsWith(Screen.SnapshotDetails.route) == true) {
+                                        val viewModel: SnapshotDetailsViewModel = viewModel(
+                                            factory = SnapshotDetailsViewModelFactory(application, application.repositoriesRepository, application.resticRepository, application.appInfoRepository, application.metadataRepository)
+                                        )
+                                        IconButton(onClick = { viewModel.onForgetSnapshot() }) {
+                                            Icon(Icons.Default.Delete, contentDescription = "Forget Snapshot")
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    },
                     bottomBar = {
-                        // Do not show bottom bar on screens that take up the full view
-                        if (currentDestination?.route != Screen.Backup.route &&
-                            currentDestination?.route?.startsWith(Screen.SnapshotDetails.route) == false &&
-                            currentDestination?.route?.startsWith(Screen.Restore.route) == false &&
-                            currentDestination?.route != Screen.Licenses.route &&
-                            currentDestination?.route != Screen.Maintenance.route
-                        ) {
+                        if (showBottomBar) {
                             val items = listOf(
                                 Screen.Home to Icons.Default.Home,
                                 Screen.Settings to Icons.Default.Settings
@@ -70,9 +109,7 @@ class MainActivity : ComponentActivity() {
                                         selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
                                         onClick = {
                                             navController.navigate(screen.route) {
-                                                popUpTo(navController.graph.findStartDestination().id) {
-                                                    saveState = true
-                                                }
+                                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                                                 launchSingleTop = true
                                                 restoreState = true
                                             }
@@ -83,43 +120,79 @@ class MainActivity : ComponentActivity() {
                         }
                     },
                     floatingActionButton = {
-                        // Show FAB only on HomeScreen
-                        if (currentDestination?.route == Screen.Home.route) {
-                            val isRepoSelected = selectedRepo != null
-                            ExtendedFloatingActionButton(
-                                text = { Text("Backup") },
-                                icon = { Icon(Icons.Filled.Add, contentDescription = "Backup") },
-                                onClick = {
-                                    if (isRepoSelected) {
-                                        navController.navigate(Screen.Backup.route)
-                                    }
-                                },
-                                // Visually disable the FAB when no repo is selected
-                                containerColor = if (isRepoSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                                contentColor = if (isRepoSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                            )
+                        // Dynamic FAB: Show only on screens that need it
+                        when (currentDestination?.route) {
+                            Screen.Home.route -> {
+                                val selectedRepo by application.repositoriesRepository.selectedRepository.collectAsState()
+                                val isRepoSelected = selectedRepo != null
+                                ExtendedFloatingActionButton(
+                                    text = { Text("Backup") },
+                                    icon = { Icon(Icons.Filled.Add, contentDescription = "Backup") },
+                                    onClick = { if (isRepoSelected) { navController.navigate(Screen.Backup.route) } },
+                                    containerColor = if (isRepoSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                                    contentColor = if (isRepoSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                )
+                            }
+                            Screen.Backup.route -> {
+                                val viewModel: BackupViewModel = viewModel(factory = BackupViewModelFactory(application, application.repositoriesRepository, application.resticRepository, application.notificationRepository, application.appInfoRepository))
+                                val isBackingUp by viewModel.isBackingUp.collectAsState()
+                                val backupProgress by viewModel.backupProgress.collectAsState()
+                                if (!isBackingUp && !backupProgress.isFinished) {
+                                    ExtendedFloatingActionButton(
+                                        onClick = { viewModel.startBackup() },
+                                        icon = { Icon(Icons.Default.Backup, contentDescription = "Start Backup") },
+                                        text = { Text("Start Backup") }
+                                    )
+                                }
+                            }
+                            Screen.Maintenance.route -> {
+                                val viewModel: MaintenanceViewModel = viewModel(factory = MaintenanceViewModelFactory(application.repositoriesRepository, application.resticRepository, application.notificationRepository))
+                                val uiState by viewModel.uiState.collectAsState()
+                                if (!uiState.isRunning && !uiState.progress.isFinished) {
+                                    ExtendedFloatingActionButton(
+                                        onClick = { viewModel.runTasks() },
+                                        icon = { Icon(Icons.Default.PlayArrow, contentDescription = "Run Tasks") },
+                                        text = { Text("Run Tasks") }
+                                    )
+                                }
+                            }
+                            Screen.SnapshotDetails.route + "/{snapshotId}" -> {
+                                ExtendedFloatingActionButton(
+                                    text = { Text("Restore") },
+                                    icon = { Icon(Icons.Default.Restore, contentDescription = "Restore Snapshot") },
+                                    onClick = { navController.navigate("${Screen.Restore.route}/${navBackStackEntry?.arguments?.getString("snapshotId")}") }
+                                )
+                            }
+                            Screen.Restore.route + "/{snapshotId}" -> {
+                                val viewModel: RestoreViewModel = viewModel(factory = RestoreViewModelFactory(application, application.repositoriesRepository, application.resticRepository, application.appInfoRepository, application.notificationRepository, application.metadataRepository, navBackStackEntry?.arguments?.getString("snapshotId") ?: ""))
+                                val isRestoring by viewModel.isRestoring.collectAsState()
+                                val restoreProgress by viewModel.restoreProgress.collectAsState()
+                                if (!isRestoring && !restoreProgress.isFinished) {
+                                    ExtendedFloatingActionButton(
+                                        onClick = { viewModel.startRestore() },
+                                        icon = { Icon(Icons.Default.Restore, contentDescription = "Start Restore") },
+                                        text = { Text("Start Restore") }
+                                    )
+                                }
+                            }
                         }
                     }
                 ) { innerPadding ->
                     NavHost(
                         navController = navController,
                         startDestination = Screen.Home.route,
+                        // Apply the padding from the Scaffold to the NavHost.
+                        // Each screen's content will now live within this padded area.
                         modifier = Modifier.padding(innerPadding)
                     ) {
                         composable(Screen.Home.route) {
                             HomeScreen(
-                                onSnapshotClick = { snapshotId ->
-                                    navController.navigate("${Screen.SnapshotDetails.route}/$snapshotId")
-                                },
-                                onMaintenanceClick = {
-                                    navController.navigate(Screen.Maintenance.route)
-                                }
+                                onSnapshotClick = { snapshotId -> navController.navigate("${Screen.SnapshotDetails.route}/$snapshotId") },
+                                onMaintenanceClick = { navController.navigate(Screen.Maintenance.route) }
                             )
                         }
                         composable(Screen.Settings.route) {
-                            SettingsScreen(
-                                onNavigateToLicenses = { navController.navigate(Screen.Licenses.route) }
-                            )
+                            SettingsScreen(onNavigateToLicenses = { navController.navigate(Screen.Licenses.route) })
                         }
                         composable(Screen.Backup.route) {
                             BackupScreen(onNavigateUp = { navController.navigateUp() })

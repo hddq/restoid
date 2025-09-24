@@ -6,9 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -31,9 +28,8 @@ import io.github.hddq.restoid.ui.backup.BackupViewModelFactory
 import io.github.hddq.restoid.ui.shared.ProgressScreenContent
 import coil.compose.rememberAsyncImagePainter
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BackupScreen(onNavigateUp: () -> Unit) {
+fun BackupScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
     val application = LocalContext.current.applicationContext as RestoidApplication
     val viewModel: BackupViewModel = viewModel(
         factory = BackupViewModelFactory(
@@ -50,8 +46,6 @@ fun BackupScreen(onNavigateUp: () -> Unit) {
     val isBackingUp by viewModel.isBackingUp.collectAsState()
     val backupProgress by viewModel.backupProgress.collectAsState()
 
-    // Refresh the app list every time the screen becomes visible.
-    // The cache will make this fast. This handles newly installed apps.
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -67,69 +61,47 @@ fun BackupScreen(onNavigateUp: () -> Unit) {
 
     val showProgressScreen = isBackingUp || backupProgress.isFinished
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(if (showProgressScreen) "Backup Progress" else "New Backup") },
-                navigationIcon = {
-                    if (!isBackingUp) {
-                        IconButton(onClick = onNavigateUp) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                        }
-                    }
+    // The Scaffold is now gone. We apply the modifier from NavHost to the root composable.
+    Crossfade(
+        targetState = showProgressScreen,
+        label = "BackupScreenCrossfade",
+        modifier = modifier.fillMaxSize() // Apply modifier here
+    ) { showProgress ->
+        if (showProgress) {
+            ProgressScreenContent(
+                progress = backupProgress,
+                operationType = "Backup",
+                onDone = {
+                    viewModel.onDone()
+                    onNavigateUp()
                 }
+                // No padding needed, handled by the modifier on Crossfade
             )
-        },
-        floatingActionButton = {
-            if (!showProgressScreen) {
-                ExtendedFloatingActionButton(
-                    onClick = { viewModel.startBackup() },
-                    icon = { Icon(Icons.Default.Backup, contentDescription = "Start Backup") },
-                    text = { Text("Start Backup") }
-                )
-            }
-        }
-    ) { paddingValues ->
-        Crossfade(targetState = showProgressScreen, label = "BackupScreenCrossfade") { showProgress ->
-            if (showProgress) {
-                ProgressScreenContent(
-                    progress = backupProgress,
-                    operationType = "Backup",
-                    onDone = {
-                        viewModel.onDone()
-                        onNavigateUp()
-                    },
-                    modifier = Modifier.padding(paddingValues)
-                )
-            } else {
-                BackupSelectionContent(
-                    paddingValues = paddingValues,
-                    viewModel = viewModel,
-                    apps = apps,
-                    isLoading = isLoadingApps,
-                    backupTypes = backupTypes
-                )
-            }
+        } else {
+            BackupSelectionContent(
+                viewModel = viewModel,
+                apps = apps,
+                isLoading = isLoadingApps,
+                backupTypes = backupTypes
+            )
         }
     }
 }
 
 @Composable
 fun BackupSelectionContent(
-    paddingValues: PaddingValues,
     viewModel: BackupViewModel,
     apps: List<AppInfo>,
     isLoading: Boolean,
     backupTypes: BackupTypes
 ) {
+    // This LazyColumn is now the root content, so it doesn't need external padding.
+    // The contentPadding provides internal spacing.
     LazyColumn(
-        modifier = Modifier
-            .padding(paddingValues)
-            .fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp, top = 8.dp), // Added bottom padding for FAB
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Backup Types Card
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -156,7 +128,6 @@ fun BackupSelectionContent(
             }
         }
 
-        // Apps Header
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -173,7 +144,6 @@ fun BackupSelectionContent(
             }
         }
 
-        // Apps List
         if (isLoading) {
             item {
                 Box(

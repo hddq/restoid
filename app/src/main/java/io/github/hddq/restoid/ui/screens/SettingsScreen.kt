@@ -22,7 +22,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import io.github.hddq.restoid.RestoidApplication
 import io.github.hddq.restoid.ui.screens.settings.AboutSettings
 import io.github.hddq.restoid.ui.screens.settings.AddRepositoryDialog
@@ -97,10 +96,11 @@ fun SettingsScreen(onNavigateToLicenses: () -> Unit, modifier: Modifier = Modifi
         )
     }
 
+    // Apply the modifier passed from NavHost here
     LazyColumn(
         modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp),
+            .fillMaxSize(),
+        contentPadding = PaddingValues(16.dp), // Add padding to the content itself
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {

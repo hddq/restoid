@@ -48,7 +48,7 @@ import io.github.hddq.restoid.ui.home.SnapshotWithMetadata
 fun HomeScreen(
     onSnapshotClick: (String) -> Unit,
     onMaintenanceClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier // Accept a modifier
 ) {
     val application = LocalContext.current.applicationContext as RestoidApplication
     val viewModel: HomeViewModel = viewModel(
@@ -61,6 +61,8 @@ fun HomeScreen(
     )
     val uiState by viewModel.uiState.collectAsState()
 
+    // Apply the modifier passed from the NavHost to the root Column.
+    // This modifier contains the padding from the main Scaffold.
     Column(
         modifier = modifier
             .fillMaxSize()
