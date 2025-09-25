@@ -59,11 +59,11 @@ class MaintenanceViewModel(
                 if (_uiState.value.unlockRepo) {
                     tasksToRun.add { "Unlock" to resticRepository.unlock(selectedRepoPath, password) }
                 }
-                if (_uiState.value.checkRepo) {
-                    tasksToRun.add { "Check" to resticRepository.check(selectedRepoPath, password, _uiState.value.readData) }
-                }
                 if (_uiState.value.pruneRepo) {
                     tasksToRun.add { "Prune" to resticRepository.prune(selectedRepoPath, password) }
+                }
+                if (_uiState.value.checkRepo) {
+                    tasksToRun.add { "Check" to resticRepository.check(selectedRepoPath, password, _uiState.value.readData) }
                 }
 
                 if (tasksToRun.isEmpty()) {
@@ -156,4 +156,3 @@ class MaintenanceViewModel(
         _uiState.update { it.copy(readData = value) }
     }
 }
-

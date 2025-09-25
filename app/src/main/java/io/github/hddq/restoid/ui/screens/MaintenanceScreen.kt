@@ -107,6 +107,12 @@ fun MaintenanceSelectionContent(
                     )
                     Divider(color = MaterialTheme.colorScheme.background)
                     MaintenanceTaskToggle(
+                        label = "Prune repository",
+                        checked = uiState.pruneRepo,
+                        onCheckedChange = onSetPruneRepo
+                    )
+                    Divider(color = MaterialTheme.colorScheme.background)
+                    MaintenanceTaskToggle(
                         label = "Check repository integrity",
                         checked = uiState.checkRepo,
                         onCheckedChange = onSetCheckRepo
@@ -120,12 +126,6 @@ fun MaintenanceSelectionContent(
                             )
                         }
                     }
-                    Divider(color = MaterialTheme.colorScheme.background)
-                    MaintenanceTaskToggle(
-                        label = "Prune repository",
-                        checked = uiState.pruneRepo,
-                        onCheckedChange = onSetPruneRepo
-                    )
                 }
             }
         }
