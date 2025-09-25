@@ -5,6 +5,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -209,7 +211,18 @@ fun RestoreTypeToggle(label: String, checked: Boolean, onCheckedChange: (Boolean
         )
         Switch(
             checked = checked,
-            onCheckedChange = onCheckedChange
+            onCheckedChange = onCheckedChange,
+            thumbContent = if (checked) {
+                {
+                    Icon(
+                        imageVector = Icons.Filled.Check,
+                        contentDescription = null,
+                        modifier = Modifier.size(SwitchDefaults.IconSize),
+                    )
+                }
+            } else {
+                null
+            }
         )
     }
 }
@@ -262,8 +275,18 @@ private fun RestoreAppListItem(detail: BackupDetail, allowDowngrade: Boolean, on
         Switch(
             checked = app.isSelected,
             onCheckedChange = { onToggle() },
-            enabled = isEnabled
+            enabled = isEnabled,
+            thumbContent = if (app.isSelected) {
+                {
+                    Icon(
+                        imageVector = Icons.Filled.Check,
+                        contentDescription = null,
+                        modifier = Modifier.size(SwitchDefaults.IconSize),
+                    )
+                }
+            } else {
+                null
+            }
         )
     }
 }
-
