@@ -5,7 +5,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -17,6 +16,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil.compose.rememberAsyncImagePainter
 import io.github.hddq.restoid.RestoidApplication
 import io.github.hddq.restoid.model.BackupDetail
 import io.github.hddq.restoid.ui.restore.RestoreTypes
@@ -24,7 +24,6 @@ import io.github.hddq.restoid.ui.restore.RestoreViewModel
 import io.github.hddq.restoid.ui.restore.RestoreViewModelFactory
 import io.github.hddq.restoid.ui.shared.ProgressScreenContent
 import io.github.hddq.restoid.ui.theme.Orange
-import coil.compose.rememberAsyncImagePainter
 
 @Composable
 fun RestoreScreen(navController: NavController, snapshotId: String?, modifier: Modifier = Modifier) {
@@ -102,7 +101,7 @@ fun RestoreSelectionContent(
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp, top = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
             Card(
@@ -111,22 +110,24 @@ fun RestoreSelectionContent(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer
                 )
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
+                Column {
                     Text(
                         text = "Restore Options",
                         style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(bottom = 8.dp)
+                        modifier = Modifier.padding(16.dp)
                     )
                     RestoreTypeToggle("APK", checked = restoreTypes.apk) { onToggleRestoreType("APK", it) }
+                    Divider(color = MaterialTheme.colorScheme.background)
                     RestoreTypeToggle("Data", checked = restoreTypes.data) { onToggleRestoreType("Data", it) }
+                    Divider(color = MaterialTheme.colorScheme.background)
                     RestoreTypeToggle("Device Protected Data", checked = restoreTypes.deviceProtectedData) { onToggleRestoreType("Device Protected Data", it) }
+                    Divider(color = MaterialTheme.colorScheme.background)
                     RestoreTypeToggle("External Data", checked = restoreTypes.externalData) { onToggleRestoreType("External Data", it) }
+                    Divider(color = MaterialTheme.colorScheme.background)
                     RestoreTypeToggle("OBB Data", checked = restoreTypes.obb) { onToggleRestoreType("OBB Data", it) }
+                    Divider(color = MaterialTheme.colorScheme.background)
                     RestoreTypeToggle("Media Data", checked = restoreTypes.media) { onToggleRestoreType("Media Data", it) }
-                    Divider(modifier = Modifier.padding(vertical = 8.dp))
+                    Divider(color = MaterialTheme.colorScheme.background)
                     RestoreTypeToggle("Allow Downgrade", checked = allowDowngrade) { onToggleAllowDowngrade(it) }
                 }
             }
@@ -167,12 +168,26 @@ fun RestoreSelectionContent(
                 )
             }
         } else {
-            items(backupDetails, key = { it.appInfo.packageName }) { detail ->
-                RestoreAppListItem(
-                    detail = detail,
-                    allowDowngrade = allowDowngrade,
-                    onToggle = { onToggleApp(detail.appInfo.packageName) }
-                )
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                ) {
+                    Column {
+                        backupDetails.forEachIndexed { index, detail ->
+                            RestoreAppListItem(
+                                detail = detail,
+                                allowDowngrade = allowDowngrade,
+                                onToggle = { onToggleApp(detail.appInfo.packageName) }
+                            )
+                            if (index < backupDetails.size - 1) {
+                                Divider(color = MaterialTheme.colorScheme.background)
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -184,7 +199,7 @@ fun RestoreTypeToggle(label: String, checked: Boolean, onCheckedChange: (Boolean
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onCheckedChange(!checked) }
-            .padding(vertical = 4.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -204,58 +219,51 @@ private fun RestoreAppListItem(detail: BackupDetail, allowDowngrade: Boolean, on
     val app = detail.appInfo
     val isEnabled = allowDowngrade || !detail.isDowngrade
 
-    Card(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = isEnabled, onClick = onToggle),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        )
+            .clickable(enabled = isEnabled, onClick = onToggle)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Image(
+            painter = rememberAsyncImagePainter(model = app.icon),
+            contentDescription = app.name,
+            modifier = Modifier.size(48.dp)
+        )
+        Spacer(Modifier.width(16.dp))
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.Center
         ) {
-            Image(
-                painter = rememberAsyncImagePainter(model = app.icon),
-                contentDescription = app.name,
-                modifier = Modifier.size(48.dp)
+            Text(
+                text = app.name,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (isEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
             )
-            Spacer(Modifier.width(16.dp))
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = app.name,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = if (isEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                )
 
-                val versionColor = if (detail.isDowngrade) Orange else MaterialTheme.colorScheme.onSurfaceVariant
-                val versionText = if (detail.isInstalled) {
-                    "Backup: ${detail.versionName ?: "N/A"} → Installed: ${app.versionName}"
-                } else {
-                    "Backup: ${detail.versionName ?: "N/A"}"
-                }
-
-                Text(
-                    text = versionText,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (isEnabled) versionColor else versionColor.copy(alpha = 0.38f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+            val versionColor = if (detail.isDowngrade) Orange else MaterialTheme.colorScheme.onSurfaceVariant
+            val versionText = if (detail.isInstalled) {
+                "Backup: ${detail.versionName ?: "N/A"} → Installed: ${app.versionName}"
+            } else {
+                "Backup: ${detail.versionName ?: "N/A"}"
             }
-            Switch(
-                checked = app.isSelected,
-                onCheckedChange = { onToggle() },
-                enabled = isEnabled
+
+            Text(
+                text = versionText,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isEnabled) versionColor else versionColor.copy(alpha = 0.38f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
+        Switch(
+            checked = app.isSelected,
+            onCheckedChange = { onToggle() },
+            enabled = isEnabled
+        )
     }
 }
+

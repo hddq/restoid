@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
@@ -22,6 +21,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -133,13 +133,25 @@ fun HomeScreen(
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(uiState.snapshotsWithMetadata.sortedByDescending { it.snapshotInfo.time }) { item ->
-                        SnapshotCard(
-                            snapshotWithMetadata = item,
-                            apps = uiState.appInfoMap[item.snapshotInfo.id],
-                            onClick = { onSnapshotClick(item.snapshotInfo.id) }
-                        )
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                ) {
+                    LazyColumn {
+                        val snapshots = uiState.snapshotsWithMetadata.sortedByDescending { it.snapshotInfo.time }
+                        items(snapshots.size) { index ->
+                            val item = snapshots[index]
+                            SnapshotItem(
+                                snapshotWithMetadata = item,
+                                apps = uiState.appInfoMap[item.snapshotInfo.id],
+                                onClick = { onSnapshotClick(item.snapshotInfo.id) }
+                            )
+                            if (index < snapshots.size - 1) {
+                                Divider(color = MaterialTheme.colorScheme.background)
+                            }
+                        }
                     }
                 }
             }
@@ -158,76 +170,71 @@ fun HomeScreen(
 }
 
 @Composable
-private fun SnapshotCard(snapshotWithMetadata: SnapshotWithMetadata, apps: List<AppInfo>?, onClick: () -> Unit) {
+private fun SnapshotItem(snapshotWithMetadata: SnapshotWithMetadata, apps: List<AppInfo>?, onClick: () -> Unit) {
     val snapshot = snapshotWithMetadata.snapshotInfo
-    Card(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        )
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = snapshot.id.take(8),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Monospace
-                )
-                Text(
-                    text = snapshot.time.take(10), // Just the date part
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            Text(
+                text = snapshot.id.take(8),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.Monospace
+            )
+            Text(
+                text = snapshot.time.take(10), // Just the date part
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
 
-            val appCount = snapshotWithMetadata.metadata?.apps?.size ?: 0
-            if (appCount > 0) {
-                Text("Apps ($appCount):", style = MaterialTheme.typography.labelMedium)
-                if (apps != null && apps.isNotEmpty()) {
-                    Row(
-                        modifier = Modifier.horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val shownApps = apps.take(10)
-                        shownApps.forEach { app ->
-                            Image(
-                                painter = rememberAsyncImagePainter(model = app.icon),
-                                contentDescription = app.name,
-                                modifier = Modifier.size(32.dp)
-                            )
-                        }
-                        val moreCount = appCount - shownApps.size
-                        if (moreCount > 0) {
-                            Text(
-                                "+$moreCount more",
-                            )
-                        }
+        val appCount = snapshotWithMetadata.metadata?.apps?.size ?: 0
+        if (appCount > 0) {
+            Text("Apps ($appCount):", style = MaterialTheme.typography.labelMedium)
+            if (apps != null && apps.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val shownApps = apps.take(10)
+                    shownApps.forEach { app ->
+                        Image(
+                            painter = rememberAsyncImagePainter(model = app.icon),
+                            contentDescription = app.name,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                    val moreCount = appCount - shownApps.size
+                    if (moreCount > 0) {
+                        Text(
+                            "+$moreCount more",
+                        )
                     }
                 }
-            } else if (snapshot.paths.isNotEmpty()) {
-                Text(
-                    text = "Paths: ${snapshot.paths.firstOrNull() ?: ""}...",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else {
-                Text(
-                    text = "No app information available for this snapshot.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
+        } else if (snapshot.paths.isNotEmpty()) {
+            Text(
+                text = "Paths: ${snapshot.paths.firstOrNull() ?: ""}...",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            Text(
+                text = "No app information available for this snapshot.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
+

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -78,7 +79,7 @@ fun MaintenanceSelectionContent(
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp, top = 8.dp), // Padding for content and FAB
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp, top = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
@@ -88,20 +89,18 @@ fun MaintenanceSelectionContent(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer
                 )
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
+                Column {
                     Text(
                         text = "Tasks",
                         style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(bottom = 8.dp)
+                        modifier = Modifier.padding(16.dp)
                     )
                     MaintenanceTaskToggle(
                         label = "Unlock repository",
                         checked = uiState.unlockRepo,
                         onCheckedChange = onSetUnlockRepo
                     )
+                    Divider(color = MaterialTheme.colorScheme.background)
                     MaintenanceTaskToggle(
                         label = "Check repository integrity",
                         checked = uiState.checkRepo,
@@ -116,6 +115,7 @@ fun MaintenanceSelectionContent(
                             )
                         }
                     }
+                    Divider(color = MaterialTheme.colorScheme.background)
                     MaintenanceTaskToggle(
                         label = "Prune repository",
                         checked = uiState.pruneRepo,
@@ -133,7 +133,7 @@ fun MaintenanceTaskToggle(label: String, checked: Boolean, onCheckedChange: (Boo
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onCheckedChange(!checked) }
-            .padding(vertical = 4.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -147,3 +147,4 @@ fun MaintenanceTaskToggle(label: String, checked: Boolean, onCheckedChange: (Boo
         )
     }
 }
+

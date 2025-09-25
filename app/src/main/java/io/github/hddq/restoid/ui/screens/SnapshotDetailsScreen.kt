@@ -17,13 +17,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil.compose.rememberAsyncImagePainter
 import io.github.hddq.restoid.RestoidApplication
 import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.model.BackupDetail
 import io.github.hddq.restoid.ui.snapshot.ForgetResult
 import io.github.hddq.restoid.ui.snapshot.SnapshotDetailsViewModel
 import io.github.hddq.restoid.ui.snapshot.SnapshotDetailsViewModelFactory
-import coil.compose.rememberAsyncImagePainter
 
 @Composable
 fun SnapshotDetailsScreen(
@@ -71,34 +71,49 @@ fun SnapshotDetailsScreen(
         )
     }
 
-    // The Scaffold is gone. The root Column now receives the modifier from NavHost.
     Column(
         modifier = modifier
             .fillMaxSize()
-            // The problematic bottom padding is removed from the main column.
-            // We only apply horizontal padding here now.
             .padding(horizontal = 16.dp)
     ) {
         when {
             isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             error != null -> Text("Error: $error", color = MaterialTheme.colorScheme.error)
             snapshot != null -> {
-                // This inner Column will contain the header and the list.
-                // By giving it a weight, it will expand to fill the available space,
-                // pushing the 'isForgetting' indicator to the bottom.
-                Column(modifier = Modifier.weight(1f)) {
-                    SnapshotDetailsHeader(
-                        snapshot = snapshot!!
-                    )
-                    Spacer(Modifier.height(16.dp))
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(bottom = 80.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    item {
+                        SnapshotDetailsHeader(snapshot = snapshot!!)
+                    }
                     if (backupDetails.isNotEmpty()) {
-                        BackedUpAppsList(backupDetails)
-                    } else if (!isLoading) {
-                        Text("Backed up paths:", style = MaterialTheme.typography.titleMedium)
-                        LazyColumn {
-                            items(snapshot!!.paths) { path ->
-                                Text(path, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
+                        item {
+                            Text("Backed up Apps (${backupDetails.size})", style = MaterialTheme.typography.titleMedium)
+                        }
+                        item {
+                            Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                                )
+                            ) {
+                                Column {
+                                    backupDetails.forEachIndexed { index, detail ->
+                                        BackedUpAppItem(detail = detail)
+                                        if (index < backupDetails.size - 1) {
+                                            Divider(color = MaterialTheme.colorScheme.background)
+                                        }
+                                    }
+                                }
                             }
+                        }
+                    } else if (!isLoading) {
+                        item {
+                            Text("Backed up paths:", style = MaterialTheme.typography.titleMedium)
+                        }
+                        items(snapshot!!.paths) { path ->
+                            Text(path, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
                         }
                     }
                 }
@@ -110,7 +125,7 @@ fun SnapshotDetailsScreen(
             Spacer(Modifier.height(16.dp))
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             Text("Forgetting snapshot...", modifier = Modifier.align(Alignment.CenterHorizontally))
-            Spacer(Modifier.height(16.dp)) // Add some space at the very bottom.
+            Spacer(Modifier.height(16.dp))
         }
     }
 }
@@ -130,60 +145,34 @@ fun SnapshotDetailsHeader(snapshot: SnapshotInfo) {
     }
 }
 
-@Composable
-fun BackedUpAppsList(details: List<BackupDetail>) {
-    LazyColumn(
-        // This modifier is key: it makes the list expand to fill the space from its parent.
-        modifier = Modifier.fillMaxHeight(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        // This contentPadding ensures the last item has 80dp of space below it,
-        // so it can be scrolled up from behind the FloatingActionButton.
-        contentPadding = PaddingValues(bottom = 80.dp)
-    ) {
-        item {
-            Text("Backed up Apps (${details.size})", style = MaterialTheme.typography.titleMedium)
-        }
-        items(details) { detail ->
-            BackedUpAppCard(detail = detail)
-        }
-    }
-}
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun BackedUpAppCard(detail: BackupDetail) {
+fun BackedUpAppItem(detail: BackupDetail) {
     val context = LocalContext.current
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
+    Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
+        Image(
+            painter = rememberAsyncImagePainter(model = detail.appInfo.icon),
+            contentDescription = null,
+            modifier = Modifier.size(48.dp)
         )
-    ) {
-        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.Top) {
-            Image(
-                painter = rememberAsyncImagePainter(model = detail.appInfo.icon),
-                contentDescription = null,
-                modifier = Modifier.size(48.dp)
-            )
-            Spacer(Modifier.width(16.dp))
-            Column {
-                Text(detail.appInfo.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.width(16.dp))
+        Column {
+            Text(detail.appInfo.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
 
-                val versionInfo = detail.versionName ?: "N/A"
-                val sizeInfo = detail.backupSize?.let { Formatter.formatShortFileSize(context, it) } ?: "N/A"
-                Text(
-                    "Version: $versionInfo • Size: $sizeInfo",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(Modifier.height(8.dp))
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    detail.backedUpItems.forEach { item ->
-                        SuggestionChip(onClick = {}, label = { Text(item, style = MaterialTheme.typography.labelSmall) })
-                    }
+            val versionInfo = detail.versionName ?: "N/A"
+            val sizeInfo = detail.backupSize?.let { Formatter.formatShortFileSize(context, it) } ?: "N/A"
+            Text(
+                "Version: $versionInfo • Size: $sizeInfo",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(8.dp))
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                detail.backedUpItems.forEach { item ->
+                    SuggestionChip(onClick = {}, label = { Text(item, style = MaterialTheme.typography.labelSmall) })
                 }
             }
         }
@@ -211,3 +200,4 @@ fun ConfirmForgetDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
         }
     )
 }
+

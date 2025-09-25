@@ -5,7 +5,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -20,13 +19,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.rememberAsyncImagePainter
 import io.github.hddq.restoid.RestoidApplication
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.ui.backup.BackupTypes
 import io.github.hddq.restoid.ui.backup.BackupViewModel
 import io.github.hddq.restoid.ui.backup.BackupViewModelFactory
 import io.github.hddq.restoid.ui.shared.ProgressScreenContent
-import coil.compose.rememberAsyncImagePainter
 
 @Composable
 fun BackupScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
@@ -61,11 +60,10 @@ fun BackupScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
 
     val showProgressScreen = isBackingUp || backupProgress.isFinished
 
-    // The Scaffold is now gone. We apply the modifier from NavHost to the root composable.
     Crossfade(
         targetState = showProgressScreen,
         label = "BackupScreenCrossfade",
-        modifier = modifier.fillMaxSize() // Apply modifier here
+        modifier = modifier.fillMaxSize()
     ) { showProgress ->
         if (showProgress) {
             ProgressScreenContent(
@@ -75,7 +73,6 @@ fun BackupScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
                     viewModel.onDone()
                     onNavigateUp()
                 }
-                // No padding needed, handled by the modifier on Crossfade
             )
         } else {
             BackupSelectionContent(
@@ -95,12 +92,10 @@ fun BackupSelectionContent(
     isLoading: Boolean,
     backupTypes: BackupTypes
 ) {
-    // This LazyColumn is now the root content, so it doesn't need external padding.
-    // The contentPadding provides internal spacing.
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp, top = 8.dp), // Added bottom padding for FAB
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp, top = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
             Card(
@@ -109,20 +104,22 @@ fun BackupSelectionContent(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer
                 )
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
+                Column {
                     Text(
                         text = "Backup Types",
                         style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(bottom = 8.dp)
+                        modifier = Modifier.padding(16.dp)
                     )
                     BackupTypeToggle("APK", backupTypes.apk) { viewModel.setBackupApk(it) }
+                    Divider(color = MaterialTheme.colorScheme.background)
                     BackupTypeToggle("Data", backupTypes.data) { viewModel.setBackupData(it) }
+                    Divider(color = MaterialTheme.colorScheme.background)
                     BackupTypeToggle("Device Protected Data", backupTypes.deviceProtectedData) { viewModel.setBackupDeviceProtectedData(it) }
+                    Divider(color = MaterialTheme.colorScheme.background)
                     BackupTypeToggle("External Data", backupTypes.externalData) { viewModel.setBackupExternalData(it) }
+                    Divider(color = MaterialTheme.colorScheme.background)
                     BackupTypeToggle("OBB Data", backupTypes.obb) { viewModel.setBackupObb(it) }
+                    Divider(color = MaterialTheme.colorScheme.background)
                     BackupTypeToggle("Media Data", backupTypes.media) { viewModel.setBackupMedia(it) }
                 }
             }
@@ -156,8 +153,22 @@ fun BackupSelectionContent(
                 }
             }
         } else {
-            items(apps, key = { it.packageName }) { app ->
-                AppListItem(app = app) { viewModel.toggleAppSelection(app.packageName) }
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                ) {
+                    Column {
+                        apps.forEachIndexed { index, app ->
+                            AppListItem(app = app) { viewModel.toggleAppSelection(app.packageName) }
+                            if (index < apps.size - 1) {
+                                Divider(color = MaterialTheme.colorScheme.background)
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -165,42 +176,34 @@ fun BackupSelectionContent(
 
 @Composable
 fun AppListItem(app: AppInfo, onToggle: () -> Unit) {
-    Card(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onToggle),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        )
+            .clickable(onClick = onToggle)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Image(
+            painter = rememberAsyncImagePainter(model = app.icon),
+            contentDescription = app.name,
+            modifier = Modifier.size(48.dp)
+        )
+        Spacer(Modifier.width(16.dp))
+        Column(
+            modifier = Modifier.weight(1f)
         ) {
-            Image(
-                painter = rememberAsyncImagePainter(model = app.icon),
-                contentDescription = app.name,
-                modifier = Modifier.size(48.dp)
-            )
-            Spacer(Modifier.width(16.dp))
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = app.name,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-            Switch(
-                checked = app.isSelected,
-                onCheckedChange = { onToggle() }
+            Text(
+                text = app.name,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
+        Switch(
+            checked = app.isSelected,
+            onCheckedChange = { onToggle() }
+        )
     }
 }
 
@@ -210,7 +213,7 @@ fun BackupTypeToggle(label: String, checked: Boolean, onCheckedChange: (Boolean)
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onCheckedChange(!checked) }
-            .padding(vertical = 4.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -224,3 +227,4 @@ fun BackupTypeToggle(label: String, checked: Boolean, onCheckedChange: (Boolean)
         )
     }
 }
+
