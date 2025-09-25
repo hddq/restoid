@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -116,7 +117,12 @@ fun ProgressScreenContent(
             Text(text = progress.stageTitle, style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(24.dp))
 
-            Card(modifier = Modifier.fillMaxWidth()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                )
+            ) {
                 Column(Modifier.padding(16.dp)) {
                     // Overall Progress
                     Text("Overall Progress", style = MaterialTheme.typography.labelMedium)

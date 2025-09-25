@@ -117,7 +117,12 @@ fun SnapshotDetailsScreen(
 
 @Composable
 fun SnapshotDetailsHeader(snapshot: SnapshotInfo) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        )
+    ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("ID: ${snapshot.id}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
             Text("Time: ${snapshot.time}", style = MaterialTheme.typography.bodyMedium)
@@ -148,7 +153,12 @@ fun BackedUpAppsList(details: List<BackupDetail>) {
 @Composable
 fun BackedUpAppCard(detail: BackupDetail) {
     val context = LocalContext.current
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        )
+    ) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.Top) {
             Image(
                 painter = rememberAsyncImagePainter(model = detail.appInfo.icon),

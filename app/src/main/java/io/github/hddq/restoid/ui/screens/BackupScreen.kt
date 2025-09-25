@@ -106,7 +106,7 @@ fun BackupSelectionContent(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceBright
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 )
             ) {
                 Column(
@@ -170,7 +170,7 @@ fun AppListItem(app: AppInfo, onToggle: () -> Unit) {
             .fillMaxWidth()
             .clickable(onClick = onToggle),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceBright
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
         )
     ) {
         Row(

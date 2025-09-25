@@ -108,7 +108,7 @@ fun RestoreSelectionContent(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceBright
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 )
             ) {
                 Column(
@@ -209,7 +209,7 @@ private fun RestoreAppListItem(detail: BackupDetail, allowDowngrade: Boolean, on
             .fillMaxWidth()
             .clickable(enabled = isEnabled, onClick = onToggle),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceBright
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
         )
     ) {
         Row(

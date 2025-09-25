@@ -27,7 +27,12 @@ fun SystemSettings(
     val rootState by viewModel.rootState.collectAsStateWithLifecycle()
     val notificationPermissionState by viewModel.notificationPermissionState.collectAsStateWithLifecycle()
 
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        )
+    ) {
         Column(Modifier.padding(16.dp)) {
             Text("System", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(12.dp))
