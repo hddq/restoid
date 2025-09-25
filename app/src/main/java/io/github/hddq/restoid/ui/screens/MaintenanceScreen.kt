@@ -19,6 +19,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -28,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.hddq.restoid.RestoidApplication
@@ -35,6 +37,7 @@ import io.github.hddq.restoid.ui.maintenance.MaintenanceUiState
 import io.github.hddq.restoid.ui.maintenance.MaintenanceViewModel
 import io.github.hddq.restoid.ui.maintenance.MaintenanceViewModelFactory
 import io.github.hddq.restoid.ui.shared.ProgressScreenContent
+import kotlin.math.roundToInt
 
 @Composable
 fun MaintenanceScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
@@ -69,7 +72,12 @@ fun MaintenanceScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
                 onSetCheckRepo = viewModel::setCheckRepo,
                 onSetPruneRepo = viewModel::setPruneRepo,
                 onSetUnlockRepo = viewModel::setUnlockRepo,
-                onSetReadData = viewModel::setReadData
+                onSetReadData = viewModel::setReadData,
+                onSetForgetSnapshots = viewModel::setForgetSnapshots,
+                onSetKeepLast = viewModel::setKeepLast,
+                onSetKeepDaily = viewModel::setKeepDaily,
+                onSetKeepWeekly = viewModel::setKeepWeekly,
+                onSetKeepMonthly = viewModel::setKeepMonthly
             )
         }
     }
@@ -81,7 +89,12 @@ fun MaintenanceSelectionContent(
     onSetCheckRepo: (Boolean) -> Unit,
     onSetPruneRepo: (Boolean) -> Unit,
     onSetUnlockRepo: (Boolean) -> Unit,
-    onSetReadData: (Boolean) -> Unit
+    onSetReadData: (Boolean) -> Unit,
+    onSetForgetSnapshots: (Boolean) -> Unit,
+    onSetKeepLast: (Int) -> Unit,
+    onSetKeepDaily: (Int) -> Unit,
+    onSetKeepWeekly: (Int) -> Unit,
+    onSetKeepMonthly: (Int) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -102,6 +115,12 @@ fun MaintenanceSelectionContent(
                         modifier = Modifier.padding(16.dp)
                     )
                     MaintenanceTaskToggle(
+                        label = "Forget old snapshots",
+                        checked = uiState.forgetSnapshots,
+                        onCheckedChange = onSetForgetSnapshots
+                    )
+                    Divider(color = MaterialTheme.colorScheme.background)
+                    MaintenanceTaskToggle(
                         label = "Unlock repository",
                         checked = uiState.unlockRepo,
                         onCheckedChange = onSetUnlockRepo
@@ -121,6 +140,30 @@ fun MaintenanceSelectionContent(
                 }
             }
         }
+
+        item {
+            AnimatedVisibility(visible = uiState.forgetSnapshots) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                ) {
+                    Column {
+                        Text(
+                            text = "Forget Policy Options",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                        PolicySlider(label = "Keep Last", value = uiState.keepLast, range = 0..20, onValueChange = onSetKeepLast)
+                        PolicySlider(label = "Keep Daily", value = uiState.keepDaily, range = 0..30, onValueChange = onSetKeepDaily)
+                        PolicySlider(label = "Keep Weekly", value = uiState.keepWeekly, range = 0..12, onValueChange = onSetKeepWeekly)
+                        PolicySlider(label = "Keep Monthly", value = uiState.keepMonthly, range = 0..24, onValueChange = onSetKeepMonthly)
+                    }
+                }
+            }
+        }
+
         item {
             AnimatedVisibility(visible = uiState.checkRepo) {
                 Card(
@@ -144,6 +187,30 @@ fun MaintenanceSelectionContent(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun PolicySlider(
+    label: String,
+    value: Int,
+    range: IntRange,
+    onValueChange: (Int) -> Unit
+) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(label, style = MaterialTheme.typography.bodyLarge)
+            Text(value.toString(), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+        }
+        Slider(
+            value = value.toFloat(),
+            onValueChange = { onValueChange(it.roundToInt()) },
+            valueRange = range.first.toFloat()..range.last.toFloat(),
+            steps = (range.last - range.first - 1).coerceAtLeast(0)
+        )
     }
 }
 

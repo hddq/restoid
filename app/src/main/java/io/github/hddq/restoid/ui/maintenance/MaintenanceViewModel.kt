@@ -15,10 +15,20 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class MaintenanceUiState(
+    // Prune, Check, Unlock
     val checkRepo: Boolean = true,
     val pruneRepo: Boolean = false,
     val unlockRepo: Boolean = false,
-    val readData: Boolean = false, // Add this
+    val readData: Boolean = false,
+
+    // Forget Policy
+    val forgetSnapshots: Boolean = false,
+    val keepLast: Int = 5,
+    val keepDaily: Int = 7,
+    val keepWeekly: Int = 4,
+    val keepMonthly: Int = 6,
+
+    // Operation Status
     val isRunning: Boolean = false,
     val progress: OperationProgress = OperationProgress(),
 )
@@ -155,4 +165,22 @@ class MaintenanceViewModel(
     fun setReadData(value: Boolean) {
         _uiState.update { it.copy(readData = value) }
     }
+
+    // Forget Policy setters
+    fun setForgetSnapshots(value: Boolean) {
+        _uiState.update { it.copy(forgetSnapshots = value) }
+    }
+    fun setKeepLast(value: Int) {
+        _uiState.update { it.copy(keepLast = value) }
+    }
+    fun setKeepDaily(value: Int) {
+        _uiState.update { it.copy(keepDaily = value) }
+    }
+    fun setKeepWeekly(value: Int) {
+        _uiState.update { it.copy(keepWeekly = value) }
+    }
+    fun setKeepMonthly(value: Int) {
+        _uiState.update { it.copy(keepMonthly = value) }
+    }
 }
+
