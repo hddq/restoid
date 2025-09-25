@@ -1,5 +1,6 @@
 package io.github.hddq.restoid.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -117,14 +118,28 @@ fun MaintenanceSelectionContent(
                         checked = uiState.checkRepo,
                         onCheckedChange = onSetCheckRepo
                     )
-                    if (uiState.checkRepo) {
-                        Row(Modifier.padding(start = 16.dp)) {
-                            MaintenanceTaskToggle(
-                                label = "Read all data",
-                                checked = uiState.readData,
-                                onCheckedChange = onSetReadData
-                            )
-                        }
+                }
+            }
+        }
+        item {
+            AnimatedVisibility(visible = uiState.checkRepo) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                ) {
+                    Column {
+                        Text(
+                            text = "Check Options",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                        MaintenanceTaskToggle(
+                            label = "Read all data",
+                            checked = uiState.readData,
+                            onCheckedChange = onSetReadData
+                        )
                     }
                 }
             }
@@ -163,3 +178,4 @@ fun MaintenanceTaskToggle(label: String, checked: Boolean, onCheckedChange: (Boo
         )
     }
 }
+
