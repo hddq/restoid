@@ -3,15 +3,14 @@ package io.github.hddq.restoid.ui.screens.settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
@@ -39,9 +38,11 @@ fun RepositorySettings(viewModel: SettingsViewModel) {
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         )
     ) {
-        Column(Modifier.padding(16.dp)) {
+        Column {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -52,30 +53,30 @@ fun RepositorySettings(viewModel: SettingsViewModel) {
                     }
                 }
             }
-            Spacer(Modifier.height(4.dp))
 
             if (resticState is ResticState.Installed) {
                 if (repositories.isEmpty()) {
                     Text(
                         "No repositories configured. Add one to get started.",
                         style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(vertical = 8.dp)
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                     )
                 } else {
-                    Column {
-                        repositories.forEach { repo ->
-                            SelectableRepositoryRow(
-                                repo = repo,
-                                isSelected = repo.path == selectedRepository,
-                                onSelected = { viewModel.selectRepository(repo.path) },
-                                viewModel = viewModel
-                            )
+                    repositories.forEachIndexed { index, repo ->
+                        SelectableRepositoryRow(
+                            repo = repo,
+                            isSelected = repo.path == selectedRepository,
+                            onSelected = { viewModel.selectRepository(repo.path) },
+                            viewModel = viewModel
+                        )
+                        if (index < repositories.size - 1) {
+                            Divider(color = MaterialTheme.colorScheme.background)
                         }
                     }
                 }
             } else {
                 Row(
-                    modifier = Modifier.padding(vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
@@ -93,3 +94,4 @@ fun RepositorySettings(viewModel: SettingsViewModel) {
         }
     }
 }
+

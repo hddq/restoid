@@ -32,7 +32,9 @@ fun NotificationPermissionRow(
     onOpenSettings: () -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -53,7 +55,7 @@ fun NotificationPermissionRow(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                modifier = Modifier.padding(end = 8.dp),
+                modifier = Modifier.padding(end = 16.dp),
                 tint = iconColor
             )
             Text(
@@ -89,7 +91,7 @@ fun SelectableRepositoryRow(
                 onClick = onSelected,
                 role = Role.RadioButton
             )
-            .padding(vertical = 4.dp),
+            .padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         RadioButton(
@@ -183,9 +185,11 @@ fun ResticDependencyRow(
     onDownloadClick: () -> Unit
 ) {
     AnimatedContent(targetState = state, label = "ResticStatusAnimation") { targetState ->
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -260,7 +264,9 @@ fun RootRequestRow(
     onClick: () -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -272,7 +278,7 @@ fun RootRequestRow(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    modifier = Modifier.padding(end = 8.dp),
+                    modifier = Modifier.padding(end = 16.dp),
                     tint = MaterialTheme.colorScheme.error
                 )
             }
@@ -287,13 +293,16 @@ fun RootRequestRow(
 @Composable
 fun RootStatusRow(text: String, icon: ImageVector) {
     Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(end = 8.dp)
+            modifier = Modifier.padding(end = 16.dp)
         )
         Text(text = text, style = MaterialTheme.typography.bodyLarge)
     }

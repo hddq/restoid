@@ -6,9 +6,7 @@ import android.os.Build
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Notes
@@ -53,14 +51,18 @@ fun AboutSettings(onNavigateToLicenses: () -> Unit) {
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         )
     ) {
-        Column(Modifier.padding(16.dp)) {
-            Text("About", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-            Spacer(Modifier.height(12.dp))
+        Column {
+            Text(
+                "About",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(16.dp)
+            )
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { onNavigateToLicenses() }
-                    .padding(vertical = 8.dp),
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
@@ -71,13 +73,13 @@ fun AboutSettings(onNavigateToLicenses: () -> Unit) {
                 Text("Open Source Licenses", style = MaterialTheme.typography.bodyLarge)
             }
 
-            Divider(modifier = Modifier.padding(vertical = 4.dp))
+            Divider(color = MaterialTheme.colorScheme.background)
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { context.startActivity(githubIntent) }
-                    .padding(vertical = 8.dp),
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
@@ -97,3 +99,4 @@ fun AboutSettings(onNavigateToLicenses: () -> Unit) {
         }
     }
 }
+

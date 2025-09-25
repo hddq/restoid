@@ -33,9 +33,13 @@ fun SystemSettings(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         )
     ) {
-        Column(Modifier.padding(16.dp)) {
-            Text("System", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-            Spacer(Modifier.height(12.dp))
+        Column {
+            Text(
+                "System",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(16.dp)
+            )
             AnimatedContent(targetState = rootState, label = "RootStatusAnimation") { state ->
                 when (state) {
                     RootState.Denied -> RootRequestRow(
@@ -45,7 +49,12 @@ fun SystemSettings(
                         onClick = { viewModel.requestRootAccess() }
                     )
                     RootState.Checking -> {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             CircularProgressIndicator(modifier = Modifier.size(24.dp))
                             Spacer(Modifier.width(8.dp))
                             Text("Checking for root...")
@@ -57,7 +66,7 @@ fun SystemSettings(
                     )
                 }
             }
-            Divider(modifier = Modifier.padding(vertical = 8.dp))
+            Divider(color = MaterialTheme.colorScheme.background)
             NotificationPermissionRow(
                 state = notificationPermissionState,
                 onRequestPermission = notificationPermissionLauncher,
@@ -66,3 +75,4 @@ fun SystemSettings(
         }
     }
 }
+
