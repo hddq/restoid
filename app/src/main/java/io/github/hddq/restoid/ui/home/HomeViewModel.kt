@@ -141,7 +141,9 @@ class HomeViewModel(
             repositoriesRepository.saveRepositoryPasswordTemporary(repoPath, password)
         }
 
-        // The combine block will automatically trigger loadSnapshots now
+        // The original comment was incorrect, the combine block isn't triggered by saving a password.
+        // We need to explicitly call loadSnapshots again now that we have a password.
+        loadSnapshots(repoPath, uiState.value.resticState)
     }
 
     fun onDismissPasswordDialog() {
