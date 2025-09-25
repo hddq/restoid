@@ -199,7 +199,7 @@ fun RestoreTypeToggle(label: String, checked: Boolean, onCheckedChange: (Boolean
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onCheckedChange(!checked) }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -223,7 +223,7 @@ private fun RestoreAppListItem(detail: BackupDetail, allowDowngrade: Boolean, on
         modifier = Modifier
             .fillMaxWidth()
             .clickable(enabled = isEnabled, onClick = onToggle)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Image(

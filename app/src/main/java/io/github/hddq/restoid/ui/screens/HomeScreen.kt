@@ -176,7 +176,7 @@ private fun SnapshotItem(snapshotWithMetadata: SnapshotWithMetadata, apps: List<
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(16.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Row(

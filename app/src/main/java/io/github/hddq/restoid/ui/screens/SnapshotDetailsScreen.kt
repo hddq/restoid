@@ -82,7 +82,7 @@ fun SnapshotDetailsScreen(
             snapshot != null -> {
                 LazyColumn(
                     modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(bottom = 80.dp),
+                    contentPadding = PaddingValues(bottom = 80.dp, top = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     item {
@@ -149,7 +149,7 @@ fun SnapshotDetailsHeader(snapshot: SnapshotInfo) {
 @Composable
 fun BackedUpAppItem(detail: BackupDetail) {
     val context = LocalContext.current
-    Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
+    Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.Top) {
         Image(
             painter = rememberAsyncImagePainter(model = detail.appInfo.icon),
             contentDescription = null,
