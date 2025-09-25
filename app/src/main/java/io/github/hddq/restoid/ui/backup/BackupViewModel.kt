@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.hddq.restoid.data.AppInfoRepository
 import io.github.hddq.restoid.data.NotificationRepository
+import io.github.hddq.restoid.data.PreferencesRepository
 import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.data.ResticState
@@ -40,7 +41,8 @@ class BackupViewModel(
     private val repositoriesRepository: RepositoriesRepository,
     private val resticRepository: ResticRepository,
     private val notificationRepository: NotificationRepository,
-    private val appInfoRepository: AppInfoRepository
+    private val appInfoRepository: AppInfoRepository,
+    private val preferencesRepository: PreferencesRepository
 ) : ViewModel() {
 
     private val _apps = MutableStateFlow<List<AppInfo>>(emptyList())
@@ -61,6 +63,7 @@ class BackupViewModel(
     private var backupJob: Job? = null
 
     init {
+        _backupTypes.value = preferencesRepository.loadBackupTypes()
         loadInstalledApps()
     }
 
@@ -80,6 +83,8 @@ class BackupViewModel(
     fun startBackup() {
         // Prevent multiple backups from running
         if (_isBackingUp.value) return
+
+        preferencesRepository.saveBackupTypes(_backupTypes.value)
 
         backupJob = viewModelScope.launch(Dispatchers.IO) {
             val startTime = System.currentTimeMillis()

@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import io.github.hddq.restoid.data.AppInfoRepository
 import io.github.hddq.restoid.data.MetadataRepository
 import io.github.hddq.restoid.data.NotificationRepository
+import io.github.hddq.restoid.data.PreferencesRepository
 import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.data.ResticState
@@ -44,6 +45,7 @@ class RestoreViewModel(
     private val appInfoRepository: AppInfoRepository,
     private val notificationRepository: NotificationRepository,
     private val metadataRepository: MetadataRepository,
+    private val preferencesRepository: PreferencesRepository,
     val snapshotId: String
 ) : ViewModel() {
 
@@ -74,6 +76,8 @@ class RestoreViewModel(
     private var restoreJob: Job? = null
 
     init {
+        _restoreTypes.value = preferencesRepository.loadRestoreTypes()
+        _allowDowngrade.value = preferencesRepository.loadAllowDowngrade()
         if (snapshotId.isNotBlank()) {
             loadSnapshotDetails(snapshotId)
         }
@@ -278,6 +282,9 @@ class RestoreViewModel(
 
     fun startRestore() {
         if (_isRestoring.value) return
+
+        preferencesRepository.saveRestoreTypes(_restoreTypes.value)
+        preferencesRepository.saveAllowDowngrade(_allowDowngrade.value)
 
         restoreJob = viewModelScope.launch(Dispatchers.IO) {
             val startTime = System.currentTimeMillis()

@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import io.github.hddq.restoid.data.AppInfoRepository
 import io.github.hddq.restoid.data.MetadataRepository
 import io.github.hddq.restoid.data.NotificationRepository
+import io.github.hddq.restoid.data.PreferencesRepository
 import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.ResticRepository
 
@@ -16,6 +17,7 @@ class RestoreViewModelFactory(
     private val appInfoRepository: AppInfoRepository,
     private val notificationRepository: NotificationRepository,
     private val metadataRepository: MetadataRepository,
+    private val preferencesRepository: PreferencesRepository,
     private val snapshotId: String
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -28,6 +30,7 @@ class RestoreViewModelFactory(
                 appInfoRepository,
                 notificationRepository,
                 metadataRepository,
+                preferencesRepository,
                 snapshotId
             ) as T
         }

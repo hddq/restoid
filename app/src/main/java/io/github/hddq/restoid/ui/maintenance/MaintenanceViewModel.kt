@@ -3,6 +3,7 @@ package io.github.hddq.restoid.ui.maintenance
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.hddq.restoid.data.NotificationRepository
+import io.github.hddq.restoid.data.PreferencesRepository
 import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.data.ResticState
@@ -36,7 +37,8 @@ data class MaintenanceUiState(
 class MaintenanceViewModel(
     private val repositoriesRepository: RepositoriesRepository,
     private val resticRepository: ResticRepository,
-    private val notificationRepository: NotificationRepository
+    private val notificationRepository: NotificationRepository,
+    private val preferencesRepository: PreferencesRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MaintenanceUiState())
@@ -44,8 +46,14 @@ class MaintenanceViewModel(
 
     private var maintenanceJob: Job? = null
 
+    init {
+        _uiState.value = preferencesRepository.loadMaintenanceState()
+    }
+
     fun runTasks() {
         if (_uiState.value.isRunning) return
+
+        preferencesRepository.saveMaintenanceState(_uiState.value)
 
         maintenanceJob = viewModelScope.launch(Dispatchers.IO) {
             val startTime = System.currentTimeMillis()

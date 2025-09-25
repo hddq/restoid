@@ -5,6 +5,7 @@ import io.github.hddq.restoid.data.AppInfoRepository
 import io.github.hddq.restoid.data.MetadataRepository
 import io.github.hddq.restoid.data.NotificationRepository
 import io.github.hddq.restoid.data.PasswordManager
+import io.github.hddq.restoid.data.PreferencesRepository
 import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.data.RootRepository
@@ -34,6 +35,8 @@ class RestoidApplication : Application() {
         private set
     lateinit var metadataRepository: MetadataRepository
         private set
+    lateinit var preferencesRepository: PreferencesRepository
+        private set
 
     override fun onCreate() {
         super.onCreate()
@@ -55,6 +58,7 @@ class RestoidApplication : Application() {
         notificationRepository = NotificationRepository(applicationContext)
         appInfoRepository = AppInfoRepository(applicationContext)
         metadataRepository = MetadataRepository(applicationContext)
+        preferencesRepository = PreferencesRepository(applicationContext)
 
 
         // Clear any temporary passwords from previous sessions

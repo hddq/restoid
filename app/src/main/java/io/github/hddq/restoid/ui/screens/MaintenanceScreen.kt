@@ -46,7 +46,8 @@ fun MaintenanceScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
         factory = MaintenanceViewModelFactory(
             application.repositoriesRepository,
             application.resticRepository,
-            application.notificationRepository
+            application.notificationRepository,
+            application.preferencesRepository
         )
     )
     val uiState by viewModel.uiState.collectAsState()

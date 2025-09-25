@@ -38,6 +38,7 @@ fun RestoreScreen(navController: NavController, snapshotId: String?, modifier: M
             application.appInfoRepository,
             application.notificationRepository,
             application.metadataRepository,
+            application.preferencesRepository,
             snapshotId ?: ""
         )
     )

@@ -142,7 +142,7 @@ class MainActivity : ComponentActivity() {
                                 // FIX: Scope the ViewModel to the NavBackStackEntry to ensure a single instance is shared with the screen.
                                 val viewModel: BackupViewModel = viewModel(
                                     viewModelStoreOwner = navBackStackEntry!!,
-                                    factory = BackupViewModelFactory(application, application.repositoriesRepository, application.resticRepository, application.notificationRepository, application.appInfoRepository)
+                                    factory = BackupViewModelFactory(application, application.repositoriesRepository, application.resticRepository, application.notificationRepository, application.appInfoRepository, application.preferencesRepository)
                                 )
                                 val isBackingUp by viewModel.isBackingUp.collectAsState()
                                 val backupProgress by viewModel.backupProgress.collectAsState()
@@ -158,7 +158,7 @@ class MainActivity : ComponentActivity() {
                                 // FIX: Scope the ViewModel to the NavBackStackEntry.
                                 val viewModel: MaintenanceViewModel = viewModel(
                                     viewModelStoreOwner = navBackStackEntry!!,
-                                    factory = MaintenanceViewModelFactory(application.repositoriesRepository, application.resticRepository, application.notificationRepository)
+                                    factory = MaintenanceViewModelFactory(application.repositoriesRepository, application.resticRepository, application.notificationRepository, application.preferencesRepository)
                                 )
                                 val uiState by viewModel.uiState.collectAsState()
                                 if (!uiState.isRunning && !uiState.progress.isFinished) {
@@ -180,7 +180,7 @@ class MainActivity : ComponentActivity() {
                                 // FIX: Scope the ViewModel to the NavBackStackEntry.
                                 val viewModel: RestoreViewModel = viewModel(
                                     viewModelStoreOwner = navBackStackEntry!!,
-                                    factory = RestoreViewModelFactory(application, application.repositoriesRepository, application.resticRepository, application.appInfoRepository, application.notificationRepository, application.metadataRepository, navBackStackEntry?.arguments?.getString("snapshotId") ?: "")
+                                    factory = RestoreViewModelFactory(application, application.repositoriesRepository, application.resticRepository, application.appInfoRepository, application.notificationRepository, application.metadataRepository, application.preferencesRepository, navBackStackEntry?.arguments?.getString("snapshotId") ?: "")
                                 )
                                 val isRestoring by viewModel.isRestoring.collectAsState()
                                 val restoreProgress by viewModel.restoreProgress.collectAsState()
@@ -244,4 +244,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-

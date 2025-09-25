@@ -38,7 +38,8 @@ fun BackupScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
             application.repositoriesRepository,
             application.resticRepository,
             application.notificationRepository,
-            application.appInfoRepository
+            application.appInfoRepository,
+            application.preferencesRepository
         )
     )
     val apps by viewModel.apps.collectAsState()
