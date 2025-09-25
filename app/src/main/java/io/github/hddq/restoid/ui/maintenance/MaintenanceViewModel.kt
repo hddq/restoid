@@ -73,14 +73,14 @@ class MaintenanceViewModel(
                 val selectedRepoPath = repositoriesRepository.selectedRepository.value!!
                 val password = repositoriesRepository.getRepositoryPassword(selectedRepoPath)!!
 
-                val tasksToRun = mutableListOf<suspend () -> Pair<String, Result<String>>>()
+                val tasksToRun = mutableListOf<Pair<String, suspend () -> Result<String>>>()
                 if (_uiState.value.unlockRepo) {
-                    tasksToRun.add { "Unlock" to resticRepository.unlock(selectedRepoPath, password) }
+                    tasksToRun.add("Unlock" to { resticRepository.unlock(selectedRepoPath, password) })
                 }
                 if (_uiState.value.forgetSnapshots) {
                     val state = _uiState.value
-                    tasksToRun.add {
-                        "Forget" to resticRepository.forget(
+                    tasksToRun.add("Forget" to {
+                        resticRepository.forget(
                             selectedRepoPath,
                             password,
                             state.keepLast,
@@ -88,30 +88,36 @@ class MaintenanceViewModel(
                             state.keepWeekly,
                             state.keepMonthly
                         )
-                    }
+                    })
                 }
                 if (_uiState.value.pruneRepo) {
-                    tasksToRun.add { "Prune" to resticRepository.prune(selectedRepoPath, password) }
+                    tasksToRun.add("Prune" to { resticRepository.prune(selectedRepoPath, password) })
                 }
                 if (_uiState.value.checkRepo) {
-                    tasksToRun.add { "Check" to resticRepository.check(selectedRepoPath, password, _uiState.value.readData) }
+                    tasksToRun.add("Check" to { resticRepository.check(selectedRepoPath, password, _uiState.value.readData) })
                 }
 
                 if (tasksToRun.isEmpty()) {
                     throw IllegalStateException("No maintenance tasks selected.")
                 }
 
-                tasksToRun.forEachIndexed { index, task ->
-                    val (taskName, result) = task()
+                tasksToRun.forEachIndexed { index, (taskName, taskAction) ->
                     val stageTitle = "[${index + 1}/${tasksToRun.size}] Running '$taskName'..."
                     _uiState.update {
                         it.copy(progress = it.progress.copy(
                             stageTitle = stageTitle,
-                            overallPercentage = (index + 1f) / tasksToRun.size
+                            overallPercentage = index.toFloat() / tasksToRun.size
                         ))
                     }
                     notificationRepository.showOperationProgressNotification("Maintenance", _uiState.value.progress)
 
+                    val result = taskAction()
+
+                    _uiState.update {
+                        it.copy(progress = it.progress.copy(
+                            overallPercentage = (index + 1f) / tasksToRun.size
+                        ))
+                    }
 
                     result.fold(
                         onSuccess = { output ->
@@ -204,4 +210,3 @@ class MaintenanceViewModel(
         _uiState.update { it.copy(keepMonthly = value) }
     }
 }
-
