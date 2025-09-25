@@ -96,7 +96,8 @@ class BackupViewModel(
             var password: String? = null
             var snapshotId: String? = null
             var repositoryId: String? = null
-            val totalStages = 3 // 1. App Backup, 2. Save Metadata, 3. Metadata Backup
+            val totalStages = 3 // 1. Prepare, 2. App Backup, 3. Finalize Backup
+            var currentStage = 1
 
             try {
                 // --- Pre-flight checks ---
@@ -119,10 +120,9 @@ class BackupViewModel(
                 password = repositoriesRepository.getRepositoryPassword(selectedRepoPath)!!
                 val selectedApps = _apps.value.filter { it.isSelected }
 
-                // --- STAGE 1: Main Backup ---
-                var currentStage = 1
+                // --- STAGE 1: Preparing backup ---
                 updateProgress(
-                    stageTitle = "[${currentStage}/${totalStages}] Backing up apps...",
+                    stageTitle = "[${currentStage}/${totalStages}] Preparing backup...",
                     overallPercentage = 0f,
                     startTime = startTime
                 )
@@ -137,6 +137,15 @@ class BackupViewModel(
                 if (pathsToBackup.size <= 1) { // Only metadata file
                     throw IllegalStateException("No files found to back up for the selected apps.")
                 }
+
+                // --- STAGE 2: Main Backup ---
+                currentStage = 2
+                val stage2Title = "[${currentStage}/${totalStages}] Backing up apps..."
+                updateProgress(
+                    stageTitle = stage2Title,
+                    overallPercentage = (currentStage - 1f) / totalStages,
+                    startTime = startTime
+                )
 
                 fileList = File.createTempFile("restic-files-", ".txt", application.cacheDir)
                 fileList.writeText(pathsToBackup.distinct().joinToString("\n"))
@@ -162,7 +171,7 @@ class BackupViewModel(
                                 // is the single source of truth for the final finished state.
                                 progressUpdate.copy(
                                     isFinished = false,
-                                    stageTitle = "[${currentStage}/${totalStages}] Backing up apps...",
+                                    stageTitle = stage2Title,
                                     overallPercentage = (currentStage - 1 + progressUpdate.stagePercentage) / totalStages,
                                     elapsedTime = (System.currentTimeMillis() - startTime) / 1000
                                 )
@@ -179,13 +188,15 @@ class BackupViewModel(
                     throw IllegalStateException(if (errorOutput.isEmpty()) "Restic command failed with exit code ${result.code}." else errorOutput)
                 }
 
-                // --- STAGE 2: Save Metadata Locally ---
-                currentStage = 2
+                // --- STAGE 3: Finalizing backup ---
+                currentStage = 3
+                val stage3Title = "[${currentStage}/${totalStages}] Finalizing backup..."
                 updateProgress(
-                    stageTitle = "[${currentStage}/${totalStages}] Saving metadata...",
+                    stageTitle = stage3Title,
                     overallPercentage = (currentStage - 1f) / totalStages,
                     startTime = startTime
                 )
+
                 try {
                     val metadataDir = File(application.filesDir, "metadata/$repositoryId")
                     if (!metadataDir.exists()) metadataDir.mkdirs()
@@ -198,24 +209,10 @@ class BackupViewModel(
                     summary += "\nWarning: Could not save backup metadata file locally."
                     Log.e("BackupVM", "Failed to save metadata", e)
                 }
-                updateProgress(
-                    stageTitle = "[${currentStage}/${totalStages}] Saving metadata...",
-                    overallPercentage = (currentStage.toFloat()) / totalStages,
-                    stagePercentage = 1.0f,
-                    startTime = startTime
-                )
 
-
-                // --- STAGE 3: Backup Metadata Directory ---
-                currentStage = 3
-                updateProgress(
-                    stageTitle = "[${currentStage}/${totalStages}] Backing up metadata...",
-                    overallPercentage = (currentStage - 1f) / totalStages,
-                    startTime = startTime
-                )
                 backupMetadata(repositoryId, selectedRepoPath, password)
                 updateProgress(
-                    stageTitle = "[${currentStage}/${totalStages}] Backing up metadata...",
+                    stageTitle = stage3Title,
                     overallPercentage = 1.0f,
                     stagePercentage = 1.0f,
                     startTime = startTime
@@ -424,4 +421,3 @@ class BackupViewModel(
     fun setBackupObb(value: Boolean) = _backupTypes.update { it.copy(obb = value) }
     fun setBackupMedia(value: Boolean) = _backupTypes.update { it.copy(media = value) }
 }
-
