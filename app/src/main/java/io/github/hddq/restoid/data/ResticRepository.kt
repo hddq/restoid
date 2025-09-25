@@ -80,6 +80,36 @@ class ResticRepository(private val context: Context) {
         }
     }
 
+    suspend fun forget(
+        repoPath: String,
+        password: String,
+        keepLast: Int,
+        keepDaily: Int,
+        keepWeekly: Int,
+        keepMonthly: Int
+    ): Result<String> {
+        return withContext(Dispatchers.IO) {
+            val forgetOptions = buildString {
+                if (keepLast > 0) append(" --keep-last $keepLast")
+                if (keepDaily > 0) append(" --keep-daily $keepDaily")
+                if (keepWeekly > 0) append(" --keep-weekly $keepWeekly")
+                if (keepMonthly > 0) append(" --keep-monthly $keepMonthly")
+            }
+
+            // The forget command requires at least one policy option
+            if (forgetOptions.isBlank()) {
+                return@withContext Result.failure(Exception("No 'keep' policy was specified for the forget operation."))
+            }
+
+            executeResticCommand(
+                repoPath = repoPath,
+                password = password,
+                command = "forget$forgetOptions",
+                failureMessage = "Failed to forget snapshots"
+            )
+        }
+    }
+
     suspend fun unlock(repoPath: String, password: String): Result<String> {
         return withContext(Dispatchers.IO) {
             executeResticCommand(
@@ -496,4 +526,3 @@ data class SnapshotInfo(
     val paths: List<String>,
     val tags: List<String>
 )
-

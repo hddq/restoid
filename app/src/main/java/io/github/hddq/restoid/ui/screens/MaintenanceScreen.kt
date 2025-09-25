@@ -115,15 +115,15 @@ fun MaintenanceSelectionContent(
                         modifier = Modifier.padding(16.dp)
                     )
                     MaintenanceTaskToggle(
-                        label = "Forget old snapshots",
-                        checked = uiState.forgetSnapshots,
-                        onCheckedChange = onSetForgetSnapshots
-                    )
-                    Divider(color = MaterialTheme.colorScheme.background)
-                    MaintenanceTaskToggle(
                         label = "Unlock repository",
                         checked = uiState.unlockRepo,
                         onCheckedChange = onSetUnlockRepo
+                    )
+                    Divider(color = MaterialTheme.colorScheme.background)
+                    MaintenanceTaskToggle(
+                        label = "Forget old snapshots",
+                        checked = uiState.forgetSnapshots,
+                        onCheckedChange = onSetForgetSnapshots
                     )
                     Divider(color = MaterialTheme.colorScheme.background)
                     MaintenanceTaskToggle(

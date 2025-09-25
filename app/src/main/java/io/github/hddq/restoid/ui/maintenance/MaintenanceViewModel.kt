@@ -69,6 +69,19 @@ class MaintenanceViewModel(
                 if (_uiState.value.unlockRepo) {
                     tasksToRun.add { "Unlock" to resticRepository.unlock(selectedRepoPath, password) }
                 }
+                if (_uiState.value.forgetSnapshots) {
+                    val state = _uiState.value
+                    tasksToRun.add {
+                        "Forget" to resticRepository.forget(
+                            selectedRepoPath,
+                            password,
+                            state.keepLast,
+                            state.keepDaily,
+                            state.keepWeekly,
+                            state.keepMonthly
+                        )
+                    }
+                }
                 if (_uiState.value.pruneRepo) {
                     tasksToRun.add { "Prune" to resticRepository.prune(selectedRepoPath, password) }
                 }
@@ -116,8 +129,8 @@ class MaintenanceViewModel(
                 _uiState.update { it.copy(isRunning = false, progress = finalProgress) }
                 notificationRepository.showOperationFinishedNotification("Maintenance", overallSuccess, finalProgress.finalSummary)
 
-                // Refresh snapshots if prune was successful
-                if (_uiState.value.pruneRepo && overallSuccess) {
+                // Refresh snapshots if prune or forget was successful
+                if ((_uiState.value.pruneRepo || _uiState.value.forgetSnapshots) && overallSuccess) {
                     val repoPath = repositoriesRepository.selectedRepository.value
                     val password = repoPath?.let { repositoriesRepository.getRepositoryPassword(it) }
                     if (repoPath != null && password != null) {
@@ -129,7 +142,7 @@ class MaintenanceViewModel(
     }
 
     private fun preflightChecks(): OperationProgress? {
-        if (!_uiState.value.checkRepo && !_uiState.value.pruneRepo && !_uiState.value.unlockRepo) {
+        if (!_uiState.value.checkRepo && !_uiState.value.pruneRepo && !_uiState.value.unlockRepo && !_uiState.value.forgetSnapshots) {
             return OperationProgress(isFinished = true, error = "No tasks selected.", finalSummary = "No maintenance tasks were selected.")
         }
         if (resticRepository.resticState.value !is ResticState.Installed) {
