@@ -101,10 +101,13 @@ class ResticRepository(private val context: Context) {
                 return@withContext Result.failure(Exception("No 'keep' policy was specified for the forget operation."))
             }
 
+            // Always apply to snapshots with 'restoid' and 'backup' tags to protect metadata snapshots
+            val tagOptions = " --tag 'restoid' --tag 'backup'"
+
             executeResticCommand(
                 repoPath = repoPath,
                 password = password,
-                command = "forget$forgetOptions",
+                command = "forget$forgetOptions$tagOptions",
                 failureMessage = "Failed to forget snapshots"
             )
         }
