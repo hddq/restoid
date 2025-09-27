@@ -7,18 +7,15 @@ import io.github.hddq.restoid.data.AppInfoRepository
 import io.github.hddq.restoid.data.MetadataRepository
 import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.ResticRepository
-import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.BackupDetail
 import io.github.hddq.restoid.model.RestoidMetadata
-import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.io.File
 
 sealed class ForgetResult {
     object Idle : ForgetResult()
@@ -209,7 +206,7 @@ class SnapshotDetailsViewModel(
                             val deleted = metadataRepository.deleteMetadataForSnapshot(repo.id, snapshotToForget.id)
                             if (deleted) {
                                 // After deleting, back up the changes to the metadata folder
-                                backupMetadataChanges(repo.id, repoPath, password)
+                                resticRepository.backupMetadata(repo.id, repoPath, password)
                             }
                             _forgetResult.value = ForgetResult.Success
                         },
@@ -233,36 +230,6 @@ class SnapshotDetailsViewModel(
         _showConfirmForgetDialog.value = false
     }
 
-    private suspend fun backupMetadataChanges(repositoryId: String, repoPath: String, password: String) {
-        val resticState = resticRepository.resticState.value
-        if (resticState !is ResticState.Installed) return
-
-        var passwordFile: File? = null
-        try {
-            val metadataDir = File(application.filesDir, "metadata/$repositoryId")
-            if (!metadataDir.exists() || !metadataDir.isDirectory) return
-
-            passwordFile = File.createTempFile("restic-pass-meta-forget", ".tmp", application.cacheDir)
-            passwordFile.writeText(password)
-
-            val tags = listOf("restoid", "metadata")
-            val tagFlags = tags.joinToString(" ") { "--tag '$it'" }
-
-            // Backup with a relative path to simplify restore
-            val parentDir = metadataDir.parentFile?.absolutePath ?: return
-            val dirToBackup = metadataDir.name
-            val command = "cd '$parentDir' && RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' ${resticState.path} -r '$repoPath' backup '$dirToBackup' --json $tagFlags"
-
-            Shell.cmd(command).exec()
-
-        } catch (e: Exception) {
-            // Log this error, but don't fail the whole operation
-            e.printStackTrace()
-        } finally {
-            passwordFile?.delete()
-        }
-    }
-
     // --- Restore Type Toggles ---
     fun setRestoreApk(value: Boolean) = _restoreTypes.update { it.copy(apk = value) }
     fun setRestoreData(value: Boolean) = _restoreTypes.update { it.copy(data = value) }
@@ -271,3 +238,4 @@ class SnapshotDetailsViewModel(
     fun setRestoreObb(value: Boolean) = _restoreTypes.update { it.copy(obb = value) }
     fun setRestoreMedia(value: Boolean) = _restoreTypes.update { it.copy(media = value) }
 }
+

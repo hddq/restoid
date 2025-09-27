@@ -14,6 +14,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.net.URL
+import android.util.Log
 
 // Represents the state of the restic binary
 sealed class ResticState {
@@ -113,6 +114,20 @@ class ResticRepository(private val context: Context) {
         }
     }
 
+    suspend fun forgetMetadataSnapshots(repoPath: String, password: String): Result<String> {
+        return withContext(Dispatchers.IO) {
+            val forgetOptions = "--keep-last 5"
+            val tagOptions = "--tag 'restoid' --tag 'metadata'"
+            val command = "forget $forgetOptions $tagOptions"
+            executeResticCommand(
+                repoPath = repoPath,
+                password = password,
+                command = command,
+                failureMessage = "Failed to forget metadata snapshots"
+            )
+        }
+    }
+
     suspend fun unlock(repoPath: String, password: String): Result<String> {
         return withContext(Dispatchers.IO) {
             executeResticCommand(
@@ -154,6 +169,45 @@ class ResticRepository(private val context: Context) {
             return Result.failure(e)
         } finally {
             passwordFile.delete()
+        }
+    }
+
+    suspend fun backupMetadata(repositoryId: String, repoPath: String, password: String) {
+        val resticState = resticState.value
+        if (resticState !is ResticState.Installed) return
+
+        var passwordFile: File? = null
+        try {
+            val metadataDir = File(context.filesDir, "metadata")
+            if (!metadataDir.exists() || !metadataDir.isDirectory) return
+
+            passwordFile = File.createTempFile("restic-pass-meta", ".tmp", context.cacheDir)
+            passwordFile.writeText(password)
+
+            val tags = listOf("restoid", "metadata")
+            val tagFlags = tags.joinToString(" ") { "--tag '$it'" }
+            // Use 'cd' to ensure relative paths in the backup for simpler restore
+            val command = "cd '${metadataDir.absolutePath}' && RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' ${resticState.path} -r '$repoPath' backup '$repositoryId' --json $tagFlags"
+
+            // We don't need detailed progress here, just run it
+            val result = Shell.cmd(command).exec()
+            if (!result.isSuccess) {
+                Log.e("ResticRepo", "Metadata backup failed: ${result.err.joinToString("\n")}")
+            } else {
+                // After a successful metadata backup, prune the old ones.
+                // This is a "best-effort" operation, we log errors but don't fail the main backup.
+                val forgetResult = forgetMetadataSnapshots(repoPath, password)
+                if (forgetResult.isFailure) {
+                    Log.e("ResticRepo", "Forgetting old metadata snapshots failed: ${forgetResult.exceptionOrNull()?.message}")
+                } else {
+                    Log.d("ResticRepo", "Successfully forgot old metadata snapshots.")
+                }
+            }
+        } catch (e: Exception) {
+            // Log this error, but don't fail the whole backup process
+            Log.e("ResticRepo", "Exception during metadata backup", e)
+        } finally {
+            passwordFile?.delete()
         }
     }
 
@@ -529,3 +583,5 @@ data class SnapshotInfo(
     val paths: List<String>,
     val tags: List<String>
 )
+
+

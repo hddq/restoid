@@ -296,33 +296,7 @@ class BackupViewModel(
     }
 
     private suspend fun backupMetadata(repositoryId: String, repoPath: String, password: String) {
-        val resticState = resticRepository.resticState.value
-        if (resticState !is ResticState.Installed) return
-
-        var passwordFile: File? = null
-        try {
-            val metadataDir = File(application.filesDir, "metadata")
-            if (!metadataDir.exists() || !metadataDir.isDirectory) return
-
-            passwordFile = File.createTempFile("restic-pass-meta", ".tmp", application.cacheDir)
-            passwordFile.writeText(password)
-
-            val tags = listOf("restoid", "metadata")
-            val tagFlags = tags.joinToString(" ") { "--tag '$it'" }
-            // Use 'cd' to ensure relative paths in the backup for simpler restore
-            val command = "cd '${metadataDir.absolutePath}' && RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' ${resticState.path} -r '$repoPath' backup '$repositoryId' --json $tagFlags"
-
-            // We don't need detailed progress here, just run it
-            val result = Shell.cmd(command).exec()
-            if (!result.isSuccess) {
-                Log.e("BackupVM", "Metadata backup failed: ${result.err.joinToString("\n")}")
-            }
-        } catch (e: Exception) {
-            // Log this error, but don't fail the whole backup process
-            Log.e("BackupVM", "Exception during metadata backup", e)
-        } finally {
-            passwordFile?.delete()
-        }
+        resticRepository.backupMetadata(repositoryId, repoPath, password)
     }
 
     private fun preflightChecks(): OperationProgress? {
@@ -426,3 +400,4 @@ class BackupViewModel(
     fun setBackupObb(value: Boolean) = _backupTypes.update { it.copy(obb = value) }
     fun setBackupMedia(value: Boolean) = _backupTypes.update { it.copy(media = value) }
 }
+
