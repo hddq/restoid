@@ -2,6 +2,12 @@ package io.github.hddq.restoid.ui.shared
 
 import android.text.format.Formatter
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
@@ -25,14 +31,22 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.delay
 
 /**
  * Shared data class for representing the progress of a long-running operation
@@ -85,105 +99,165 @@ fun ProgressScreenContent(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        if (progress.isFinished) {
-            // Finished State
-            val icon = if (progress.error == null) Icons.Default.CheckCircle else Icons.Default.Error
-            val iconColor = if (progress.error == null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
-
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(80.dp),
-                tint = iconColor
-            )
-            Spacer(Modifier.height(16.dp))
-            Text(
-                text = if (progress.error == null) "$operationType Complete" else "$operationType Failed",
-                style = MaterialTheme.typography.headlineSmall
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = progress.finalSummary,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(24.dp))
-            Button(onClick = onDone) {
-                Text("Done")
+        AnimatedContent(
+            targetState = progress.isFinished,
+            label = "ProgressOrFinish",
+            transitionSpec = {
+                fadeIn(animationSpec = tween(300, 150)) togetherWith
+                        fadeOut(animationSpec = tween(150))
             }
+        ) { isFinished ->
+            if (isFinished) {
+                // Finished State
+                var startAnimation by remember { mutableStateOf(false) }
 
-        } else {
-            // In-Progress State
-            Text(text = progress.stageTitle, style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(24.dp))
+                LaunchedEffect(Unit) {
+                    delay(200) // A small delay to let the screen transition in
+                    startAnimation = true
+                }
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                )
-            ) {
-                Column(Modifier.padding(16.dp)) {
-                    // Overall Progress
-                    Text("Overall Progress", style = MaterialTheme.typography.labelMedium)
-                    LinearProgressIndicator(
-                        progress = { progress.overallPercentage },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(Modifier.height(16.dp))
+                val icon = if (progress.error == null) Icons.Default.CheckCircle else Icons.Default.Error
+                val iconColor = if (progress.error == null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
 
-                    // Stage Progress
-                    Text("Stage Progress", style = MaterialTheme.typography.labelMedium)
-                    LinearProgressIndicator(
-                        progress = { progress.stagePercentage },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(Modifier.height(16.dp))
-
-
-                    // Stats Row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceAround
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    AnimatedVisibility(
+                        visible = startAnimation,
+                        enter = scaleIn(animationSpec = spring(dampingRatio = 0.5f, stiffness = 100f))
                     ) {
-                        ProgressStat(label = "Elapsed", value = formatElapsedTime(progress.elapsedTime))
-                        ProgressStat(
-                            label = "Items",
-                            value = "${progress.filesProcessed}/${progress.totalFiles}"
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            modifier = Modifier.size(100.dp),
+                            tint = iconColor
                         )
-                        // Only show size if it's relevant (not 0)
-                        if (progress.totalBytes > 0) {
-                            ProgressStat(
-                                label = "Size",
-                                value = "${Formatter.formatFileSize(context, progress.bytesProcessed)} / ${Formatter.formatFileSize(context, progress.totalBytes)}"
-                            )
-                        }
                     }
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(24.dp))
+                    Text(
+                        text = if (progress.error == null) "$operationType Complete" else "$operationType Failed",
+                        style = MaterialTheme.typography.headlineMedium,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer
+                        )
+                    ) {
+                        Text(
+                            text = progress.finalSummary,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(16.dp),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                    Spacer(Modifier.height(32.dp))
+                    Button(
+                        onClick = onDone,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp)
+                    ) {
+                        Text("Done")
+                    }
+                }
 
-                    // Current File Text (only show for backup as restore is app-based)
-                    if (operationType == "Backup" && progress.currentFile.isNotBlank()) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                "Processing: ",
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.Bold
+            } else {
+                // In-Progress State
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = progress.stageTitle, style = MaterialTheme.typography.titleLarge)
+                    Spacer(Modifier.height(24.dp))
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer
+                        )
+                    ) {
+                        Column(Modifier.padding(16.dp)) {
+                            // Overall Progress
+                            Text("Overall Progress", style = MaterialTheme.typography.labelMedium)
+                            Spacer(Modifier.height(8.dp))
+                            LinearProgressIndicator(
+                                progress = { progress.overallPercentage },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(8.dp),
+                                strokeCap = StrokeCap.Round
                             )
-                            AnimatedContent(
-                                targetState = progress.currentFile,
-                                label = "CurrentFileAnimation",
-                                transitionSpec = {
-                                    slideInVertically { height -> height } togetherWith
-                                            slideOutVertically { height -> -height }
-                                }
-                            ) { targetFile ->
-                                Text(
-                                    text = targetFile.ifEmpty { "..." },
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontFamily = FontFamily.Monospace,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                            Spacer(Modifier.height(20.dp))
+
+                            // Stage Progress
+                            Text("Stage Progress", style = MaterialTheme.typography.labelMedium)
+                            Spacer(Modifier.height(8.dp))
+                            LinearProgressIndicator(
+                                progress = { progress.stagePercentage },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(8.dp),
+                                strokeCap = StrokeCap.Round
+                            )
+                            Spacer(Modifier.height(24.dp))
+
+
+                            // Stats Row
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceAround
+                            ) {
+                                ProgressStat(label = "Elapsed", value = formatElapsedTime(progress.elapsedTime))
+                                ProgressStat(
+                                    label = "Items",
+                                    value = "${progress.filesProcessed}/${progress.totalFiles}"
                                 )
+                                // Only show size if it's relevant (not 0)
+                                if (progress.totalBytes > 0) {
+                                    ProgressStat(
+                                        label = "Size",
+                                        value = "${Formatter.formatFileSize(context, progress.bytesProcessed)} / ${
+                                            Formatter.formatFileSize(
+                                                context,
+                                                progress.totalBytes
+                                            )
+                                        }"
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.height(16.dp))
+
+                            // Current File Text (only show for backup as restore is app-based)
+                            if (operationType == "Backup" && progress.currentFile.isNotBlank()) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        "Processing: ",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    AnimatedContent(
+                                        targetState = progress.currentFile,
+                                        label = "CurrentFileAnimation",
+                                        transitionSpec = {
+                                            slideInVertically { height -> height } togetherWith
+                                                    slideOutVertically { height -> -height }
+                                        }
+                                    ) { targetFile ->
+                                        Text(
+                                            text = targetFile.ifEmpty { "..." },
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontFamily = FontFamily.Monospace,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -196,7 +270,8 @@ fun ProgressScreenContent(
 @Composable
 fun ProgressStat(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = label, style = MaterialTheme.typography.labelMedium)
+        Text(text = label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(2.dp))
         Text(text = value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
     }
 }
