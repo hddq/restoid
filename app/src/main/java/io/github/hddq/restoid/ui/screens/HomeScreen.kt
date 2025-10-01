@@ -1,5 +1,6 @@
 package io.github.hddq.restoid.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -82,7 +83,12 @@ fun HomeScreen(
             )
             OutlinedButton(
                 onClick = onMaintenanceClick,
-                enabled = uiState.selectedRepo != null
+                enabled = uiState.selectedRepo != null,
+                // Manually set border and content colors to fix styling issue with new compose bom
+                border = BorderStroke(1.dp, if (uiState.selectedRepo != null) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.primary
+                )
             ) {
                 Icon(Icons.Default.Build, contentDescription = "Maintenance")
                 Spacer(Modifier.size(ButtonDefaults.IconSpacing))
