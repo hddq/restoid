@@ -8,6 +8,7 @@ import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.ui.shared.OperationProgress
+import io.github.hddq.restoid.util.MaintenanceOutputParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -121,7 +122,8 @@ class MaintenanceViewModel(
 
                     result.fold(
                         onSuccess = { output ->
-                            finalSummary.append("$taskName successful:\n$output\n\n")
+                            val summary = MaintenanceOutputParser.parse(taskName, output)
+                            finalSummary.append("$taskName successful:\n$summary\n\n")
                         },
                         onFailure = { exception ->
                             overallSuccess = false
