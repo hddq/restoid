@@ -81,11 +81,12 @@ fun HomeScreen(
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold,
             )
+            val isMaintenanceEnabled = uiState.selectedRepo != null && uiState.hasPasswordForSelectedRepo
             OutlinedButton(
                 onClick = onMaintenanceClick,
-                enabled = uiState.selectedRepo != null,
+                enabled = isMaintenanceEnabled,
                 // Manually set border and content colors to fix styling issue with new compose bom
-                border = BorderStroke(1.dp, if (uiState.selectedRepo != null) MaterialTheme.colorScheme.outline else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)),
+                border = BorderStroke(1.dp, if (isMaintenanceEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)),
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = MaterialTheme.colorScheme.primary
                 )

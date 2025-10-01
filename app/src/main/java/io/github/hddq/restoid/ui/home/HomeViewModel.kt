@@ -30,7 +30,8 @@ data class HomeUiState(
     val error: String? = null,
     val selectedRepo: String? = null,
     val resticState: ResticState = ResticState.Idle,
-    val showPasswordDialogFor: String? = null
+    val showPasswordDialogFor: String? = null,
+    val hasPasswordForSelectedRepo: Boolean = false
 )
 
 class HomeViewModel(
@@ -57,7 +58,8 @@ class HomeViewModel(
             repositoriesRepository.repositories
         ) { repoPath, restic, snapshots, repos ->
 
-            _uiState.update { it.copy(selectedRepo = repoPath, resticState = restic) }
+            val hasPassword = repoPath?.let { repositoriesRepository.hasRepositoryPassword(it) } ?: false
+            _uiState.update { it.copy(selectedRepo = repoPath, resticState = restic, hasPasswordForSelectedRepo = hasPassword) }
 
             if (repoPath == null || restic !is ResticState.Installed) {
                 resticRepository.clearSnapshots()
