@@ -1,0 +1,3 @@
+[submodule "restic"]
+	path = restic
+	url = https://github.com/restic/restic.git
