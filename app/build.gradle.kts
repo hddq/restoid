@@ -1,3 +1,63 @@
+// This task builds the restic binary from the submodule for each required Android architecture.
+tasks.register("buildResticForBundledFlavor") {
+    group = "restic"
+    description = "Builds restic binary from submodule for bundled flavor ABIs"
+
+    // Use the submodule as an input directory for Gradle's up-to-date checks.
+    inputs.dir(rootProject.file("restic"))
+    // Define the output directory for the compiled binaries.
+    val outputAssetsDir = file("$buildDir/generated/assets/restic/bundled")
+    outputs.dir(outputAssetsDir)
+
+    doLast {
+        // First, check if Go is installed on the system.
+        try {
+            project.exec { commandLine("go", "version") }
+        } catch (e: Exception) {
+            throw GradleException("Go is not installed or not in your PATH. It's required to build the 'bundled' flavor.", e)
+        }
+
+        // These are the architectures defined in your splits block.
+        val targetAbis = setOf("x86", "x86_64", "armeabi-v7a", "arm64-v8a")
+
+        targetAbis.forEach { abi ->
+            // Map Android ABI names to Go architecture names.
+            val goArch = when (abi) {
+                "arm64-v8a" -> "arm64"
+                "armeabi-v7a" -> "arm"
+                "x86_64" -> "amd64"
+                "x86" -> "386"
+                else -> null
+            }
+
+            if (goArch != null) {
+                println("Building restic for $abi (GOARCH: $goArch)...")
+
+                // The output directory for assets needs a subdirectory for each ABI.
+                val finalOutputDir = File(outputAssetsDir, abi)
+                finalOutputDir.mkdirs()
+                val outputFile = File(finalOutputDir, "restic")
+
+                project.exec {
+                    workingDir = rootProject.file("restic")
+                    // Set environment variables for cross-compilation.
+                    environment("GOOS", "linux") // Target is Android (Linux)
+                    environment("GOARCH", goArch)
+                    environment("CGO_ENABLED", "0") // Create a static binary
+
+                    commandLine(
+                        "go", "build",
+                        "-ldflags=-s -w", // Strip debug info to reduce binary size
+                        "-trimpath",
+                        "-o", outputFile.absolutePath,
+                        "./cmd/restic"
+                    )
+                }
+            }
+        }
+    }
+}
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -25,10 +85,13 @@ android {
         create("vanilla") {
             dimension = "distribution"
             versionNameSuffix = "-vanilla"
+            // We can add a build config field to distinguish flavors in code.
+            buildConfigField("boolean", "IS_BUNDLED", "false")
         }
         create("bundled") {
             dimension = "distribution"
             versionNameSuffix = "-bundled"
+            buildConfigField("boolean", "IS_BUNDLED", "true")
         }
     }
 
@@ -38,6 +101,14 @@ android {
             reset()
             include("x86", "x86_64", "armeabi-v7a", "arm64-v8a")
             isUniversalApk = true
+        }
+    }
+
+    // This tells the 'bundled' flavor where to find its assets,
+    // which now includes our compiled restic binaries.
+    sourceSets {
+        named("bundled") {
+            assets.srcDir(file("$buildDir/generated/assets/restic/bundled"))
         }
     }
 
@@ -61,6 +132,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -92,5 +164,13 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+}
+
+// Hooks our new task into the build process for the 'bundled' flavor.
+// This ensures restic is built before the app is assembled.
+android.applicationVariants.all {
+    if (flavorName == "bundled") {
+        preBuildProvider.get().dependsOn(tasks.named("buildResticForBundledFlavor"))
+    }
 }
 

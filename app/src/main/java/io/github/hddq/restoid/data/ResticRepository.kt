@@ -3,6 +3,7 @@ package io.github.hddq.restoid.data
 import android.content.Context
 import android.os.Build
 import com.topjohnwu.superuser.Shell
+import io.github.hddq.restoid.BuildConfig
 import io.github.hddq.restoid.model.ResticConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,6 +41,10 @@ class ResticRepository(private val context: Context) {
     // Check the status of the restic binary by executing it
     suspend fun checkResticStatus() {
         withContext(Dispatchers.IO) {
+            if (BuildConfig.IS_BUNDLED && !resticFile.exists()) {
+                ensureBundledResticIsReady()
+            }
+
             if (resticFile.exists() && resticFile.canExecute()) {
                 // Execute the binary with the 'version' command
                 val result = Shell.cmd("${resticFile.absolutePath} version").exec()
@@ -53,7 +58,37 @@ class ResticRepository(private val context: Context) {
                     resticFile.delete() // Clean up the bad file
                 }
             } else {
-                _resticState.value = ResticState.NotInstalled
+                if (_resticState.value !is ResticState.Error) {
+                    if (BuildConfig.IS_BUNDLED) {
+                        _resticState.value = ResticState.Error("Bundled binary not found or not executable.")
+                    } else {
+                        _resticState.value = ResticState.NotInstalled
+                    }
+                }
+            }
+        }
+    }
+
+    private suspend fun ensureBundledResticIsReady() {
+        withContext(Dispatchers.IO) {
+            if (resticFile.exists()) return@withContext
+
+            try {
+                _resticState.value = ResticState.Extracting
+                val abi = Build.SUPPORTED_ABIS[0]
+                val assetPath = "$abi/restic"
+                Log.d("ResticRepository", "Attempting to extract bundled restic from assets: $assetPath")
+
+                context.assets.open(assetPath).use { inputStream ->
+                    FileOutputStream(resticFile).use { outputStream ->
+                        inputStream.copyTo(outputStream)
+                    }
+                }
+                resticFile.setExecutable(true)
+                Log.d("ResticRepository", "Bundled restic for $abi extracted to ${resticFile.absolutePath}")
+            } catch (e: Exception) {
+                Log.e("ResticRepository", "Failed to extract bundled restic binary", e)
+                _resticState.value = ResticState.Error("Failed to extract bundled binary for ${Build.SUPPORTED_ABIS[0]}. It might be missing from the APK.")
             }
         }
     }
@@ -295,6 +330,11 @@ class ResticRepository(private val context: Context) {
 
     // Download, decompress, and verify the restic binary
     suspend fun downloadAndInstallRestic() {
+        if (BuildConfig.IS_BUNDLED) {
+            _resticState.value = ResticState.Error("Download is not supported in the bundled flavor.")
+            return
+        }
+
         withContext(Dispatchers.IO) {
             try {
                 // Determine architecture based on device ABI
@@ -583,5 +623,3 @@ data class SnapshotInfo(
     val paths: List<String>,
     val tags: List<String>
 )
-
-
