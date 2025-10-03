@@ -9,6 +9,8 @@ android {
     namespace = "io.github.hddq.restoid"
     compileSdk = 36
 
+    flavorDimensions += "distribution"
+
     defaultConfig {
         applicationId = "io.github.hddq.restoid"
         minSdk = 33
@@ -17,6 +19,17 @@ android {
         versionName = "0.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    productFlavors {
+        create("vanilla") {
+            dimension = "distribution"
+            versionNameSuffix = "-vanilla"
+        }
+        create("bundled") {
+            dimension = "distribution"
+            versionNameSuffix = "-bundled"
+        }
     }
 
     splits {
@@ -80,3 +93,4 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
+
