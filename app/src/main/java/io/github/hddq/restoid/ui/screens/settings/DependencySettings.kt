@@ -34,9 +34,10 @@ fun DependencySettings(viewModel: SettingsViewModel) {
             )
             ResticDependencyRow(
                 state = resticState,
-                onDownloadClick = { viewModel.downloadRestic() }
+                stableResticVersion = viewModel.stableResticVersion,
+                onDownloadClick = { viewModel.downloadRestic() },
+                onDownloadLatestClick = { viewModel.downloadLatestRestic() }
             )
         }
     }
 }
-

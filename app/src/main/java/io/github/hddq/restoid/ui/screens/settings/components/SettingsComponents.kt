@@ -1,16 +1,44 @@
 package io.github.hddq.restoid.ui.screens.settings.components
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -181,9 +209,47 @@ fun SelectableRepositoryRow(
 }
 
 @Composable
+fun SplitButton(
+    onClick: () -> Unit,
+    onSecondaryClick: () -> Unit,
+    text: String
+) {
+    Row(Modifier.height(IntrinsicSize.Min)) {
+        Button(
+            onClick = onClick,
+            shape = MaterialTheme.shapes.medium.copy(
+                topEnd = CornerSize(0.dp),
+                bottomEnd = CornerSize(0.dp)
+            ),
+            contentPadding = ButtonDefaults.ContentPadding
+        ) {
+            Text(text)
+        }
+        Divider(
+            modifier = Modifier
+                .fillMaxHeight()
+                .width(1.dp),
+            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f)
+        )
+        Button(
+            onClick = onSecondaryClick,
+            shape = MaterialTheme.shapes.medium.copy(
+                topStart = CornerSize(0.dp),
+                bottomStart = CornerSize(0.dp)
+            )
+        ) {
+            Icon(Icons.Default.ArrowDropDown, contentDescription = "More download options")
+        }
+    }
+}
+
+
+@Composable
 fun ResticDependencyRow(
     state: ResticState,
-    onDownloadClick: () -> Unit
+    stableResticVersion: String,
+    onDownloadClick: () -> Unit,
+    onDownloadLatestClick: () -> Unit
 ) {
     AnimatedContent(targetState = state, label = "ResticStatusAnimation") { targetState ->
         Column {
@@ -232,8 +298,25 @@ fun ResticDependencyRow(
                 when (targetState) {
                     ResticState.NotInstalled, is ResticState.Error -> {
                         if (!BuildConfig.IS_BUNDLED) {
-                            Button(onClick = onDownloadClick) {
-                                Text(if (targetState is ResticState.Error) "Retry" else "Download")
+                            var showMenu by remember { mutableStateOf(false) }
+                            Box {
+                                SplitButton(
+                                    onClick = onDownloadClick,
+                                    onSecondaryClick = { showMenu = true },
+                                    text = if (targetState is ResticState.Error) "Retry" else "Download v$stableResticVersion"
+                                )
+                                DropdownMenu(
+                                    expanded = showMenu,
+                                    onDismissRequest = { showMenu = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("Download latest") },
+                                        onClick = {
+                                            onDownloadLatestClick()
+                                            showMenu = false
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
@@ -310,3 +393,4 @@ fun RootStatusRow(text: String, icon: ImageVector) {
         Text(text = text, style = MaterialTheme.typography.bodyLarge)
     }
 }
+

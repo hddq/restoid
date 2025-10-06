@@ -2,6 +2,7 @@ package io.github.hddq.restoid.data
 
 import android.content.Context
 import android.os.Build
+import android.util.Log
 import com.topjohnwu.superuser.Shell
 import io.github.hddq.restoid.BuildConfig
 import io.github.hddq.restoid.model.ResticConfig
@@ -10,12 +11,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.net.URL
-import android.util.Log
 
 // Represents the state of the restic binary
 sealed class ResticState {
@@ -36,7 +38,9 @@ class ResticRepository(private val context: Context) {
     val snapshots = _snapshots.asStateFlow()
 
     private val resticFile = File(context.filesDir, "restic")
-    private val resticReleaseVersion = "0.18.0"
+    val stableResticVersion = "0.18.0"
+    private val json = Json { ignoreUnknownKeys = true }
+
 
     // Check the status of the restic binary by executing it
     suspend fun checkResticStatus() {
@@ -353,8 +357,16 @@ class ResticRepository(private val context: Context) {
         }
     }
 
-    // Download, decompress, and verify the restic binary
-    suspend fun downloadAndInstallRestic() {
+    private suspend fun getLatestResticVersionFromGitHub(): String = withContext(Dispatchers.IO) {
+        val url = URL("https://api.github.com/repos/restic/restic/releases/latest")
+        val jsonString = url.readText()
+        val jsonElement = json.parseToJsonElement(jsonString)
+        val tagName = jsonElement.jsonObject["tag_name"]?.jsonPrimitive?.content
+            ?: throw IllegalStateException("tag_name not found in GitHub API response")
+        tagName.removePrefix("v")
+    }
+
+    suspend fun downloadAndInstallLatestRestic() {
         if (BuildConfig.IS_BUNDLED) {
             _resticState.value = ResticState.Error("Download is not supported in the bundled flavor.")
             return
@@ -362,15 +374,32 @@ class ResticRepository(private val context: Context) {
 
         withContext(Dispatchers.IO) {
             try {
-                // Determine architecture based on device ABI
+                _resticState.value = ResticState.Downloading(0f)
+                val latestVersion = getLatestResticVersionFromGitHub()
+                Log.d("ResticRepository", "Latest restic version found from GitHub: $latestVersion")
+                downloadAndInstallRestic(latestVersion)
+            } catch (e: Exception) {
+                _resticState.value = ResticState.Error("Could not fetch latest version: ${e.message}")
+            }
+        }
+    }
+
+    suspend fun downloadAndInstallRestic(versionToDownload: String = stableResticVersion) {
+        if (BuildConfig.IS_BUNDLED) {
+            _resticState.value = ResticState.Error("Download is not supported in the bundled flavor.")
+            return
+        }
+
+        withContext(Dispatchers.IO) {
+            try {
                 val arch = getArchForRestic()
                 if (arch == null) {
                     _resticState.value = ResticState.Error("Unsupported device architecture")
                     return@withContext
                 }
 
-                // Download the bz2 compressed file and report progress
-                val url = URL("https://github.com/restic/restic/releases/download/v$resticReleaseVersion/restic_${resticReleaseVersion}_linux_$arch.bz2")
+                _resticState.value = ResticState.Downloading(0f)
+                val url = URL("https://github.com/restic/restic/releases/download/v$versionToDownload/restic_${versionToDownload}_linux_$arch.bz2")
                 val bz2File = File(context.cacheDir, "restic.bz2")
                 val urlConnection = url.openConnection()
                 val fileSize = urlConnection.contentLength.toLong()
@@ -391,10 +420,7 @@ class ResticRepository(private val context: Context) {
                     }
                 }
 
-                // Switch to extracting state
                 _resticState.value = ResticState.Extracting
-
-                // Decompress the file
                 FileInputStream(bz2File).use { fileInput ->
                     BZip2CompressorInputStream(fileInput).use { bzip2Input ->
                         FileOutputStream(resticFile).use { fileOutput ->
@@ -403,11 +429,8 @@ class ResticRepository(private val context: Context) {
                     }
                 }
 
-                // Make the binary executable and clean up
                 resticFile.setExecutable(true)
                 bz2File.delete()
-
-                // Verify installation by checking the version
                 checkResticStatus()
 
             } catch (e: Exception) {

@@ -1,5 +1,6 @@
 package io.github.hddq.restoid.ui.settings
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.hddq.restoid.data.AddRepositoryState
@@ -43,6 +44,7 @@ class SettingsViewModel(
     val repositories = repositoriesRepository.repositories
     val selectedRepository = repositoriesRepository.selectedRepository
     val notificationPermissionState = notificationRepository.permissionState
+    val stableResticVersion: String get() = resticRepository.stableResticVersion
 
 
     // Internal and exposed UI State for adding a new repository
@@ -109,6 +111,14 @@ class SettingsViewModel(
             resticRepository.downloadAndInstallRestic()
         }
     }
+
+    fun downloadLatestRestic() {
+        viewModelScope.launch {
+            Log.d("SettingsViewModel", "Triggering download of latest restic version.")
+            resticRepository.downloadAndInstallLatestRestic()
+        }
+    }
+
 
     fun selectRepository(path: String) {
         repositoriesRepository.selectRepository(path)
