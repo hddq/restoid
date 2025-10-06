@@ -18,6 +18,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.github.hddq.restoid.BuildConfig
 import io.github.hddq.restoid.data.LocalRepository
 import io.github.hddq.restoid.data.NotificationPermissionState
 import io.github.hddq.restoid.data.ResticState
@@ -213,7 +214,7 @@ fun ResticDependencyRow(
                         Text("Restic Binary", style = MaterialTheme.typography.bodyLarge)
                         val supportingText = when (targetState) {
                             ResticState.Idle -> "Checking status..."
-                            ResticState.NotInstalled -> "Required for backups"
+                            ResticState.NotInstalled -> if (BuildConfig.IS_BUNDLED) "Bundled, will be extracted" else "Required for backups"
                             is ResticState.Downloading -> "Downloading..."
                             ResticState.Extracting -> "Extracting binary..."
                             is ResticState.Installed -> targetState.version
@@ -230,8 +231,10 @@ fun ResticDependencyRow(
 
                 when (targetState) {
                     ResticState.NotInstalled, is ResticState.Error -> {
-                        Button(onClick = onDownloadClick) {
-                            Text(if (targetState is ResticState.Error) "Retry" else "Download")
+                        if (!BuildConfig.IS_BUNDLED) {
+                            Button(onClick = onDownloadClick) {
+                                Text(if (targetState is ResticState.Error) "Retry" else "Download")
+                            }
                         }
                     }
                     ResticState.Extracting -> CircularProgressIndicator()
