@@ -5,9 +5,9 @@ tasks.register("buildResticForBundledFlavor") {
 
     // Use the submodule as an input directory for Gradle's up-to-date checks.
     inputs.dir(rootProject.file("restic"))
-    // Define the output directory for the compiled binaries.
-    val outputAssetsDir = file("$buildDir/generated/assets/restic/bundled")
-    outputs.dir(outputAssetsDir)
+    // Define the output directory for the compiled binaries - NOW USING jniLibs!
+    val outputJniLibsDir = file("src/bundled/jniLibs")
+    outputs.dir(outputJniLibsDir)
 
     doLast {
         // First, check if Go is installed on the system.
@@ -33,10 +33,11 @@ tasks.register("buildResticForBundledFlavor") {
             if (goArch != null) {
                 println("Building restic for $abi (GOARCH: $goArch)...")
 
-                // The output directory for assets needs a subdirectory for each ABI.
-                val finalOutputDir = File(outputAssetsDir, abi)
+                // The output directory now follows jniLibs structure
+                val finalOutputDir = File(outputJniLibsDir, abi)
                 finalOutputDir.mkdirs()
-                val outputFile = File(finalOutputDir, "restic")
+                // IMPORTANT: Prefix with "lib" and use ".so" extension for Android to recognize it
+                val outputFile = File(finalOutputDir, "librestic.so")
 
                 project.exec {
                     workingDir = rootProject.file("restic")
@@ -104,13 +105,8 @@ android {
         }
     }
 
-    // This tells the 'bundled' flavor where to find its assets,
-    // which now includes our compiled restic binaries.
-    sourceSets {
-        named("bundled") {
-            assets.srcDir(file("$buildDir/generated/assets/restic/bundled"))
-        }
-    }
+    // Remove the old assets sourceSets configuration
+    // The jniLibs are automatically picked up from src/bundled/jniLibs
 
     buildTypes {
         release {
@@ -133,6 +129,14 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    // Add packaging options to prevent stripping our "fake" .so files
+    packagingOptions {
+        jniLibs {
+            // Don't strip our restic binaries (they're not real .so files)
+            keepDebugSymbols += "**/*.so"
+        }
     }
 }
 
@@ -173,4 +177,3 @@ android.applicationVariants.all {
         preBuildProvider.get().dependsOn(tasks.named("buildResticForBundledFlavor"))
     }
 }
-

@@ -75,20 +75,45 @@ class ResticRepository(private val context: Context) {
 
             try {
                 _resticState.value = ResticState.Extracting
-                val abi = Build.SUPPORTED_ABIS[0]
-                val assetPath = "$abi/restic"
-                Log.d("ResticRepository", "Attempting to extract bundled restic from assets: $assetPath")
 
-                context.assets.open(assetPath).use { inputStream ->
-                    FileOutputStream(resticFile).use { outputStream ->
-                        inputStream.copyTo(outputStream)
+                // The binary is now in the native library directory as librestic.so
+                val nativeLibDir = context.applicationInfo.nativeLibraryDir
+                val sourceBinary = File(nativeLibDir, "librestic.so")
+
+                Log.d("ResticRepository", "Looking for bundled restic at: ${sourceBinary.absolutePath}")
+
+                if (!sourceBinary.exists()) {
+                    // Fallback: Try to find it in the specific ABI directory
+                    val abi = Build.SUPPORTED_ABIS[0]
+                    val altSourceBinary = File(nativeLibDir, "../$abi/librestic.so")
+
+                    if (altSourceBinary.exists()) {
+                        Log.d("ResticRepository", "Found bundled restic at alternative location: ${altSourceBinary.absolutePath}")
+                        // Copy the binary from native lib directory to app's files directory
+                        altSourceBinary.inputStream().use { input ->
+                            FileOutputStream(resticFile).use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                    } else {
+                        throw Exception("Bundled restic binary not found in native library directory")
+                    }
+                } else {
+                    // Copy the binary from native lib directory to app's files directory
+                    sourceBinary.inputStream().use { input ->
+                        FileOutputStream(resticFile).use { output ->
+                            input.copyTo(output)
+                        }
                     }
                 }
+
+                // Make it executable
                 resticFile.setExecutable(true)
-                Log.d("ResticRepository", "Bundled restic for $abi extracted to ${resticFile.absolutePath}")
+                Log.d("ResticRepository", "Bundled restic copied to ${resticFile.absolutePath}")
+
             } catch (e: Exception) {
-                Log.e("ResticRepository", "Failed to extract bundled restic binary", e)
-                _resticState.value = ResticState.Error("Failed to extract bundled binary for ${Build.SUPPORTED_ABIS[0]}. It might be missing from the APK.")
+                Log.e("ResticRepository", "Failed to prepare bundled restic binary", e)
+                _resticState.value = ResticState.Error("Failed to prepare bundled binary: ${e.message}")
             }
         }
     }
