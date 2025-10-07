@@ -25,7 +25,7 @@ sealed class ResticState {
     object NotInstalled : ResticState()
     data class Downloading(val progress: Float) : ResticState() // Progress from 0.0 to 1.0
     object Extracting : ResticState() // State for when decompression is in progress
-    data class Installed(val path: String, val version: String) : ResticState()
+    data class Installed(val path: String, val version: String, val fullVersionOutput: String) : ResticState()
     data class Error(val message: String) : ResticState()
 }
 
@@ -58,7 +58,8 @@ class ResticRepository(private val context: Context) {
                 if (result.isSuccess) {
                     // Get the first line of the output, e.g., "restic 0.18.0 ..."
                     val versionOutput = result.out.firstOrNull()?.trim() ?: "Unknown version"
-                    _resticState.value = ResticState.Installed(resticFile.absolutePath, versionOutput)
+                    val version = versionOutput.split(" ").getOrNull(1) ?: "unknown"
+                    _resticState.value = ResticState.Installed(resticFile.absolutePath, version, versionOutput)
                 } else {
                     // If the command fails, the binary might be corrupted
                     _resticState.value = ResticState.Error("Binary corrupted or invalid")
@@ -684,3 +685,4 @@ data class SnapshotInfo(
     val paths: List<String>,
     val tags: List<String>
 )
+

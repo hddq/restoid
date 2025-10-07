@@ -42,9 +42,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.hddq.restoid.BuildConfig
@@ -261,16 +263,33 @@ fun ResticDependencyRow(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.weight(1f)
                 ) {
-                    val icon = when (targetState) {
-                        is ResticState.Installed -> Icons.Default.CheckCircle
-                        is ResticState.Error -> Icons.Default.Error
-                        else -> Icons.Default.CloudDownload
+                    val isUpdateAvailable = (targetState as? ResticState.Installed)?.version?.let {
+                        // A simple string comparison is often sufficient for semantic versions like this
+                        it.isNotEmpty() && it != "unknown" && it < stableResticVersion
+                    } == true
+
+                    val icon: ImageVector
+                    val iconColor: Color
+
+                    when {
+                        isUpdateAvailable -> {
+                            icon = Icons.Default.CloudDownload
+                            iconColor = MaterialTheme.colorScheme.primary
+                        }
+                        targetState is ResticState.Installed -> {
+                            icon = Icons.Default.CheckCircle
+                            iconColor = MaterialTheme.colorScheme.primary
+                        }
+                        targetState is ResticState.Error -> {
+                            icon = Icons.Default.Error
+                            iconColor = MaterialTheme.colorScheme.error
+                        }
+                        else -> {
+                            icon = Icons.Default.CloudDownload
+                            iconColor = LocalContentColor.current
+                        }
                     }
-                    val iconColor = when (targetState) {
-                        is ResticState.Installed -> MaterialTheme.colorScheme.primary
-                        is ResticState.Error -> MaterialTheme.colorScheme.error
-                        else -> LocalContentColor.current
-                    }
+
                     Icon(imageVector = icon, contentDescription = null, modifier = Modifier.padding(end = 16.dp), tint = iconColor)
 
                     Column(modifier = Modifier.weight(1f)) {
@@ -280,7 +299,7 @@ fun ResticDependencyRow(
                             ResticState.NotInstalled -> if (BuildConfig.IS_BUNDLED) "Bundled, will be extracted" else "Required for backups"
                             is ResticState.Downloading -> "Downloading..."
                             ResticState.Extracting -> "Extracting binary..."
-                            is ResticState.Installed -> targetState.version
+                            is ResticState.Installed -> targetState.fullVersionOutput
                             is ResticState.Error -> "Error: ${targetState.message}"
                         }
                         Text(
@@ -289,6 +308,14 @@ fun ResticDependencyRow(
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
+                        if (isUpdateAvailable) {
+                            Text(
+                                text = "Update to v$stableResticVersion available",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
 
@@ -336,6 +363,16 @@ fun ResticDependencyRow(
                             }
                         }
                     }
+                    is ResticState.Installed -> {
+                        val isUpdateAvailable = targetState.version.let {
+                            it.isNotEmpty() && it != "unknown" && it < stableResticVersion
+                        }
+                        if (isUpdateAvailable && !BuildConfig.IS_BUNDLED) {
+                            Button(onClick = onDownloadClick) {
+                                Text("Update")
+                            }
+                        }
+                    }
                     ResticState.Extracting -> CircularProgressIndicator()
                     is ResticState.Downloading -> {
                         Text(
@@ -344,7 +381,7 @@ fun ResticDependencyRow(
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
-                    is ResticState.Installed, ResticState.Idle -> {}
+                    ResticState.Idle -> {}
                 }
             }
 
@@ -409,3 +446,4 @@ fun RootStatusRow(text: String, icon: ImageVector) {
         Text(text = text, style = MaterialTheme.typography.bodyLarge)
     }
 }
+
