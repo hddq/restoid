@@ -41,7 +41,7 @@ class ResticRepository(private val context: Context) {
     val latestResticVersion = _latestResticVersion.asStateFlow()
 
     private val resticFile = File(context.filesDir, "restic")
-    val stableResticVersion = "0.18.0"
+    val stableResticVersion = "0.18.1"
     private val json = Json { ignoreUnknownKeys = true }
 
 
