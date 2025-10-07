@@ -37,6 +37,9 @@ class ResticRepository(private val context: Context) {
     private val _snapshots = MutableStateFlow<List<SnapshotInfo>?>(null)
     val snapshots = _snapshots.asStateFlow()
 
+    private val _latestResticVersion = MutableStateFlow<String?>(null)
+    val latestResticVersion = _latestResticVersion.asStateFlow()
+
     private val resticFile = File(context.filesDir, "restic")
     val stableResticVersion = "0.18.0"
     private val json = Json { ignoreUnknownKeys = true }
@@ -353,6 +356,16 @@ class ResticRepository(private val context: Context) {
                 // Ensure temporary files are deleted
                 oldPasswordFile.delete()
                 newPasswordFile.delete()
+            }
+        }
+    }
+
+    suspend fun fetchLatestResticVersion() {
+        withContext(Dispatchers.IO) {
+            try {
+                _latestResticVersion.value = getLatestResticVersionFromGitHub()
+            } catch (e: Exception) {
+                Log.e("ResticRepository", "Failed to fetch latest restic version", e)
             }
         }
     }

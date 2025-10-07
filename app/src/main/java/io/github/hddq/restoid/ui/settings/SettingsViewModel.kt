@@ -45,6 +45,7 @@ class SettingsViewModel(
     val selectedRepository = repositoriesRepository.selectedRepository
     val notificationPermissionState = notificationRepository.permissionState
     val stableResticVersion: String get() = resticRepository.stableResticVersion
+    val latestResticVersion = resticRepository.latestResticVersion
 
 
     // Internal and exposed UI State for adding a new repository
@@ -53,6 +54,12 @@ class SettingsViewModel(
 
     private val _changePasswordState = MutableStateFlow(ChangePasswordState.Idle)
     val changePasswordState = _changePasswordState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            resticRepository.fetchLatestResticVersion()
+        }
+    }
 
     fun requestRootAccess() {
         viewModelScope.launch {

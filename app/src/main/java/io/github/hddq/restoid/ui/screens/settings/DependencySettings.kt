@@ -18,6 +18,7 @@ import io.github.hddq.restoid.ui.settings.SettingsViewModel
 @Composable
 fun DependencySettings(viewModel: SettingsViewModel) {
     val resticState by viewModel.resticState.collectAsStateWithLifecycle()
+    val latestResticVersion by viewModel.latestResticVersion.collectAsStateWithLifecycle()
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -35,6 +36,7 @@ fun DependencySettings(viewModel: SettingsViewModel) {
             ResticDependencyRow(
                 state = resticState,
                 stableResticVersion = viewModel.stableResticVersion,
+                latestResticVersion = latestResticVersion,
                 onDownloadClick = { viewModel.downloadRestic() },
                 onDownloadLatestClick = { viewModel.downloadLatestRestic() }
             )

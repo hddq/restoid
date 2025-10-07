@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CornerSize
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CheckCircle
@@ -214,13 +215,11 @@ fun SplitButton(
     onSecondaryClick: () -> Unit,
     text: String
 ) {
+    val shape = RoundedCornerShape(percent = 50)
     Row(Modifier.height(IntrinsicSize.Min)) {
         Button(
             onClick = onClick,
-            shape = MaterialTheme.shapes.medium.copy(
-                topEnd = CornerSize(0.dp),
-                bottomEnd = CornerSize(0.dp)
-            ),
+            shape = shape.copy(topEnd = CornerSize(0.dp), bottomEnd = CornerSize(0.dp)),
             contentPadding = ButtonDefaults.ContentPadding
         ) {
             Text(text)
@@ -233,10 +232,7 @@ fun SplitButton(
         )
         Button(
             onClick = onSecondaryClick,
-            shape = MaterialTheme.shapes.medium.copy(
-                topStart = CornerSize(0.dp),
-                bottomStart = CornerSize(0.dp)
-            )
+            shape = shape.copy(topStart = CornerSize(0.dp), bottomStart = CornerSize(0.dp))
         ) {
             Icon(Icons.Default.ArrowDropDown, contentDescription = "More download options")
         }
@@ -248,6 +244,7 @@ fun SplitButton(
 fun ResticDependencyRow(
     state: ResticState,
     stableResticVersion: String,
+    latestResticVersion: String?,
     onDownloadClick: () -> Unit,
     onDownloadLatestClick: () -> Unit
 ) {
@@ -298,24 +295,43 @@ fun ResticDependencyRow(
                 when (targetState) {
                     ResticState.NotInstalled, is ResticState.Error -> {
                         if (!BuildConfig.IS_BUNDLED) {
-                            var showMenu by remember { mutableStateOf(false) }
-                            Box {
-                                SplitButton(
-                                    onClick = onDownloadClick,
-                                    onSecondaryClick = { showMenu = true },
-                                    text = if (targetState is ResticState.Error) "Retry" else "Download v$stableResticVersion"
-                                )
-                                DropdownMenu(
-                                    expanded = showMenu,
-                                    onDismissRequest = { showMenu = false }
-                                ) {
-                                    DropdownMenuItem(
-                                        text = { Text("Download latest") },
-                                        onClick = {
-                                            onDownloadLatestClick()
-                                            showMenu = false
-                                        }
+                            val isStableLatest = latestResticVersion != null && latestResticVersion == stableResticVersion
+                            val showSplitButton = latestResticVersion != null && !isStableLatest
+
+                            if (showSplitButton) {
+                                var showMenu by remember { mutableStateOf(false) }
+                                Box {
+                                    SplitButton(
+                                        onClick = onDownloadClick,
+                                        onSecondaryClick = { showMenu = true },
+                                        text = if (targetState is ResticState.Error) "Retry" else "Download v$stableResticVersion"
                                     )
+                                    DropdownMenu(
+                                        expanded = showMenu,
+                                        onDismissRequest = { showMenu = false }
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = { Text("Download latest (v$latestResticVersion)") },
+                                            onClick = {
+                                                onDownloadLatestClick()
+                                                showMenu = false
+                                            }
+                                        )
+                                    }
+                                }
+                            } else {
+                                val buttonText = when {
+                                    targetState is ResticState.Error -> "Retry"
+                                    latestResticVersion != null -> "Download latest (v$latestResticVersion)"
+                                    else -> "Download v$stableResticVersion"
+                                }
+                                val clickAction = when {
+                                    targetState is ResticState.Error -> onDownloadClick
+                                    latestResticVersion != null -> onDownloadLatestClick
+                                    else -> onDownloadClick
+                                }
+                                Button(onClick = clickAction) {
+                                    Text(buttonText)
                                 }
                             }
                         }
@@ -393,4 +409,3 @@ fun RootStatusRow(text: String, icon: ImageVector) {
         Text(text = text, style = MaterialTheme.typography.bodyLarge)
     }
 }
-
