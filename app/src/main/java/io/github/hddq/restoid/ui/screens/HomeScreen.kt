@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material3.ButtonDefaults
@@ -23,10 +24,12 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -46,6 +49,7 @@ import io.github.hddq.restoid.ui.home.HomeViewModel
 import io.github.hddq.restoid.ui.home.HomeViewModelFactory
 import io.github.hddq.restoid.ui.home.SnapshotWithMetadata
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onSnapshotClick: (String) -> Unit,
@@ -68,8 +72,9 @@ fun HomeScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(horizontal = 16.dp, vertical = 16.dp)
     ) {
+        // Header Section
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -98,65 +103,85 @@ fun HomeScreen(
         }
         Spacer(Modifier.height(24.dp))
 
-
-        when {
-            uiState.selectedRepo == null -> {
-                Text(
-                    "No repository selected. Go to settings to add one.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            uiState.resticState !is ResticState.Installed -> {
-                Text(
-                    "Restic not available. Check settings.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
-            uiState.isLoading -> {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            }
-            uiState.error != null -> {
-                Text(
-                    text = "Error: ${uiState.error}",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
-            uiState.snapshotsWithMetadata.isEmpty() && !uiState.isLoading -> {
-                Text(
-                    text = "No snapshots found for the selected repository.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            else -> {
-                Text(
-                    text = "Snapshots (${uiState.snapshotsWithMetadata.size})",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer
-                    )
-                ) {
-                    LazyColumn {
-                        val snapshots = uiState.snapshotsWithMetadata.sortedByDescending { it.snapshotInfo.time }
-                        items(snapshots.size) { index ->
-                            val item = snapshots[index]
-                            SnapshotItem(
-                                snapshotWithMetadata = item,
-                                apps = uiState.appInfoMap[item.snapshotInfo.id],
-                                onClick = { onSnapshotClick(item.snapshotInfo.id) }
+        // Refreshable Content Area
+        PullToRefreshBox(
+            isRefreshing = uiState.isRefreshing,
+            onRefresh = { viewModel.refreshSnapshots() },
+            modifier = Modifier.fillMaxSize()
+        ) {
+            // Use Box to ensure content fills space and handles scroll for non-list items
+            Box(modifier = Modifier.fillMaxSize()) {
+                when {
+                    uiState.selectedRepo == null -> {
+                        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                            Text(
+                                "No repository selected. Go to settings to add one.",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            if (index < snapshots.size - 1) {
-                                Divider(color = MaterialTheme.colorScheme.background)
+                        }
+                    }
+                    uiState.resticState !is ResticState.Installed -> {
+                        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                            Text(
+                                "Restic not available. Check settings.",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                    uiState.isLoading -> {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                    uiState.error != null -> {
+                        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                            Text(
+                                text = "Error: ${uiState.error}",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                    uiState.snapshotsWithMetadata.isEmpty() -> {
+                        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                            Text(
+                                text = "No snapshots found for the selected repository.",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    else -> {
+                        // Main list content
+                        Column {
+                            Text(
+                                text = "Snapshots (${uiState.snapshotsWithMetadata.size})",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                                )
+                            ) {
+                                LazyColumn {
+                                    val snapshots = uiState.snapshotsWithMetadata.sortedByDescending { it.snapshotInfo.time }
+                                    items(snapshots.size) { index ->
+                                        val item = snapshots[index]
+                                        SnapshotItem(
+                                            snapshotWithMetadata = item,
+                                            apps = uiState.appInfoMap[item.snapshotInfo.id],
+                                            onClick = { onSnapshotClick(item.snapshotInfo.id) }
+                                        )
+                                        if (index < snapshots.size - 1) {
+                                            Divider(color = MaterialTheme.colorScheme.background)
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -244,4 +269,3 @@ private fun SnapshotItem(snapshotWithMetadata: SnapshotWithMetadata, apps: List<
         }
     }
 }
-

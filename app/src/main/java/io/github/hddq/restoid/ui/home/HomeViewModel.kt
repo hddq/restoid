@@ -27,6 +27,7 @@ data class HomeUiState(
     val snapshotsWithMetadata: List<SnapshotWithMetadata> = emptyList(),
     val appInfoMap: Map<String, List<AppInfo>> = emptyMap(),
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false, // Added for swipe-to-refresh
     val error: String? = null,
     val selectedRepo: String? = null,
     val resticState: ResticState = ResticState.Idle,
@@ -69,7 +70,10 @@ class HomeViewModel(
 
             if (snapshots == null) {
                 // State is "not loaded yet". Trigger the load and show spinner.
-                _uiState.update { it.copy(isLoading = true, error = null) }
+                // Only show main loader if we aren't already refreshing
+                if (!_uiState.value.isRefreshing) {
+                    _uiState.update { it.copy(isLoading = true, error = null) }
+                }
                 loadSnapshots(repoPath, restic)
                 return@combine // Wait for flow to be updated by loadSnapshots
             }
@@ -119,6 +123,36 @@ class HomeViewModel(
         }
     }
 
+    // Explicit refresh function for pull-to-refresh
+    fun refreshSnapshots() {
+        val repoPath = _uiState.value.selectedRepo
+        val resticState = _uiState.value.resticState
+
+        if (repoPath == null || resticState !is ResticState.Installed) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshing = true, error = null) }
+
+            try {
+                if (repositoriesRepository.hasRepositoryPassword(repoPath)) {
+                    val password = repositoriesRepository.getRepositoryPassword(repoPath)!!
+                    // We await this call to ensure the refresh indicator stays until done
+                    val result = resticRepository.getSnapshots(repoPath, password)
+                    if (result.isFailure) {
+                        _uiState.update { it.copy(error = result.exceptionOrNull()?.message) }
+                    }
+                } else {
+                    _uiState.update { it.copy(showPasswordDialogFor = repoPath) }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = e.message) }
+            } finally {
+                // Always turn off the refreshing state, preventing infinite loader
+                _uiState.update { it.copy(isRefreshing = false) }
+            }
+        }
+    }
+
     private fun loadAppInfoForSnapshots(snapshotsWithMetadata: List<SnapshotWithMetadata>) {
         viewModelScope.launch {
             val appInfoMap = mutableMapOf<String, List<AppInfo>>()
@@ -143,7 +177,6 @@ class HomeViewModel(
             repositoriesRepository.saveRepositoryPasswordTemporary(repoPath, password)
         }
 
-        // The original comment was incorrect, the combine block isn't triggered by saving a password.
         // We need to explicitly call loadSnapshots again now that we have a password.
         loadSnapshots(repoPath, uiState.value.resticState)
     }
