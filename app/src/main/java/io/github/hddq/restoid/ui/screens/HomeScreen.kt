@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -113,7 +112,11 @@ fun HomeScreen(
             Box(modifier = Modifier.fillMaxSize()) {
                 when {
                     uiState.selectedRepo == null -> {
-                        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                        ) {
                             Text(
                                 "No repository selected. Go to settings to add one.",
                                 style = MaterialTheme.typography.bodyLarge,
@@ -122,7 +125,11 @@ fun HomeScreen(
                         }
                     }
                     uiState.resticState !is ResticState.Installed -> {
-                        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                        ) {
                             Text(
                                 "Restic not available. Check settings.",
                                 style = MaterialTheme.typography.bodyLarge,
@@ -136,7 +143,11 @@ fun HomeScreen(
                         }
                     }
                     uiState.error != null -> {
-                        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                        ) {
                             Text(
                                 text = "Error: ${uiState.error}",
                                 style = MaterialTheme.typography.bodyLarge,
@@ -145,7 +156,11 @@ fun HomeScreen(
                         }
                     }
                     uiState.snapshotsWithMetadata.isEmpty() -> {
-                        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                        ) {
                             Text(
                                 text = "No snapshots found for the selected repository.",
                                 style = MaterialTheme.typography.bodyLarge,
@@ -155,7 +170,14 @@ fun HomeScreen(
                     }
                     else -> {
                         // Main list content
-                        Column {
+                        // We use a Scrollable Column that fills max size so the swipe gesture works anywhere.
+                        // Inside the card, we use a simple Column instead of LazyColumn to avoid nested scrolling issues
+                        // and to ensure the Card height wraps its content correctly within the scrollable parent.
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                        ) {
                             Text(
                                 text = "Snapshots (${uiState.snapshotsWithMetadata.size})",
                                 style = MaterialTheme.typography.titleMedium,
@@ -168,10 +190,9 @@ fun HomeScreen(
                                     containerColor = MaterialTheme.colorScheme.surfaceContainer
                                 )
                             ) {
-                                LazyColumn {
+                                Column {
                                     val snapshots = uiState.snapshotsWithMetadata.sortedByDescending { it.snapshotInfo.time }
-                                    items(snapshots.size) { index ->
-                                        val item = snapshots[index]
+                                    snapshots.forEachIndexed { index, item ->
                                         SnapshotItem(
                                             snapshotWithMetadata = item,
                                             apps = uiState.appInfoMap[item.snapshotInfo.id],
