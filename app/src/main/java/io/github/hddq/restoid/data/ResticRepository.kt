@@ -1,6 +1,7 @@
 package io.github.hddq.restoid.data
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.os.Build
 import android.util.Log
 import com.topjohnwu.superuser.Shell
@@ -44,11 +45,15 @@ class ResticRepository(private val context: Context) {
     val stableResticVersion = "0.18.1"
     private val json = Json { ignoreUnknownKeys = true }
 
+    // Prefs to track which version of the app extracted the binary
+    private val prefs: SharedPreferences = context.getSharedPreferences("restic_repo_prefs", Context.MODE_PRIVATE)
+    private val KEY_EXTRACTED_VERSION = "extracted_pkg_version"
+
 
     // Check the status of the restic binary by executing it
     suspend fun checkResticStatus() {
         withContext(Dispatchers.IO) {
-            if (BuildConfig.IS_BUNDLED && !resticFile.exists()) {
+            if (BuildConfig.IS_BUNDLED) {
                 ensureBundledResticIsReady()
             }
 
@@ -79,10 +84,16 @@ class ResticRepository(private val context: Context) {
 
     private suspend fun ensureBundledResticIsReady() {
         withContext(Dispatchers.IO) {
-            if (resticFile.exists()) return@withContext
+            // Version Check Logic 🚀
+            val currentAppVersion = getAppVersionCode()
+            val lastExtractedVersion = prefs.getLong(KEY_EXTRACTED_VERSION, -1L)
+            val needsExtraction = !resticFile.exists() || (currentAppVersion > lastExtractedVersion)
+
+            if (!needsExtraction) return@withContext
 
             try {
                 _resticState.value = ResticState.Extracting
+                Log.d("ResticRepository", "Extracting bundled binary. App Ver: $currentAppVersion, Last Extracted: $lastExtractedVersion")
 
                 // The binary is now in the native library directory as librestic.so
                 val nativeLibDir = context.applicationInfo.nativeLibraryDir
@@ -91,38 +102,53 @@ class ResticRepository(private val context: Context) {
                 Log.d("ResticRepository", "Looking for bundled restic at: ${sourceBinary.absolutePath}")
 
                 if (!sourceBinary.exists()) {
-                    // Fallback: Try to find it in the specific ABI directory
+                    // Fallback: Try to find it in the specific ABI directory (rare but possible on some devices)
                     val abi = Build.SUPPORTED_ABIS[0]
                     val altSourceBinary = File(nativeLibDir, "../$abi/librestic.so")
 
                     if (altSourceBinary.exists()) {
-                        Log.d("ResticRepository", "Found bundled restic at alternative location: ${altSourceBinary.absolutePath}")
-                        // Copy the binary from native lib directory to app's files directory
-                        altSourceBinary.inputStream().use { input ->
-                            FileOutputStream(resticFile).use { output ->
-                                input.copyTo(output)
-                            }
-                        }
+                        copyFile(altSourceBinary, resticFile)
                     } else {
                         throw Exception("Bundled restic binary not found in native library directory")
                     }
                 } else {
-                    // Copy the binary from native lib directory to app's files directory
-                    sourceBinary.inputStream().use { input ->
-                        FileOutputStream(resticFile).use { output ->
-                            input.copyTo(output)
-                        }
-                    }
+                    copyFile(sourceBinary, resticFile)
                 }
 
                 // Make it executable
                 resticFile.setExecutable(true)
+
+                // Save the version code so we don't extract again until the next app update
+                prefs.edit().putLong(KEY_EXTRACTED_VERSION, currentAppVersion).apply()
+
                 Log.d("ResticRepository", "Bundled restic copied to ${resticFile.absolutePath}")
 
             } catch (e: Exception) {
                 Log.e("ResticRepository", "Failed to prepare bundled restic binary", e)
                 _resticState.value = ResticState.Error("Failed to prepare bundled binary: ${e.message}")
             }
+        }
+    }
+
+    private fun copyFile(source: File, dest: File) {
+        source.inputStream().use { input ->
+            FileOutputStream(dest).use { output ->
+                input.copyTo(output)
+            }
+        }
+    }
+
+    private fun getAppVersionCode(): Long {
+        return try {
+            val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                pInfo.longVersionCode
+            } else {
+                @Suppress("DEPRECATION")
+                pInfo.versionCode.toLong()
+            }
+        } catch (e: Exception) {
+            0L
         }
     }
 
@@ -685,4 +711,3 @@ data class SnapshotInfo(
     val paths: List<String>,
     val tags: List<String>
 )
-
