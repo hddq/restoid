@@ -2,9 +2,6 @@ package io.github.hddq.restoid.ui.screens
 
 import android.Manifest
 import android.content.Intent
-import android.net.Uri
-import android.os.Environment
-import android.provider.DocumentsContract
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -30,6 +27,7 @@ import io.github.hddq.restoid.ui.screens.settings.RepositorySettings
 import io.github.hddq.restoid.ui.screens.settings.SystemSettings
 import io.github.hddq.restoid.ui.settings.SettingsViewModel
 import io.github.hddq.restoid.ui.settings.SettingsViewModelFactory
+import io.github.hddq.restoid.util.StorageUtils
 
 @Composable
 fun SettingsScreen(onNavigateToLicenses: () -> Unit, modifier: Modifier = Modifier) {
@@ -68,7 +66,8 @@ fun SettingsScreen(onNavigateToLicenses: () -> Unit, modifier: Modifier = Modifi
                             Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                     context.contentResolver.takePersistableUriPermission(it, takeFlags)
 
-                    getPathFromTreeUri(it)?.let { path ->
+                    // Use the new utility function
+                    StorageUtils.getPathFromTreeUri(it)?.let { path ->
                         settingsViewModel.onNewRepoPathChanged(path)
                     }
                 } catch (e: SecurityException) {
@@ -128,24 +127,4 @@ fun SettingsScreen(onNavigateToLicenses: () -> Unit, modifier: Modifier = Modifi
             AboutSettings(onNavigateToLicenses = onNavigateToLicenses)
         }
     }
-}
-
-private fun getPathFromTreeUri(treeUri: Uri): String? {
-    if (treeUri.authority != "com.android.externalstorage.documents") {
-        return null
-    }
-
-    val docId = DocumentsContract.getTreeDocumentId(treeUri)
-    val split = docId.split(":")
-    if (split.size > 1) {
-        val type = split[0]
-        val path = split[1]
-        return if (type == "primary") {
-            "${Environment.getExternalStorageDirectory()}/$path"
-        } else {
-            // Handle SD cards and USB drives where type is the UUID
-            "/storage/$type/$path"
-        }
-    }
-    return null
 }

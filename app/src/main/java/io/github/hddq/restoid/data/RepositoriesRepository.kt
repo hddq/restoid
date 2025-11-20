@@ -3,6 +3,7 @@ package io.github.hddq.restoid.data
 import android.content.Context
 import android.util.Log
 import com.topjohnwu.superuser.Shell
+import io.github.hddq.restoid.util.StorageUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -140,8 +141,8 @@ class RepositoriesRepository(
             // Java runs as the app user and cannot access external storage roots (Scoped Storage).
             // We use Root Shell commands which bypass these restrictions.
 
-            // Resolve the path for the root shell environment (Global Mount Namespace)
-            val resolvedPath = resolvePathForShell(path)
+            // Resolve the path for the root shell environment (Global Mount Namespace) using Utility
+            val resolvedPath = StorageUtils.resolvePathForShell(path)
             Log.d("RepoRepo", "Adding repository at: $resolvedPath (Original: $path)")
 
             if (repositories.value.any { it.path == resolvedPath }) {
@@ -193,45 +194,6 @@ class RepositoriesRepository(
                 passwordFile.delete()
             }
         }
-    }
-
-    /**
-     * Dynamically resolves a user-space path (e.g., /storage/UUID/...) to a root-space mount path
-     * (e.g., /mnt/media_rw/UUID/...).
-     * This is necessary because Shell.FLAG_MOUNT_MASTER places the shell in the global namespace,
-     * where user-specific FUSE/SDCardFS mounts often don't exist or are inaccessible.
-     */
-    private fun resolvePathForShell(inputPath: String): String {
-        // Pattern to match /storage/UUID/...
-        val uuidPattern = Regex("^/storage/([A-Fa-f0-9-]+)(/.*)?$")
-        val match = uuidPattern.find(inputPath)
-
-        if (match != null) {
-            val uuid = match.groupValues[1]
-            val relativePath = match.groupValues[2]
-
-            // 1. Check /proc/mounts to find where this UUID is actually mounted
-            val mounts = Shell.cmd("cat /proc/mounts").exec().out
-            val mountPoint = mounts
-                .map { it.split("\\s+".toRegex()) }
-                .filter { it.size >= 2 }
-                .map { it[1] } // Mount point is the second field
-                .find { it.endsWith("/$uuid") }
-
-            if (mountPoint != null) {
-                return "$mountPoint$relativePath"
-            }
-
-            // 2. Fallback: If grep fails, check specific common locations like /mnt/media_rw
-            // We check the root of the drive (/$uuid) because the relative folder might not exist yet.
-            val mediaRwPath = "/mnt/media_rw/$uuid"
-            if (Shell.cmd("[ -d '$mediaRwPath' ]").exec().isSuccess) {
-                return "$mediaRwPath$relativePath"
-            }
-        }
-
-        // Return original if it's primary storage or resolution failed
-        return inputPath
     }
 
     private suspend fun handleSuccessfulRepoAdd(path: String, password: String, resticRepository: ResticRepository, savePassword: Boolean, wasEmpty: Boolean): AddRepositoryState {
