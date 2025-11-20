@@ -140,9 +140,11 @@ private fun getPathFromTreeUri(treeUri: Uri): String? {
     if (split.size > 1) {
         val type = split[0]
         val path = split[1]
-        return when (type) {
-            "primary" -> "${Environment.getExternalStorageDirectory()}/$path"
-            else -> null
+        return if (type == "primary") {
+            "${Environment.getExternalStorageDirectory()}/$path"
+        } else {
+            // Handle SD cards and USB drives where type is the UUID
+            "/storage/$type/$path"
         }
     }
     return null

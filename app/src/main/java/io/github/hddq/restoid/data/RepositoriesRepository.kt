@@ -136,10 +136,15 @@ class RepositoriesRepository(
         savePassword: Boolean
     ): AddRepositoryState {
         return withContext(Dispatchers.IO) {
-            val repoDir = File(path)
-            val configFile = File(repoDir, "config")
+            // We do NOT use java.io.File here for existence checks or mkdirs.
+            // Java runs as the app user and cannot access external storage roots (Scoped Storage).
+            // We use Root Shell commands which bypass these restrictions.
 
-            if (repositories.value.any { it.path == path }) {
+            // Resolve the path for the root shell environment (Global Mount Namespace)
+            val resolvedPath = resolvePathForShell(path)
+            Log.d("RepoRepo", "Adding repository at: $resolvedPath (Original: $path)")
+
+            if (repositories.value.any { it.path == resolvedPath }) {
                 return@withContext AddRepositoryState.Error("Repository already exists.")
             }
             val wasEmpty = repositories.value.isEmpty()
@@ -149,29 +154,37 @@ class RepositoriesRepository(
                 passwordFile.writeText(password)
                 val resticPath = (resticRepository.resticState.value as ResticState.Installed).path
 
-                // Check if it's an existing repository by trying to list keys
-                if (repoDir.exists() && configFile.exists()) {
-                    val checkCommand = "RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' $resticPath -r '$path' list keys --no-lock"
+                // 1. Check if it's an existing repository using ROOT shell
+                // [ -f path/config ] checks if the config file exists
+                val checkConfigCmd = "[ -f '$resolvedPath/config' ]"
+                val repoExists = Shell.cmd(checkConfigCmd).exec().isSuccess
+
+                if (repoExists) {
+                    val checkCommand = "RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' $resticPath -r '$resolvedPath' list keys --no-lock"
                     val checkResult = Shell.cmd(checkCommand).exec()
                     if (checkResult.isSuccess) {
-                        handleSuccessfulRepoAdd(path, password, resticRepository, savePassword, wasEmpty)
+                        handleSuccessfulRepoAdd(resolvedPath, password, resticRepository, savePassword, wasEmpty)
                     } else {
                         val errorOutput = checkResult.err.joinToString("\n")
                         AddRepositoryState.Error(if (errorOutput.isEmpty()) "Invalid password or corrupted repository." else errorOutput)
                     }
                 } else {
-                    // It's a new repository, initialize it
-                    if (!repoDir.exists() && !repoDir.mkdirs()) {
-                        return@withContext AddRepositoryState.Error("Failed to create directory at $path")
+                    // 2. It's a new repository. Create the directory using ROOT shell (mkdir -p)
+                    val mkdirResult = Shell.cmd("mkdir -p '$resolvedPath'").exec()
+
+                    if (!mkdirResult.isSuccess) {
+                        return@withContext AddRepositoryState.Error("Failed to create directory at $resolvedPath. Check root permissions.")
                     }
 
-                    val initCommand = "RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' $resticPath -r '$path' init"
+                    // 3. Initialize using restic
+                    val initCommand = "RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' $resticPath -r '$resolvedPath' init"
                     val initResult = Shell.cmd(initCommand).exec()
 
                     if (initResult.isSuccess) {
-                        handleSuccessfulRepoAdd(path, password, resticRepository, savePassword, wasEmpty)
+                        handleSuccessfulRepoAdd(resolvedPath, password, resticRepository, savePassword, wasEmpty)
                     } else {
-                        repoDir.deleteRecursively() // Clean up failed init
+                        // Clean up failed init using root
+                        Shell.cmd("rm -rf '$resolvedPath'").exec()
                         val errorOutput = initResult.err.joinToString("\n")
                         AddRepositoryState.Error(if (errorOutput.isEmpty()) "Failed to initialize repository." else errorOutput)
                     }
@@ -180,6 +193,45 @@ class RepositoriesRepository(
                 passwordFile.delete()
             }
         }
+    }
+
+    /**
+     * Dynamically resolves a user-space path (e.g., /storage/UUID/...) to a root-space mount path
+     * (e.g., /mnt/media_rw/UUID/...).
+     * This is necessary because Shell.FLAG_MOUNT_MASTER places the shell in the global namespace,
+     * where user-specific FUSE/SDCardFS mounts often don't exist or are inaccessible.
+     */
+    private fun resolvePathForShell(inputPath: String): String {
+        // Pattern to match /storage/UUID/...
+        val uuidPattern = Regex("^/storage/([A-Fa-f0-9-]+)(/.*)?$")
+        val match = uuidPattern.find(inputPath)
+
+        if (match != null) {
+            val uuid = match.groupValues[1]
+            val relativePath = match.groupValues[2]
+
+            // 1. Check /proc/mounts to find where this UUID is actually mounted
+            val mounts = Shell.cmd("cat /proc/mounts").exec().out
+            val mountPoint = mounts
+                .map { it.split("\\s+".toRegex()) }
+                .filter { it.size >= 2 }
+                .map { it[1] } // Mount point is the second field
+                .find { it.endsWith("/$uuid") }
+
+            if (mountPoint != null) {
+                return "$mountPoint$relativePath"
+            }
+
+            // 2. Fallback: If grep fails, check specific common locations like /mnt/media_rw
+            // We check the root of the drive (/$uuid) because the relative folder might not exist yet.
+            val mediaRwPath = "/mnt/media_rw/$uuid"
+            if (Shell.cmd("[ -d '$mediaRwPath' ]").exec().isSuccess) {
+                return "$mediaRwPath$relativePath"
+            }
+        }
+
+        // Return original if it's primary storage or resolution failed
+        return inputPath
     }
 
     private suspend fun handleSuccessfulRepoAdd(path: String, password: String, resticRepository: ResticRepository, savePassword: Boolean, wasEmpty: Boolean): AddRepositoryState {
@@ -285,4 +337,3 @@ class RepositoriesRepository(
         prefs.edit().putStringSet(REPOS_KEY, currentJsonSet).apply()
     }
 }
-
