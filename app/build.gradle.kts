@@ -18,15 +18,13 @@ tasks.register("buildResticForBundledFlavor") {
         }
 
         // These are the architectures defined in your splits block.
-        val targetAbis = setOf("x86", "x86_64", "armeabi-v7a", "arm64-v8a")
+        val targetAbis = setOf("x86_64", "arm64-v8a")
 
         targetAbis.forEach { abi ->
             // Map Android ABI names to Go architecture names.
             val goArch = when (abi) {
                 "arm64-v8a" -> "arm64"
-                "armeabi-v7a" -> "arm"
                 "x86_64" -> "amd64"
-                "x86" -> "386"
                 else -> null
             }
 
@@ -80,6 +78,11 @@ android {
         versionName = "0.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        ndk {
+            abiFilters.add("arm64-v8a")
+            abiFilters.add("x86_64")
+        }
     }
 
     productFlavors {
@@ -100,7 +103,7 @@ android {
         abi {
             isEnable = true
             reset()
-            include("x86", "x86_64", "armeabi-v7a", "arm64-v8a")
+            include("x86_64", "arm64-v8a")
             isUniversalApk = true
         }
     }
