@@ -3,16 +3,12 @@ package io.github.hddq.restoid.ui.restore
 import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import io.github.hddq.restoid.data.AppInfoRepository
-import io.github.hddq.restoid.data.MetadataRepository
-import io.github.hddq.restoid.data.NotificationRepository
-import io.github.hddq.restoid.data.PreferencesRepository
-import io.github.hddq.restoid.data.RepositoriesRepository
-import io.github.hddq.restoid.data.ResticRepository
+import io.github.hddq.restoid.data.*
 
 class RestoreViewModelFactory(
     private val application: Application,
     private val repositoriesRepository: RepositoriesRepository,
+    private val resticBinaryManager: ResticBinaryManager, // Injected
     private val resticRepository: ResticRepository,
     private val appInfoRepository: AppInfoRepository,
     private val notificationRepository: NotificationRepository,
@@ -26,6 +22,7 @@ class RestoreViewModelFactory(
             return RestoreViewModel(
                 application,
                 repositoriesRepository,
+                resticBinaryManager,
                 resticRepository,
                 appInfoRepository,
                 notificationRepository,

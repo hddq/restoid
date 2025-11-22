@@ -34,6 +34,7 @@ fun RestoreScreen(navController: NavController, snapshotId: String?, modifier: M
         factory = RestoreViewModelFactory(
             application,
             application.repositoriesRepository,
+            application.resticBinaryManager, // Added this!
             application.resticRepository,
             application.appInfoRepository,
             application.notificationRepository,
@@ -120,17 +121,17 @@ fun RestoreSelectionContent(
                         modifier = Modifier.padding(16.dp)
                     )
                     RestoreTypeToggle("APK", checked = restoreTypes.apk) { onToggleRestoreType("APK", it) }
-                    Divider(color = MaterialTheme.colorScheme.background)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
                     RestoreTypeToggle("Data", checked = restoreTypes.data) { onToggleRestoreType("Data", it) }
-                    Divider(color = MaterialTheme.colorScheme.background)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
                     RestoreTypeToggle("Device Protected Data", checked = restoreTypes.deviceProtectedData) { onToggleRestoreType("Device Protected Data", it) }
-                    Divider(color = MaterialTheme.colorScheme.background)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
                     RestoreTypeToggle("External Data", checked = restoreTypes.externalData) { onToggleRestoreType("External Data", it) }
-                    Divider(color = MaterialTheme.colorScheme.background)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
                     RestoreTypeToggle("OBB Data", checked = restoreTypes.obb) { onToggleRestoreType("OBB Data", it) }
-                    Divider(color = MaterialTheme.colorScheme.background)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
                     RestoreTypeToggle("Media Data", checked = restoreTypes.media) { onToggleRestoreType("Media Data", it) }
-                    Divider(color = MaterialTheme.colorScheme.background)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
                     RestoreTypeToggle("Allow Downgrade", checked = allowDowngrade) { onToggleAllowDowngrade(it) }
                 }
             }
@@ -186,7 +187,7 @@ fun RestoreSelectionContent(
                                 onToggle = { onToggleApp(detail.appInfo.packageName) }
                             )
                             if (index < backupDetails.size - 1) {
-                                Divider(color = MaterialTheme.colorScheme.background)
+                                HorizontalDivider(color = MaterialTheme.colorScheme.background)
                             }
                         }
                     }

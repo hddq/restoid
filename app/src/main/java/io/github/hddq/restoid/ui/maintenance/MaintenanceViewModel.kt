@@ -2,11 +2,7 @@ package io.github.hddq.restoid.ui.maintenance
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.github.hddq.restoid.data.NotificationRepository
-import io.github.hddq.restoid.data.PreferencesRepository
-import io.github.hddq.restoid.data.RepositoriesRepository
-import io.github.hddq.restoid.data.ResticRepository
-import io.github.hddq.restoid.data.ResticState
+import io.github.hddq.restoid.data.*
 import io.github.hddq.restoid.ui.shared.OperationProgress
 import io.github.hddq.restoid.util.MaintenanceOutputParser
 import kotlinx.coroutines.Dispatchers
@@ -17,26 +13,22 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class MaintenanceUiState(
-    // Prune, Check, Unlock
     val checkRepo: Boolean = true,
     val pruneRepo: Boolean = false,
     val unlockRepo: Boolean = false,
     val readData: Boolean = false,
-
-    // Forget Policy
     val forgetSnapshots: Boolean = false,
     val keepLast: Int = 5,
     val keepDaily: Int = 7,
     val keepWeekly: Int = 4,
     val keepMonthly: Int = 6,
-
-    // Operation Status
     val isRunning: Boolean = false,
     val progress: OperationProgress = OperationProgress(),
 )
 
 class MaintenanceViewModel(
     private val repositoriesRepository: RepositoriesRepository,
+    private val resticBinaryManager: ResticBinaryManager, // Inject Manager
     private val resticRepository: ResticRepository,
     private val notificationRepository: NotificationRepository,
     private val preferencesRepository: PreferencesRepository
@@ -44,7 +36,6 @@ class MaintenanceViewModel(
 
     private val _uiState = MutableStateFlow(MaintenanceUiState())
     val uiState = _uiState.asStateFlow()
-
     private var maintenanceJob: Job? = null
 
     init {
@@ -53,7 +44,6 @@ class MaintenanceViewModel(
 
     fun runTasks() {
         if (_uiState.value.isRunning) return
-
         preferencesRepository.saveMaintenanceState(_uiState.value)
 
         maintenanceJob = viewModelScope.launch(Dispatchers.IO) {
@@ -64,7 +54,6 @@ class MaintenanceViewModel(
             var overallSuccess = true
 
             try {
-                // --- Pre-flight checks ---
                 val errorState = preflightChecks()
                 if (errorState != null) {
                     _uiState.update { it.copy(progress = errorState, isRunning = false) }
@@ -75,49 +64,29 @@ class MaintenanceViewModel(
                 val password = repositoriesRepository.getRepositoryPassword(selectedRepoPath)!!
 
                 val tasksToRun = mutableListOf<Pair<String, suspend () -> Result<String>>>()
-                if (_uiState.value.unlockRepo) {
-                    tasksToRun.add("Unlock" to { resticRepository.unlock(selectedRepoPath, password) })
-                }
+                if (_uiState.value.unlockRepo) tasksToRun.add("Unlock" to { resticRepository.unlock(selectedRepoPath, password) })
                 if (_uiState.value.forgetSnapshots) {
                     val state = _uiState.value
                     tasksToRun.add("Forget" to {
-                        resticRepository.forget(
-                            selectedRepoPath,
-                            password,
-                            state.keepLast,
-                            state.keepDaily,
-                            state.keepWeekly,
-                            state.keepMonthly
-                        )
+                        resticRepository.forget(selectedRepoPath, password, state.keepLast, state.keepDaily, state.keepWeekly, state.keepMonthly)
                     })
                 }
-                if (_uiState.value.pruneRepo) {
-                    tasksToRun.add("Prune" to { resticRepository.prune(selectedRepoPath, password) })
-                }
-                if (_uiState.value.checkRepo) {
-                    tasksToRun.add("Check" to { resticRepository.check(selectedRepoPath, password, _uiState.value.readData) })
-                }
+                if (_uiState.value.pruneRepo) tasksToRun.add("Prune" to { resticRepository.prune(selectedRepoPath, password) })
+                if (_uiState.value.checkRepo) tasksToRun.add("Check" to { resticRepository.check(selectedRepoPath, password, _uiState.value.readData) })
 
-                if (tasksToRun.isEmpty()) {
-                    throw IllegalStateException("No maintenance tasks selected.")
-                }
+                if (tasksToRun.isEmpty()) throw IllegalStateException("No maintenance tasks selected.")
 
                 tasksToRun.forEachIndexed { index, (taskName, taskAction) ->
                     val stageTitle = "[${index + 1}/${tasksToRun.size}] Running '$taskName'..."
                     _uiState.update {
-                        it.copy(progress = it.progress.copy(
-                            stageTitle = stageTitle,
-                            overallPercentage = index.toFloat() / tasksToRun.size
-                        ))
+                        it.copy(progress = it.progress.copy(stageTitle = stageTitle, overallPercentage = index.toFloat() / tasksToRun.size))
                     }
                     notificationRepository.showOperationProgressNotification("Maintenance", _uiState.value.progress)
 
                     val result = taskAction()
 
                     _uiState.update {
-                        it.copy(progress = it.progress.copy(
-                            overallPercentage = (index + 1f) / tasksToRun.size
-                        ))
+                        it.copy(progress = it.progress.copy(overallPercentage = (index + 1f) / tasksToRun.size))
                     }
 
                     result.fold(
@@ -145,7 +114,6 @@ class MaintenanceViewModel(
                 _uiState.update { it.copy(isRunning = false, progress = finalProgress) }
                 notificationRepository.showOperationFinishedNotification("Maintenance", overallSuccess, finalProgress.finalSummary)
 
-                // Refresh snapshots if prune or forget was successful
                 if ((_uiState.value.pruneRepo || _uiState.value.forgetSnapshots) && overallSuccess) {
                     val repoPath = repositoriesRepository.selectedRepository.value
                     val password = repoPath?.let { repositoriesRepository.getRepositoryPassword(it) }
@@ -161,7 +129,8 @@ class MaintenanceViewModel(
         if (!_uiState.value.checkRepo && !_uiState.value.pruneRepo && !_uiState.value.unlockRepo && !_uiState.value.forgetSnapshots) {
             return OperationProgress(isFinished = true, error = "No tasks selected.", finalSummary = "No maintenance tasks were selected.")
         }
-        if (resticRepository.resticState.value !is ResticState.Installed) {
+        // Use Manager for check
+        if (resticBinaryManager.resticState.value !is ResticState.Installed) {
             return OperationProgress(isFinished = true, error = "Restic is not installed.", finalSummary = "Restic binary is not installed.")
         }
         val selectedRepoPath = repositoriesRepository.selectedRepository.value
@@ -169,46 +138,19 @@ class MaintenanceViewModel(
             return OperationProgress(isFinished = true, error = "No backup repository selected.", finalSummary = "No backup repository is selected.")
         }
         if (repositoriesRepository.getRepositoryPassword(selectedRepoPath) == null) {
-            return OperationProgress(isFinished = true, error = "Password for repository not found.", finalSummary = "Could not find the password for the repository.")
+            return OperationProgress(isFinished = true, error = "Password for repository not found.", finalSummary = "Could not find the password.")
         }
         return null
     }
 
-    fun onDone() {
-        _uiState.update { it.copy(progress = OperationProgress()) }
-    }
-
-
-    fun setCheckRepo(value: Boolean) {
-        _uiState.update { it.copy(checkRepo = value) }
-    }
-
-    fun setPruneRepo(value: Boolean) {
-        _uiState.update { it.copy(pruneRepo = value) }
-    }
-
-    fun setUnlockRepo(value: Boolean) {
-        _uiState.update { it.copy(unlockRepo = value) }
-    }
-
-    fun setReadData(value: Boolean) {
-        _uiState.update { it.copy(readData = value) }
-    }
-
-    // Forget Policy setters
-    fun setForgetSnapshots(value: Boolean) {
-        _uiState.update { it.copy(forgetSnapshots = value) }
-    }
-    fun setKeepLast(value: Int) {
-        _uiState.update { it.copy(keepLast = value) }
-    }
-    fun setKeepDaily(value: Int) {
-        _uiState.update { it.copy(keepDaily = value) }
-    }
-    fun setKeepWeekly(value: Int) {
-        _uiState.update { it.copy(keepWeekly = value) }
-    }
-    fun setKeepMonthly(value: Int) {
-        _uiState.update { it.copy(keepMonthly = value) }
-    }
+    fun onDone() { _uiState.update { it.copy(progress = OperationProgress()) } }
+    fun setCheckRepo(value: Boolean) = _uiState.update { it.copy(checkRepo = value) }
+    fun setPruneRepo(value: Boolean) = _uiState.update { it.copy(pruneRepo = value) }
+    fun setUnlockRepo(value: Boolean) = _uiState.update { it.copy(unlockRepo = value) }
+    fun setReadData(value: Boolean) = _uiState.update { it.copy(readData = value) }
+    fun setForgetSnapshots(value: Boolean) = _uiState.update { it.copy(forgetSnapshots = value) }
+    fun setKeepLast(value: Int) = _uiState.update { it.copy(keepLast = value) }
+    fun setKeepDaily(value: Int) = _uiState.update { it.copy(keepDaily = value) }
+    fun setKeepWeekly(value: Int) = _uiState.update { it.copy(keepWeekly = value) }
+    fun setKeepMonthly(value: Int) = _uiState.update { it.copy(keepMonthly = value) }
 }

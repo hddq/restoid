@@ -16,7 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -45,6 +45,7 @@ fun MaintenanceScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
     val viewModel: MaintenanceViewModel = viewModel(
         factory = MaintenanceViewModelFactory(
             application.repositoriesRepository,
+            application.resticBinaryManager, // Added this!
             application.resticRepository,
             application.notificationRepository,
             application.preferencesRepository
@@ -120,19 +121,19 @@ fun MaintenanceSelectionContent(
                         checked = uiState.unlockRepo,
                         onCheckedChange = onSetUnlockRepo
                     )
-                    Divider(color = MaterialTheme.colorScheme.background)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
                     MaintenanceTaskToggle(
                         label = "Forget old snapshots",
                         checked = uiState.forgetSnapshots,
                         onCheckedChange = onSetForgetSnapshots
                     )
-                    Divider(color = MaterialTheme.colorScheme.background)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
                     MaintenanceTaskToggle(
                         label = "Prune repository",
                         checked = uiState.pruneRepo,
                         onCheckedChange = onSetPruneRepo
                     )
-                    Divider(color = MaterialTheme.colorScheme.background)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
                     MaintenanceTaskToggle(
                         label = "Check repository integrity",
                         checked = uiState.checkRepo,
@@ -246,4 +247,3 @@ fun MaintenanceTaskToggle(label: String, checked: Boolean, onCheckedChange: (Boo
         )
     }
 }
-

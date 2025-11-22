@@ -1,21 +1,14 @@
 package io.github.hddq.restoid.ui.settings
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.github.hddq.restoid.data.AddRepositoryState
-import io.github.hddq.restoid.data.NotificationRepository
-import io.github.hddq.restoid.data.RepositoriesRepository
-import io.github.hddq.restoid.data.ResticRepository
-import io.github.hddq.restoid.data.ResticState
-import io.github.hddq.restoid.data.RootRepository
+import io.github.hddq.restoid.data.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-// UI state for the "Add Repository" dialog
 data class AddRepoUiState(
     val path: String = "",
     val password: String = "",
@@ -24,31 +17,26 @@ data class AddRepoUiState(
     val state: AddRepositoryState = AddRepositoryState.Idle
 )
 
-enum class ChangePasswordState {
-    Idle,
-    InProgress,
-    Success,
-    Error
-}
+enum class ChangePasswordState { Idle, InProgress, Success, Error }
 
 class SettingsViewModel(
     private val rootRepository: RootRepository,
+    private val resticBinaryManager: ResticBinaryManager, // Injected Manager
     private val resticRepository: ResticRepository,
     private val repositoriesRepository: RepositoriesRepository,
     private val notificationRepository: NotificationRepository
 ) : ViewModel() {
 
-    // Expose states from repositories
     val rootState = rootRepository.rootState
-    val resticState = resticRepository.resticState
+    // Use Manager for binary state
+    val resticState = resticBinaryManager.resticState
+    val latestResticVersion = resticBinaryManager.latestResticVersion
+    val stableResticVersion: String get() = resticBinaryManager.stableResticVersion
+
     val repositories = repositoriesRepository.repositories
     val selectedRepository = repositoriesRepository.selectedRepository
     val notificationPermissionState = notificationRepository.permissionState
-    val stableResticVersion: String get() = resticRepository.stableResticVersion
-    val latestResticVersion = resticRepository.latestResticVersion
 
-
-    // Internal and exposed UI State for adding a new repository
     private val _addRepoUiState = MutableStateFlow(AddRepoUiState())
     val addRepoUiState = _addRepoUiState.asStateFlow()
 
@@ -57,36 +45,21 @@ class SettingsViewModel(
 
     init {
         viewModelScope.launch {
-            resticRepository.fetchLatestResticVersion()
+            resticBinaryManager.fetchLatestResticVersion()
         }
     }
 
     fun requestRootAccess() {
-        viewModelScope.launch {
-            rootRepository.checkRootAccess()
-        }
+        viewModelScope.launch { rootRepository.checkRootAccess() }
     }
 
-    fun hasRepositoryPassword(path: String): Boolean {
-        return repositoriesRepository.hasRepositoryPassword(path)
-    }
-
-    fun hasStoredRepositoryPassword(path: String): Boolean {
-        return repositoriesRepository.hasStoredRepositoryPassword(path)
-    }
-
-    fun forgetPassword(path: String) {
-        repositoriesRepository.forgetPassword(path)
-    }
-
-    fun savePassword(path: String, password: String) {
-        repositoriesRepository.saveRepositoryPassword(path, password)
-    }
+    fun hasRepositoryPassword(path: String) = repositoriesRepository.hasRepositoryPassword(path)
+    fun hasStoredRepositoryPassword(path: String) = repositoriesRepository.hasStoredRepositoryPassword(path)
+    fun forgetPassword(path: String) = repositoriesRepository.forgetPassword(path)
+    fun savePassword(path: String, password: String) = repositoriesRepository.saveRepositoryPassword(path, password)
 
     fun deleteRepository(path: String) {
-        viewModelScope.launch {
-            repositoriesRepository.deleteRepository(path)
-        }
+        viewModelScope.launch { repositoriesRepository.deleteRepository(path) }
     }
 
     fun changePassword(path: String, oldPassword: String, newPassword: String) {
@@ -94,7 +67,6 @@ class SettingsViewModel(
             _changePasswordState.value = ChangePasswordState.InProgress
             val result = resticRepository.changePassword(path, oldPassword, newPassword)
             if (result.isSuccess) {
-                // If there was a stored password, update it.
                 if (repositoriesRepository.hasStoredRepositoryPassword(path)) {
                     repositoriesRepository.saveRepositoryPassword(path, newPassword)
                 }
@@ -105,60 +77,33 @@ class SettingsViewModel(
         }
     }
 
-    fun resetChangePasswordState() {
-        _changePasswordState.value = ChangePasswordState.Idle
-    }
-
-    fun checkNotificationPermission() {
-        notificationRepository.checkPermissionStatus()
-    }
+    fun resetChangePasswordState() { _changePasswordState.value = ChangePasswordState.Idle }
+    fun checkNotificationPermission() = notificationRepository.checkPermissionStatus()
 
     fun downloadRestic() {
-        viewModelScope.launch {
-            resticRepository.downloadAndInstallRestic()
-        }
+        viewModelScope.launch { resticBinaryManager.downloadAndInstallRestic() }
     }
 
     fun downloadLatestRestic() {
-        viewModelScope.launch {
-            Log.d("SettingsViewModel", "Triggering download of latest restic version.")
-            resticRepository.downloadAndInstallLatestRestic()
-        }
+        viewModelScope.launch { resticBinaryManager.downloadAndInstallLatestRestic() }
     }
 
+    fun selectRepository(path: String) = repositoriesRepository.selectRepository(path)
 
-    fun selectRepository(path: String) {
-        repositoriesRepository.selectRepository(path)
-    }
-
-    // UI event handlers for the Add Repository dialog
-    fun onNewRepoPathChanged(path: String) {
-        _addRepoUiState.update { it.copy(path = path) }
-    }
-
-    fun onNewRepoPasswordChanged(password: String) {
-        _addRepoUiState.update { it.copy(password = password) }
-    }
-
-    fun onSavePasswordChanged(save: Boolean) {
-        _addRepoUiState.update { it.copy(savePassword = save) }
-    }
-
-    fun onNewRepoDialogDismiss() {
-        _addRepoUiState.value = AddRepoUiState() // Reset state on dismiss
-    }
+    // UI handlers
+    fun onNewRepoPathChanged(path: String) = _addRepoUiState.update { it.copy(path = path) }
+    fun onNewRepoPasswordChanged(password: String) = _addRepoUiState.update { it.copy(password = password) }
+    fun onSavePasswordChanged(save: Boolean) = _addRepoUiState.update { it.copy(savePassword = save) }
+    fun onNewRepoDialogDismiss() { _addRepoUiState.value = AddRepoUiState() }
 
     fun onShowAddRepoDialog() {
-        // Only show the dialog if restic is actually installed.
         if (resticState.value is ResticState.Installed) {
             _addRepoUiState.update { it.copy(showDialog = true) }
         }
     }
 
-    // Logic to add a new repository
     fun addRepository() {
-        val currentResticState = resticState.value
-        if (currentResticState !is ResticState.Installed) {
+        if (resticState.value !is ResticState.Installed) {
             _addRepoUiState.update { it.copy(state = AddRepositoryState.Error("Restic is not installed.")) }
             return
         }
@@ -182,7 +127,6 @@ class SettingsViewModel(
             )
             _addRepoUiState.update { it.copy(state = result) }
 
-            // If successful, close the dialog after a brief delay
             if (result is AddRepositoryState.Success) {
                 delay(1000)
                 onNewRepoDialogDismiss()

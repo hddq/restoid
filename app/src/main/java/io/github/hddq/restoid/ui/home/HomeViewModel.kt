@@ -2,24 +2,14 @@ package io.github.hddq.restoid.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.github.hddq.restoid.data.AppInfoRepository
-import io.github.hddq.restoid.data.MetadataRepository
-import io.github.hddq.restoid.data.RepositoriesRepository
-import io.github.hddq.restoid.data.ResticRepository
-import io.github.hddq.restoid.data.ResticState
-import io.github.hddq.restoid.data.SnapshotInfo
+import io.github.hddq.restoid.data.*
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.RestoidMetadata
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-// Data class to combine snapshot with its metadata
 data class SnapshotWithMetadata(
     val snapshotInfo: SnapshotInfo,
     val metadata: RestoidMetadata?
@@ -39,6 +29,7 @@ data class HomeUiState(
 
 class HomeViewModel(
     private val repositoriesRepository: RepositoriesRepository,
+    private val resticBinaryManager: ResticBinaryManager, // Use Manager for state
     private val resticRepository: ResticRepository,
     private val appInfoRepository: AppInfoRepository,
     private val metadataRepository: MetadataRepository
@@ -46,20 +37,17 @@ class HomeViewModel(
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState = _uiState.asStateFlow()
-
-    // Added a trigger to force metadata re-reads even if snapshots list hasn't changed
     private val refreshTrigger = MutableStateFlow(0)
 
     init {
         viewModelScope.launch {
             repositoriesRepository.loadRepositories()
-            resticRepository.checkResticStatus()
+            resticBinaryManager.checkResticStatus()
         }
 
-        // React to changes in repositories, restic status, snapshots, OR the manual refresh trigger
         combine(
             repositoriesRepository.selectedRepository,
-            resticRepository.resticState,
+            resticBinaryManager.resticState, // Observe state from Manager
             resticRepository.snapshots,
             repositoriesRepository.repositories,
             refreshTrigger
@@ -75,32 +63,26 @@ class HomeViewModel(
             }
 
             if (snapshots == null) {
-                // State is "not loaded yet". Trigger the load and show spinner.
-                // Only show main loader if we aren't already refreshing
                 if (!_uiState.value.isRefreshing) {
                     _uiState.update { it.copy(isLoading = true, error = null) }
                 }
                 loadSnapshots(repoPath, restic)
-                return@combine // Wait for flow to be updated by loadSnapshots
+                return@combine
             }
 
-            // If we're here, snapshots are loaded (could be an empty list). Stop the spinner.
             _uiState.update { it.copy(isLoading = false) }
 
             val repo = repos.find { it.path == repoPath }
             if (repo?.id == null) {
-                val errorMsg = if (repoPath != null) "Repository ID not found" else null
+                // repoPath is guaranteed not null here because of the check above
+                val errorMsg = "Repository ID not found"
                 _uiState.update { it.copy(snapshotsWithMetadata = emptyList(), error = errorMsg) }
                 return@combine
             }
 
-            val filteredSnapshots = snapshots.filter {
-                it.tags.contains("restoid") && it.tags.contains("backup")
-            }
+            val filteredSnapshots = snapshots.filter { it.tags.contains("restoid") && it.tags.contains("backup") }
 
             val snapshotsWithMetadata = filteredSnapshots.map { snapshot ->
-                // access metadataRepository here, which reads from disk.
-                // Triggering this block via refreshTrigger ensures we re-read files.
                 val metadata = metadataRepository.getMetadataForSnapshot(repo.id, snapshot.id)
                 SnapshotWithMetadata(snapshot, metadata)
             }
@@ -124,14 +106,12 @@ class HomeViewModel(
                 if (result.isFailure) {
                     _uiState.update { it.copy(error = result.exceptionOrNull()?.message, isLoading = false) }
                 }
-                // On success, the `snapshots` flow is updated, which the `combine` block will handle.
             } else {
                 _uiState.update { it.copy(isLoading = false, showPasswordDialogFor = repoPath) }
             }
         }
     }
 
-    // Explicit refresh function for pull-to-refresh
     fun refreshSnapshots() {
         val repoPath = _uiState.value.selectedRepo
         val resticState = _uiState.value.resticState
@@ -140,16 +120,13 @@ class HomeViewModel(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isRefreshing = true, error = null) }
-
             try {
                 if (repositoriesRepository.hasRepositoryPassword(repoPath)) {
                     val password = repositoriesRepository.getRepositoryPassword(repoPath)!!
-                    // We await this call to ensure the refresh indicator stays until done
                     val result = resticRepository.getSnapshots(repoPath, password)
                     if (result.isFailure) {
                         _uiState.update { it.copy(error = result.exceptionOrNull()?.message) }
                     } else {
-                        // Force the combine block to run again to reload metadata from disk
                         refreshTrigger.update { it + 1 }
                     }
                 } else {
@@ -158,7 +135,6 @@ class HomeViewModel(
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message) }
             } finally {
-                // Always turn off the refreshing state, preventing infinite loader
                 _uiState.update { it.copy(isRefreshing = false) }
             }
         }
@@ -166,23 +142,16 @@ class HomeViewModel(
 
     private fun loadAppInfoForSnapshots(snapshotsWithMetadata: List<SnapshotWithMetadata>) {
         viewModelScope.launch {
-            // We switch to Default dispatcher to ensure sorting doesn't affect UI thread,
-            // although it's very fast.
             val appInfoMap = withContext(Dispatchers.Default) {
                 val map = mutableMapOf<String, List<AppInfo>>()
                 snapshotsWithMetadata.forEach { item ->
                     val appsMetadata = item.metadata?.apps
                     val packageNames = appsMetadata?.keys?.toList() ?: emptyList()
-
                     if (packageNames.isNotEmpty()) {
                         val appInfos = appInfoRepository.getAppInfoForPackages(packageNames)
-
-                        // SORTING LOGIC: Sort by size (descending)
-                        // If size is missing (0L), those apps go to the end.
                         val sortedApps = appInfos.sortedByDescending { app ->
                             appsMetadata?.get(app.packageName)?.size ?: 0L
                         }
-
                         map[item.snapshotInfo.id] = sortedApps
                     }
                 }
@@ -196,13 +165,9 @@ class HomeViewModel(
         val repoPath = _uiState.value.showPasswordDialogFor ?: return
         _uiState.update { it.copy(showPasswordDialogFor = null, isLoading = true, error = null) }
 
-        if (save) {
-            repositoriesRepository.saveRepositoryPassword(repoPath, password)
-        } else {
-            repositoriesRepository.saveRepositoryPasswordTemporary(repoPath, password)
-        }
+        if (save) repositoriesRepository.saveRepositoryPassword(repoPath, password)
+        else repositoriesRepository.saveRepositoryPasswordTemporary(repoPath, password)
 
-        // We need to explicitly call loadSnapshots again now that we have a password.
         loadSnapshots(repoPath, uiState.value.resticState)
     }
 

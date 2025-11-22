@@ -3,15 +3,12 @@ package io.github.hddq.restoid.ui.backup
 import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import io.github.hddq.restoid.data.AppInfoRepository
-import io.github.hddq.restoid.data.NotificationRepository
-import io.github.hddq.restoid.data.PreferencesRepository
-import io.github.hddq.restoid.data.RepositoriesRepository
-import io.github.hddq.restoid.data.ResticRepository
+import io.github.hddq.restoid.data.*
 
 class BackupViewModelFactory(
     private val application: Application,
     private val repositoriesRepository: RepositoriesRepository,
+    private val resticBinaryManager: ResticBinaryManager, // Injected
     private val resticRepository: ResticRepository,
     private val notificationRepository: NotificationRepository,
     private val appInfoRepository: AppInfoRepository,
@@ -23,6 +20,7 @@ class BackupViewModelFactory(
             return BackupViewModel(
                 application,
                 repositoriesRepository,
+                resticBinaryManager,
                 resticRepository,
                 notificationRepository,
                 appInfoRepository,

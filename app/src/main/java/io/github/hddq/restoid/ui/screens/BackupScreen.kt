@@ -15,7 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -36,6 +36,7 @@ fun BackupScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
         factory = BackupViewModelFactory(
             application,
             application.repositoriesRepository,
+            application.resticBinaryManager, // Added this!
             application.resticRepository,
             application.notificationRepository,
             application.appInfoRepository,
@@ -114,15 +115,15 @@ fun BackupSelectionContent(
                         modifier = Modifier.padding(16.dp)
                     )
                     BackupTypeToggle("APK", backupTypes.apk) { viewModel.setBackupApk(it) }
-                    Divider(color = MaterialTheme.colorScheme.background)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
                     BackupTypeToggle("Data", backupTypes.data) { viewModel.setBackupData(it) }
-                    Divider(color = MaterialTheme.colorScheme.background)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
                     BackupTypeToggle("Device Protected Data", backupTypes.deviceProtectedData) { viewModel.setBackupDeviceProtectedData(it) }
-                    Divider(color = MaterialTheme.colorScheme.background)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
                     BackupTypeToggle("External Data", backupTypes.externalData) { viewModel.setBackupExternalData(it) }
-                    Divider(color = MaterialTheme.colorScheme.background)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
                     BackupTypeToggle("OBB Data", backupTypes.obb) { viewModel.setBackupObb(it) }
-                    Divider(color = MaterialTheme.colorScheme.background)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
                     BackupTypeToggle("Media Data", backupTypes.media) { viewModel.setBackupMedia(it) }
                 }
             }
@@ -167,7 +168,7 @@ fun BackupSelectionContent(
                         apps.forEachIndexed { index, app ->
                             AppListItem(app = app) { viewModel.toggleAppSelection(app.packageName) }
                             if (index < apps.size - 1) {
-                                Divider(color = MaterialTheme.colorScheme.background)
+                                HorizontalDivider(color = MaterialTheme.colorScheme.background)
                             }
                         }
                     }

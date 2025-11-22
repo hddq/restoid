@@ -13,42 +13,29 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import io.github.hddq.restoid.RestoidApplication
-import io.github.hddq.restoid.ui.screens.settings.AboutSettings
-import io.github.hddq.restoid.ui.screens.settings.AddRepositoryDialog
-import io.github.hddq.restoid.ui.screens.settings.DependencySettings
-import io.github.hddq.restoid.ui.screens.settings.RepositorySettings
-import io.github.hddq.restoid.ui.screens.settings.SystemSettings
+import io.github.hddq.restoid.ui.screens.settings.*
 import io.github.hddq.restoid.ui.settings.SettingsViewModel
-import io.github.hddq.restoid.ui.settings.SettingsViewModelFactory
 import io.github.hddq.restoid.util.StorageUtils
 
 @Composable
-fun SettingsScreen(onNavigateToLicenses: () -> Unit, modifier: Modifier = Modifier) {
-    val application = LocalContext.current.applicationContext as RestoidApplication
-    val settingsViewModel: SettingsViewModel = viewModel(
-        factory = SettingsViewModelFactory(
-            application.rootRepository,
-            application.resticRepository,
-            application.repositoriesRepository,
-            application.notificationRepository
-        )
-    )
-
-    val addRepoUiState by settingsViewModel.addRepoUiState.collectAsStateWithLifecycle()
+fun SettingsScreen(
+    viewModel: SettingsViewModel, // Passed directly
+    onNavigateToLicenses: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val addRepoUiState by viewModel.addRepoUiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                settingsViewModel.checkNotificationPermission()
+                viewModel.checkNotificationPermission()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -62,13 +49,10 @@ fun SettingsScreen(onNavigateToLicenses: () -> Unit, modifier: Modifier = Modifi
         onResult = { uri ->
             uri?.let {
                 try {
-                    val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                            Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                     context.contentResolver.takePersistableUriPermission(it, takeFlags)
-
-                    // Use the new utility function
                     StorageUtils.getPathFromTreeUri(it)?.let { path ->
-                        settingsViewModel.onNewRepoPathChanged(path)
+                        viewModel.onNewRepoPathChanged(path)
                     }
                 } catch (e: SecurityException) {
                     e.printStackTrace()
@@ -79,36 +63,30 @@ fun SettingsScreen(onNavigateToLicenses: () -> Unit, modifier: Modifier = Modifi
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
-        onResult = { isGranted ->
-            settingsViewModel.checkNotificationPermission()
-        }
+        onResult = { viewModel.checkNotificationPermission() }
     )
 
     if (addRepoUiState.showDialog) {
         AddRepositoryDialog(
             uiState = addRepoUiState,
-            onDismiss = { settingsViewModel.onNewRepoDialogDismiss() },
-            onPasswordChange = { settingsViewModel.onNewRepoPasswordChanged(it) },
-            onSavePasswordChange = { settingsViewModel.onSavePasswordChanged(it) },
-            onConfirm = { settingsViewModel.addRepository() },
+            onDismiss = { viewModel.onNewRepoDialogDismiss() },
+            onPasswordChange = { viewModel.onNewRepoPasswordChanged(it) },
+            onSavePasswordChange = { viewModel.onSavePasswordChanged(it) },
+            onConfirm = { viewModel.addRepository() },
             onSelectPath = { directoryPickerLauncher.launch(null) }
         )
     }
 
-    // Apply the modifier passed from NavHost here
     LazyColumn(
-        modifier = modifier
-            .fillMaxSize(),
-        contentPadding = PaddingValues(16.dp), // Add padding to the content itself
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
             SystemSettings(
-                viewModel = settingsViewModel,
-                notificationPermissionLauncher = {
-                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                },
+                viewModel = viewModel,
+                notificationPermissionLauncher = { notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) },
                 onOpenSettings = {
                     val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
                         putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
@@ -117,14 +95,8 @@ fun SettingsScreen(onNavigateToLicenses: () -> Unit, modifier: Modifier = Modifi
                 }
             )
         }
-        item {
-            DependencySettings(viewModel = settingsViewModel)
-        }
-        item {
-            RepositorySettings(viewModel = settingsViewModel)
-        }
-        item {
-            AboutSettings(onNavigateToLicenses = onNavigateToLicenses)
-        }
+        item { DependencySettings(viewModel = viewModel) }
+        item { RepositorySettings(viewModel = viewModel) }
+        item { AboutSettings(onNavigateToLicenses = onNavigateToLicenses) }
     }
 }
