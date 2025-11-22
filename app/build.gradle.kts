@@ -121,12 +121,12 @@ android {
     productFlavors {
         create("vanilla") {
             dimension = "distribution"
-            versionNameSuffix = "-vanilla"
+            // Removed versionNameSuffix
             buildConfigField("boolean", "IS_BUNDLED", "false")
         }
         create("bundled") {
             dimension = "distribution"
-            versionNameSuffix = "-bundled"
+            // Removed versionNameSuffix
             buildConfigField("boolean", "IS_BUNDLED", "true")
         }
     }
@@ -163,10 +163,8 @@ android {
         buildConfig = true
     }
 
-    // FIXED: Replaced deprecated packagingOptions with packaging
     packaging {
         jniLibs {
-            // Don't strip our restic binaries (they're not real .so files)
             keepDebugSymbols += "**/*.so"
         }
     }
