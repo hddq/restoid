@@ -2,10 +2,11 @@ package io.github.hddq.restoid.ui.screens
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
@@ -34,10 +36,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import io.github.hddq.restoid.RestoidApplication
@@ -170,9 +174,6 @@ fun HomeScreen(
                     }
                     else -> {
                         // Main list content
-                        // We use a Scrollable Column that fills max size so the swipe gesture works anywhere.
-                        // Inside the card, we use a simple Column instead of LazyColumn to avoid nested scrolling issues
-                        // and to ensure the Card height wraps its content correctly within the scrollable parent.
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -254,24 +255,54 @@ private fun SnapshotItem(snapshotWithMetadata: SnapshotWithMetadata, apps: List<
         if (appCount > 0) {
             Text("Apps ($appCount):", style = MaterialTheme.typography.labelMedium)
             if (apps != null && apps.isNotEmpty()) {
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val shownApps = apps.take(10)
-                    shownApps.forEach { app ->
-                        Image(
-                            painter = rememberAsyncImagePainter(model = app.icon),
-                            contentDescription = app.name,
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
-                    val moreCount = appCount - shownApps.size
-                    if (moreCount > 0) {
-                        Text(
-                            "+$moreCount more",
-                        )
+
+                // DYNAMIC LAYOUT: Use BoxWithConstraints to know exact width
+                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                    val iconSize = 32.dp
+                    val spacing = 8.dp
+
+                    // Calculate how many icons fit perfectly in the row
+                    // Formula: n * icon + (n-1) * spacing <= maxWidth
+                    // Simplified: n <= (maxWidth + spacing) / (icon + spacing)
+                    val itemWidthWithSpacing = iconSize + spacing
+                    // coerceAtLeast(1) ensures we don't crash on extremely small screens
+                    val maxIconsPossible = ((maxWidth + spacing) / itemWidthWithSpacing).toInt().coerceAtLeast(1)
+
+                    // Determine if we need the "+X" badge
+                    val showCounter = appCount > maxIconsPossible
+                    // If we show counter, we must reserve one slot for it
+                    val limit = if (showCounter) maxIconsPossible - 1 else maxIconsPossible
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(spacing),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val shownApps = apps.take(limit)
+                        shownApps.forEach { app ->
+                            Image(
+                                painter = rememberAsyncImagePainter(model = app.icon),
+                                contentDescription = app.name,
+                                modifier = Modifier.size(iconSize)
+                            )
+                        }
+
+                        val moreCount = appCount - shownApps.size
+                        if (moreCount > 0) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(iconSize)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.secondaryContainer)
+                            ) {
+                                Text(
+                                    text = "+$moreCount",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
                     }
                 }
             }
