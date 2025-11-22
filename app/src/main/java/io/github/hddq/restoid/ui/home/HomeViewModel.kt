@@ -10,12 +10,14 @@ import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.RestoidMetadata
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 // Data class to combine snapshot with its metadata
 data class SnapshotWithMetadata(
@@ -164,13 +166,27 @@ class HomeViewModel(
 
     private fun loadAppInfoForSnapshots(snapshotsWithMetadata: List<SnapshotWithMetadata>) {
         viewModelScope.launch {
-            val appInfoMap = mutableMapOf<String, List<AppInfo>>()
-            snapshotsWithMetadata.forEach { item ->
-                val packageNames = item.metadata?.apps?.keys?.toList() ?: emptyList()
-                if (packageNames.isNotEmpty()) {
-                    val appInfos = appInfoRepository.getAppInfoForPackages(packageNames)
-                    appInfoMap[item.snapshotInfo.id] = appInfos
+            // We switch to Default dispatcher to ensure sorting doesn't affect UI thread,
+            // although it's very fast.
+            val appInfoMap = withContext(Dispatchers.Default) {
+                val map = mutableMapOf<String, List<AppInfo>>()
+                snapshotsWithMetadata.forEach { item ->
+                    val appsMetadata = item.metadata?.apps
+                    val packageNames = appsMetadata?.keys?.toList() ?: emptyList()
+
+                    if (packageNames.isNotEmpty()) {
+                        val appInfos = appInfoRepository.getAppInfoForPackages(packageNames)
+
+                        // SORTING LOGIC: Sort by size (descending)
+                        // If size is missing (0L), those apps go to the end.
+                        val sortedApps = appInfos.sortedByDescending { app ->
+                            appsMetadata?.get(app.packageName)?.size ?: 0L
+                        }
+
+                        map[item.snapshotInfo.id] = sortedApps
+                    }
                 }
+                map
             }
             _uiState.update { it.copy(appInfoMap = appInfoMap) }
         }

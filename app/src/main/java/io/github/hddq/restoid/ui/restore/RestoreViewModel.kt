@@ -155,7 +155,12 @@ class RestoreViewModel(
 
             BackupDetail(finalAppInfo, items, appMeta.versionName, appMeta.versionCode, appMeta.size, isDowngrade, isInstalled)
         }
-        _backupDetails.value = details.sortedBy { it.appInfo.name.lowercase() }
+
+        // SORTING: Size (High -> Low), then Name (A -> Z)
+        _backupDetails.value = details.sortedWith(
+            compareByDescending<BackupDetail> { it.backupSize ?: 0L }
+                .thenBy { it.appInfo.name.lowercase() }
+        )
     }
 
 

@@ -140,7 +140,11 @@ class SnapshotDetailsViewModel(
             BackupDetail(finalAppInfo, items, appMeta.versionName, appMeta.versionCode, appMeta.size, isDowngrade, isInstalled)
         }
 
-        _backupDetails.value = details.sortedBy { it.appInfo.name.lowercase() }
+        // SORTING: Size (High -> Low), then Name (A -> Z)
+        _backupDetails.value = details.sortedWith(
+            compareByDescending<BackupDetail> { it.backupSize ?: 0L }
+                .thenBy { it.appInfo.name.lowercase() }
+        )
     }
 
 
@@ -238,4 +242,3 @@ class SnapshotDetailsViewModel(
     fun setRestoreObb(value: Boolean) = _restoreTypes.update { it.copy(obb = value) }
     fun setRestoreMedia(value: Boolean) = _restoreTypes.update { it.copy(media = value) }
 }
-
