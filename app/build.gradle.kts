@@ -1,3 +1,5 @@
+import java.io.File
+
 // This task builds the restic binary from the submodule for each required Android architecture.
 tasks.register("buildResticForBundledFlavor") {
     group = "restic"
@@ -10,14 +12,34 @@ tasks.register("buildResticForBundledFlavor") {
     outputs.dir(outputJniLibsDir)
 
     doLast {
-        // First, check if Go is installed on the system.
-        try {
-            project.exec { commandLine("go", "version") }
-        } catch (e: Exception) {
-            throw GradleException("Go is not installed or not in your PATH. It's required to build the 'bundled' flavor.", e)
+        // 1. Check Go Version using ProcessBuilder (Clean & Standard)
+        val versionProcess = ProcessBuilder("go", "version")
+            .redirectErrorStream(true)
+            .start()
+
+        val versionOutput = versionProcess.inputStream.bufferedReader().readText().trim()
+        versionProcess.waitFor()
+
+        if (versionProcess.exitValue() != 0) {
+            throw GradleException("Go is not installed or not in your PATH. It's required to build the 'bundled' flavor.\nOutput: $versionOutput")
         }
 
-        // These are the architectures defined in your splits block.
+        // Regex matches "go version go<major>.<minor>" e.g. "go version go1.24.0" or "go version go1.24"
+        val versionRegex = Regex("go version go(\\d+)\\.(\\d+)")
+        val matchResult = versionRegex.find(versionOutput)
+
+        if (matchResult == null) {
+            throw GradleException("Could not determine Go version from output: '$versionOutput'. Expected format 'go version go<major>.<minor>...'")
+        }
+
+        val (major, minor) = matchResult.destructured
+        if (major != "1" || minor != "24") {
+            throw GradleException("Go version 1.24.x is required to build restic (found $major.$minor). Please install Go 1.24.")
+        }
+
+        println("Go version check passed: $versionOutput")
+
+        // 2. Build Restic for each architecture
         val targetAbis = setOf("x86_64", "arm64-v8a")
 
         targetAbis.forEach { abi ->
@@ -31,26 +53,37 @@ tasks.register("buildResticForBundledFlavor") {
             if (goArch != null) {
                 println("Building restic for $abi (GOARCH: $goArch)...")
 
-                // The output directory now follows jniLibs structure
                 val finalOutputDir = File(outputJniLibsDir, abi)
                 finalOutputDir.mkdirs()
                 // IMPORTANT: Prefix with "lib" and use ".so" extension for Android to recognize it
                 val outputFile = File(finalOutputDir, "librestic.so")
 
-                project.exec {
-                    workingDir = rootProject.file("restic")
-                    // Set environment variables for cross-compilation.
-                    environment("GOOS", "linux") // Target is Android (Linux)
-                    environment("GOARCH", goArch)
-                    environment("CGO_ENABLED", "0") // Create a static binary
+                // Using ProcessBuilder for the build command
+                val buildProcess = ProcessBuilder(
+                    "go", "build",
+                    "-ldflags=-s -w", // Strip debug info to reduce binary size
+                    "-trimpath",
+                    "-o", outputFile.absolutePath,
+                    "./cmd/restic"
+                )
 
-                    commandLine(
-                        "go", "build",
-                        "-ldflags=-s -w", // Strip debug info to reduce binary size
-                        "-trimpath",
-                        "-o", outputFile.absolutePath,
-                        "./cmd/restic"
-                    )
+                buildProcess.directory(rootProject.file("restic"))
+
+                // Set environment variables cleanly
+                val env = buildProcess.environment()
+                env["GOOS"] = "linux" // Target is Android (Linux)
+                env["GOARCH"] = goArch
+                env["CGO_ENABLED"] = "0" // Create a static binary
+
+                buildProcess.redirectErrorStream(true)
+                val process = buildProcess.start()
+
+                // Capture output to show if something goes wrong
+                val buildOutput = process.inputStream.bufferedReader().readText()
+                val exitCode = process.waitFor()
+
+                if (exitCode != 0) {
+                    throw GradleException("Failed to build restic for $abi.\nOutput: $buildOutput")
                 }
             }
         }
@@ -89,7 +122,6 @@ android {
         create("vanilla") {
             dimension = "distribution"
             versionNameSuffix = "-vanilla"
-            // We can add a build config field to distinguish flavors in code.
             buildConfigField("boolean", "IS_BUNDLED", "false")
         }
         create("bundled") {
@@ -107,9 +139,6 @@ android {
             isUniversalApk = true
         }
     }
-
-    // Remove the old assets sourceSets configuration
-    // The jniLibs are automatically picked up from src/bundled/jniLibs
 
     buildTypes {
         release {
@@ -134,8 +163,8 @@ android {
         buildConfig = true
     }
 
-    // Add packaging options to prevent stripping our "fake" .so files
-    packagingOptions {
+    // FIXED: Replaced deprecated packagingOptions with packaging
+    packaging {
         jniLibs {
             // Don't strip our restic binaries (they're not real .so files)
             keepDebugSymbols += "**/*.so"
@@ -144,7 +173,6 @@ android {
 }
 
 dependencies {
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
