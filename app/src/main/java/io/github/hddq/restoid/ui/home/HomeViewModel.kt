@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-// New data class to combine snapshot with its metadata
+// Data class to combine snapshot with its metadata
 data class SnapshotWithMetadata(
     val snapshotInfo: SnapshotInfo,
     val metadata: RestoidMetadata?
@@ -27,7 +27,7 @@ data class HomeUiState(
     val snapshotsWithMetadata: List<SnapshotWithMetadata> = emptyList(),
     val appInfoMap: Map<String, List<AppInfo>> = emptyMap(),
     val isLoading: Boolean = false,
-    val isRefreshing: Boolean = false, // Added for swipe-to-refresh
+    val isRefreshing: Boolean = false,
     val error: String? = null,
     val selectedRepo: String? = null,
     val resticState: ResticState = ResticState.Idle,
@@ -45,19 +45,23 @@ class HomeViewModel(
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState = _uiState.asStateFlow()
 
+    // Added a trigger to force metadata re-reads even if snapshots list hasn't changed
+    private val refreshTrigger = MutableStateFlow(0)
+
     init {
         viewModelScope.launch {
             repositoriesRepository.loadRepositories()
             resticRepository.checkResticStatus()
         }
 
-        // React to changes in repositories, restic status, or snapshots
+        // React to changes in repositories, restic status, snapshots, OR the manual refresh trigger
         combine(
             repositoriesRepository.selectedRepository,
             resticRepository.resticState,
             resticRepository.snapshots,
-            repositoriesRepository.repositories
-        ) { repoPath, restic, snapshots, repos ->
+            repositoriesRepository.repositories,
+            refreshTrigger
+        ) { repoPath, restic, snapshots, repos, _ ->
 
             val hasPassword = repoPath?.let { repositoriesRepository.hasRepositoryPassword(it) } ?: false
             _uiState.update { it.copy(selectedRepo = repoPath, resticState = restic, hasPasswordForSelectedRepo = hasPassword) }
@@ -93,6 +97,8 @@ class HomeViewModel(
             }
 
             val snapshotsWithMetadata = filteredSnapshots.map { snapshot ->
+                // access metadataRepository here, which reads from disk.
+                // Triggering this block via refreshTrigger ensures we re-read files.
                 val metadata = metadataRepository.getMetadataForSnapshot(repo.id, snapshot.id)
                 SnapshotWithMetadata(snapshot, metadata)
             }
@@ -140,6 +146,9 @@ class HomeViewModel(
                     val result = resticRepository.getSnapshots(repoPath, password)
                     if (result.isFailure) {
                         _uiState.update { it.copy(error = result.exceptionOrNull()?.message) }
+                    } else {
+                        // Force the combine block to run again to reload metadata from disk
+                        refreshTrigger.update { it + 1 }
                     }
                 } else {
                     _uiState.update { it.copy(showPasswordDialogFor = repoPath) }

@@ -200,12 +200,22 @@ class RepositoriesRepository(
         val configResult = resticRepository.getConfig(path, password)
         if (configResult.isSuccess) {
             val repoId = configResult.getOrNull()?.id
-            saveNewRepository(LocalRepository(path = path, id = repoId), password, savePassword, wasEmpty)
 
-            // After successfully adding, attempt to restore metadata. This is a "best-effort" operation.
+            // 1. Attempt to restore metadata FIRST.
+            // This ensures files are on disk before the UI knows about the repo.
             if (repoId != null) {
                 restoreMetadataForRepo(repoId, path, password, resticRepository)
             }
+
+            // 2. Clear the snapshot cache in ResticRepository.
+            // This is critical! restoring metadata populates the cache with a list that
+            // HomeViewModel sees too early. Clearing it forces HomeViewModel to reload
+            // everything from scratch when the repo is selected, fixing the race condition.
+            resticRepository.clearSnapshots()
+
+            // 3. Save the repo to the app database.
+            saveNewRepository(LocalRepository(path = path, id = repoId), password, savePassword, wasEmpty)
+
             return AddRepositoryState.Success
         } else {
             return AddRepositoryState.Error("Repo valid, but failed to get ID.")
