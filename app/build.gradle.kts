@@ -39,7 +39,39 @@ tasks.register("buildResticForBundledFlavor") {
 
         println("Go version check passed: $versionOutput")
 
-        // 2. Build Restic for each architecture
+        // 2. Cleanup: Delete unnecessary test files before building
+        val resticRoot = rootProject.file("restic")
+
+        // List of specific files to delete
+        val filesToDelete = listOf(
+            "internal/repository/testdata/test-repo.tar.gz",
+            "internal/backend/testdata/repo-layout-default.tar.gz",
+            "internal/checker/testdata/duplicate-packs-in-index-test-repo.tar.gz",
+            "internal/checker/testdata/checker-test-repo.tar.gz"
+        )
+
+        filesToDelete.forEach { relativePath ->
+            val file = File(resticRoot, relativePath)
+            if (file.exists()) {
+                if (file.delete()) {
+                    println("Deleted: $relativePath")
+                } else {
+                    println("Warning: Failed to delete $relativePath")
+                }
+            }
+        }
+
+        // Delete contents of cmd/restic/testdata/*
+        val cmdTestDataDir = File(resticRoot, "cmd/restic/testdata")
+        if (cmdTestDataDir.exists() && cmdTestDataDir.isDirectory) {
+            cmdTestDataDir.listFiles()?.forEach { file ->
+                if (file.deleteRecursively()) {
+                    println("Deleted from cmd/restic/testdata: ${file.name}")
+                }
+            }
+        }
+
+        // 3. Build Restic for each architecture
         val targetAbis = setOf("x86_64", "arm64-v8a")
 
         targetAbis.forEach { abi ->
