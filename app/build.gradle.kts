@@ -127,6 +127,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    // Apply AboutLibraries plugin
+    alias(libs.plugins.aboutlibraries)
 }
 
 android {
@@ -222,6 +224,9 @@ dependencies {
     implementation(libs.androidx.security.crypto)
     implementation(libs.coil.compose)
     implementation(libs.kotlinx.serialization.json)
+    // Add AboutLibraries UI
+    implementation(libs.aboutlibraries.compose)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
