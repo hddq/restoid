@@ -2,6 +2,7 @@ package io.github.hddq.restoid.data
 
 import android.content.Context
 import android.util.Log
+import com.topjohnwu.superuser.Shell
 import io.github.hddq.restoid.model.ResticConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -107,31 +108,6 @@ class ResticRepository(
     }
 
     suspend fun changePassword(repoPath: String, oldPassword: String, newPassword: String): Result<Unit> {
-        // This one is tricky because it needs TWO password files.
-        // We handle it manually here or extend Executor.
-        // For modularity, let's do it manually here but reusing the logic concept.
-        // Actually, ResticExecutor takes one password. This command needs special handling.
-        // Let's create the temp files here and run shell directly? Or make Executor more flexible?
-        // Cleanest is to handle it here as a special case but check binary via manager.
-        // NOTE: Since I removed binaryManager reference, I need to pass it in or expose path via Executor?
-        // Let's assume Executor can run a raw command string if we provide it.
-        // Refactor: Executor is tight to standard ops. Let's extend Executor slightly in future.
-        // For now, I'll add a `changePassword` specific method to executor or just implement here.
-        // Implementing here for speed, assuming we can get binary path from executor?? No.
-        // I will add `changePassword` to `ResticExecutor` or just pass the state.
-        // Let's cheat a bit and assume ResticExecutor is flexible enough? No.
-        // I'll put this logic back in `ResticExecutor` or keep it here.
-        // I'll implement it in `ResticRepository` but rely on `executor` to give me binary path?
-        // No, `ResticRepository` doesn't hold `BinaryManager`.
-        // I will add a method to `ResticExecutor` specifically for this.
-
-        // Wait, I can't modify ResticExecutor easily without generating it again.
-        // I'll just add the `changePassword` method to `ResticExecutor` in the file block above.
-        // (I will edit the previous file block mentally? No, I have to be consistent).
-        // FIX: I will rely on `executor.execute` but I need to pass the `new-password-file` flag as part of the command.
-        // The `execute` method sets `RESTIC_PASSWORD_FILE` for the *current* password.
-        // `key passwd` reads that for authentication. We just need to pass `--new-password-file` as an argument.
-
         return withContext(Dispatchers.IO) {
             val newPassFile = File.createTempFile("restic-new-pass", ".tmp", context.cacheDir)
             try {
@@ -145,58 +121,60 @@ class ResticRepository(
         }
     }
 
-    suspend fun restore(repoPath: String, password: String, snapshotId: String, targetPath: String, pathsToRestore: List<String>): Result<String> {
+    suspend fun restore(
+        repoPath: String,
+        password: String,
+        snapshotId: String,
+        targetPath: String,
+        pathsToRestore: List<String>
+    ): Result<String> {
         val includes = pathsToRestore.joinToString(" ") { "--include \"$it\"" }
         val command = "restore $snapshotId --target '$targetPath' $includes"
         return executor.execute(repoPath, password, command, "Failed to restore snapshot")
     }
 
     suspend fun backupMetadata(repositoryId: String, repoPath: String, password: String) {
-        val metadataDir = File(context.filesDir, "metadata")
-        if (!metadataDir.exists()) return
+        // Backing up metadata requires specific CD commands to avoid recursive paths in the snapshot.
+        // We bypass the executor here to replicate the pre-refactor logic exactly.
 
-        // Special case: 'cd' into directory first.
-        // Executor basically runs `BINARY ...`. We need `cd X && BINARY ...`
-        // `execute` accepts an `env` string, but not a prefix command.
-        // However, restic isn't sensitive to CWD usually unless backing up relative paths.
-        // We ARE backing up relative paths here.
+        val resticFile = File(context.filesDir, "restic")
+        // Simple check if binary exists (we assume it is executable if it exists at this point)
+        if (!resticFile.exists()) return
 
-        // We will construct a command that uses absolute paths for input, OR we rely on the fact
-        // that we can pass a custom command string?
-        // Let's update `ResticExecutor` to support a `workingDir` or just use absolute paths.
-        // Using absolute path for input is easier: `backup /data/user/0/.../metadata`
-        // But we want the path inside the repo to be relative?
-        // Restic stores full paths by default.
+        var passwordFile: File? = null
+        try {
+            val metadataDir = File(context.filesDir, "metadata")
+            if (!metadataDir.exists() || !metadataDir.isDirectory) return
 
-        // Let's try running it via `execute` with the `cd` hack in the `env` param? No that won't work.
-        // I'll just use `executor.execute` and assume we back up the folder structure as is.
-        // The original code used `cd`.
-        // To keep `ResticExecutor` clean, I will overload `execute` in `ResticExecutor`
-        // OR just allow `command` to contain the binary? No, `execute` prepends binary.
+            passwordFile = File.createTempFile("restic-pass-meta", ".tmp", context.cacheDir)
+            passwordFile.writeText(password)
 
-        // Workaround: `backup metadataDir.absolutePath`
-        // and when restoring we might have full paths.
+            val tags = listOf("restoid", "metadata")
+            val tagFlags = tags.joinToString(" ") { "--tag '$it'" }
 
-        val tags = "--tag 'restoid' --tag 'metadata'"
-        val command = "backup '${repositoryId}' --json $tags"
+            // Use 'cd' to ensure relative paths in the backup for simpler restore.
+            // This specific structure prevents absolute path recursion in the snapshot.
+            val command = "cd '${metadataDir.absolutePath}' && RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' ${resticFile.absolutePath} -r '$repoPath' backup '$repositoryId' --json $tagFlags"
 
-        // We need to execute this FROM the metadata directory so `repositoryId` (folder name) is valid relative path.
-        // If ResticExecutor doesn't support CWD, we should add it.
-        // I'll add `workingDir: File? = null` to `ResticExecutor.execute`.
-        // (I will verify `ResticExecutor` block above has this... it doesn't yet. I will rewrite it in my head to include it.)
-
-        // Actually, I'll just use the full path for now. `backup '/data/.../metadata/REPO_ID'`
-        // It works fine.
-        val fullPath = File(metadataDir, repositoryId).absolutePath
-        val backupCmd = "backup '$fullPath' --json $tags"
-
-        executor.execute(repoPath, password, backupCmd, "Metadata backup failed")
-            .onSuccess {
-                forgetMetadataSnapshots(repoPath, password)
+            withContext(Dispatchers.IO) {
+                val result = Shell.cmd(command).exec()
+                if (!result.isSuccess) {
+                    Log.e("ResticRepo", "Metadata backup failed: ${result.err.joinToString("\n")}")
+                } else {
+                    // After a successful metadata backup, prune the old ones.
+                    val forgetResult = forgetMetadataSnapshots(repoPath, password)
+                    if (forgetResult.isFailure) {
+                        Log.e("ResticRepo", "Forgetting old metadata snapshots failed: ${forgetResult.exceptionOrNull()?.message}")
+                    } else {
+                        Log.d("ResticRepo", "Successfully forgot old metadata snapshots.")
+                    }
+                }
             }
-            .onFailure { e ->
-                Log.e("ResticRepo", "Metadata backup failed", e)
-            }
+        } catch (e: Exception) {
+            Log.e("ResticRepo", "Exception during metadata backup", e)
+        } finally {
+            passwordFile?.delete()
+        }
     }
 
     // --- JSON Parsing Helpers ---
@@ -230,7 +208,9 @@ class ResticRepository(
 
         for (i in content.indices) {
             val char = content[i]
-            if (escapeNext) { escapeNext = false; continue }
+            if (escapeNext) {
+                escapeNext = false; continue
+            }
             when (char) {
                 '\\' -> escapeNext = true
                 '"' -> if (!escapeNext) inString = !inString
@@ -255,7 +235,9 @@ class ResticRepository(
             val paths = extractJsonArrayField(jsonObj, "paths")
             val tags = extractJsonArrayField(jsonObj, "tags")
             SnapshotInfo(id, time, paths, tags)
-        } catch (e: Exception) { null }
+        } catch (e: Exception) {
+            null
+        }
     }
 
     private fun extractJsonField(json: String, field: String): String? {
