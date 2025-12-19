@@ -78,7 +78,9 @@ class AppInfoRepository(private val context: Context) {
     suspend fun getInstalledUserApps(): List<AppInfo> = withContext(Dispatchers.IO) {
         val packageNamesResult = Shell.cmd("pm list packages -3").exec()
         if (packageNamesResult.isSuccess) {
-            val packageNames = packageNamesResult.out.map { it.removePrefix("package:").trim() }
+            val packageNames = packageNamesResult.out
+                .map { it.removePrefix("package:").trim() }
+                .filter { it != context.packageName } // Exclude self
             // This will fetch from cache if available, or from system for new apps.
             val appInfos = getAppInfoForPackages(packageNames)
             return@withContext appInfos.sortedBy { it.name.lowercase() }

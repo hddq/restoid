@@ -114,7 +114,7 @@ class RestoreViewModel(
 
     private suspend fun processSnapshot(snapshot: SnapshotInfo, metadata: RestoidMetadata?) {
         val appMetadataMap = metadata?.apps ?: emptyMap()
-        val packageNames = appMetadataMap.keys.toList()
+        val packageNames = appMetadataMap.keys.toList().filter { it != application.packageName }
 
         if (packageNames.isEmpty()) {
             _backupDetails.value = emptyList()
@@ -124,7 +124,7 @@ class RestoreViewModel(
         val appInfos = appInfoRepository.getAppInfoForPackages(packageNames)
         val appInfoMap = appInfos.associateBy { it.packageName }
 
-        val details = appMetadataMap.map { (packageName, appMeta) ->
+        val details = appMetadataMap.filterKeys { it != application.packageName }.map { (packageName, appMeta) ->
             val appInfo = appInfoMap[packageName]
             val items = findBackedUpItems(snapshot, packageName)
 
