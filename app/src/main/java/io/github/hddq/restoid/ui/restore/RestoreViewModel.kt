@@ -426,7 +426,7 @@ class RestoreViewModel(
                 notificationRepository.showOperationFinishedNotification("Restore", false, _restoreProgress.value.finalSummary ?: "Restore failed.")
             } finally {
                 passwordFile?.delete()
-                tempRestoreDir?.deleteRecursively()
+                tempRestoreDir?.let { dir -> Shell.cmd("rm -rf '${dir.absolutePath}'").exec() }
                 _isRestoring.value = false
             }
         }
