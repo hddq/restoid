@@ -118,21 +118,27 @@ class AppInfoRepository(private val context: Context) {
             currentPackageInfo!!.versionCode.toLong()
         }
 
+        val currentSourceDir = currentPackageInfo.applicationInfo?.sourceDir
+
         // 1. Check hot in-memory cache.
-        appInfoCache[packageName]?.let {
-            if (it.versionCode == currentVersionCode) return it
+        if (currentSourceDir != null) {
+            appInfoCache[packageName]?.let {
+                if (it.versionCode == currentVersionCode && it.apkPaths.contains(currentSourceDir)) return it
+            }
         }
 
         // 2. Check warm disk-backed cache.
-        diskCache[packageName]?.let { cachedInfo ->
-            if (cachedInfo.versionCode == currentVersionCode) {
-                val appInfo = cachedInfo.toAppInfo(context)
-                // Preserve selection state if available in hot cache
-                val finalInfo = appInfoCache[packageName]?.isSelected?.let { isSelected ->
-                    appInfo.copy(isSelected = isSelected)
-                } ?: appInfo
-                appInfoCache[packageName] = finalInfo // Promote to hot cache.
-                return finalInfo
+        if (currentSourceDir != null) {
+            diskCache[packageName]?.let { cachedInfo ->
+                if (cachedInfo.versionCode == currentVersionCode && cachedInfo.apkPaths.contains(currentSourceDir)) {
+                    val appInfo = cachedInfo.toAppInfo(context)
+                    // Preserve selection state if available in hot cache
+                    val finalInfo = appInfoCache[packageName]?.isSelected?.let { isSelected ->
+                        appInfo.copy(isSelected = isSelected)
+                    } ?: appInfo
+                    appInfoCache[packageName] = finalInfo // Promote to hot cache.
+                    return finalInfo
+                }
             }
         }
 
