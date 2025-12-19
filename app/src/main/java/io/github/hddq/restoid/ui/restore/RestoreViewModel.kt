@@ -210,7 +210,7 @@ class RestoreViewModel(
         Shell.cmd("am force-stop $pkg").exec()
 
         for ((source, destination) in dataMappings) {
-            if (source.exists()) {
+            if (Shell.cmd("[ -e '${source.absolutePath}' ]").exec().isSuccess) {
                 Shell.cmd("mkdir -p '$destination'").exec()
                 val copyResult = Shell.cmd("cp -a '${source.absolutePath}/.' '$destination/'").exec()
                 if (!copyResult.isSuccess) {
@@ -280,7 +280,7 @@ class RestoreViewModel(
                 // TODO: This should also move to ResticExecutor ideally, but it uses restore output streaming.
                 // We continue manual command construction here for now.
                 val env = "HOME='${application.filesDir.absolutePath}' TMPDIR='${application.cacheDir.absolutePath}'"
-                val command = "$env RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' ${resticState.path} -r '$selectedRepoPath' restore ${currentSnapshot.id} --target '${tempRestoreDir.absolutePath}' $includes --json"
+                val command = "$env RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' ${resticState.path} -r '$selectedRepoPath' restore ${currentSnapshot.id} --target '${tempRestoreDir.absolutePath}' --exclude-xattr 'security.selinux' $includes --json"
 
                 val stdoutCallback = object : CallbackList<String>() {
                     override fun onAddElement(line: String) {
