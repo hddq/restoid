@@ -34,6 +34,13 @@ You can set up your repository in a folder that is synchronized by Syncthing. Th
 
 You have two options to get the app:
 
+### Choose Your Flavor
+
+Restoid comes in two flavors:
+
+*   **Bundled**: Includes the pre-compiled `restic` binary. The APK file is larger, but you don't need to download anything else after installation. It works out of the box.
+*   **Vanilla**: Does not include the `restic` binary. The APK is smaller, but you will need to download `restic` from within the app (**Settings** -> **Download**) before you can use it.
+
 1.  **Obtainium**
 
     <a href="http://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/hddq/restoid"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" width="250"></a>
