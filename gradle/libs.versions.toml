@@ -20,7 +20,7 @@ apacheCommonsCompress = "1.28.0"
 securityCrypto = "1.1.0"
 coilCompose = "2.7.0"
 kotlinxSerializationJson = "1.9.0"
-aboutLibraries = "13.1.0"
+aboutLibraries = "13.2.1"
 
 [libraries]
 androidx-compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "materialIconsExtended" }
