@@ -105,6 +105,7 @@ class RepositoriesRepository(
 
                 // Check if exists using shell (bypasses scoped storage limits for root)
                 val repoExists = Shell.cmd("[ -f '$resolvedPath/config' ]").exec().isSuccess
+                val directoryExists = Shell.cmd("[ -d '$resolvedPath' ]").exec().isSuccess
 
                 if (repoExists) {
                     // Verify password
@@ -115,15 +116,23 @@ class RepositoriesRepository(
                         AddRepositoryState.Error("Invalid password or corrupted repository.")
                     }
                 } else {
-                    // Create new
-                    val mkdirResult = Shell.cmd("mkdir -p '$resolvedPath'").exec()
-                    if (!mkdirResult.isSuccess) return@withContext AddRepositoryState.Error("Failed to create directory.")
+                    if (directoryExists) {
+                        val directoryHasEntries = Shell.cmd("find '$resolvedPath' -mindepth 1 -print -quit | grep -q .").exec().isSuccess
+                        if (directoryHasEntries) {
+                            return@withContext AddRepositoryState.Error("Directory exists but is not a restic repository.")
+                        }
+                    } else {
+                        val mkdirResult = Shell.cmd("mkdir -p '$resolvedPath'").exec()
+                        if (!mkdirResult.isSuccess) return@withContext AddRepositoryState.Error("Failed to create directory.")
+                    }
 
                     val initResult = Shell.cmd("RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' $resticPath -r '$resolvedPath' init").exec()
                     if (initResult.isSuccess) {
                         handleSuccessfulRepoAdd(resolvedPath, password, resticRepository, savePassword, wasEmpty)
                     } else {
-                        Shell.cmd("rm -rf '$resolvedPath'").exec()
+                        if (!directoryExists) {
+                            Shell.cmd("rm -rf '$resolvedPath'").exec()
+                        }
                         AddRepositoryState.Error("Failed to initialize repository.")
                     }
                 }
