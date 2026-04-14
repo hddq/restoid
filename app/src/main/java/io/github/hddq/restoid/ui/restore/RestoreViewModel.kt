@@ -221,6 +221,18 @@ class RestoreViewModel(
                 if (!chownResult.isSuccess) {
                     allSucceeded = false
                 }
+
+                // Relabel restored files so app-private SELinux categories are restored (including symlinks).
+                val relabelCommand = if (destination.startsWith("/data/data/")) {
+                    "restorecon -RFD '$destination'"
+                } else {
+                    "restorecon -RF '$destination'"
+                }
+                val relabelResult = Shell.cmd(relabelCommand).exec()
+                if (!relabelResult.isSuccess) {
+                    allSucceeded = false
+                    Log.w("RestoreViewModel", "Failed to relabel restored path $destination")
+                }
             }
         }
         return allSucceeded
