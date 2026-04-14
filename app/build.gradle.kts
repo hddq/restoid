@@ -134,6 +134,7 @@ plugins {
 android {
     namespace = "io.github.hddq.restoid"
     compileSdk = 36
+    buildToolsVersion = "36.0.0"
 
     flavorDimensions += "distribution"
 
