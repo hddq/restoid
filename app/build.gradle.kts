@@ -93,6 +93,7 @@ tasks.register("buildResticForBundledFlavor") {
                 // Using ProcessBuilder for the build command
                 val buildProcess = ProcessBuilder(
                     "go", "build",
+                    "-buildvcs=false",
                     "-ldflags=-s -w", // Strip debug info to reduce binary size
                     "-trimpath",
                     "-o", outputFile.absolutePath,
