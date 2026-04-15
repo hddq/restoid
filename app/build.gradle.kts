@@ -131,6 +131,26 @@ plugins {
     alias(libs.plugins.aboutlibraries)
 }
 
+val signingKeystorePath = providers.environmentVariable("ANDROID_SIGNING_KEYSTORE_FILE")
+    .orElse(providers.gradleProperty("ANDROID_SIGNING_KEYSTORE_FILE"))
+    .orNull
+val signingStorePassword = providers.environmentVariable("ANDROID_SIGNING_STORE_PASSWORD")
+    .orElse(providers.gradleProperty("ANDROID_SIGNING_STORE_PASSWORD"))
+    .orNull
+val signingKeyAlias = providers.environmentVariable("ANDROID_SIGNING_KEY_ALIAS")
+    .orElse(providers.gradleProperty("ANDROID_SIGNING_KEY_ALIAS"))
+    .orNull
+val signingKeyPassword = providers.environmentVariable("ANDROID_SIGNING_KEY_PASSWORD")
+    .orElse(providers.gradleProperty("ANDROID_SIGNING_KEY_PASSWORD"))
+    .orNull
+
+val hasReleaseSigning = listOf(
+    signingKeystorePath,
+    signingStorePassword,
+    signingKeyAlias,
+    signingKeyPassword
+).all { !it.isNullOrBlank() }
+
 android {
     namespace = "io.github.hddq.restoid"
     compileSdk = 36
@@ -175,9 +195,25 @@ android {
         }
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(signingKeystorePath!!)
+                storePassword = signingStorePassword
+                keyAlias = signingKeyAlias
+                keyPassword = signingKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            } else {
+                logger.lifecycle("Release signing not configured; release APKs will be unsigned.")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
