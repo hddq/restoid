@@ -3,6 +3,7 @@ package io.github.hddq.restoid.data
 import android.content.Context
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
+import android.content.pm.PermissionInfo
 import android.os.Build
 import io.github.hddq.restoid.model.AppInfo
 import com.topjohnwu.superuser.Shell
@@ -111,12 +112,8 @@ class AppInfoRepository(private val context: Context) {
             return null
         }
 
-        val currentVersionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        val currentVersionCode =
             currentPackageInfo!!.longVersionCode
-        } else {
-            @Suppress("DEPRECATION")
-            currentPackageInfo!!.versionCode.toLong()
-        }
 
         val currentSourceDir = currentPackageInfo.applicationInfo?.sourceDir
 
@@ -173,5 +170,38 @@ class AppInfoRepository(private val context: Context) {
             // Something went wrong while building AppInfo.
             null
         }
+    }
+
+    /**
+     * Returns currently granted dangerous/runtime permissions for a package.
+     * These permissions can be restored later using `pm grant`.
+     */
+    suspend fun getGrantedRuntimePermissions(packageName: String): List<String> = withContext(Dispatchers.IO) {
+        val pm = context.packageManager
+        val packageInfo = try {
+            pm.getPackageInfo(
+                packageName,
+                PackageManager.PackageInfoFlags.of(PackageManager.GET_PERMISSIONS.toLong())
+            )
+        } catch (_: Exception) {
+            return@withContext emptyList()
+        }
+
+        val requestedPermissions = packageInfo.requestedPermissions ?: return@withContext emptyList()
+        val requestedPermissionFlags = packageInfo.requestedPermissionsFlags ?: IntArray(0)
+
+        requestedPermissions.mapIndexedNotNull { index, permission ->
+            val flags = requestedPermissionFlags.getOrElse(index) { 0 }
+            val isGranted = (flags and PackageInfo.REQUESTED_PERMISSION_GRANTED) != 0
+            if (!isGranted) return@mapIndexedNotNull null
+
+            val permissionInfo = try {
+                pm.getPermissionInfo(permission, 0)
+            } catch (_: Exception) {
+                return@mapIndexedNotNull null
+            }
+
+            if (permissionInfo.protection == PermissionInfo.PROTECTION_DANGEROUS) permission else null
+        }.distinct().sorted()
     }
 }

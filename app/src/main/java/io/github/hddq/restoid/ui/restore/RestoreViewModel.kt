@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
+import java.util.Locale
 
 data class RestoreTypes(
     val apk: Boolean = true,
@@ -41,6 +42,8 @@ class RestoreViewModel(
     private val preferencesRepository: PreferencesRepository,
     val snapshotId: String
 ) : ViewModel() {
+
+    private var snapshotMetadata: RestoidMetadata? = null
 
     private val _snapshot = MutableStateFlow<SnapshotInfo?>(null)
     val snapshot = _snapshot.asStateFlow()
@@ -94,6 +97,7 @@ class RestoreViewModel(
                             _snapshot.value = foundSnapshot
                             if (foundSnapshot != null) {
                                 val metadata = metadataRepository.getMetadataForSnapshot(repo.id, foundSnapshot.id)
+                                snapshotMetadata = metadata
                                 processSnapshot(foundSnapshot, metadata)
                             } else {
                                 _error.value = "Snapshot not found."
@@ -126,11 +130,11 @@ class RestoreViewModel(
 
         val details = appMetadataMap.filterKeys { it != application.packageName }.map { (packageName, appMeta) ->
             val appInfo = appInfoMap[packageName]
-            val items = findBackedUpItems(snapshot, packageName)
+            val items = findBackedUpItems(snapshot, packageName, appMeta.grantedRuntimePermissions.isNotEmpty())
 
             val isInstalled = appInfo != null
             val isDowngrade = if (isInstalled) {
-                appMeta.versionCode < appInfo!!.versionCode
+                appMeta.versionCode < appInfo.versionCode
             } else {
                 false
             }
@@ -154,7 +158,7 @@ class RestoreViewModel(
         )
     }
 
-    private fun findBackedUpItems(snapshot: SnapshotInfo, pkg: String): List<String> {
+    private fun findBackedUpItems(snapshot: SnapshotInfo, pkg: String, hasPermissionBackup: Boolean): List<String> {
         val items = mutableListOf<String>()
         snapshot.paths.forEach { path ->
             when {
@@ -166,7 +170,36 @@ class RestoreViewModel(
                 path == "/storage/emulated/0/Android/media/$pkg" -> if (!items.contains("Media")) items.add("Media")
             }
         }
+        if (hasPermissionBackup && !items.contains("Permissions")) {
+            items.add("Permissions")
+        }
         return if (items.isNotEmpty()) items else listOf("Unknown items")
+    }
+
+    private fun restoreGrantedRuntimePermissions(packageName: String, permissions: List<String>): List<String> {
+        if (permissions.isEmpty()) return emptyList()
+
+        val failures = mutableListOf<String>()
+        permissions.forEach { permission ->
+            val result = Shell.cmd("pm grant '$packageName' '$permission'").exec()
+            if (!result.isSuccess) {
+                val output = (result.err + result.out).joinToString(" ").trim()
+                failures.add(if (output.isBlank()) permission else "$permission ($output)")
+            }
+        }
+        return failures
+    }
+
+    private fun isPackageInstalled(packageName: String): Boolean {
+        return try {
+            application.packageManager.getPackageInfo(
+                packageName,
+                android.content.pm.PackageManager.PackageInfoFlags.of(0)
+            )
+            true
+        } catch (_: Exception) {
+            false
+        }
     }
 
     private fun generatePathsToRestore(selectedApps: List<BackupDetail>, snapshot: SnapshotInfo): List<String> {
@@ -392,7 +425,26 @@ class RestoreViewModel(
 
                         if (appProcessSuccess && anyDataRestoreSelected) {
                             if (!moveRestoredDataAndFixPerms(detail, tempRestoreDir, restoreTypes.value)) {
+                                appProcessSuccess = false
                                 failureDetails.add("$appName: Data restore failed or incomplete.")
+                            }
+                        }
+
+                        val permissionsToRestore = snapshotMetadata
+                            ?.apps
+                            ?.get(detail.appInfo.packageName)
+                            ?.grantedRuntimePermissions
+                            .orEmpty()
+                        if (permissionsToRestore.isNotEmpty()) {
+                            if (!isPackageInstalled(detail.appInfo.packageName)) {
+                                appProcessSuccess = false
+                                failureDetails.add("$appName: Failed to restore permissions because the app is not installed.")
+                            } else {
+                                val permissionFailures = restoreGrantedRuntimePermissions(detail.appInfo.packageName, permissionsToRestore)
+                                if (permissionFailures.isNotEmpty()) {
+                                    appProcessSuccess = false
+                                    failureDetails.add("$appName: Failed to restore some permissions: ${permissionFailures.joinToString(", ")}")
+                                }
                             }
                         }
 
@@ -435,7 +487,7 @@ class RestoreViewModel(
                     finalSummary = "A fatal error occurred: ${e.message}",
                     elapsedTime = (System.currentTimeMillis() - startTime) / 1000
                 )
-                notificationRepository.showOperationFinishedNotification("Restore", false, _restoreProgress.value.finalSummary ?: "Restore failed.")
+                notificationRepository.showOperationFinishedNotification("Restore", false, _restoreProgress.value.finalSummary)
             } finally {
                 passwordFile?.delete()
                 tempRestoreDir?.let { dir -> Shell.cmd("rm -rf '${dir.absolutePath}'").exec() }
@@ -448,7 +500,11 @@ class RestoreViewModel(
         val hours = java.util.concurrent.TimeUnit.SECONDS.toHours(seconds)
         val minutes = java.util.concurrent.TimeUnit.SECONDS.toMinutes(seconds) % 60
         val secs = seconds % 60
-        return if (hours > 0) String.format("%02d:%02d:%02d", hours, minutes, secs) else String.format("%02d:%02d", minutes, secs)
+        return if (hours > 0) {
+            String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, secs)
+        } else {
+            String.format(Locale.US, "%02d:%02d", minutes, secs)
+        }
     }
 
     fun onDone() { _restoreProgress.value = OperationProgress() }

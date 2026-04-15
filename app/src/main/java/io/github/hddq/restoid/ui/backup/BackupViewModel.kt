@@ -1,7 +1,6 @@
 package io.github.hddq.restoid.ui.backup
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.hddq.restoid.data.*
@@ -245,11 +244,13 @@ class BackupViewModel(
             }
 
             val size = getDirectorySize(existingAppPaths)
+            val grantedRuntimePermissions = appInfoRepository.getGrantedRuntimePermissions(app.packageName)
             appMetadataMap[app.packageName] = AppMetadata(
                 size = size,
                 types = backupTypesList,
                 versionCode = app.versionCode,
-                versionName = app.versionName
+                versionName = app.versionName,
+                grantedRuntimePermissions = grantedRuntimePermissions
             )
         }
         val metadata = RestoidMetadata(apps = appMetadataMap)

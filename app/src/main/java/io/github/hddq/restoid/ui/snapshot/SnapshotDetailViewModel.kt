@@ -118,7 +118,7 @@ class SnapshotDetailsViewModel(
 
         val details = appMetadataMap.map { (packageName, appMeta) ->
             val appInfo = appInfoMap[packageName]
-            val items = findBackedUpItems(snapshot, packageName)
+            val items = findBackedUpItems(snapshot, packageName, appMeta.grantedRuntimePermissions.isNotEmpty())
 
             val isInstalled = appInfo != null
             val isDowngrade = if (isInstalled) {
@@ -147,8 +147,7 @@ class SnapshotDetailsViewModel(
         )
     }
 
-
-    private fun findBackedUpItems(snapshot: SnapshotInfo, pkg: String): List<String> {
+    private fun findBackedUpItems(snapshot: SnapshotInfo, pkg: String, hasPermissionBackup: Boolean): List<String> {
         val items = mutableListOf<String>()
         snapshot.paths.forEach { path ->
             when {
@@ -159,6 +158,9 @@ class SnapshotDetailsViewModel(
                 path == "/storage/emulated/0/Android/obb/$pkg" -> if (!items.contains("OBB")) items.add("OBB")
                 path == "/storage/emulated/0/Android/media/$pkg" -> if (!items.contains("Media")) items.add("Media")
             }
+        }
+        if (hasPermissionBackup && !items.contains("Permissions")) {
+            items.add("Permissions")
         }
         return if (items.isNotEmpty()) items else listOf("Unknown items")
     }

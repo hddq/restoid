@@ -23,11 +23,14 @@ data class RestoidMetadata(
  * (e.g., "apk", "data", "user_de").
  * @param versionCode The version code of the app at the time of backup.
  * @param versionName The version name of the app at the time of backup.
+ * @param grantedRuntimePermissions A list of dangerous/runtime permissions that were granted
+ * for this app at backup time (e.g., camera, location).
  */
 @Serializable
 data class AppMetadata(
     val size: Long,
     val types: List<String>,
     val versionCode: Long,
-    val versionName: String
+    val versionName: String,
+    val grantedRuntimePermissions: List<String> = emptyList()
 )
