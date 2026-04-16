@@ -1,0 +1,52 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^\\.go-version$/"
+      ],
+      "matchStrings": [
+        "^(?<currentValue>\\d+\\.\\d+\\.\\d+)\\s*$"
+      ],
+      "depNameTemplate": "go",
+      "datasourceTemplate": "custom.go-official",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^flake\\.nix$/"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=custom.go-official depName=go versioning=semver currentValue=(?<currentValue>\\S+)\\s+hash = \"sha256:(?<currentDigest>[a-f0-9]{64})\";"
+      ],
+      "depNameTemplate": "go",
+      "datasourceTemplate": "custom.go-official",
+      "versioningTemplate": "semver",
+      "autoReplaceStringTemplate": "# renovate: datasource=custom.go-official depName=go versioning=semver currentValue={{{newValue}}}\n        hash = \"sha256:{{{newDigest}}}\";"
+    }
+  ],
+  "customDatasources": {
+    "go-official": {
+      "defaultRegistryUrlTemplate": "https://go.dev/dl/?mode=json",
+      "transformTemplates": [
+        "{ \"releases\": $[stable = true].{ \"version\": $substring(version, 2), \"digest\": files[os='linux' and arch='amd64' and kind='archive'][0].sha256 } }"
+      ]
+    }
+  },
+  "packageRules": [
+    {
+      "matchDatasources": [
+        "custom.go-official"
+      ],
+      "matchDepNames": [
+        "go"
+      ],
+      "groupName": "go toolchain"
+    }
+  ]
+}
