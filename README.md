@@ -75,6 +75,20 @@ This is a new project and there's a lot to do! If you find a bug, have a feature
 
 All contributions are welcome!
 
+## 🌐 Translations
+
+Translations for Restoid are managed via Weblate. If you'd like to help translate the app, please visit the project page:
+
+https://hosted.weblate.org/projects/restoid/
+
+How to contribute translations:
+
+- Create an account on Weblate (if you don't already have one).
+- Pick a language and translate strings using Weblate's web interface.
+- Submitted translations will be reviewed by the maintainers and integrated into the project.
+
+If you prefer to contribute translations through GitHub (by editing Android string resources directly), open a pull request.
+
 ## 📜 License
 
 This project is licensed under the **GNU General Public License v3.0**. See the `LICENSE` file for details.
