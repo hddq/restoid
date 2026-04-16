@@ -12,34 +12,7 @@ tasks.register("buildResticForBundledFlavor") {
     outputs.dir(outputJniLibsDir)
 
     doLast {
-        // 1. Check Go Version using ProcessBuilder (Clean & Standard)
-        val versionProcess = ProcessBuilder("go", "version")
-            .redirectErrorStream(true)
-            .start()
-
-        val versionOutput = versionProcess.inputStream.bufferedReader().readText().trim()
-        versionProcess.waitFor()
-
-        if (versionProcess.exitValue() != 0) {
-            throw GradleException("Go is not installed or not in your PATH. It's required to build the 'bundled' flavor.\nOutput: $versionOutput")
-        }
-
-        // Regex matches "go version go<major>.<minor>" e.g. "go version go1.24.0" or "go version go1.24"
-        val versionRegex = Regex("go version go(\\d+)\\.(\\d+)")
-        val matchResult = versionRegex.find(versionOutput)
-
-        if (matchResult == null) {
-            throw GradleException("Could not determine Go version from output: '$versionOutput'. Expected format 'go version go<major>.<minor>...'")
-        }
-
-        val (major, minor) = matchResult.destructured
-        if (major != "1" || minor != "24") {
-            throw GradleException("Go version 1.24.x is required to build restic (found $major.$minor). Please install Go 1.24.")
-        }
-
-        println("Go version check passed: $versionOutput")
-
-        // 2. Cleanup: Delete unnecessary test files before building
+        // 1. Cleanup: Delete unnecessary test files before building
         val resticRoot = rootProject.file("restic")
 
         // List of specific files to delete
@@ -71,7 +44,7 @@ tasks.register("buildResticForBundledFlavor") {
             }
         }
 
-        // 3. Build Restic for each architecture
+        // 2. Build Restic for each architecture
         val targetAbis = setOf("x86_64", "arm64-v8a")
 
         targetAbis.forEach { abi ->
