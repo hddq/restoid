@@ -3,6 +3,7 @@ package io.github.hddq.restoid.data
 import android.content.Context
 import android.util.Log
 import com.topjohnwu.superuser.Shell
+import io.github.hddq.restoid.R
 import io.github.hddq.restoid.util.StorageUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -88,12 +89,12 @@ class RepositoriesRepository(
             val resolvedPath = StorageUtils.resolvePathForShell(path)
 
             if (repositories.value.any { it.path == resolvedPath }) {
-                return@withContext AddRepositoryState.Error("Repository already exists.")
+                return@withContext AddRepositoryState.Error(context.getString(R.string.repo_error_exists))
             }
 
             val binaryState = binaryManager.resticState.value
             if (binaryState !is ResticState.Installed) {
-                return@withContext AddRepositoryState.Error("Restic binary not ready.")
+                return@withContext AddRepositoryState.Error(context.getString(R.string.repo_error_binary_not_ready))
             }
 
             val resticPath = binaryState.path
@@ -113,17 +114,17 @@ class RepositoriesRepository(
                     if (checkResult.isSuccess) {
                         handleSuccessfulRepoAdd(resolvedPath, password, resticRepository, savePassword, wasEmpty)
                     } else {
-                        AddRepositoryState.Error("Invalid password or corrupted repository.")
+                        AddRepositoryState.Error(context.getString(R.string.repo_error_invalid_password_or_corrupted))
                     }
                 } else {
                     if (directoryExists) {
                         val directoryHasEntries = Shell.cmd("find '$resolvedPath' -mindepth 1 -print -quit | grep -q .").exec().isSuccess
                         if (directoryHasEntries) {
-                            return@withContext AddRepositoryState.Error("Directory exists but is not a restic repository.")
+                            return@withContext AddRepositoryState.Error(context.getString(R.string.repo_error_directory_not_repository))
                         }
                     } else {
                         val mkdirResult = Shell.cmd("mkdir -p '$resolvedPath'").exec()
-                        if (!mkdirResult.isSuccess) return@withContext AddRepositoryState.Error("Failed to create directory.")
+                        if (!mkdirResult.isSuccess) return@withContext AddRepositoryState.Error(context.getString(R.string.repo_error_failed_create_directory))
                     }
 
                     val initResult = Shell.cmd("RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' $resticPath -r '$resolvedPath' init").exec()
@@ -133,7 +134,7 @@ class RepositoriesRepository(
                         if (!directoryExists) {
                             Shell.cmd("rm -rf '$resolvedPath'").exec()
                         }
-                        AddRepositoryState.Error("Failed to initialize repository.")
+                        AddRepositoryState.Error(context.getString(R.string.repo_error_failed_initialize))
                     }
                 }
             } finally {
@@ -154,7 +155,7 @@ class RepositoriesRepository(
             saveNewRepository(LocalRepository(path = path, id = repoId), password, savePassword, wasEmpty)
             return AddRepositoryState.Success
         } else {
-            return AddRepositoryState.Error("Repo valid, but failed to get ID.")
+            return AddRepositoryState.Error(context.getString(R.string.repo_error_failed_get_id))
         }
     }
 

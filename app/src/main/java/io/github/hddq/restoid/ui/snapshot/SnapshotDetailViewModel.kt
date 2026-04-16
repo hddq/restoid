@@ -3,6 +3,7 @@ package io.github.hddq.restoid.ui.snapshot
 import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.AppInfoRepository
 import io.github.hddq.restoid.data.MetadataRepository
 import io.github.hddq.restoid.data.RepositoriesRepository
@@ -94,7 +95,7 @@ class SnapshotDetailsViewModel(
                         onFailure = { _error.value = it.message }
                     )
                 } else {
-                    _error.value = "Repository, password, or repo ID not found"
+                    _error.value = application.getString(R.string.error_repository_password_or_id_not_found)
                 }
             } catch (e: Exception) {
                 _error.value = e.message
@@ -151,18 +152,18 @@ class SnapshotDetailsViewModel(
         val items = mutableListOf<String>()
         snapshot.paths.forEach { path ->
             when {
-                (path.startsWith("/data/app/") && path.contains("/${pkg}-")) -> if (!items.contains("APK")) items.add("APK")
-                path == "/data/data/$pkg" -> if (!items.contains("Data")) items.add("Data")
-                path == "/data/user_de/0/$pkg" -> if (!items.contains("Device Protected Data")) items.add("Device Protected Data")
-                path == "/storage/emulated/0/Android/data/$pkg" -> if (!items.contains("External Data")) items.add("External Data")
-                path == "/storage/emulated/0/Android/obb/$pkg" -> if (!items.contains("OBB")) items.add("OBB")
-                path == "/storage/emulated/0/Android/media/$pkg" -> if (!items.contains("Media")) items.add("Media")
+                (path.startsWith("/data/app/") && path.contains("/${pkg}-")) -> if (!items.contains(application.getString(R.string.backup_type_apk))) items.add(application.getString(R.string.backup_type_apk))
+                path == "/data/data/$pkg" -> if (!items.contains(application.getString(R.string.backup_type_data))) items.add(application.getString(R.string.backup_type_data))
+                path == "/data/user_de/0/$pkg" -> if (!items.contains(application.getString(R.string.backup_type_device_protected_data))) items.add(application.getString(R.string.backup_type_device_protected_data))
+                path == "/storage/emulated/0/Android/data/$pkg" -> if (!items.contains(application.getString(R.string.backup_type_external_data))) items.add(application.getString(R.string.backup_type_external_data))
+                path == "/storage/emulated/0/Android/obb/$pkg" -> if (!items.contains(application.getString(R.string.backup_item_obb))) items.add(application.getString(R.string.backup_item_obb))
+                path == "/storage/emulated/0/Android/media/$pkg" -> if (!items.contains(application.getString(R.string.backup_item_media))) items.add(application.getString(R.string.backup_item_media))
             }
         }
-        if (hasPermissionBackup && !items.contains("Permissions")) {
-            items.add("Permissions")
+        if (hasPermissionBackup && !items.contains(application.getString(R.string.backup_item_permissions))) {
+            items.add(application.getString(R.string.backup_item_permissions))
         }
-        return if (items.isNotEmpty()) items else listOf("Unknown items")
+        return if (items.isNotEmpty()) items else listOf(application.getString(R.string.backup_item_unknown))
     }
 
 
@@ -218,11 +219,11 @@ class SnapshotDetailsViewModel(
                         },
                         onFailure = {
                             _error.value = it.message
-                            _forgetResult.value = ForgetResult.Error(it.message ?: "Unknown error")
+                            _forgetResult.value = ForgetResult.Error(it.message ?: application.getString(R.string.error_unknown))
                         }
                     )
                 } else {
-                    _error.value = "Repository, password, or repo ID not found"
+                    _error.value = application.getString(R.string.error_repository_password_or_id_not_found)
                 }
             } catch (e: Exception) {
                 _error.value = e.message

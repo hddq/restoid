@@ -1,5 +1,6 @@
 package io.github.hddq.restoid.ui.settings
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import io.github.hddq.restoid.data.NotificationRepository
@@ -9,6 +10,7 @@ import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.data.RootRepository
 
 class SettingsViewModelFactory(
+    private val context: Context,
     private val rootRepository: RootRepository,
     private val resticBinaryManager: ResticBinaryManager, // New dependency
     private val resticRepository: ResticRepository,
@@ -19,6 +21,7 @@ class SettingsViewModelFactory(
         if (modelClass.isAssignableFrom(SettingsViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
             return SettingsViewModel(
+                context,
                 rootRepository,
                 resticBinaryManager,
                 resticRepository,

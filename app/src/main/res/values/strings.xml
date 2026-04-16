@@ -1,4 +1,300 @@
 <resources>
-    <string name="app_name">Restoid</string>
-    <string name="title_activity_settings_screen">SettingsScreen</string>
+    <string name="app_name" translatable="false">Restoid</string>
+
+    <string name="screen_home">Home</string>
+    <string name="screen_settings">Settings</string>
+    <string name="screen_backup">Backup</string>
+    <string name="screen_snapshot_details">Snapshot Details</string>
+    <string name="screen_restore">Restore</string>
+    <string name="screen_licenses">Licenses</string>
+    <string name="screen_maintenance">Maintenance</string>
+
+    <string name="topbar_new_backup">New Backup</string>
+    <string name="topbar_maintenance">Maintenance</string>
+    <string name="topbar_open_source_licenses">Open Source Licenses</string>
+    <string name="topbar_snapshot_details">Snapshot Details</string>
+    <string name="topbar_restore_snapshot">Restore Snapshot</string>
+    <string name="cd_back">Back</string>
+    <string name="cd_forget_snapshot">Forget Snapshot</string>
+
+    <string name="fab_backup">Backup</string>
+    <string name="fab_start_backup">Start Backup</string>
+    <string name="fab_run_tasks">Run Tasks</string>
+    <string name="fab_restore">Restore</string>
+    <string name="fab_start_restore">Start Restore</string>
+
+    <string name="operation_backup">Backup</string>
+    <string name="operation_restore">Restore</string>
+    <string name="operation_maintenance">Maintenance</string>
+
+    <string name="backup_types_title">Backup Types</string>
+    <string name="backup_type_apk">APK</string>
+    <string name="backup_type_data">Data</string>
+    <string name="backup_type_device_protected_data">Device Protected Data</string>
+    <string name="backup_type_external_data">External Data</string>
+    <string name="backup_type_obb_data">OBB Data</string>
+    <string name="backup_type_media_data">Media Data</string>
+    <string name="apps_title">Apps</string>
+    <string name="toggle_all">Toggle All</string>
+
+    <string name="restore_options_title">Restore Options</string>
+    <string name="allow_downgrade">Allow Downgrade</string>
+    <string name="apps_to_restore_title">Apps to Restore</string>
+    <string name="no_app_data_found_in_snapshot">No app data found in this snapshot.</string>
+    <string name="restore_backup_version_with_installed">Backup: %1$s -&gt; Installed: %2$s</string>
+    <string name="restore_backup_version_only">Backup: %1$s</string>
+
+    <string name="home_title">Restoid</string>
+    <string name="maintenance_button">Maintenance</string>
+    <string name="no_repository_selected">No repository selected. Go to settings to add one.</string>
+    <string name="restic_not_available_check_settings">Restic not available. Check settings.</string>
+    <string name="error_with_message">Error: %1$s</string>
+    <string name="no_snapshots_found_for_repository">No snapshots found for the selected repository.</string>
+    <string name="snapshots_count">Snapshots (%1$d)</string>
+    <string name="repository_password_required">Repository Password Required</string>
+    <string name="enter_password_for_repository">Please enter the password for repository: %1$s</string>
+    <string name="apps_count">Apps (%1$d):</string>
+    <string name="paths_preview">Paths: %1$s…</string>
+    <string name="no_app_info_for_snapshot">No app information available for this snapshot.</string>
+
+    <string name="maintenance_tasks_title">Tasks</string>
+    <string name="maintenance_task_unlock_repository">Unlock repository</string>
+    <string name="maintenance_task_forget_old_snapshots">Forget old snapshots</string>
+    <string name="maintenance_task_prune_repository">Prune repository</string>
+    <string name="maintenance_task_check_repository_integrity">Check repository integrity</string>
+    <string name="maintenance_forget_policy_options">Forget Policy Options</string>
+    <string name="maintenance_keep_last">Keep Last</string>
+    <string name="maintenance_keep_daily">Keep Daily</string>
+    <string name="maintenance_keep_weekly">Keep Weekly</string>
+    <string name="maintenance_keep_monthly">Keep Monthly</string>
+    <string name="maintenance_check_options">Check Options</string>
+    <string name="maintenance_read_all_data">Read all data</string>
+
+    <string name="snapshot_backed_up_apps_count">Backed up Apps (%1$d)</string>
+    <string name="snapshot_backed_up_paths">Backed up paths:</string>
+    <string name="snapshot_not_found">No snapshot found.</string>
+    <string name="snapshot_forgetting">Forgetting snapshot…</string>
+    <string name="snapshot_id">ID: %1$s</string>
+    <string name="snapshot_time">Time: %1$s</string>
+    <string name="snapshot_version_size">Version: %1$s - Size: %2$s</string>
+    <string name="dialog_forget_snapshot_title">Forget Snapshot?</string>
+    <string name="dialog_forget_snapshot_message">This will remove the snapshot entry. The actual data will only be deleted after running a prune. Are you sure?</string>
+
+    <string name="label_password">Password</string>
+    <string name="error_password_cannot_be_empty">Password cannot be empty</string>
+    <string name="save_password">Save password</string>
+    <string name="action_ok">OK</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_done">Done</string>
+    <string name="action_add">Add</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_change">Change</string>
+    <string name="action_save">Save</string>
+    <string name="action_grant">Grant</string>
+    <string name="action_settings">Settings</string>
+    <string name="action_retry">Retry</string>
+    <string name="action_update">Update</string>
+    <string name="action_forget">Forget</string>
+    <string name="action_try_again">Try Again</string>
+
+    <string name="progress_initializing">Initializing…</string>
+    <string name="progress_operation_complete">%1$s Complete</string>
+    <string name="progress_operation_failed">%1$s Failed</string>
+    <string name="progress_overall">Overall Progress</string>
+    <string name="progress_stage">Stage Progress</string>
+    <string name="progress_elapsed">Elapsed</string>
+    <string name="progress_items">Items</string>
+    <string name="progress_size">Size</string>
+    <string name="progress_processing">Processing: </string>
+    <string name="progress_placeholder">...</string>
+
+    <string name="dialog_add_local_repository_title">Add Local Repository</string>
+    <string name="label_path">Path</string>
+    <string name="placeholder_select_directory">Select a directory…</string>
+    <string name="cd_select_folder">Select Folder</string>
+    <string name="cd_hide_password">Hide password</string>
+    <string name="cd_show_password">Show password</string>
+
+    <string name="backup_repositories_title">Backup Repositories</string>
+    <string name="cd_add_repository">Add Repository</string>
+    <string name="no_repositories_configured">No repositories configured. Add one to get started.</string>
+    <string name="install_restic_manage_repositories">Install restic to manage repositories.</string>
+
+    <string name="system_title">System</string>
+    <string name="root_access_denied">Root access denied</string>
+    <string name="checking_for_root">Checking for root…</string>
+    <string name="root_access_granted">Root access granted</string>
+
+    <string name="dependencies_title">Dependencies</string>
+    <string name="about_title">About</string>
+    <string name="version_label">Version</string>
+    <string name="open_source_licenses">Open Source Licenses</string>
+
+    <string name="notifications_enabled">Notifications enabled</string>
+    <string name="notifications_disabled">Notifications disabled</string>
+    <string name="notification_permission">Notification permission</string>
+    <string name="repository_id_short">ID: %1$s…</string>
+    <string name="cd_more_options">More options</string>
+    <string name="action_forget_password">Forget Password</string>
+    <string name="action_save_password">Save Password</string>
+    <string name="action_change_password">Change password</string>
+    <string name="cd_more_download_options">More download options</string>
+
+    <string name="restic_binary">Restic Binary</string>
+    <string name="restic_checking_status">Checking status…</string>
+    <string name="restic_bundled_will_extract">Bundled, will be extracted</string>
+    <string name="restic_required_for_backups">Required for backups</string>
+    <string name="restic_downloading">Downloading…</string>
+    <string name="restic_extracting_binary">Extracting binary…</string>
+    <string name="restic_error_with_message">Error: %1$s</string>
+    <string name="restic_update_available">Update to v%1$s available</string>
+    <string name="restic_download_version">Download v%1$s</string>
+    <string name="restic_download_latest">Download latest (v%1$s)</string>
+
+    <string name="error_failed_change_password">Failed to change password.</string>
+    <string name="dialog_change_password">Change Password</string>
+    <string name="label_old_password">Old Password</string>
+    <string name="label_new_password">New Password</string>
+    <string name="label_confirm_new_password">Confirm New Password</string>
+    <string name="cd_hide">Hide</string>
+    <string name="cd_show">Show</string>
+    <string name="error_passwords_do_not_match">Passwords do not match.</string>
+    <string name="dialog_save_password">Save Password</string>
+
+    <string name="backup_item_permissions">Permissions</string>
+    <string name="backup_item_unknown">Unknown items</string>
+    <string name="backup_item_obb">OBB</string>
+    <string name="backup_item_media">Media</string>
+
+    <string name="backup_error_repository_id_not_found">Repository ID not found. Cannot save metadata.</string>
+    <string name="backup_stage_preparing">[%1$d/%2$d] Preparing backup...</string>
+    <string name="backup_stage_running">[%1$d/%2$d] Backing up apps…</string>
+    <string name="backup_stage_finalizing">[%1$d/%2$d] Finalizing backup…</string>
+    <string name="backup_error_no_files_selected">No files found to back up for the selected apps.</string>
+    <string name="backup_error_command_failed_with_code">Restic command failed with exit code %1$d.</string>
+    <string name="backup_warning_metadata_not_saved">Warning: Could not save backup metadata file locally.</string>
+    <string name="backup_summary_success">Backed up %1$d app(s).</string>
+
+    <string name="error_fatal_with_message">A fatal error occurred: %1$s</string>
+    <string name="error_no_apps_selected">No apps selected.</string>
+    <string name="summary_no_apps_selected">No apps were selected.</string>
+    <string name="error_no_backup_types_selected">No backup types selected.</string>
+    <string name="summary_no_backup_types_selected">No backup types were selected.</string>
+    <string name="error_restic_not_installed">Restic is not installed.</string>
+    <string name="summary_restic_binary_not_installed">Restic binary is not installed.</string>
+    <string name="error_no_backup_repository_selected">No backup repository selected.</string>
+    <string name="summary_no_backup_repository_selected">No backup repository is selected.</string>
+    <string name="error_password_not_found_for_repository">Password for repository not found.</string>
+    <string name="summary_password_not_found">Could not find the password.</string>
+
+    <string name="error_snapshot_not_found">Snapshot not found.</string>
+    <string name="error_repository_password_or_id_not_found">Repository, password, or repo ID not found</string>
+    <string name="restore_stage_restore_files">Restore Files</string>
+    <string name="restore_stage_processing_apps">Processing Apps</string>
+    <string name="restore_stage_cleanup">Cleanup</string>
+    <string name="restore_error_preflight_failed">Pre-restore checks failed.</string>
+    <string name="restore_error_no_apps_selected">No apps selected for restore.</string>
+    <string name="restore_error_password_not_found">Password not found for repository.</string>
+    <string name="restore_error_no_files_found">No files found in the snapshot for the selected apps.</string>
+    <string name="restore_error_command_failed">Restic restore command failed.</string>
+    <string name="restore_stage_processing_template">[%1$d/%2$d] Processing Apps</string>
+    <string name="restore_failure_install_commit">%1$s: Install commit failed: %2$s</string>
+    <string name="restore_failure_write_apk_splits">%1$s: Failed to write APK splits.</string>
+    <string name="restore_failure_create_install_session">%1$s: Failed to create install session.</string>
+    <string name="restore_failure_no_apk_files">%1$s: No APK files found in restored data.</string>
+    <string name="restore_failure_data_restore">%1$s: Data restore failed or incomplete.</string>
+    <string name="restore_failure_permissions_app_not_installed">%1$s: Failed to restore permissions because the app is not installed.</string>
+    <string name="restore_failure_permissions_partial">%1$s: Failed to restore some permissions: %2$s</string>
+    <string name="restore_summary_finished_in">Restore finished in %1$s. </string>
+    <string name="restore_summary_processed">Successfully processed %1$d app(s).</string>
+    <string name="restore_summary_failed"> Failed to restore %1$d app(s).</string>
+    <string name="restore_summary_details">\n\nDetails:\n- %1$s</string>
+
+    <string name="maintenance_task_unlock">Unlock</string>
+    <string name="maintenance_task_forget">Forget</string>
+    <string name="maintenance_task_prune">Prune</string>
+    <string name="maintenance_task_check">Check</string>
+    <string name="maintenance_error_no_tasks_selected">No maintenance tasks selected.</string>
+    <string name="maintenance_stage_running_task">[%1$d/%2$d] Running \'%3$s\'…</string>
+    <string name="maintenance_task_successful">%1$s successful:\n%2$s\n\n</string>
+    <string name="maintenance_task_failed">%1$s failed:\n%2$s\n\n</string>
+    <string name="maintenance_error_one_or_more_failed">One or more tasks failed.</string>
+    <string name="maintenance_error_no_tasks">No tasks selected.</string>
+    <string name="maintenance_summary_no_tasks">No maintenance tasks were selected.</string>
+
+    <string name="home_error_repository_id_not_found">Repository ID not found</string>
+    <string name="settings_error_path_password_empty">Path and password cannot be empty.</string>
+    <string name="error_unknown">Unknown error</string>
+
+    <string name="channel_ongoing_operations">Ongoing Operations</string>
+    <string name="channel_completed_operations">Completed Operations</string>
+    <string name="channel_ongoing_description">Shows ongoing backup and restore progress silently.</string>
+    <string name="channel_completed_description">Alerts when a backup or restore has finished.</string>
+    <string name="notification_files_progress">%1$d/%2$d files</string>
+    <string name="notification_scanning_files">Scanning files…</string>
+    <string name="notification_operation_finished_success">%1$s finished successfully</string>
+    <string name="notification_operation_finished_failure">%1$s failed</string>
+
+    <string name="repo_error_exists">Repository already exists.</string>
+    <string name="repo_error_binary_not_ready">Restic binary not ready.</string>
+    <string name="repo_error_invalid_password_or_corrupted">Invalid password or corrupted repository.</string>
+    <string name="repo_error_directory_not_repository">Directory exists but is not a restic repository.</string>
+    <string name="repo_error_failed_create_directory">Failed to create directory.</string>
+    <string name="repo_error_failed_initialize">Failed to initialize repository.</string>
+    <string name="repo_error_failed_get_id">Repo valid, but failed to get ID.</string>
+
+    <string name="restic_unknown_version">Unknown version</string>
+    <string name="restic_unknown">unknown</string>
+    <string name="restic_error_binary_corrupted">Binary corrupted or invalid</string>
+    <string name="restic_error_bundled_not_found">Bundled binary not found or not executable.</string>
+    <string name="restic_error_prepare_bundled">Failed to prepare bundled binary: %1$s</string>
+    <string name="restic_error_bundled_native_lib_not_found">Bundled restic binary not found in native library directory</string>
+    <string name="restic_error_tag_name_missing">tag_name not found in GitHub API response</string>
+    <string name="restic_error_fetch_latest">Could not fetch latest version: %1$s</string>
+    <string name="restic_error_download_not_supported_bundled">Download is not supported in the bundled flavor.</string>
+    <string name="restic_error_unsupported_architecture">Unsupported device architecture</string>
+    <string name="restic_error_unknown">An unknown error occurred</string>
+
+    <string name="restic_failure_load_snapshots">Failed to load snapshots</string>
+    <string name="restic_failure_check_repository">Failed to check repository</string>
+    <string name="restic_failure_prune_repository">Failed to prune repository</string>
+    <string name="restic_failure_unlock_repository">Failed to unlock repository</string>
+    <string name="restic_failure_no_forget_policy">No \'keep\' policy was specified for the forget operation.</string>
+    <string name="restic_failure_forget_snapshots">Failed to forget snapshots</string>
+    <string name="restic_failure_delete_snapshot">Failed to delete snapshot</string>
+    <string name="restic_failure_forget_metadata">Failed to forget metadata snapshots</string>
+    <string name="restic_failure_get_repo_config">Failed to get repo config</string>
+    <string name="restic_failure_change_password">Failed to change password</string>
+    <string name="restic_failure_restore_snapshot">Failed to restore snapshot</string>
+    <string name="restic_stage_restoring_files">Restoring files…</string>
+    <string name="restic_stage_backing_up">Backing up…</string>
+    <string name="restic_stage_finishing">Finishing…</string>
+    <string name="restic_summary_added">Added %1$s (%2$d new, %3$d changed files) in %4$s.</string>
+
+    <string name="restic_executor_failure_command">Restic command failed</string>
+    <string name="restic_executor_failure_not_ready">Restic is not installed or ready.</string>
+
+    <string name="maintenance_summary_prune_completed">Prune operation completed.</string>
+    <string name="maintenance_summary_removed_snapshots">Removed %1$s snapshot(s).</string>
+    <string name="maintenance_summary_no_snapshots_removed">No snapshots matched the policy to be removed.</string>
+    <string name="maintenance_summary_check_completed">Check operation completed.</string>
+    <string name="maintenance_summary_unlock_finished">Unlock operation finished.</string>
+
+    <string name="not_available">N/A</string>
+
+    <string name="license_unknown_author">Unknown</string>
+    <string name="license_unknown_name">Unknown License</string>
+    <string name="license_restoid_author" translatable="false">hddq</string>
+    <string name="license_restoid_name" translatable="false">GPL-3.0</string>
+    <string name="license_restoid_url" translatable="false">https://github.com/hddq/restoid/blob/master/LICENSE</string>
+    <string name="license_restic_name" translatable="false">Restic</string>
+    <string name="license_restic_author" translatable="false">Alexander Neumann</string>
+    <string name="license_restic_license" translatable="false">BSD-2-Clause</string>
+    <string name="license_restic_url" translatable="false">https://github.com/restic/restic/blob/master/LICENSE</string>
+    <string name="license_url_label">License URL: %1$s</string>
+    <string name="license_project_website_label">Project Website: %1$s</string>
+    <string name="license_no_link_available">No link available</string>
+    <string name="license_tap_to_expand">… (tap to expand)</string>
+    <string name="cd_open_link">Open Link</string>
+    <string name="cd_copy_license">Copy License</string>
 </resources>

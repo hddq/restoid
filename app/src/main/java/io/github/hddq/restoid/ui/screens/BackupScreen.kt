@@ -15,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -22,6 +23,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
+import io.github.hddq.restoid.R
 import io.github.hddq.restoid.RestoidApplication
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.ui.backup.BackupTypes
@@ -72,7 +74,7 @@ fun BackupScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
         if (showProgress) {
             ProgressScreenContent(
                 progress = backupProgress,
-                operationType = "Backup",
+                operationType = stringResource(R.string.operation_backup),
                 onDone = {
                     viewModel.onDone()
                     onNavigateUp()
@@ -110,21 +112,21 @@ fun BackupSelectionContent(
             ) {
                 Column {
                     Text(
-                        text = "Backup Types",
+                        text = stringResource(R.string.backup_types_title),
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(16.dp)
                     )
-                    BackupTypeToggle("APK", backupTypes.apk) { viewModel.setBackupApk(it) }
+                    BackupTypeToggle(stringResource(R.string.backup_type_apk), backupTypes.apk) { viewModel.setBackupApk(it) }
                     HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    BackupTypeToggle("Data", backupTypes.data) { viewModel.setBackupData(it) }
+                    BackupTypeToggle(stringResource(R.string.backup_type_data), backupTypes.data) { viewModel.setBackupData(it) }
                     HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    BackupTypeToggle("Device Protected Data", backupTypes.deviceProtectedData) { viewModel.setBackupDeviceProtectedData(it) }
+                    BackupTypeToggle(stringResource(R.string.backup_type_device_protected_data), backupTypes.deviceProtectedData) { viewModel.setBackupDeviceProtectedData(it) }
                     HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    BackupTypeToggle("External Data", backupTypes.externalData) { viewModel.setBackupExternalData(it) }
+                    BackupTypeToggle(stringResource(R.string.backup_type_external_data), backupTypes.externalData) { viewModel.setBackupExternalData(it) }
                     HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    BackupTypeToggle("OBB Data", backupTypes.obb) { viewModel.setBackupObb(it) }
+                    BackupTypeToggle(stringResource(R.string.backup_type_obb_data), backupTypes.obb) { viewModel.setBackupObb(it) }
                     HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    BackupTypeToggle("Media Data", backupTypes.media) { viewModel.setBackupMedia(it) }
+                    BackupTypeToggle(stringResource(R.string.backup_type_media_data), backupTypes.media) { viewModel.setBackupMedia(it) }
                 }
             }
         }
@@ -136,11 +138,11 @@ fun BackupSelectionContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Apps",
+                    text = stringResource(R.string.apps_title),
                     style = MaterialTheme.typography.titleMedium
                 )
                 FilledTonalButton(onClick = { viewModel.toggleAll() }) {
-                    Text("Toggle All")
+                    Text(stringResource(R.string.toggle_all))
                 }
             }
         }

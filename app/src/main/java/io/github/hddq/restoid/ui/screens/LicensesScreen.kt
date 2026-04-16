@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -67,20 +68,20 @@ fun LicensesScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
         // 1. Custom Items (Restoid & Restic)
         item {
             LicenseCard(
-                name = "Restoid",
-                author = "hddq",
-                licenseName = "GPL-3.0",
+                name = stringResource(R.string.app_name),
+                author = stringResource(R.string.license_restoid_author),
+                licenseName = stringResource(R.string.license_restoid_name),
                 licenseText = Licenses.RESTOID_LICENSE,
-                url = "https://github.com/hddq/restoid/blob/master/LICENSE"
+                url = stringResource(R.string.license_restoid_url)
             )
         }
         item {
             LicenseCard(
-                name = "Restic",
-                author = "Alexander Neumann",
-                licenseName = "BSD-2-Clause",
+                name = stringResource(R.string.license_restic_name),
+                author = stringResource(R.string.license_restic_author),
+                licenseName = stringResource(R.string.license_restic_license),
                 licenseText = Licenses.RESTIC_LICENSE,
-                url = "https://github.com/restic/restic/blob/master/LICENSE"
+                url = stringResource(R.string.license_restic_url)
             )
         }
 
@@ -95,9 +96,15 @@ fun LicensesScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
 
             LicenseCard(
                 name = library.name,
-                author = library.developers.firstOrNull()?.name ?: library.organization?.name ?: "Unknown",
-                licenseName = firstLicense?.name ?: "Unknown License",
-                licenseText = if (licenseUrl.isNotBlank()) "License URL: $licenseUrl" else if (website.isNotBlank()) "Project Website: $website" else "No link available",
+                author = library.developers.firstOrNull()?.name ?: library.organization?.name ?: stringResource(R.string.license_unknown_author),
+                licenseName = firstLicense?.name ?: stringResource(R.string.license_unknown_name),
+                licenseText = if (licenseUrl.isNotBlank()) {
+                    stringResource(R.string.license_url_label, licenseUrl)
+                } else if (website.isNotBlank()) {
+                    stringResource(R.string.license_project_website_label, website)
+                } else {
+                    stringResource(R.string.license_no_link_available)
+                },
                 version = library.artifactVersion,
                 url = primaryUrl
             )
@@ -118,11 +125,12 @@ fun LicenseCard(
     var expanded by remember { mutableStateOf(false) }
     val uriHandler = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current
+    val tapToExpand = stringResource(R.string.license_tap_to_expand)
 
     // Optimize text for preview
-    val licensePreview = remember(licenseText) {
+    val licensePreview = remember(licenseText, tapToExpand) {
         if (licenseText.length > 200) {
-            licenseText.trimIndent().take(200) + "... (tap to expand)"
+            licenseText.trimIndent().take(200) + tapToExpand
         } else {
             licenseText.trimIndent()
         }
@@ -172,7 +180,7 @@ fun LicenseCard(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.OpenInNew,
-                                contentDescription = "Open Link",
+                                contentDescription = stringResource(R.string.cd_open_link),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(16.dp)
                             )
@@ -208,7 +216,7 @@ fun LicenseCard(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.ContentCopy,
-                                contentDescription = "Copy License",
+                                contentDescription = stringResource(R.string.cd_copy_license),
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(18.dp)
                             )

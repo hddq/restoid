@@ -3,6 +3,7 @@ package io.github.hddq.restoid.data
 import android.content.Context
 import com.topjohnwu.superuser.CallbackList
 import com.topjohnwu.superuser.Shell
+import io.github.hddq.restoid.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -33,14 +34,14 @@ class ResticExecutor(
         repoPath: String,
         password: String,
         command: String,
-        failureMessage: String = "Restic command failed",
+        failureMessage: String = context.getString(R.string.restic_executor_failure_command),
         env: String = "",
         stdoutCallback: CallbackList<String>? = null
     ): Result<String> {
         return withContext(Dispatchers.IO) {
             val state = binaryManager.resticState.value
             if (state !is ResticState.Installed) {
-                return@withContext Result.failure(Exception("Restic is not installed or ready."))
+                return@withContext Result.failure(Exception(context.getString(R.string.restic_executor_failure_not_ready)))
             }
 
             val resticPath = state.path

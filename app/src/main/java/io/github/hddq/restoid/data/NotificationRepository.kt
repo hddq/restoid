@@ -32,8 +32,6 @@ class NotificationRepository(private val context: Context) {
     companion object {
         const val PROGRESS_CHANNEL_ID = "progress_channel"
         const val FINISHED_CHANNEL_ID = "finished_channel"
-        private const val PROGRESS_CHANNEL_NAME = "Ongoing Operations"
-        private const val FINISHED_CHANNEL_NAME = "Completed Operations"
         private const val PROGRESS_NOTIFICATION_ID = 1
         private const val FINISHED_NOTIFICATION_ID = 2
     }
@@ -45,20 +43,20 @@ class NotificationRepository(private val context: Context) {
         // Low importance channel for silent progress updates
         val progressChannel = NotificationChannel(
             PROGRESS_CHANNEL_ID,
-            PROGRESS_CHANNEL_NAME,
+            context.getString(R.string.channel_ongoing_operations),
             NotificationManager.IMPORTANCE_LOW
         ).apply {
-            description = "Shows ongoing backup and restore progress silently."
+            description = context.getString(R.string.channel_ongoing_description)
         }
         notificationManager.createNotificationChannel(progressChannel)
 
         // High importance channel for finished notifications to make them pop up
         val finishedChannel = NotificationChannel(
             FINISHED_CHANNEL_ID,
-            FINISHED_CHANNEL_NAME,
+            context.getString(R.string.channel_completed_operations),
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
-            description = "Alerts when a backup or restore has finished."
+            description = context.getString(R.string.channel_completed_description)
         }
         notificationManager.createNotificationChannel(finishedChannel)
     }
@@ -78,12 +76,12 @@ class NotificationRepository(private val context: Context) {
         val percentage = (progress.stagePercentage * 100).toInt()
         val processedSize = Formatter.formatFileSize(context, progress.bytesProcessed)
         val totalSize = Formatter.formatFileSize(context, progress.totalBytes)
-        val filesText = "${progress.filesProcessed}/${progress.totalFiles} files"
+        val filesText = context.getString(R.string.notification_files_progress, progress.filesProcessed, progress.totalFiles)
 
         val contentText = if (progress.totalFiles > 0) {
             "$filesText | $processedSize / $totalSize"
         } else {
-            "Scanning files..."
+            context.getString(R.string.notification_scanning_files)
         }
 
         val title = progress.stageTitle.let { "$it ($percentage%)" }
@@ -113,7 +111,11 @@ class NotificationRepository(private val context: Context) {
         // Cancel the ongoing progress notification
         NotificationManagerCompat.from(context).cancel(PROGRESS_NOTIFICATION_ID)
 
-        val title = if (success) "$operationName finished successfully" else "$operationName failed"
+        val title = if (success) {
+            context.getString(R.string.notification_operation_finished_success, operationName)
+        } else {
+            context.getString(R.string.notification_operation_finished_failure, operationName)
+        }
 
         val builder = NotificationCompat.Builder(context, FINISHED_CHANNEL_ID) // Use finished channel
             .setContentTitle(title)
@@ -142,4 +144,3 @@ class NotificationRepository(private val context: Context) {
         }
     }
 }
-

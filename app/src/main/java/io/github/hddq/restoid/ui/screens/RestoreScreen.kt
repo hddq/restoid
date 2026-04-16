@@ -14,11 +14,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import io.github.hddq.restoid.R
 import io.github.hddq.restoid.RestoidApplication
 import io.github.hddq.restoid.model.BackupDetail
 import io.github.hddq.restoid.ui.restore.RestoreTypes
@@ -52,6 +54,13 @@ fun RestoreScreen(navController: NavController, snapshotId: String?, modifier: M
     val restoreProgress by viewModel.restoreProgress.collectAsState()
 
     val showProgressScreen = isRestoring || restoreProgress.isFinished
+    val apkLabel = stringResource(R.string.backup_type_apk)
+    val dataLabel = stringResource(R.string.backup_type_data)
+    val deviceProtectedDataLabel = stringResource(R.string.backup_type_device_protected_data)
+    val externalDataLabel = stringResource(R.string.backup_type_external_data)
+    val obbDataLabel = stringResource(R.string.backup_type_obb_data)
+    val mediaDataLabel = stringResource(R.string.backup_type_media_data)
+    val allowDowngradeLabel = stringResource(R.string.allow_downgrade)
 
     Crossfade(
         targetState = showProgressScreen,
@@ -61,7 +70,7 @@ fun RestoreScreen(navController: NavController, snapshotId: String?, modifier: M
         if (showProgress) {
             ProgressScreenContent(
                 progress = restoreProgress,
-                operationType = "Restore",
+                operationType = stringResource(R.string.operation_restore),
                 onDone = {
                     viewModel.onDone()
                     navController.popBackStack()
@@ -77,12 +86,13 @@ fun RestoreScreen(navController: NavController, snapshotId: String?, modifier: M
                 onToggleAll = viewModel::toggleAllRestoreSelection,
                 onToggleRestoreType = { type, value ->
                     when (type) {
-                        "APK" -> viewModel.setRestoreApk(value)
-                        "Data" -> viewModel.setRestoreData(value)
-                        "Device Protected Data" -> viewModel.setRestoreDeviceProtectedData(value)
-                        "External Data" -> viewModel.setRestoreExternalData(value)
-                        "OBB Data" -> viewModel.setRestoreObb(value)
-                        "Media Data" -> viewModel.setRestoreMedia(value)
+                        apkLabel -> viewModel.setRestoreApk(value)
+                        dataLabel -> viewModel.setRestoreData(value)
+                        deviceProtectedDataLabel -> viewModel.setRestoreDeviceProtectedData(value)
+                        externalDataLabel -> viewModel.setRestoreExternalData(value)
+                        obbDataLabel -> viewModel.setRestoreObb(value)
+                        mediaDataLabel -> viewModel.setRestoreMedia(value)
+                        allowDowngradeLabel -> viewModel.setAllowDowngrade(value)
                     }
                 },
                 onToggleAllowDowngrade = viewModel::setAllowDowngrade
@@ -102,6 +112,13 @@ fun RestoreSelectionContent(
     onToggleRestoreType: (String, Boolean) -> Unit,
     onToggleAllowDowngrade: (Boolean) -> Unit
 ) {
+    val apkLabel = stringResource(R.string.backup_type_apk)
+    val dataLabel = stringResource(R.string.backup_type_data)
+    val deviceProtectedDataLabel = stringResource(R.string.backup_type_device_protected_data)
+    val externalDataLabel = stringResource(R.string.backup_type_external_data)
+    val obbDataLabel = stringResource(R.string.backup_type_obb_data)
+    val mediaDataLabel = stringResource(R.string.backup_type_media_data)
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp, top = 8.dp),
@@ -116,23 +133,23 @@ fun RestoreSelectionContent(
             ) {
                 Column {
                     Text(
-                        text = "Restore Options",
+                        text = stringResource(R.string.restore_options_title),
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(16.dp)
                     )
-                    RestoreTypeToggle("APK", checked = restoreTypes.apk) { onToggleRestoreType("APK", it) }
+                    RestoreTypeToggle(apkLabel, checked = restoreTypes.apk) { onToggleRestoreType(apkLabel, it) }
                     HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    RestoreTypeToggle("Data", checked = restoreTypes.data) { onToggleRestoreType("Data", it) }
+                    RestoreTypeToggle(dataLabel, checked = restoreTypes.data) { onToggleRestoreType(dataLabel, it) }
                     HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    RestoreTypeToggle("Device Protected Data", checked = restoreTypes.deviceProtectedData) { onToggleRestoreType("Device Protected Data", it) }
+                    RestoreTypeToggle(deviceProtectedDataLabel, checked = restoreTypes.deviceProtectedData) { onToggleRestoreType(deviceProtectedDataLabel, it) }
                     HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    RestoreTypeToggle("External Data", checked = restoreTypes.externalData) { onToggleRestoreType("External Data", it) }
+                    RestoreTypeToggle(externalDataLabel, checked = restoreTypes.externalData) { onToggleRestoreType(externalDataLabel, it) }
                     HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    RestoreTypeToggle("OBB Data", checked = restoreTypes.obb) { onToggleRestoreType("OBB Data", it) }
+                    RestoreTypeToggle(obbDataLabel, checked = restoreTypes.obb) { onToggleRestoreType(obbDataLabel, it) }
                     HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    RestoreTypeToggle("Media Data", checked = restoreTypes.media) { onToggleRestoreType("Media Data", it) }
+                    RestoreTypeToggle(mediaDataLabel, checked = restoreTypes.media) { onToggleRestoreType(mediaDataLabel, it) }
                     HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    RestoreTypeToggle("Allow Downgrade", checked = allowDowngrade) { onToggleAllowDowngrade(it) }
+                    RestoreTypeToggle(stringResource(R.string.allow_downgrade), checked = allowDowngrade) { onToggleAllowDowngrade(it) }
                 }
             }
         }
@@ -144,11 +161,11 @@ fun RestoreSelectionContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Apps to Restore",
+                    text = stringResource(R.string.apps_to_restore_title),
                     style = MaterialTheme.typography.titleMedium
                 )
                 FilledTonalButton(onClick = onToggleAll) {
-                    Text("Toggle All")
+                    Text(stringResource(R.string.toggle_all))
                 }
             }
         }
@@ -167,7 +184,7 @@ fun RestoreSelectionContent(
         } else if (backupDetails.isEmpty() && !isLoading) {
             item {
                 Text(
-                    "No app data found in this snapshot.",
+                    stringResource(R.string.no_app_data_found_in_snapshot),
                     modifier = Modifier.padding(16.dp)
                 )
             }
@@ -261,9 +278,16 @@ private fun RestoreAppListItem(detail: BackupDetail, allowDowngrade: Boolean, on
 
             val versionColor = if (detail.isDowngrade) Orange else MaterialTheme.colorScheme.onSurfaceVariant
             val versionText = if (detail.isInstalled) {
-                "Backup: ${detail.versionName ?: "N/A"} → Installed: ${app.versionName}"
+                stringResource(
+                    R.string.restore_backup_version_with_installed,
+                    detail.versionName ?: stringResource(R.string.not_available),
+                    app.versionName
+                )
             } else {
-                "Backup: ${detail.versionName ?: "N/A"}"
+                stringResource(
+                    R.string.restore_backup_version_only,
+                    detail.versionName ?: stringResource(R.string.not_available)
+                )
             }
 
             Text(

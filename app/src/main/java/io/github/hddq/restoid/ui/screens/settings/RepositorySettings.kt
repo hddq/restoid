@@ -20,8 +20,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.ui.screens.settings.components.SelectableRepositoryRow
 import io.github.hddq.restoid.ui.settings.SettingsViewModel
@@ -46,10 +48,10 @@ fun RepositorySettings(viewModel: SettingsViewModel) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Backup Repositories", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.backup_repositories_title), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                 if (resticState is ResticState.Installed) {
                     IconButton(onClick = { viewModel.onShowAddRepoDialog() }) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Repository")
+                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_add_repository))
                     }
                 }
             }
@@ -57,7 +59,7 @@ fun RepositorySettings(viewModel: SettingsViewModel) {
             if (resticState is ResticState.Installed) {
                 if (repositories.isEmpty()) {
                     Text(
-                        "No repositories configured. Add one to get started.",
+                        stringResource(R.string.no_repositories_configured),
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                     )
@@ -86,7 +88,7 @@ fun RepositorySettings(viewModel: SettingsViewModel) {
                         tint = LocalContentColor.current.copy(alpha = 0.6f)
                     )
                     Text(
-                        "Install restic to manage repositories.",
+                        stringResource(R.string.install_restic_manage_repositories),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
@@ -94,4 +96,3 @@ fun RepositorySettings(viewModel: SettingsViewModel) {
         }
     }
 }
-

@@ -3,6 +3,7 @@ package io.github.hddq.restoid.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.hddq.restoid.data.*
+import io.github.hddq.restoid.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,6 +21,7 @@ data class AddRepoUiState(
 enum class ChangePasswordState { Idle, InProgress, Success, Error }
 
 class SettingsViewModel(
+    private val context: android.content.Context,
     private val rootRepository: RootRepository,
     private val resticBinaryManager: ResticBinaryManager, // Injected Manager
     private val resticRepository: ResticRepository,
@@ -104,7 +106,7 @@ class SettingsViewModel(
 
     fun addRepository() {
         if (resticState.value !is ResticState.Installed) {
-            _addRepoUiState.update { it.copy(state = AddRepositoryState.Error("Restic is not installed.")) }
+            _addRepoUiState.update { it.copy(state = AddRepositoryState.Error(context.getString(R.string.error_restic_not_installed))) }
             return
         }
 
@@ -113,7 +115,7 @@ class SettingsViewModel(
         val savePassword = addRepoUiState.value.savePassword
 
         if (path.isBlank() || password.isBlank()) {
-            _addRepoUiState.update { it.copy(state = AddRepositoryState.Error("Path and password cannot be empty.")) }
+            _addRepoUiState.update { it.copy(state = AddRepositoryState.Error(context.getString(R.string.settings_error_path_password_empty))) }
             return
         }
 

@@ -28,10 +28,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import io.github.hddq.restoid.R
 import io.github.hddq.restoid.RestoidApplication
 import io.github.hddq.restoid.ui.maintenance.MaintenanceUiState
 import io.github.hddq.restoid.ui.maintenance.MaintenanceViewModel
@@ -44,6 +46,7 @@ fun MaintenanceScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
     val application = LocalContext.current.applicationContext as RestoidApplication
     val viewModel: MaintenanceViewModel = viewModel(
         factory = MaintenanceViewModelFactory(
+            application,
             application.repositoriesRepository,
             application.resticBinaryManager, // Added this!
             application.resticRepository,
@@ -62,7 +65,7 @@ fun MaintenanceScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
         if (showProgress) {
             ProgressScreenContent(
                 progress = uiState.progress,
-                operationType = "Maintenance",
+                operationType = stringResource(R.string.operation_maintenance),
                 onDone = {
                     viewModel.onDone()
                     onNavigateUp()
@@ -112,30 +115,30 @@ fun MaintenanceSelectionContent(
             ) {
                 Column {
                     Text(
-                        text = "Tasks",
+                        text = stringResource(R.string.maintenance_tasks_title),
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(16.dp)
                     )
                     MaintenanceTaskToggle(
-                        label = "Unlock repository",
+                        label = stringResource(R.string.maintenance_task_unlock_repository),
                         checked = uiState.unlockRepo,
                         onCheckedChange = onSetUnlockRepo
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.background)
                     MaintenanceTaskToggle(
-                        label = "Forget old snapshots",
+                        label = stringResource(R.string.maintenance_task_forget_old_snapshots),
                         checked = uiState.forgetSnapshots,
                         onCheckedChange = onSetForgetSnapshots
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.background)
                     MaintenanceTaskToggle(
-                        label = "Prune repository",
+                        label = stringResource(R.string.maintenance_task_prune_repository),
                         checked = uiState.pruneRepo,
                         onCheckedChange = onSetPruneRepo
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.background)
                     MaintenanceTaskToggle(
-                        label = "Check repository integrity",
+                        label = stringResource(R.string.maintenance_task_check_repository_integrity),
                         checked = uiState.checkRepo,
                         onCheckedChange = onSetCheckRepo
                     )
@@ -153,14 +156,14 @@ fun MaintenanceSelectionContent(
                 ) {
                     Column {
                         Text(
-                            text = "Forget Policy Options",
+                            text = stringResource(R.string.maintenance_forget_policy_options),
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.padding(16.dp)
                         )
-                        PolicySlider(label = "Keep Last", value = uiState.keepLast, range = 0..20, onValueChange = onSetKeepLast)
-                        PolicySlider(label = "Keep Daily", value = uiState.keepDaily, range = 0..30, onValueChange = onSetKeepDaily)
-                        PolicySlider(label = "Keep Weekly", value = uiState.keepWeekly, range = 0..12, onValueChange = onSetKeepWeekly)
-                        PolicySlider(label = "Keep Monthly", value = uiState.keepMonthly, range = 0..24, onValueChange = onSetKeepMonthly)
+                        PolicySlider(label = stringResource(R.string.maintenance_keep_last), value = uiState.keepLast, range = 0..20, onValueChange = onSetKeepLast)
+                        PolicySlider(label = stringResource(R.string.maintenance_keep_daily), value = uiState.keepDaily, range = 0..30, onValueChange = onSetKeepDaily)
+                        PolicySlider(label = stringResource(R.string.maintenance_keep_weekly), value = uiState.keepWeekly, range = 0..12, onValueChange = onSetKeepWeekly)
+                        PolicySlider(label = stringResource(R.string.maintenance_keep_monthly), value = uiState.keepMonthly, range = 0..24, onValueChange = onSetKeepMonthly)
                     }
                 }
             }
@@ -176,12 +179,12 @@ fun MaintenanceSelectionContent(
                 ) {
                     Column {
                         Text(
-                            text = "Check Options",
+                            text = stringResource(R.string.maintenance_check_options),
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.padding(16.dp)
                         )
                         MaintenanceTaskToggle(
-                            label = "Read all data",
+                            label = stringResource(R.string.maintenance_read_all_data),
                             checked = uiState.readData,
                             onCheckedChange = onSetReadData
                         )

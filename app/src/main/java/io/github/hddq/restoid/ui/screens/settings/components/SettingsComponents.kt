@@ -44,12 +44,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.hddq.restoid.BuildConfig
+import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.LocalRepository
 import io.github.hddq.restoid.data.NotificationPermissionState
 import io.github.hddq.restoid.data.ResticState
@@ -92,15 +94,15 @@ fun NotificationPermissionRow(
             )
             Text(
                 text = when (state) {
-                    NotificationPermissionState.Granted -> "Notifications enabled"
-                    NotificationPermissionState.Denied -> "Notifications disabled"
-                    NotificationPermissionState.NotRequested -> "Notification permission"
+                    NotificationPermissionState.Granted -> stringResource(R.string.notifications_enabled)
+                    NotificationPermissionState.Denied -> stringResource(R.string.notifications_disabled)
+                    NotificationPermissionState.NotRequested -> stringResource(R.string.notification_permission)
                 }
             )
         }
         if (state != NotificationPermissionState.Granted) {
             Button(onClick = if (state == NotificationPermissionState.NotRequested) onRequestPermission else onOpenSettings) {
-                Text(if (state == NotificationPermissionState.Denied) "Settings" else "Grant")
+                Text(if (state == NotificationPermissionState.Denied) stringResource(R.string.action_settings) else stringResource(R.string.action_grant))
             }
         }
     }
@@ -141,7 +143,7 @@ fun SelectableRepositoryRow(
             )
             repo.id?.let {
                 Text(
-                    "ID: ${it.take(12)}...",
+                    stringResource(R.string.repository_id_short, it.take(12)),
                     style = MaterialTheme.typography.bodySmall,
                     fontFamily = FontFamily.Monospace,
                     color = LocalContentColor.current.copy(alpha = 0.7f)
@@ -169,14 +171,14 @@ fun SelectableRepositoryRow(
 
         Box {
             IconButton(onClick = { showMenu = true }) {
-                Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.cd_more_options))
             }
             DropdownMenu(
                 expanded = showMenu,
                 onDismissRequest = { showMenu = false }
             ) {
                 DropdownMenuItem(
-                    text = { Text("Delete") },
+                    text = { Text(stringResource(R.string.action_delete)) },
                     onClick = {
                         viewModel.deleteRepository(repo.path)
                         showMenu = false
@@ -184,7 +186,7 @@ fun SelectableRepositoryRow(
                 )
                 if (viewModel.hasStoredRepositoryPassword(repo.path)) {
                     DropdownMenuItem(
-                        text = { Text("Forget Password") },
+                        text = { Text(stringResource(R.string.action_forget_password)) },
                         onClick = {
                             viewModel.forgetPassword(repo.path)
                             showMenu = false
@@ -192,7 +194,7 @@ fun SelectableRepositoryRow(
                     )
                 } else {
                     DropdownMenuItem(
-                        text = { Text("Save Password") },
+                        text = { Text(stringResource(R.string.action_save_password)) },
                         onClick = {
                             showSavePasswordDialog = true
                             showMenu = false
@@ -200,7 +202,7 @@ fun SelectableRepositoryRow(
                     )
                 }
                 DropdownMenuItem(
-                    text = { Text("Change password") },
+                    text = { Text(stringResource(R.string.action_change_password)) },
                     onClick = {
                         showChangePasswordDialog = true
                         showMenu = false
@@ -236,7 +238,7 @@ fun SplitButton(
             onClick = onSecondaryClick,
             shape = shape.copy(topStart = CornerSize(0.dp), bottomStart = CornerSize(0.dp))
         ) {
-            Icon(Icons.Default.ArrowDropDown, contentDescription = "More download options")
+            Icon(Icons.Default.ArrowDropDown, contentDescription = stringResource(R.string.cd_more_download_options))
         }
     }
 }
@@ -293,14 +295,14 @@ fun ResticDependencyRow(
                     Icon(imageVector = icon, contentDescription = null, modifier = Modifier.padding(end = 16.dp), tint = iconColor)
 
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Restic Binary", style = MaterialTheme.typography.bodyLarge)
+                        Text(stringResource(R.string.restic_binary), style = MaterialTheme.typography.bodyLarge)
                         val supportingText = when (targetState) {
-                            ResticState.Idle -> "Checking status..."
-                            ResticState.NotInstalled -> if (BuildConfig.IS_BUNDLED) "Bundled, will be extracted" else "Required for backups"
-                            is ResticState.Downloading -> "Downloading..."
-                            ResticState.Extracting -> "Extracting binary..."
+                            ResticState.Idle -> stringResource(R.string.restic_checking_status)
+                            ResticState.NotInstalled -> if (BuildConfig.IS_BUNDLED) stringResource(R.string.restic_bundled_will_extract) else stringResource(R.string.restic_required_for_backups)
+                            is ResticState.Downloading -> stringResource(R.string.restic_downloading)
+                            ResticState.Extracting -> stringResource(R.string.restic_extracting_binary)
                             is ResticState.Installed -> targetState.fullVersionOutput
-                            is ResticState.Error -> "Error: ${targetState.message}"
+                            is ResticState.Error -> stringResource(R.string.restic_error_with_message, targetState.message)
                         }
                         Text(
                             text = supportingText,
@@ -310,7 +312,7 @@ fun ResticDependencyRow(
                         )
                         if (isUpdateAvailable) {
                             Text(
-                                text = "Update to v$stableResticVersion available",
+                                text = stringResource(R.string.restic_update_available, stableResticVersion),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.Bold
@@ -331,14 +333,18 @@ fun ResticDependencyRow(
                                     SplitButton(
                                         onClick = onDownloadClick,
                                         onSecondaryClick = { showMenu = true },
-                                        text = if (targetState is ResticState.Error) "Retry" else "Download v$stableResticVersion"
+                                        text = if (targetState is ResticState.Error) {
+                                            stringResource(R.string.action_retry)
+                                        } else {
+                                            stringResource(R.string.restic_download_version, stableResticVersion)
+                                        }
                                     )
                                     DropdownMenu(
                                         expanded = showMenu,
                                         onDismissRequest = { showMenu = false }
                                     ) {
                                         DropdownMenuItem(
-                                            text = { Text("Download latest (v$latestResticVersion)") },
+                                            text = { Text(stringResource(R.string.restic_download_latest, latestResticVersion ?: "")) },
                                             onClick = {
                                                 onDownloadLatestClick()
                                                 showMenu = false
@@ -348,9 +354,9 @@ fun ResticDependencyRow(
                                 }
                             } else {
                                 val buttonText = when {
-                                    targetState is ResticState.Error -> "Retry"
-                                    latestResticVersion != null -> "Download latest (v$latestResticVersion)"
-                                    else -> "Download v$stableResticVersion"
+                                    targetState is ResticState.Error -> stringResource(R.string.action_retry)
+                                    latestResticVersion != null -> stringResource(R.string.restic_download_latest, latestResticVersion)
+                                    else -> stringResource(R.string.restic_download_version, stableResticVersion)
                                 }
                                 val clickAction = when {
                                     targetState is ResticState.Error -> onDownloadClick
@@ -369,7 +375,7 @@ fun ResticDependencyRow(
                         }
                         if (isUpdateAvailable && !BuildConfig.IS_BUNDLED) {
                             Button(onClick = onDownloadClick) {
-                                Text("Update")
+                                Text(stringResource(R.string.action_update))
                             }
                         }
                     }
@@ -446,4 +452,3 @@ fun RootStatusRow(text: String, icon: ImageVector) {
         Text(text = text, style = MaterialTheme.typography.bodyLarge)
     }
 }
-

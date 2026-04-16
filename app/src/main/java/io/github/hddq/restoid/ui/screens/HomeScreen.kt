@@ -16,11 +16,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
+import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.ui.components.PasswordDialog
@@ -50,7 +52,7 @@ fun HomeScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Restoid",
+                text = stringResource(R.string.home_title),
                 style = MaterialTheme.typography.headlineLarge,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold,
@@ -62,9 +64,9 @@ fun HomeScreen(
                 border = BorderStroke(1.dp, if (isMaintenanceEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
             ) {
-                Icon(Icons.Default.Build, contentDescription = "Maintenance")
+                Icon(Icons.Default.Build, contentDescription = stringResource(R.string.maintenance_button))
                 Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                Text("Maintenance")
+                Text(stringResource(R.string.maintenance_button))
             }
         }
         Spacer(Modifier.height(24.dp))
@@ -79,12 +81,20 @@ fun HomeScreen(
                 when {
                     uiState.selectedRepo == null -> {
                         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                            Text("No repository selected. Go to settings to add one.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                stringResource(R.string.no_repository_selected),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                     uiState.resticState !is ResticState.Installed -> {
                         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                            Text("Restic not available. Check settings.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.error)
+                            Text(
+                                stringResource(R.string.restic_not_available_check_settings),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.error
+                            )
                         }
                     }
                     uiState.isLoading -> {
@@ -92,17 +102,30 @@ fun HomeScreen(
                     }
                     uiState.error != null -> {
                         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                            Text(text = "Error: ${uiState.error}", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.error)
+                            Text(
+                                text = stringResource(R.string.error_with_message, uiState.error ?: ""),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.error
+                            )
                         }
                     }
                     uiState.snapshotsWithMetadata.isEmpty() -> {
                         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                            Text(text = "No snapshots found for the selected repository.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                text = stringResource(R.string.no_snapshots_found_for_repository),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                     else -> {
                         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                            Text(text = "Snapshots (${uiState.snapshotsWithMetadata.size})", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(bottom = 8.dp))
+                            Text(
+                                text = stringResource(R.string.snapshots_count, uiState.snapshotsWithMetadata.size),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
                             Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
                                 Column {
                                     val snapshots = uiState.snapshotsWithMetadata.sortedByDescending { it.snapshotInfo.time }
@@ -121,8 +144,8 @@ fun HomeScreen(
 
     if (uiState.showPasswordDialogFor != null) {
         PasswordDialog(
-            title = "Repository Password Required",
-            message = "Please enter the password for repository: ${uiState.showPasswordDialogFor}",
+            title = stringResource(R.string.repository_password_required),
+            message = stringResource(R.string.enter_password_for_repository, uiState.showPasswordDialogFor ?: ""),
             onPasswordEntered = onPasswordEntered,
             onDismiss = onDismissPasswordDialog
         )
@@ -143,7 +166,7 @@ private fun SnapshotItem(snapshotWithMetadata: SnapshotWithMetadata, apps: List<
 
         val appCount = snapshotWithMetadata.metadata?.apps?.size ?: 0
         if (appCount > 0) {
-            Text("Apps ($appCount):", style = MaterialTheme.typography.labelMedium)
+            Text(stringResource(R.string.apps_count, appCount), style = MaterialTheme.typography.labelMedium)
             if (apps != null && apps.isNotEmpty()) {
                 BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                     val iconSize = 32.dp
@@ -171,9 +194,17 @@ private fun SnapshotItem(snapshotWithMetadata: SnapshotWithMetadata, apps: List<
                 }
             }
         } else if (snapshot.paths.isNotEmpty()) {
-            Text(text = "Paths: ${snapshot.paths.firstOrNull() ?: ""}...", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                text = stringResource(R.string.paths_preview, snapshot.paths.firstOrNull() ?: ""),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         } else {
-            Text(text = "No app information available for this snapshot.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                text = stringResource(R.string.no_app_info_for_snapshot),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

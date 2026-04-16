@@ -10,8 +10,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.RootState
 import io.github.hddq.restoid.ui.screens.settings.components.NotificationPermissionRow
 import io.github.hddq.restoid.ui.screens.settings.components.RootRequestRow
@@ -35,7 +37,7 @@ fun SystemSettings(
     ) {
         Column {
             Text(
-                "System",
+                stringResource(R.string.system_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(16.dp)
@@ -43,8 +45,8 @@ fun SystemSettings(
             AnimatedContent(targetState = rootState, label = "RootStatusAnimation") { state ->
                 when (state) {
                     RootState.Denied -> RootRequestRow(
-                        text = "Root access denied",
-                        buttonText = "Try Again",
+                        text = stringResource(R.string.root_access_denied),
+                        buttonText = stringResource(R.string.action_try_again),
                         icon = Icons.Default.Error,
                         onClick = { viewModel.requestRootAccess() }
                     )
@@ -57,11 +59,11 @@ fun SystemSettings(
                         ) {
                             CircularProgressIndicator(modifier = Modifier.size(24.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("Checking for root...")
+                            Text(stringResource(R.string.checking_for_root))
                         }
                     }
                     RootState.Granted -> RootStatusRow(
-                        text = "Root access granted",
+                        text = stringResource(R.string.root_access_granted),
                         icon = Icons.Default.CheckCircle
                     )
                 }
@@ -75,4 +77,3 @@ fun SystemSettings(
         }
     }
 }
-

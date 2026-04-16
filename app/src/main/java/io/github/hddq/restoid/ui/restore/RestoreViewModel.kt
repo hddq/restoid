@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.hddq.restoid.data.*
+import io.github.hddq.restoid.R
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.BackupDetail
 import io.github.hddq.restoid.model.RestoidMetadata
@@ -100,13 +101,13 @@ class RestoreViewModel(
                                 snapshotMetadata = metadata
                                 processSnapshot(foundSnapshot, metadata)
                             } else {
-                                _error.value = "Snapshot not found."
+                                _error.value = application.getString(R.string.error_snapshot_not_found)
                             }
                         },
                         onFailure = { _error.value = it.message }
                     )
                 } else {
-                    _error.value = "Repository, password, or repo ID not found"
+                    _error.value = application.getString(R.string.error_repository_password_or_id_not_found)
                 }
             } catch (e: Exception) {
                 _error.value = e.message
@@ -162,18 +163,18 @@ class RestoreViewModel(
         val items = mutableListOf<String>()
         snapshot.paths.forEach { path ->
             when {
-                (path.startsWith("/data/app/") && path.contains("/${pkg}-")) -> if (!items.contains("APK")) items.add("APK")
-                path == "/data/data/$pkg" -> if (!items.contains("Data")) items.add("Data")
-                path == "/data/user_de/0/$pkg" -> if (!items.contains("Device Protected Data")) items.add("Device Protected Data")
-                path == "/storage/emulated/0/Android/data/$pkg" -> if (!items.contains("External Data")) items.add("External Data")
-                path == "/storage/emulated/0/Android/obb/$pkg" -> if (!items.contains("OBB")) items.add("OBB")
-                path == "/storage/emulated/0/Android/media/$pkg" -> if (!items.contains("Media")) items.add("Media")
+                (path.startsWith("/data/app/") && path.contains("/${pkg}-")) -> if (!items.contains(application.getString(R.string.backup_type_apk))) items.add(application.getString(R.string.backup_type_apk))
+                path == "/data/data/$pkg" -> if (!items.contains(application.getString(R.string.backup_type_data))) items.add(application.getString(R.string.backup_type_data))
+                path == "/data/user_de/0/$pkg" -> if (!items.contains(application.getString(R.string.backup_type_device_protected_data))) items.add(application.getString(R.string.backup_type_device_protected_data))
+                path == "/storage/emulated/0/Android/data/$pkg" -> if (!items.contains(application.getString(R.string.backup_type_external_data))) items.add(application.getString(R.string.backup_type_external_data))
+                path == "/storage/emulated/0/Android/obb/$pkg" -> if (!items.contains(application.getString(R.string.backup_item_obb))) items.add(application.getString(R.string.backup_item_obb))
+                path == "/storage/emulated/0/Android/media/$pkg" -> if (!items.contains(application.getString(R.string.backup_item_media))) items.add(application.getString(R.string.backup_item_media))
             }
         }
-        if (hasPermissionBackup && !items.contains("Permissions")) {
-            items.add("Permissions")
+        if (hasPermissionBackup && !items.contains(application.getString(R.string.backup_item_permissions))) {
+            items.add(application.getString(R.string.backup_item_permissions))
         }
-        return if (items.isNotEmpty()) items else listOf("Unknown items")
+        return if (items.isNotEmpty()) items else listOf(application.getString(R.string.backup_item_unknown))
     }
 
     private fun restoreGrantedRuntimePermissions(packageName: String, permissions: List<String>): List<String> {
@@ -290,9 +291,9 @@ class RestoreViewModel(
             val apkRestoreSelected = restoreTypes.value.apk
             val anyDataRestoreSelected = with(restoreTypes.value) { data || deviceProtectedData || externalData || obb || media }
 
-            val stageList = mutableListOf("Restore Files")
-            if (apkRestoreSelected || anyDataRestoreSelected) stageList.add("Processing Apps")
-            stageList.add("Cleanup")
+            val stageList = mutableListOf(application.getString(R.string.restore_stage_restore_files))
+            if (apkRestoreSelected || anyDataRestoreSelected) stageList.add(application.getString(R.string.restore_stage_processing_apps))
+            stageList.add(application.getString(R.string.restore_stage_cleanup))
             val totalStages = stageList.size
             var currentStageNum = 1
 
@@ -304,12 +305,12 @@ class RestoreViewModel(
                 val selectedApps = _backupDetails.value.filter { it.appInfo.isSelected && (_allowDowngrade.value || !it.isDowngrade) }
 
                 if (resticState !is ResticState.Installed || selectedRepoPath == null || currentSnapshot == null) {
-                    throw IllegalStateException("Pre-restore checks failed.")
+                    throw IllegalStateException(application.getString(R.string.restore_error_preflight_failed))
                 }
-                if (selectedApps.isEmpty()) throw IllegalStateException("No apps selected for restore.")
+                if (selectedApps.isEmpty()) throw IllegalStateException(application.getString(R.string.restore_error_no_apps_selected))
 
                 val password = repositoriesRepository.getRepositoryPassword(selectedRepoPath)
-                    ?: throw IllegalStateException("Password not found for repository.")
+                    ?: throw IllegalStateException(application.getString(R.string.restore_error_password_not_found))
 
                 passwordFile = File.createTempFile("restic-pass", ".tmp", application.cacheDir)
                 passwordFile.writeText(password)
@@ -317,7 +318,9 @@ class RestoreViewModel(
                 tempRestoreDir = File(application.cacheDir, "restic-restore-${System.currentTimeMillis()}").also { it.mkdirs() }
 
                 val pathsToRestore = generatePathsToRestore(selectedApps, currentSnapshot)
-                if (pathsToRestore.isEmpty()) throw IllegalStateException("No files found in the snapshot for the selected apps.")
+                if (pathsToRestore.isEmpty()) throw IllegalStateException(application.getString(R.string.restore_error_no_files_found))
+
+                val operationRestore = application.getString(R.string.operation_restore)
 
                 // --- Stage 1: Execute restic restore ---
                 val restoreStageTitle = "[${currentStageNum}/${totalStages}] ${stageList[0]}"
@@ -329,7 +332,7 @@ class RestoreViewModel(
 
                 val stdoutCallback = object : CallbackList<String>() {
                     override fun onAddElement(line: String) {
-                        ResticOutputParser.parse(line)?.let { progressUpdate ->
+                        ResticOutputParser.parse(line, application)?.let { progressUpdate ->
                             val elapsedTime = (System.currentTimeMillis() - startTime) / 1000
                             val newProgress = if (progressUpdate.isFinished) {
                                 _restoreProgress.value.copy(
@@ -348,7 +351,7 @@ class RestoreViewModel(
                                 )
                             }
                             _restoreProgress.value = newProgress
-                            notificationRepository.showOperationProgressNotification("Restore", newProgress)
+                            notificationRepository.showOperationProgressNotification(operationRestore, newProgress)
                         }
                     }
                 }
@@ -357,14 +360,14 @@ class RestoreViewModel(
 
                 if (!restoreResult.isSuccess) {
                     val errorOutput = stderr.joinToString("\n")
-                    throw IllegalStateException(if (errorOutput.isEmpty()) "Restic restore command failed." else errorOutput)
+                    throw IllegalStateException(if (errorOutput.isEmpty()) application.getString(R.string.restore_error_command_failed) else errorOutput)
                 }
 
                 // --- Stage 2: Processing Apps ---
-                val processingAppsStageIndex = stageList.indexOf("Processing Apps")
+                val processingAppsStageIndex = stageList.indexOf(application.getString(R.string.restore_stage_processing_apps))
                 if (processingAppsStageIndex != -1) {
                     currentStageNum = processingAppsStageIndex + 1
-                    val processingStageTitle = "[${currentStageNum}/${totalStages}] Processing Apps"
+                    val processingStageTitle = application.getString(R.string.restore_stage_processing_template, currentStageNum, totalStages)
 
                     for ((index, detail) in selectedApps.withIndex()) {
                         val appName = detail.appInfo.name
@@ -381,7 +384,7 @@ class RestoreViewModel(
                                 totalFiles = selectedApps.size
                             )
                         }
-                        notificationRepository.showOperationProgressNotification("Restore", _restoreProgress.value)
+                        notificationRepository.showOperationProgressNotification(operationRestore, _restoreProgress.value)
 
                         if (apkRestoreSelected) {
                             val originalApkPath = pathsToRestore.find { it.startsWith("/data/app/") && it.contains("/${detail.appInfo.packageName}-") }
@@ -406,27 +409,27 @@ class RestoreViewModel(
                                         val commitResult = Shell.cmd("pm install-commit $sessionId").exec()
                                         if (!commitResult.isSuccess || !commitResult.out.any { it.contains("Success") }) {
                                             appProcessSuccess = false
-                                            failureDetails.add("$appName: Install commit failed: ${commitResult.err.joinToString(" ")}")
+                                            failureDetails.add(application.getString(R.string.restore_failure_install_commit, appName, commitResult.err.joinToString(" ")))
                                         }
                                     } else {
                                         appProcessSuccess = false
-                                        failureDetails.add("$appName: Failed to write APK splits.")
+                                        failureDetails.add(application.getString(R.string.restore_failure_write_apk_splits, appName))
                                         Shell.cmd("pm install-abandon $sessionId").exec()
                                     }
                                 } else {
                                     appProcessSuccess = false
-                                    failureDetails.add("$appName: Failed to create install session.")
+                                    failureDetails.add(application.getString(R.string.restore_failure_create_install_session, appName))
                                 }
                             } else {
                                 appProcessSuccess = false
-                                failureDetails.add("$appName: No APK files found in restored data.")
+                                failureDetails.add(application.getString(R.string.restore_failure_no_apk_files, appName))
                             }
                         }
 
                         if (appProcessSuccess && anyDataRestoreSelected) {
                             if (!moveRestoredDataAndFixPerms(detail, tempRestoreDir, restoreTypes.value)) {
                                 appProcessSuccess = false
-                                failureDetails.add("$appName: Data restore failed or incomplete.")
+                                failureDetails.add(application.getString(R.string.restore_failure_data_restore, appName))
                             }
                         }
 
@@ -438,12 +441,12 @@ class RestoreViewModel(
                         if (permissionsToRestore.isNotEmpty()) {
                             if (!isPackageInstalled(detail.appInfo.packageName)) {
                                 appProcessSuccess = false
-                                failureDetails.add("$appName: Failed to restore permissions because the app is not installed.")
+                                failureDetails.add(application.getString(R.string.restore_failure_permissions_app_not_installed, appName))
                             } else {
                                 val permissionFailures = restoreGrantedRuntimePermissions(detail.appInfo.packageName, permissionsToRestore)
                                 if (permissionFailures.isNotEmpty()) {
                                     appProcessSuccess = false
-                                    failureDetails.add("$appName: Failed to restore some permissions: ${permissionFailures.joinToString(", ")}")
+                                    failureDetails.add(application.getString(R.string.restore_failure_permissions_partial, appName, permissionFailures.joinToString(", ")))
                                 }
                             }
                         }
@@ -456,7 +459,7 @@ class RestoreViewModel(
 
                 // --- Final Stage: Cleanup ---
                 currentStageNum = totalStages
-                val cleanupStageTitle = "[${currentStageNum}/${totalStages}] Cleanup"
+                val cleanupStageTitle = "[${currentStageNum}/${totalStages}] ${application.getString(R.string.restore_stage_cleanup)}"
                 _restoreProgress.update { it.copy(stageTitle = cleanupStageTitle, stagePercentage = 0f, overallPercentage = (totalStages - 1).toFloat() / totalStages.toFloat()) }
 
                 tempRestoreDir.let { dir -> Shell.cmd("rm -rf '${dir.absolutePath}'").exec() }
@@ -464,10 +467,10 @@ class RestoreViewModel(
 
                 val finalElapsedTime = (System.currentTimeMillis() - startTime) / 1000
                 val summary = buildString {
-                    append("Restore finished in ${formatElapsedTime(finalElapsedTime)}. ")
-                    append("Successfully processed $successes app(s).")
-                    if (failures > 0) append(" Failed to restore $failures app(s).")
-                    if (failureDetails.isNotEmpty()) append("\n\nDetails:\n- ${failureDetails.joinToString("\n- ")}")
+                    append(application.getString(R.string.restore_summary_finished_in, formatElapsedTime(finalElapsedTime)))
+                    append(application.getString(R.string.restore_summary_processed, successes))
+                    if (failures > 0) append(application.getString(R.string.restore_summary_failed, failures))
+                    if (failureDetails.isNotEmpty()) append(application.getString(R.string.restore_summary_details, failureDetails.joinToString("\n- ")))
                 }
 
                 _restoreProgress.value = OperationProgress(
@@ -478,16 +481,16 @@ class RestoreViewModel(
                     filesProcessed = successes,
                     totalFiles = selectedApps.size
                 )
-                notificationRepository.showOperationFinishedNotification("Restore", failures == 0, summary)
+                notificationRepository.showOperationFinishedNotification(operationRestore, failures == 0, summary)
 
             } catch (e: Exception) {
                 _restoreProgress.value = _restoreProgress.value.copy(
                     isFinished = true,
-                    error = "A fatal error occurred: ${e.message}",
-                    finalSummary = "A fatal error occurred: ${e.message}",
+                    error = application.getString(R.string.error_fatal_with_message, e.message ?: ""),
+                    finalSummary = application.getString(R.string.error_fatal_with_message, e.message ?: ""),
                     elapsedTime = (System.currentTimeMillis() - startTime) / 1000
                 )
-                notificationRepository.showOperationFinishedNotification("Restore", false, _restoreProgress.value.finalSummary)
+                notificationRepository.showOperationFinishedNotification(application.getString(R.string.operation_restore), false, _restoreProgress.value.finalSummary)
             } finally {
                 passwordFile?.delete()
                 tempRestoreDir?.let { dir -> Shell.cmd("rm -rf '${dir.absolutePath}'").exec() }

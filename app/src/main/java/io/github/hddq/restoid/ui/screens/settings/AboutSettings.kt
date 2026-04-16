@@ -22,8 +22,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.hddq.restoid.BuildConfig
+import io.github.hddq.restoid.R
 
 @Composable
 fun AboutSettings(onNavigateToLicenses: () -> Unit) {
@@ -31,14 +33,14 @@ fun AboutSettings(onNavigateToLicenses: () -> Unit) {
     val versionText = remember {
         try {
             val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-            val versionName = packageInfo.versionName ?: "N/A"
+            val versionName = packageInfo.versionName ?: context.getString(R.string.not_available)
             val versionCode =
                 packageInfo.longVersionCode
             // Added flavor here, capitalizing it for better looks
             val flavor = BuildConfig.FLAVOR.replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale.ROOT) else it.toString() }
             "$versionName ($versionCode) - $flavor"
         } catch (e: Exception) {
-            "N/A"
+            context.getString(R.string.not_available)
         }
     }
     val githubIntent = remember { Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/hddq/restoid")) }
@@ -52,7 +54,7 @@ fun AboutSettings(onNavigateToLicenses: () -> Unit) {
     ) {
         Column {
             Text(
-                "About",
+                stringResource(R.string.about_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(16.dp)
@@ -69,7 +71,7 @@ fun AboutSettings(onNavigateToLicenses: () -> Unit) {
                     contentDescription = null,
                     modifier = Modifier.padding(end = 16.dp)
                 )
-                Text("Open Source Licenses", style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(R.string.open_source_licenses), style = MaterialTheme.typography.bodyLarge)
             }
 
             Divider(color = MaterialTheme.colorScheme.background)
@@ -87,7 +89,7 @@ fun AboutSettings(onNavigateToLicenses: () -> Unit) {
                     modifier = Modifier.padding(end = 16.dp)
                 )
                 Column {
-                    Text("Version", style = MaterialTheme.typography.bodyLarge)
+                    Text(stringResource(R.string.version_label), style = MaterialTheme.typography.bodyLarge)
                     Text(
                         versionText,
                         style = MaterialTheme.typography.bodySmall,

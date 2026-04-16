@@ -1,5 +1,6 @@
 package io.github.hddq.restoid.ui.maintenance
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import io.github.hddq.restoid.data.NotificationRepository
@@ -9,6 +10,7 @@ import io.github.hddq.restoid.data.ResticBinaryManager
 import io.github.hddq.restoid.data.ResticRepository
 
 class MaintenanceViewModelFactory(
+    private val context: Context,
     private val repositoriesRepository: RepositoriesRepository,
     private val resticBinaryManager: ResticBinaryManager, // Injected
     private val resticRepository: ResticRepository,
@@ -18,7 +20,7 @@ class MaintenanceViewModelFactory(
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(MaintenanceViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return MaintenanceViewModel(repositoriesRepository, resticBinaryManager, resticRepository, notificationRepository, preferencesRepository) as T
+            return MaintenanceViewModel(context, repositoriesRepository, resticBinaryManager, resticRepository, notificationRepository, preferencesRepository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

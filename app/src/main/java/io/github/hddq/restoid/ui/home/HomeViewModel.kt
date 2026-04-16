@@ -3,6 +3,7 @@ package io.github.hddq.restoid.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.hddq.restoid.data.*
+import io.github.hddq.restoid.R
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.RestoidMetadata
 import kotlinx.coroutines.Dispatchers
@@ -28,6 +29,7 @@ data class HomeUiState(
 )
 
 class HomeViewModel(
+    private val context: android.content.Context,
     private val repositoriesRepository: RepositoriesRepository,
     private val resticBinaryManager: ResticBinaryManager, // Use Manager for state
     private val resticRepository: ResticRepository,
@@ -75,7 +77,7 @@ class HomeViewModel(
             val repo = repos.find { it.path == repoPath }
             if (repo?.id == null) {
                 // repoPath is guaranteed not null here because of the check above
-                val errorMsg = "Repository ID not found"
+                val errorMsg = context.getString(R.string.home_error_repository_id_not_found)
                 _uiState.update { it.copy(snapshotsWithMetadata = emptyList(), error = errorMsg) }
                 return@combine
             }

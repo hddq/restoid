@@ -10,10 +10,12 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.hddq.restoid.R
 import io.github.hddq.restoid.ui.settings.ChangePasswordState
 import io.github.hddq.restoid.ui.settings.SettingsViewModel
 
@@ -28,6 +30,7 @@ fun ChangePasswordDialog(
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    val failedChangePasswordMessage = stringResource(R.string.error_failed_change_password)
 
     val changePasswordState by viewModel.changePasswordState.collectAsStateWithLifecycle()
 
@@ -38,7 +41,7 @@ fun ChangePasswordDialog(
                 onDismiss()
             }
             ChangePasswordState.Error -> {
-                error = "Failed to change password."
+                error = failedChangePasswordMessage
                 viewModel.resetChangePasswordState()
             }
             else -> {}
@@ -51,19 +54,19 @@ fun ChangePasswordDialog(
                 onDismiss()
             }
         },
-        title = { Text("Change Password") },
+        title = { Text(stringResource(R.string.dialog_change_password)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = oldPassword,
                     onValueChange = { oldPassword = it },
-                    label = { Text("Old Password") },
+                    label = { Text(stringResource(R.string.label_old_password)) },
                     singleLine = true,
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         val image = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(imageVector = image, contentDescription = if (passwordVisible) "Hide" else "Show")
+                            Icon(imageVector = image, contentDescription = if (passwordVisible) stringResource(R.string.cd_hide) else stringResource(R.string.cd_show))
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -72,13 +75,13 @@ fun ChangePasswordDialog(
                 OutlinedTextField(
                     value = newPassword,
                     onValueChange = { newPassword = it },
-                    label = { Text("New Password") },
+                    label = { Text(stringResource(R.string.label_new_password)) },
                     singleLine = true,
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         val image = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(imageVector = image, contentDescription = if (passwordVisible) "Hide" else "Show")
+                            Icon(imageVector = image, contentDescription = if (passwordVisible) stringResource(R.string.cd_hide) else stringResource(R.string.cd_show))
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -87,13 +90,13 @@ fun ChangePasswordDialog(
                 OutlinedTextField(
                     value = confirmPassword,
                     onValueChange = { confirmPassword = it },
-                    label = { Text("Confirm New Password") },
+                    label = { Text(stringResource(R.string.label_confirm_new_password)) },
                     singleLine = true,
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
                         val image = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(imageVector = image, contentDescription = if (passwordVisible) "Hide" else "Show")
+                            Icon(imageVector = image, contentDescription = if (passwordVisible) stringResource(R.string.cd_hide) else stringResource(R.string.cd_show))
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -101,7 +104,7 @@ fun ChangePasswordDialog(
                     isError = newPassword != confirmPassword
                 )
                 if (newPassword != confirmPassword) {
-                    Text("Passwords do not match.", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.error_passwords_do_not_match), color = MaterialTheme.colorScheme.error)
                 }
                 error?.let {
                     Text(it, color = MaterialTheme.colorScheme.error)
@@ -125,7 +128,7 @@ fun ChangePasswordDialog(
                 if (changePasswordState == ChangePasswordState.InProgress) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp))
                 } else {
-                    Text("Change")
+                    Text(stringResource(R.string.action_change))
                 }
             }
         },
@@ -134,7 +137,7 @@ fun ChangePasswordDialog(
                 onClick = onDismiss,
                 enabled = changePasswordState != ChangePasswordState.InProgress
             ) {
-                Text("Cancel")
+                Text(stringResource(R.string.action_cancel))
             }
         }
     )

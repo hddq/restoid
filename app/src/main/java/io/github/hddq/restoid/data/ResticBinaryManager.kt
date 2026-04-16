@@ -6,6 +6,7 @@ import android.os.Build
 import android.util.Log
 import com.topjohnwu.superuser.Shell
 import io.github.hddq.restoid.BuildConfig
+import io.github.hddq.restoid.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -53,18 +54,18 @@ class ResticBinaryManager(private val context: Context) {
                 val result = Shell.cmd("${resticFile.absolutePath} version").exec()
                 if (result.isSuccess) {
                     // Get the first line of the output, e.g., "restic 0.18.0 ..."
-                    val versionOutput = result.out.firstOrNull()?.trim() ?: "Unknown version"
-                    val version = versionOutput.split(" ").getOrNull(1) ?: "unknown"
+                    val versionOutput = result.out.firstOrNull()?.trim() ?: context.getString(R.string.restic_unknown_version)
+                    val version = versionOutput.split(" ").getOrNull(1) ?: context.getString(R.string.restic_unknown)
                     _resticState.value = ResticState.Installed(resticFile.absolutePath, version, versionOutput)
                 } else {
                     // If the command fails, the binary might be corrupted
-                    _resticState.value = ResticState.Error("Binary corrupted or invalid")
+                    _resticState.value = ResticState.Error(context.getString(R.string.restic_error_binary_corrupted))
                     resticFile.delete() // Clean up the bad file
                 }
             } else {
                 if (_resticState.value !is ResticState.Error) {
                     if (BuildConfig.IS_BUNDLED) {
-                        _resticState.value = ResticState.Error("Bundled binary not found or not executable.")
+                        _resticState.value = ResticState.Error(context.getString(R.string.restic_error_bundled_not_found))
                     } else {
                         _resticState.value = ResticState.NotInstalled
                     }
@@ -96,7 +97,7 @@ class ResticBinaryManager(private val context: Context) {
                     if (altSourceBinary.exists()) {
                         copyFile(altSourceBinary, resticFile)
                     } else {
-                        throw Exception("Bundled restic binary not found in native library directory")
+                        throw Exception(context.getString(R.string.restic_error_bundled_native_lib_not_found))
                     }
                 } else {
                     copyFile(sourceBinary, resticFile)
@@ -108,7 +109,7 @@ class ResticBinaryManager(private val context: Context) {
 
             } catch (e: Exception) {
                 Log.e("ResticBinMgr", "Failed to prepare bundled restic binary", e)
-                _resticState.value = ResticState.Error("Failed to prepare bundled binary: ${e.message}")
+                _resticState.value = ResticState.Error(context.getString(R.string.restic_error_prepare_bundled, e.message ?: ""))
             }
         }
     }
@@ -150,7 +151,7 @@ class ResticBinaryManager(private val context: Context) {
         val jsonString = url.readText()
         val jsonElement = json.parseToJsonElement(jsonString)
         val tagName = jsonElement.jsonObject["tag_name"]?.jsonPrimitive?.content
-            ?: throw IllegalStateException("tag_name not found in GitHub API response")
+            ?: throw IllegalStateException(context.getString(R.string.restic_error_tag_name_missing))
         tagName.removePrefix("v")
     }
 
@@ -162,14 +163,14 @@ class ResticBinaryManager(private val context: Context) {
                 val latestVersion = getLatestResticVersionFromGitHub()
                 downloadAndInstallRestic(latestVersion)
             } catch (e: Exception) {
-                _resticState.value = ResticState.Error("Could not fetch latest version: ${e.message}")
+                _resticState.value = ResticState.Error(context.getString(R.string.restic_error_fetch_latest, e.message ?: ""))
             }
         }
     }
 
     suspend fun downloadAndInstallRestic(versionToDownload: String = stableResticVersion) {
         if (BuildConfig.IS_BUNDLED) {
-            _resticState.value = ResticState.Error("Download is not supported in the bundled flavor.")
+            _resticState.value = ResticState.Error(context.getString(R.string.restic_error_download_not_supported_bundled))
             return
         }
 
@@ -177,7 +178,7 @@ class ResticBinaryManager(private val context: Context) {
             try {
                 val arch = getArchForRestic()
                 if (arch == null) {
-                    _resticState.value = ResticState.Error("Unsupported device architecture")
+                    _resticState.value = ResticState.Error(context.getString(R.string.restic_error_unsupported_architecture))
                     return@withContext
                 }
 
@@ -218,7 +219,7 @@ class ResticBinaryManager(private val context: Context) {
 
             } catch (e: Exception) {
                 e.printStackTrace()
-                _resticState.value = ResticState.Error(e.message ?: "An unknown error occurred")
+                _resticState.value = ResticState.Error(e.message ?: context.getString(R.string.restic_error_unknown))
             }
         }
     }

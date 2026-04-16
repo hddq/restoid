@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.hddq.restoid.data.*
+import io.github.hddq.restoid.R
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.AppMetadata
 import io.github.hddq.restoid.model.RestoidMetadata
@@ -78,7 +79,7 @@ class BackupViewModel(
         backupJob = viewModelScope.launch(Dispatchers.IO) {
             val startTime = System.currentTimeMillis()
             _isBackingUp.value = true
-            _backupProgress.value = OperationProgress(stageTitle = "Initializing...")
+            _backupProgress.value = OperationProgress(stageTitle = application.getString(R.string.progress_initializing))
 
             var fileList: File? = null
             var passwordFile: File? = null
@@ -106,14 +107,14 @@ class BackupViewModel(
                 val repository = repositoriesRepository.repositories.value.find { it.path == selectedRepoPath }
                 repositoryId = repository?.id
 
-                if (repositoryId == null) throw IllegalStateException("Repository ID not found. Cannot save metadata.")
+                if (repositoryId == null) throw IllegalStateException(application.getString(R.string.backup_error_repository_id_not_found))
 
                 repoPath = selectedRepoPath
                 password = repositoriesRepository.getRepositoryPassword(selectedRepoPath)!!
                 val selectedApps = _apps.value.filter { it.isSelected }
 
                 // --- STAGE 1: Preparing backup ---
-                updateProgress("[${currentStage}/${totalStages}] Preparing backup...", 0f, 0f, startTime)
+                updateProgress(application.getString(R.string.backup_stage_preparing, currentStage, totalStages), 0f, 0f, startTime)
 
                 val (pathsToBackup, excludePatterns, metadata) = prepareBackupData(selectedApps)
                 restoidMetadataFile = File(application.cacheDir, "restoid.json")
@@ -121,11 +122,11 @@ class BackupViewModel(
                 restoidMetadataFile.writeText(json.encodeToString(metadata))
                 pathsToBackup.add(0, restoidMetadataFile.absolutePath)
 
-                if (pathsToBackup.size <= 1) throw IllegalStateException("No files found to back up for the selected apps.")
+                if (pathsToBackup.size <= 1) throw IllegalStateException(application.getString(R.string.backup_error_no_files_selected))
 
                 // --- STAGE 2: Main Backup ---
                 currentStage = 2
-                val stage2Title = "[${currentStage}/${totalStages}] Backing up apps..."
+                val stage2Title = application.getString(R.string.backup_stage_running, currentStage, totalStages)
                 updateProgress(stage2Title, 0f, (currentStage - 1f) / totalStages, startTime)
 
                 fileList = File.createTempFile("restic-files-", ".txt", application.cacheDir)
@@ -144,7 +145,7 @@ class BackupViewModel(
 
                 val stdoutCallback = object : CallbackList<String>() {
                     override fun onAddElement(line: String) {
-                        ResticOutputParser.parse(line)?.let { progressUpdate ->
+                        ResticOutputParser.parse(line, application)?.let { progressUpdate ->
                             if (progressUpdate.isFinished) {
                                 finalSummaryProgress = progressUpdate
                                 snapshotId = progressUpdate.snapshotId
@@ -157,7 +158,7 @@ class BackupViewModel(
                                     elapsedTime = (System.currentTimeMillis() - startTime) / 1000
                                 )
                             }
-                            notificationRepository.showOperationProgressNotification("Backup", _backupProgress.value)
+                            notificationRepository.showOperationProgressNotification(application.getString(R.string.operation_backup), _backupProgress.value)
                         }
                     }
                 }
@@ -166,12 +167,12 @@ class BackupViewModel(
 
                 if (!result.isSuccess || snapshotId == null) {
                     val errorOutput = stderr.joinToString("\n")
-                    throw IllegalStateException(if (errorOutput.isEmpty()) "Restic command failed with exit code ${result.code}." else errorOutput)
+                    throw IllegalStateException(if (errorOutput.isEmpty()) application.getString(R.string.backup_error_command_failed_with_code, result.code) else errorOutput)
                 }
 
                 // --- STAGE 3: Finalizing backup ---
                 currentStage = 3
-                val stage3Title = "[${currentStage}/${totalStages}] Finalizing backup..."
+                val stage3Title = application.getString(R.string.backup_stage_finalizing, currentStage, totalStages)
                 updateProgress(stage3Title, 0f, (currentStage - 1f) / totalStages, startTime)
 
                 try {
@@ -180,18 +181,18 @@ class BackupViewModel(
                     val destFile = File(metadataDir, "$snapshotId.json")
                     restoidMetadataFile.copyTo(destFile, overwrite = true)
                 } catch (e: Exception) {
-                    summary += "\nWarning: Could not save backup metadata file locally."
+                    summary += "\n" + application.getString(R.string.backup_warning_metadata_not_saved)
                 }
 
                 resticRepository.backupMetadata(repositoryId, selectedRepoPath, password)
                 updateProgress(stage3Title, 1.0f, 1.0f, startTime)
 
                 isSuccess = true
-                summary = finalSummaryProgress?.finalSummary ?: "Backed up ${selectedApps.size} app(s)."
+                summary = finalSummaryProgress?.finalSummary ?: application.getString(R.string.backup_summary_success, selectedApps.size)
 
             } catch (e: Exception) {
                 isSuccess = false
-                summary = "A fatal error occurred: ${e.message}"
+                summary = application.getString(R.string.error_fatal_with_message, e.message ?: "")
             } finally {
                 fileList?.delete()
                 passwordFile?.delete()
@@ -208,7 +209,7 @@ class BackupViewModel(
                     totalDuration = finalSummaryProgress?.totalDuration ?: ((System.currentTimeMillis() - startTime) / 1000.0)
                 )
                 _backupProgress.value = finalProgress
-                notificationRepository.showOperationFinishedNotification("Backup", isSuccess, summary)
+                notificationRepository.showOperationFinishedNotification(application.getString(R.string.operation_backup), isSuccess, summary)
 
                 if (isSuccess && repoPath != null && password != null) {
                     launch { resticRepository.refreshSnapshots(repoPath, password) }
@@ -260,26 +261,46 @@ class BackupViewModel(
     private fun preflightChecks(): OperationProgress? {
         val selectedApps = _apps.value.filter { it.isSelected }
         if (selectedApps.isEmpty()) {
-            return OperationProgress(isFinished = true, error = "No apps selected.", finalSummary = "No apps were selected.")
+            return OperationProgress(
+                isFinished = true,
+                error = application.getString(R.string.error_no_apps_selected),
+                finalSummary = application.getString(R.string.summary_no_apps_selected)
+            )
         }
 
         val backupOptions = _backupTypes.value
         if (!backupOptions.apk && !backupOptions.data && !backupOptions.deviceProtectedData && !backupOptions.externalData && !backupOptions.obb && !backupOptions.media) {
-            return OperationProgress(isFinished = true, error = "No backup types selected.", finalSummary = "No backup types were selected.")
+            return OperationProgress(
+                isFinished = true,
+                error = application.getString(R.string.error_no_backup_types_selected),
+                finalSummary = application.getString(R.string.summary_no_backup_types_selected)
+            )
         }
 
         // Use Manager for check
         if (resticBinaryManager.resticState.value !is ResticState.Installed) {
-            return OperationProgress(isFinished = true, error = "Restic is not installed.", finalSummary = "Restic binary is not installed.")
+            return OperationProgress(
+                isFinished = true,
+                error = application.getString(R.string.error_restic_not_installed),
+                finalSummary = application.getString(R.string.summary_restic_binary_not_installed)
+            )
         }
 
         val selectedRepoPath = repositoriesRepository.selectedRepository.value
         if (selectedRepoPath == null) {
-            return OperationProgress(isFinished = true, error = "No backup repository selected.", finalSummary = "No backup repository is selected.")
+            return OperationProgress(
+                isFinished = true,
+                error = application.getString(R.string.error_no_backup_repository_selected),
+                finalSummary = application.getString(R.string.summary_no_backup_repository_selected)
+            )
         }
 
         if (repositoriesRepository.getRepositoryPassword(selectedRepoPath) == null) {
-            return OperationProgress(isFinished = true, error = "Password for repository not found.", finalSummary = "Could not find the password.")
+            return OperationProgress(
+                isFinished = true,
+                error = application.getString(R.string.error_password_not_found_for_repository),
+                finalSummary = application.getString(R.string.summary_password_not_found)
+            )
         }
 
         return null

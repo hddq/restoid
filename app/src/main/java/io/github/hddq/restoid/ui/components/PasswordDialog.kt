@@ -20,9 +20,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import io.github.hddq.restoid.R
 
 @Composable
 fun PasswordDialog(
@@ -48,12 +50,12 @@ fun PasswordDialog(
                         password = it
                         isError = false
                     },
-                    label = { Text("Password") },
+                    label = { Text(stringResource(R.string.label_password)) },
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     isError = isError,
                     supportingText = if (isError) {
-                        { Text("Password cannot be empty") }
+                        { Text(stringResource(R.string.error_password_cannot_be_empty)) }
                     } else null,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -67,7 +69,7 @@ fun PasswordDialog(
                         checked = savePassword,
                         onCheckedChange = { savePassword = it }
                     )
-                    Text(text = "Save password")
+                    Text(text = stringResource(R.string.save_password))
                 }
             }
         },
@@ -81,12 +83,12 @@ fun PasswordDialog(
                     }
                 }
             ) {
-                Text("OK")
+                Text(stringResource(R.string.action_ok))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.action_cancel))
             }
         }
     )

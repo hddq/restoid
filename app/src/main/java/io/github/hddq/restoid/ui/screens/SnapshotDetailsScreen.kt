@@ -12,12 +12,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import io.github.hddq.restoid.R
 import io.github.hddq.restoid.RestoidApplication
 import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.model.BackupDetail
@@ -78,7 +80,7 @@ fun SnapshotDetailsScreen(
     ) {
         when {
             isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-            error != null -> Text("Error: $error", color = MaterialTheme.colorScheme.error)
+            error != null -> Text(stringResource(R.string.error_with_message, error ?: ""), color = MaterialTheme.colorScheme.error)
             snapshot != null -> {
                 LazyColumn(
                     modifier = Modifier.weight(1f),
@@ -90,7 +92,7 @@ fun SnapshotDetailsScreen(
                     }
                     if (backupDetails.isNotEmpty()) {
                         item {
-                            Text("Backed up Apps (${backupDetails.size})", style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(R.string.snapshot_backed_up_apps_count, backupDetails.size), style = MaterialTheme.typography.titleMedium)
                         }
                         item {
                             Card(
@@ -110,7 +112,7 @@ fun SnapshotDetailsScreen(
                         }
                     } else if (!isLoading) {
                         item {
-                            Text("Backed up paths:", style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(R.string.snapshot_backed_up_paths), style = MaterialTheme.typography.titleMedium)
                         }
                         items(snapshot!!.paths) { path ->
                             Text(path, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
@@ -118,13 +120,13 @@ fun SnapshotDetailsScreen(
                     }
                 }
             }
-            else -> if (!isLoading) Text("No snapshot found.")
+            else -> if (!isLoading) Text(stringResource(R.string.snapshot_not_found))
         }
 
         if (isForgetting) {
             Spacer(Modifier.height(16.dp))
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            Text("Forgetting snapshot...", modifier = Modifier.align(Alignment.CenterHorizontally))
+            Text(stringResource(R.string.snapshot_forgetting), modifier = Modifier.align(Alignment.CenterHorizontally))
             Spacer(Modifier.height(16.dp))
         }
     }
@@ -139,8 +141,8 @@ fun SnapshotDetailsHeader(snapshot: SnapshotInfo) {
         )
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("ID: ${snapshot.id}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
-            Text("Time: ${snapshot.time}", style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.snapshot_id, snapshot.id), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+            Text(stringResource(R.string.snapshot_time, snapshot.time), style = MaterialTheme.typography.bodyMedium)
         }
     }
 }
@@ -149,6 +151,7 @@ fun SnapshotDetailsHeader(snapshot: SnapshotInfo) {
 @Composable
 fun BackedUpAppItem(detail: BackupDetail) {
     val context = LocalContext.current
+    val notAvailable = stringResource(R.string.not_available)
     Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.Top) {
         Image(
             painter = rememberAsyncImagePainter(model = detail.appInfo.icon),
@@ -159,10 +162,10 @@ fun BackedUpAppItem(detail: BackupDetail) {
         Column {
             Text(detail.appInfo.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
 
-            val versionInfo = detail.versionName ?: "N/A"
-            val sizeInfo = detail.backupSize?.let { Formatter.formatShortFileSize(context, it) } ?: "N/A"
+            val versionInfo = detail.versionName ?: notAvailable
+            val sizeInfo = detail.backupSize?.let { Formatter.formatShortFileSize(context, it) } ?: notAvailable
             Text(
-                "Version: $versionInfo • Size: $sizeInfo",
+                stringResource(R.string.snapshot_version_size, versionInfo, sizeInfo),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -183,21 +186,20 @@ fun BackedUpAppItem(detail: BackupDetail) {
 fun ConfirmForgetDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Forget Snapshot?") },
-        text = { Text("This will remove the snapshot entry. The actual data will only be deleted after running a prune. Are you sure?") },
+        title = { Text(stringResource(R.string.dialog_forget_snapshot_title)) },
+        text = { Text(stringResource(R.string.dialog_forget_snapshot_message)) },
         confirmButton = {
             Button(
                 onClick = onConfirm,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
             ) {
-                Text("Forget")
+                Text(stringResource(R.string.action_forget))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.action_cancel))
             }
         }
     )
 }
-

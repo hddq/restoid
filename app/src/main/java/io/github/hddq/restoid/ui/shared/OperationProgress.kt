@@ -40,11 +40,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.github.hddq.restoid.R
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.delay
 
@@ -53,7 +55,7 @@ import kotlinx.coroutines.delay
  * like backup or restore. It now supports multi-stage operations.
  */
 data class OperationProgress(
-    val stageTitle: String = "Initializing...", // e.g., "Stage 1/2: Restoring Files"
+    val stageTitle: String = "", // e.g., "Stage 1/2: Restoring Files"
     val stagePercentage: Float = 0f, // progress of the current stage (0.0 to 1.0)
     val overallPercentage: Float = 0f, // overall progress (0.0 to 1.0)
 
@@ -91,6 +93,9 @@ fun ProgressScreenContent(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val operationComplete = stringResource(R.string.progress_operation_complete, operationType)
+    val operationFailed = stringResource(R.string.progress_operation_failed, operationType)
+    val stageTitle = progress.stageTitle.ifBlank { stringResource(R.string.progress_initializing) }
 
     Column(
         modifier = modifier
@@ -137,7 +142,7 @@ fun ProgressScreenContent(
                     }
                     Spacer(Modifier.height(24.dp))
                     Text(
-                        text = if (progress.error == null) "$operationType Complete" else "$operationType Failed",
+                        text = if (progress.error == null) operationComplete else operationFailed,
                         style = MaterialTheme.typography.headlineMedium,
                         textAlign = TextAlign.Center
                     )
@@ -162,7 +167,7 @@ fun ProgressScreenContent(
                             .fillMaxWidth()
                             .height(50.dp)
                     ) {
-                        Text("Done")
+                        Text(stringResource(R.string.action_done))
                     }
                 }
 
@@ -173,7 +178,7 @@ fun ProgressScreenContent(
                     verticalArrangement = Arrangement.Center,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(text = progress.stageTitle, style = MaterialTheme.typography.titleLarge)
+                    Text(text = stageTitle, style = MaterialTheme.typography.titleLarge)
                     Spacer(Modifier.height(24.dp))
 
                     Card(
@@ -184,7 +189,7 @@ fun ProgressScreenContent(
                     ) {
                         Column(Modifier.padding(16.dp)) {
                             // Overall Progress
-                            Text("Overall Progress", style = MaterialTheme.typography.labelMedium)
+                            Text(stringResource(R.string.progress_overall), style = MaterialTheme.typography.labelMedium)
                             Spacer(Modifier.height(8.dp))
                             LinearProgressIndicator(
                                 progress = { progress.overallPercentage },
@@ -196,7 +201,7 @@ fun ProgressScreenContent(
                             Spacer(Modifier.height(20.dp))
 
                             // Stage Progress
-                            Text("Stage Progress", style = MaterialTheme.typography.labelMedium)
+                            Text(stringResource(R.string.progress_stage), style = MaterialTheme.typography.labelMedium)
                             Spacer(Modifier.height(8.dp))
                             LinearProgressIndicator(
                                 progress = { progress.stagePercentage },
@@ -213,15 +218,15 @@ fun ProgressScreenContent(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceAround
                             ) {
-                                ProgressStat(label = "Elapsed", value = formatElapsedTime(progress.elapsedTime))
+                                ProgressStat(label = stringResource(R.string.progress_elapsed), value = formatElapsedTime(progress.elapsedTime))
                                 ProgressStat(
-                                    label = "Items",
+                                    label = stringResource(R.string.progress_items),
                                     value = "${progress.filesProcessed}/${progress.totalFiles}"
                                 )
                                 // Only show size if it's relevant (not 0)
                                 if (progress.totalBytes > 0) {
                                     ProgressStat(
-                                        label = "Size",
+                                        label = stringResource(R.string.progress_size),
                                         value = "${Formatter.formatFileSize(context, progress.bytesProcessed)} / ${
                                             Formatter.formatFileSize(
                                                 context,
@@ -234,10 +239,10 @@ fun ProgressScreenContent(
                             Spacer(Modifier.height(16.dp))
 
                             // Current File Text (only show for backup as restore is app-based)
-                            if (operationType == "Backup" && progress.currentFile.isNotBlank()) {
+                            if (operationType == stringResource(R.string.operation_backup) && progress.currentFile.isNotBlank()) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
-                                        "Processing: ",
+                                        stringResource(R.string.progress_processing),
                                         style = MaterialTheme.typography.bodySmall,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -250,7 +255,7 @@ fun ProgressScreenContent(
                                         }
                                     ) { targetFile ->
                                         Text(
-                                            text = targetFile.ifEmpty { "..." },
+                                            text = targetFile.ifEmpty { stringResource(R.string.progress_placeholder) },
                                             style = MaterialTheme.typography.bodySmall,
                                             fontFamily = FontFamily.Monospace,
                                             maxLines = 1,

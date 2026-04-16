@@ -1,17 +1,19 @@
 package io.github.hddq.restoid.util
 
+import android.content.Context
+import io.github.hddq.restoid.R
 import io.github.hddq.restoid.ui.shared.OperationProgress
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
 object ResticOutputParser {
 
-    fun parse(jsonLine: String): OperationProgress? {
+    fun parse(jsonLine: String, context: Context): OperationProgress? {
         return try {
             val json = JSONObject(jsonLine)
             when (json.optString("message_type")) {
-                "status" -> parseStatus(json)
-                "summary" -> parseSummary(json)
+                "status" -> parseStatus(json, context)
+                "summary" -> parseSummary(json, context)
                 else -> null
             }
         } catch (e: Exception) {
@@ -19,7 +21,7 @@ object ResticOutputParser {
         }
     }
 
-    private fun parseStatus(json: JSONObject): OperationProgress {
+    private fun parseStatus(json: JSONObject, context: Context): OperationProgress {
         // Restore status has "bytes_restored", backup has "bytes_done"
         val isRestore = json.has("bytes_restored")
         val percentDone = json.optDouble("percent_done", 0.0).toFloat()
@@ -32,7 +34,7 @@ object ResticOutputParser {
                 totalBytes = json.optLong("total_bytes", 0),
                 bytesProcessed = json.optLong("bytes_restored", 0),
                 currentFile = "", // Not available in restore status
-                stageTitle = "Restoring files..."
+                stageTitle = context.getString(R.string.restic_stage_restoring_files)
             )
         } else {
             // Assume backup
@@ -44,12 +46,12 @@ object ResticOutputParser {
                 totalBytes = json.optLong("total_bytes", 0),
                 bytesProcessed = json.optLong("bytes_done", 0),
                 currentFile = json.optJSONArray("current_files")?.optString(0) ?: "",
-                stageTitle = "Backing up..."
+                stageTitle = context.getString(R.string.restic_stage_backing_up)
             )
         }
     }
 
-    private fun parseSummary(json: JSONObject): OperationProgress {
+    private fun parseSummary(json: JSONObject, context: Context): OperationProgress {
         val filesNew = json.optInt("files_new", 0)
         val filesChanged = json.optInt("files_changed", 0)
         val dataAdded = json.optLong("data_added", 0)
@@ -63,9 +65,9 @@ object ResticOutputParser {
             filesProcessed = json.optInt("total_files_processed", 0),
             totalBytes = json.optLong("total_bytes_processed", 0),
             bytesProcessed = json.optLong("total_bytes_processed", 0),
-            stageTitle = "Finishing...",
+            stageTitle = context.getString(R.string.restic_stage_finishing),
             isFinished = true,
-            finalSummary = formatSummary(json), // Use the helper to create the string
+            finalSummary = formatSummary(json, context), // Use the helper to create the string
             snapshotId = snapshotId,
             // Add the new fields
             filesNew = filesNew,
@@ -75,10 +77,9 @@ object ResticOutputParser {
         )
     }
 
-    private fun formatSummary(json: JSONObject): String {
+    private fun formatSummary(json: JSONObject, context: Context): String {
         val filesNew = json.optInt("files_new", 0)
         val filesChanged = json.optInt("files_changed", 0)
-        val filesUnmodified = json.optInt("files_unmodified", 0)
         val dataAdded = json.optLong("data_added", 0)
         val totalDuration = json.optDouble("total_duration", 0.0)
 
@@ -90,9 +91,13 @@ object ResticOutputParser {
             seconds % 60
         )
 
-        return "Added ${android.text.format.Formatter.formatShortFileSize(null, dataAdded)} " +
-                "($filesNew new, $filesChanged changed files) " +
-                "in $formattedDuration."
+        return context.getString(
+            R.string.restic_summary_added,
+            android.text.format.Formatter.formatShortFileSize(context, dataAdded),
+            filesNew,
+            filesChanged,
+            formattedDuration
+        )
     }
 
     // This is likely not needed anymore with JSON parsing, but keep for now.
