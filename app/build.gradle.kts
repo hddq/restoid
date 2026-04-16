@@ -194,6 +194,10 @@ android {
             )
         }
     }
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
