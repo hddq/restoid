@@ -17,7 +17,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       JAVA_VERSION: "21"
-      GO_VERSION: "1.24.4"
 
     steps:
       - name: Checkout repository
@@ -34,7 +33,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version-file: '.go-version'
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
