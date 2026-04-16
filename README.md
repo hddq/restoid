@@ -44,7 +44,6 @@ Restoid comes in two flavors:
 1.  **Obtainium**
 
     <a href="http://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/hddq/restoid"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" width="250"></a>
-    > **Note:** You'll need to check the "Include prereleases" option, as the app hasn't hit a stable `v1.0.0` release yet.
 
 2.  **GitHub Releases**
     You can also just grab the latest APK file directly from the [**GitHub Releases page**](https://github.com/hddq/restoid/releases).
