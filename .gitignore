@@ -8,3 +8,7 @@
 .externalNativeBuild
 .cxx
 local.properties
+.direnv/
+.android/
+.kotlin/
+librestic.so
