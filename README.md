@@ -13,7 +13,7 @@ Restoid gives you control over your app backups through a clean and simple user 
 * **Restic-Powered**: Leverages the speed, security, and efficiency of `restic` for deduplicated and encrypted backups.
 * **Selective App Backup**: Choose exactly which user-installed applications you want to back up.
 * **Full Control Over What You Back Up**: Granularly select what to include for each app: APK files, user data, device-protected data, external/OBB/media files.
-* **Flexible Repository Management**: Create and manage backup repositories on your device's local storage, SD card, or mounted drives.
+* **Flexible Repository Management**: Create and manage repositories across multiple native restic backends: Local directory, SFTP, REST server, Amazon S3/MinIO, OpenStack Swift, Backblaze B2, Azure Blob Storage, and Google Cloud Storage.
 * **Snapshot Management**: Easily browse backup snapshots, view details of what was backed up, and forget old snapshots.
 * **Flexible Restore**: Restore entire apps or just specific parts (like only app data).
 * **Downgrade Protection**: Prevents you from accidentally restoring an older app version over a newer one (can be overridden).
@@ -55,7 +55,9 @@ Restoid comes in two flavors:
 2.  **Install Restic**: Go to **Settings**. The app will show that `restic` is not installed. Tap **Download** to automatically fetch and set it up.
 3.  **Create a Repository**:
    * In **Settings**, tap the `+` icon to add a new repository.
-   * Select a folder on your device.
+   * Choose a backend type (local or one of the supported remote backends).
+   * For local repositories, select a folder on your device. For remote repositories, enter the restic repository specification.
+   * If needed, add backend credentials as environment variables (one `KEY=value` per line).
    * Set a strong password to encrypt your backups. You can choose to save it securely in the app.
 4.  **Run Your First Backup**:
    * Go **Home** and tap the **Backup** FAB (the `+` button).

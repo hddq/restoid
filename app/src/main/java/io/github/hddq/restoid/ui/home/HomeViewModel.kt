@@ -53,10 +53,15 @@ class HomeViewModel(
             resticRepository.snapshots,
             repositoriesRepository.repositories,
             refreshTrigger
-        ) { repoPath, restic, snapshots, repos, _ ->
+        ) { repoKey, restic, snapshots, repos, _ ->
 
-            val hasPassword = repoPath?.let { repositoriesRepository.hasRepositoryPassword(it) } ?: false
-            _uiState.update { it.copy(selectedRepo = repoPath, resticState = restic, hasPasswordForSelectedRepo = hasPassword) }
+            val selectedRepository = repoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
+            val repoPath = selectedRepository?.path
+            val env = repoKey?.let { repositoriesRepository.getExecutionEnvironmentVariables(it) }.orEmpty()
+            val resticOptions = repoKey?.let { repositoriesRepository.getExecutionResticOptions(it) }.orEmpty()
+
+            val hasPassword = repoKey?.let { repositoriesRepository.hasRepositoryPassword(it) } ?: false
+            _uiState.update { it.copy(selectedRepo = repoKey, resticState = restic, hasPasswordForSelectedRepo = hasPassword) }
 
             if (repoPath == null || restic !is ResticState.Installed) {
                 resticRepository.clearSnapshots()
@@ -68,13 +73,13 @@ class HomeViewModel(
                 if (!_uiState.value.isRefreshing) {
                     _uiState.update { it.copy(isLoading = true, error = null) }
                 }
-                loadSnapshots(repoPath, restic)
+                loadSnapshots(repoPath, env, resticOptions, repoKey, restic)
                 return@combine
             }
 
             _uiState.update { it.copy(isLoading = false) }
 
-            val repo = repos.find { it.path == repoPath }
+            val repo = repos.find { repositoriesRepository.repositoryKey(it) == repoKey }
             if (repo?.id == null) {
                 // repoPath is guaranteed not null here because of the check above
                 val errorMsg = context.getString(R.string.home_error_repository_id_not_found)
@@ -95,44 +100,81 @@ class HomeViewModel(
         }.launchIn(viewModelScope)
     }
 
-    private fun loadSnapshots(repoPath: String?, resticState: ResticState) {
-        if (repoPath == null || resticState !is ResticState.Installed) {
+    private fun loadSnapshots(
+        repoPath: String?,
+        environmentVariables: Map<String, String>,
+        resticOptions: Map<String, String>,
+        repoKey: String?,
+        resticState: ResticState
+    ) {
+        if (repoPath == null || repoKey == null || resticState !is ResticState.Installed) {
             _uiState.update { it.copy(snapshotsWithMetadata = emptyList(), isLoading = false) }
             return
         }
 
+        val repository = repositoriesRepository.getRepositoryByKey(repoKey)
+            ?: run {
+                _uiState.update { it.copy(snapshotsWithMetadata = emptyList(), isLoading = false) }
+                return
+            }
+
         viewModelScope.launch {
-            if (repositoriesRepository.hasRepositoryPassword(repoPath)) {
-                val password = repositoriesRepository.getRepositoryPassword(repoPath)!!
-                val result = resticRepository.getSnapshots(repoPath, password)
+            if (repository.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpPassword(repoKey)) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = context.getString(R.string.error_sftp_password_not_found_for_repository)
+                    )
+                }
+                return@launch
+            }
+
+            if (repositoriesRepository.hasRepositoryPassword(repoKey)) {
+                val password = repositoriesRepository.getRepositoryPassword(repoKey)!!
+                val result = resticRepository.getSnapshots(repoPath, password, environmentVariables, resticOptions)
                 if (result.isFailure) {
                     _uiState.update { it.copy(error = result.exceptionOrNull()?.message, isLoading = false) }
                 }
             } else {
-                _uiState.update { it.copy(isLoading = false, showPasswordDialogFor = repoPath) }
+                _uiState.update { it.copy(isLoading = false, showPasswordDialogFor = repoKey) }
             }
         }
     }
 
     fun refreshSnapshots() {
-        val repoPath = _uiState.value.selectedRepo
+        val repoKey = _uiState.value.selectedRepo
         val resticState = _uiState.value.resticState
+        if (repoKey == null || resticState !is ResticState.Installed) return
 
-        if (repoPath == null || resticState !is ResticState.Installed) return
+        val repository = repositoriesRepository.getRepositoryByKey(repoKey)
+        val repoPath = repository?.path
+        val environmentVariables = repositoriesRepository.getExecutionEnvironmentVariables(repoKey)
+        val resticOptions = repositoriesRepository.getExecutionResticOptions(repoKey)
+
+        if (repoPath == null) return
+        if (repository.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpPassword(repoKey)) {
+            _uiState.update {
+                it.copy(
+                    isRefreshing = false,
+                    error = context.getString(R.string.error_sftp_password_not_found_for_repository)
+                )
+            }
+            return
+        }
 
         viewModelScope.launch {
             _uiState.update { it.copy(isRefreshing = true, error = null) }
             try {
-                if (repositoriesRepository.hasRepositoryPassword(repoPath)) {
-                    val password = repositoriesRepository.getRepositoryPassword(repoPath)!!
-                    val result = resticRepository.getSnapshots(repoPath, password)
+                if (repositoriesRepository.hasRepositoryPassword(repoKey)) {
+                    val password = repositoriesRepository.getRepositoryPassword(repoKey)!!
+                    val result = resticRepository.getSnapshots(repoPath, password, environmentVariables, resticOptions)
                     if (result.isFailure) {
                         _uiState.update { it.copy(error = result.exceptionOrNull()?.message) }
                     } else {
                         refreshTrigger.update { it + 1 }
                     }
                 } else {
-                    _uiState.update { it.copy(showPasswordDialogFor = repoPath) }
+                    _uiState.update { it.copy(showPasswordDialogFor = repoKey) }
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message) }
@@ -164,13 +206,20 @@ class HomeViewModel(
     }
 
     fun onPasswordEntered(password: String, save: Boolean) {
-        val repoPath = _uiState.value.showPasswordDialogFor ?: return
+        val repoKey = _uiState.value.showPasswordDialogFor ?: return
+        val repository = repositoriesRepository.getRepositoryByKey(repoKey) ?: return
         _uiState.update { it.copy(showPasswordDialogFor = null, isLoading = true, error = null) }
 
-        if (save) repositoriesRepository.saveRepositoryPassword(repoPath, password)
-        else repositoriesRepository.saveRepositoryPasswordTemporary(repoPath, password)
+        if (save) repositoriesRepository.saveRepositoryPassword(repoKey, password)
+        else repositoriesRepository.saveRepositoryPasswordTemporary(repoKey, password)
 
-        loadSnapshots(repoPath, uiState.value.resticState)
+        loadSnapshots(
+            repository.path,
+            repositoriesRepository.getExecutionEnvironmentVariables(repoKey),
+            repositoriesRepository.getExecutionResticOptions(repoKey),
+            repoKey,
+            uiState.value.resticState
+        )
     }
 
     fun onDismissPasswordDialog() {

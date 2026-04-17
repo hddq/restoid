@@ -76,16 +76,21 @@ class SnapshotDetailsViewModel(
             _error.value = null
             _backupDetails.value = emptyList() // Clear previous details
             try {
-                val repoPath = repositoriesRepository.selectedRepository.first()
-                val password = repoPath?.let { repositoriesRepository.getRepositoryPassword(it) }
-                val repo = repositoriesRepository.repositories.value.find { it.path == repoPath }
+                val selectedRepoKey = repositoriesRepository.selectedRepository.first()
+                val repo = selectedRepoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
+                val repoPath = repo?.path
+                val password = selectedRepoKey?.let { repositoriesRepository.getRepositoryPassword(it) }
+                val repoId = repo?.id
 
 
-                if (repoPath != null && password != null && repo?.id != null) {
-                    val loadedMetadata = metadataRepository.getMetadataForSnapshot(repo.id, snapshotId)
+                if (repoPath != null && password != null && repoId != null) {
+                    val loadedMetadata = metadataRepository.getMetadataForSnapshot(repoId, snapshotId)
                     _metadata.value = loadedMetadata
 
-                    val result = resticRepository.getSnapshots(repoPath, password)
+                    val executionEnvironment = repositoriesRepository.getExecutionEnvironmentVariables(selectedRepoKey)
+                    val resticOptions = repositoriesRepository.getExecutionResticOptions(selectedRepoKey)
+
+                    val result = resticRepository.getSnapshots(repoPath, password, executionEnvironment, resticOptions)
                     result.fold(
                         onSuccess = { snapshots ->
                             val foundSnapshot = snapshots.find { it.id.startsWith(snapshotId) }
@@ -123,7 +128,7 @@ class SnapshotDetailsViewModel(
 
             val isInstalled = appInfo != null
             val isDowngrade = if (isInstalled) {
-                appMeta.versionCode < appInfo!!.versionCode
+                appMeta.versionCode < appInfo.versionCode
             } else {
                 false
             }
@@ -201,19 +206,36 @@ class SnapshotDetailsViewModel(
             _isForgetting.value = true
             _error.value = null
             try {
-                val repoPath = repositoriesRepository.selectedRepository.first()
-                val password = repoPath?.let { repositoriesRepository.getRepositoryPassword(it) }
-                val repo = repositoriesRepository.repositories.value.find { it.path == repoPath }
+                val selectedRepoKey = repositoriesRepository.selectedRepository.first()
+                val repo = selectedRepoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
+                val repoPath = repo?.path
+                val password = selectedRepoKey?.let { repositoriesRepository.getRepositoryPassword(it) }
+                val repoId = repo?.id
 
-                if (repoPath != null && password != null && repo?.id != null) {
-                    val result = resticRepository.forgetSnapshot(repoPath, password, snapshotToForget.id)
+                if (repoPath != null && password != null && repoId != null) {
+                    val executionEnvironment = repositoriesRepository.getExecutionEnvironmentVariables(selectedRepoKey)
+                    val resticOptions = repositoriesRepository.getExecutionResticOptions(selectedRepoKey)
+
+                    val result = resticRepository.forgetSnapshot(
+                        repoPath,
+                        password,
+                        snapshotToForget.id,
+                        executionEnvironment,
+                        resticOptions
+                    )
                     result.fold(
                         onSuccess = {
                             // Also delete the metadata file
-                            val deleted = metadataRepository.deleteMetadataForSnapshot(repo.id, snapshotToForget.id)
+                            val deleted = metadataRepository.deleteMetadataForSnapshot(repoId, snapshotToForget.id)
                             if (deleted) {
                                 // After deleting, back up the changes to the metadata folder
-                                resticRepository.backupMetadata(repo.id, repoPath, password)
+                                resticRepository.backupMetadata(
+                                    repoId,
+                                    repoPath,
+                                    password,
+                                    executionEnvironment,
+                                    resticOptions
+                                )
                             }
                             _forgetResult.value = ForgetResult.Success
                         },

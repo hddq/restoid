@@ -60,6 +60,7 @@ import io.github.hddq.restoid.BuildConfig
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.LocalRepository
 import io.github.hddq.restoid.data.NotificationPermissionState
+import io.github.hddq.restoid.data.RepositoryBackendType
 import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.ui.screens.settings.dialogs.ChangePasswordDialog
 import io.github.hddq.restoid.ui.screens.settings.dialogs.SavePasswordDialog
@@ -164,6 +165,7 @@ fun SelectableRepositoryRow(
     viewModel: SettingsViewModel
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    val repoKey = viewModel.repositoryKey(repo)
 
     Row(
         modifier = Modifier
@@ -189,6 +191,20 @@ fun SelectableRepositoryRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            Text(
+                text = when (repo.backendType) {
+                    RepositoryBackendType.LOCAL -> stringResource(R.string.repo_backend_local)
+                    RepositoryBackendType.SFTP -> stringResource(R.string.repo_backend_sftp)
+                    RepositoryBackendType.REST -> stringResource(R.string.repo_backend_rest)
+                    RepositoryBackendType.S3 -> stringResource(R.string.repo_backend_s3)
+                    RepositoryBackendType.SWIFT -> stringResource(R.string.repo_backend_swift)
+                    RepositoryBackendType.B2 -> stringResource(R.string.repo_backend_b2)
+                    RepositoryBackendType.AZURE -> stringResource(R.string.repo_backend_azure)
+                    RepositoryBackendType.GOOGLE_CLOUD_STORAGE -> stringResource(R.string.repo_backend_gcs)
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = LocalContentColor.current.copy(alpha = 0.75f)
+            )
             repo.id?.let {
                 Text(
                     stringResource(R.string.repository_id_short, it.take(12)),
@@ -204,7 +220,7 @@ fun SelectableRepositoryRow(
         if (showChangePasswordDialog) {
             ChangePasswordDialog(
                 viewModel = viewModel,
-                repoPath = repo.path,
+                repositoryKey = repoKey,
                 onDismiss = { showChangePasswordDialog = false }
             )
         }
@@ -212,7 +228,7 @@ fun SelectableRepositoryRow(
         if (showSavePasswordDialog) {
             SavePasswordDialog(
                 viewModel = viewModel,
-                repoPath = repo.path,
+                repositoryKey = repoKey,
                 onDismiss = { showSavePasswordDialog = false }
             )
         }
@@ -228,15 +244,24 @@ fun SelectableRepositoryRow(
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_delete)) },
                     onClick = {
-                        viewModel.deleteRepository(repo.path)
+                        viewModel.deleteRepository(repoKey)
                         showMenu = false
                     }
                 )
-                if (viewModel.hasStoredRepositoryPassword(repo.path)) {
+                if (repo.backendType == RepositoryBackendType.SFTP && viewModel.hasSftpPassword(repoKey)) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_forget_sftp_password)) },
+                        onClick = {
+                            viewModel.forgetSftpPassword(repoKey)
+                            showMenu = false
+                        }
+                    )
+                }
+                if (viewModel.hasStoredRepositoryPassword(repoKey)) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_forget_password)) },
                         onClick = {
-                            viewModel.forgetPassword(repo.path)
+                            viewModel.forgetPassword(repoKey)
                             showMenu = false
                         }
                     )

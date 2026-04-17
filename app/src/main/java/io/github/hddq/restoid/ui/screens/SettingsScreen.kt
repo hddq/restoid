@@ -70,7 +70,11 @@ fun SettingsScreen(
         AddRepositoryDialog(
             uiState = addRepoUiState,
             onDismiss = { viewModel.onNewRepoDialogDismiss() },
+            onBackendTypeChange = { viewModel.onNewRepoBackendTypeChanged(it) },
+            onPathChange = { viewModel.onNewRepoPathChanged(it) },
             onPasswordChange = { viewModel.onNewRepoPasswordChanged(it) },
+            onSftpPasswordChange = { viewModel.onNewRepoSftpPasswordChanged(it) },
+            onEnvironmentVariablesChange = { viewModel.onNewRepoEnvironmentVariablesChanged(it) },
             onSavePasswordChange = { viewModel.onSavePasswordChanged(it) },
             onConfirm = { viewModel.addRepository() },
             onSelectPath = { directoryPickerLauncher.launch(null) }

@@ -81,6 +81,7 @@
     <string name="dialog_forget_snapshot_message">This will remove the snapshot entry. The actual data will only be deleted after running a prune. Are you sure?</string>
 
     <string name="label_password">Password</string>
+    <string name="label_repository_password">Repository password</string>
     <string name="error_password_cannot_be_empty">Password cannot be empty</string>
     <string name="save_password">Save password</string>
     <string name="action_ok">OK</string>
@@ -109,6 +110,30 @@
     <string name="progress_placeholder">...</string>
 
     <string name="dialog_add_local_repository_title">Add Local Repository</string>
+    <string name="dialog_add_repository_title">Add Repository</string>
+    <string name="label_repository_type">Repository type</string>
+    <string name="label_repository_specification">Repository specification</string>
+    <string name="label_environment_variables">Environment variables</string>
+    <string name="placeholder_environment_variables">KEY=value (one per line)</string>
+    <string name="label_sftp_password">SFTP password</string>
+
+    <string name="repo_backend_local">Local directory</string>
+    <string name="repo_backend_sftp">SFTP (SSH)</string>
+    <string name="repo_backend_rest">HTTP REST server</string>
+    <string name="repo_backend_s3">Amazon S3 / MinIO</string>
+    <string name="repo_backend_swift">OpenStack Swift</string>
+    <string name="repo_backend_b2">Backblaze B2</string>
+    <string name="repo_backend_azure">Azure Blob Storage</string>
+    <string name="repo_backend_gcs">Google Cloud Storage</string>
+
+    <string name="repo_hint_sftp">user@host:/srv/restic-repo</string>
+    <string name="repo_hint_rest">http://host:8000/</string>
+    <string name="repo_hint_s3">s3.us-east-1.amazonaws.com/bucket_name</string>
+    <string name="repo_hint_swift">container_name:/path</string>
+    <string name="repo_hint_b2">bucketname:path/to/repo</string>
+    <string name="repo_hint_azure">container:/</string>
+    <string name="repo_hint_gcs">bucket:/</string>
+
     <string name="label_path">Path</string>
     <string name="placeholder_select_directory">Select a directory…</string>
     <string name="cd_select_folder">Select Folder</string>
@@ -139,6 +164,7 @@
     <string name="repository_id_short">ID: %1$s…</string>
     <string name="cd_more_options">More options</string>
     <string name="action_forget_password">Forget Password</string>
+    <string name="action_forget_sftp_password">Forget SFTP Password</string>
     <string name="action_save_password">Save Password</string>
     <string name="action_change_password">Change password</string>
     <string name="cd_more_download_options">More download options</string>
@@ -189,6 +215,8 @@
     <string name="summary_no_backup_repository_selected">No backup repository is selected.</string>
     <string name="error_password_not_found_for_repository">Password for repository not found.</string>
     <string name="summary_password_not_found">Could not find the password.</string>
+    <string name="error_sftp_password_not_found_for_repository">SFTP password for repository not found.</string>
+    <string name="summary_sftp_password_not_found">Could not find the SFTP password.</string>
 
     <string name="error_snapshot_not_found">Snapshot not found.</string>
     <string name="error_repository_password_or_id_not_found">Repository, password, or repo ID not found</string>
@@ -227,6 +255,10 @@
 
     <string name="home_error_repository_id_not_found">Repository ID not found</string>
     <string name="settings_error_path_password_empty">Path and password cannot be empty.</string>
+    <string name="settings_error_invalid_environment_variables">Invalid environment variables.</string>
+    <string name="settings_error_invalid_environment_line">Invalid environment variable format at line %1$d. Use KEY=value.</string>
+    <string name="settings_error_invalid_environment_name">Invalid environment variable name: %1$s</string>
+    <string name="settings_error_invalid_restic_options">Invalid restic options.</string>
     <string name="error_unknown">Unknown error</string>
 
     <string name="channel_ongoing_operations">Ongoing Operations</string>
@@ -245,6 +277,9 @@
     <string name="repo_error_failed_create_directory">Failed to create directory.</string>
     <string name="repo_error_failed_initialize">Failed to initialize repository.</string>
     <string name="repo_error_failed_get_id">Repo valid, but failed to get ID.</string>
+    <string name="repo_error_sftp_password_setup_failed">Failed to configure SFTP password authentication.</string>
+    <string name="repo_error_sftp_ssh_binary_not_found">SSH binary was not found on this device.</string>
+    <string name="repo_error_sftp_askpass_create_failed">Failed to create SSH askpass helper script.</string>
 
     <string name="restic_unknown_version">Unknown version</string>
     <string name="restic_unknown">unknown</string>
@@ -276,6 +311,8 @@
 
     <string name="restic_executor_failure_command">Restic command failed</string>
     <string name="restic_executor_failure_not_ready">Restic is not installed or ready.</string>
+    <string name="restic_executor_failure_invalid_env_name">One or more environment variable names are invalid.</string>
+    <string name="restic_executor_failure_invalid_option_name">One or more restic option names are invalid.</string>
 
     <string name="maintenance_summary_prune_completed">Prune operation completed.</string>
     <string name="maintenance_summary_removed_snapshots">Removed %1$s snapshot(s).</string>

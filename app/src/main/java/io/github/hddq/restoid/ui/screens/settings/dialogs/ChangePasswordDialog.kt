@@ -22,7 +22,7 @@ import io.github.hddq.restoid.ui.settings.SettingsViewModel
 @Composable
 fun ChangePasswordDialog(
     viewModel: SettingsViewModel,
-    repoPath: String,
+    repositoryKey: String,
     onDismiss: () -> Unit
 ) {
     var oldPassword by remember { mutableStateOf("") }
@@ -116,7 +116,7 @@ fun ChangePasswordDialog(
                 onClick = {
                     error = null
                     if (newPassword == confirmPassword) {
-                        viewModel.changePassword(repoPath, oldPassword, newPassword)
+                        viewModel.changePassword(repositoryKey, oldPassword, newPassword)
                     }
                 },
                 enabled = oldPassword.isNotEmpty() &&

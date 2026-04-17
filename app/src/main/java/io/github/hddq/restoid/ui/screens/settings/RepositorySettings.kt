@@ -65,10 +65,11 @@ fun RepositorySettings(viewModel: SettingsViewModel) {
                     )
                 } else {
                     repositories.forEachIndexed { index, repo ->
+                        val repoKey = viewModel.repositoryKey(repo)
                         SelectableRepositoryRow(
                             repo = repo,
-                            isSelected = repo.path == selectedRepository,
-                            onSelected = { viewModel.selectRepository(repo.path) },
+                            isSelected = repoKey == selectedRepository,
+                            onSelected = { viewModel.selectRepository(repoKey) },
                             viewModel = viewModel
                         )
                         if (index < repositories.size - 1) {

@@ -16,7 +16,7 @@ import io.github.hddq.restoid.ui.settings.SettingsViewModel
 @Composable
 fun SavePasswordDialog(
     viewModel: SettingsViewModel,
-    repoPath: String,
+    repositoryKey: String,
     onDismiss: () -> Unit
 ) {
     var password by remember { mutableStateOf("") }
@@ -45,7 +45,7 @@ fun SavePasswordDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    viewModel.savePassword(repoPath, password)
+                    viewModel.savePassword(repositoryKey, password)
                     onDismiss()
                 },
                 enabled = password.isNotEmpty()

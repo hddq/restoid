@@ -88,6 +88,8 @@ class BackupViewModel(
             var summary = ""
             var finalSummaryProgress: OperationProgress? = null
             var repoPath: String? = null
+            var repositoryEnvironment: Map<String, String> = emptyMap()
+            var repositoryResticOptions: Map<String, String> = emptyMap()
             var password: String? = null
             var snapshotId: String? = null
             var repositoryId: String? = null
@@ -103,14 +105,19 @@ class BackupViewModel(
 
                 // Use Manager for state check
                 val resticState = resticBinaryManager.resticState.value as ResticState.Installed
-                val selectedRepoPath = repositoriesRepository.selectedRepository.value!!
-                val repository = repositoriesRepository.repositories.value.find { it.path == selectedRepoPath }
-                repositoryId = repository?.id
+                val selectedRepoKey = repositoriesRepository.selectedRepository.value!!
+                val repository = repositoriesRepository.getRepositoryByKey(selectedRepoKey)
+                    ?: throw IllegalStateException(application.getString(R.string.error_no_backup_repository_selected))
+                repositoryId = repository.id
 
                 if (repositoryId == null) throw IllegalStateException(application.getString(R.string.backup_error_repository_id_not_found))
 
-                repoPath = selectedRepoPath
-                password = repositoriesRepository.getRepositoryPassword(selectedRepoPath)!!
+                val currentRepoPath = repository.path
+                repositoryEnvironment = repositoriesRepository.getExecutionEnvironmentVariables(selectedRepoKey)
+                repositoryResticOptions = repositoriesRepository.getExecutionResticOptions(selectedRepoKey)
+                val currentPassword = repositoriesRepository.getRepositoryPassword(selectedRepoKey)!!
+                repoPath = currentRepoPath
+                password = currentPassword
                 val selectedApps = _apps.value.filter { it.isSelected }
 
                 // --- STAGE 1: Preparing backup ---
@@ -138,10 +145,25 @@ class BackupViewModel(
                 val tags = listOf("restoid", "backup")
                 val tagFlags = tags.joinToString(" ") { "--tag '$it'" }
                 val excludeFlags = excludePatterns.distinct().joinToString(" ") { pattern -> "--exclude $pattern" }
+                val envPrefix = io.github.hddq.restoid.util.buildShellEnvironmentPrefix(repositoryEnvironment)
+                val resticOptionFlags = io.github.hddq.restoid.util.buildResticOptionFlags(repositoryResticOptions)
 
                 // TODO: This part should ideally move to ResticExecutor too, but it uses fileList logic.
                 // For now, we construct the command here using binary path from Manager.
-                val command = "RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' ${resticState.path} -r '$selectedRepoPath' backup --files-from '${fileList.absolutePath}' --json --verbose=2 $tagFlags $excludeFlags"
+                val command = buildString {
+                    if (envPrefix.isNotEmpty()) append(envPrefix).append(' ')
+                    append("RESTIC_PASSWORD_FILE=").append(io.github.hddq.restoid.util.shellQuote(passwordFile.absolutePath)).append(' ')
+                    append(io.github.hddq.restoid.util.shellQuote(resticState.path)).append(' ')
+                    if (resticOptionFlags.isNotEmpty()) append(resticOptionFlags).append(' ')
+                    append("-r ")
+                    append(io.github.hddq.restoid.util.shellQuote(currentRepoPath)).append(' ')
+                    append("backup --files-from ")
+                    append(io.github.hddq.restoid.util.shellQuote(fileList.absolutePath))
+                    append(" --json --verbose=2 ")
+                    append(tagFlags)
+                    append(' ')
+                    append(excludeFlags)
+                }
 
                 val stdoutCallback = object : CallbackList<String>() {
                     override fun onAddElement(line: String) {
@@ -184,7 +206,13 @@ class BackupViewModel(
                     summary += "\n" + application.getString(R.string.backup_warning_metadata_not_saved)
                 }
 
-                resticRepository.backupMetadata(repositoryId, selectedRepoPath, password)
+                resticRepository.backupMetadata(
+                    repositoryId,
+                    currentRepoPath,
+                    currentPassword,
+                    repositoryEnvironment,
+                    repositoryResticOptions
+                )
                 updateProgress(stage3Title, 1.0f, 1.0f, startTime)
 
                 isSuccess = true
@@ -212,7 +240,14 @@ class BackupViewModel(
                 notificationRepository.showOperationFinishedNotification(application.getString(R.string.operation_backup), isSuccess, summary)
 
                 if (isSuccess && repoPath != null && password != null) {
-                    launch { resticRepository.refreshSnapshots(repoPath, password) }
+                    launch {
+                        resticRepository.refreshSnapshots(
+                            repoPath,
+                            password,
+                            repositoryEnvironment,
+                            repositoryResticOptions
+                        )
+                    }
                 }
             }
         }
@@ -286,8 +321,8 @@ class BackupViewModel(
             )
         }
 
-        val selectedRepoPath = repositoriesRepository.selectedRepository.value
-        if (selectedRepoPath == null) {
+        val selectedRepoKey = repositoriesRepository.selectedRepository.value
+        if (selectedRepoKey == null) {
             return OperationProgress(
                 isFinished = true,
                 error = application.getString(R.string.error_no_backup_repository_selected),
@@ -295,11 +330,28 @@ class BackupViewModel(
             )
         }
 
-        if (repositoriesRepository.getRepositoryPassword(selectedRepoPath) == null) {
+        if (repositoriesRepository.getRepositoryByKey(selectedRepoKey) == null) {
+            return OperationProgress(
+                isFinished = true,
+                error = application.getString(R.string.error_no_backup_repository_selected),
+                finalSummary = application.getString(R.string.summary_no_backup_repository_selected)
+            )
+        }
+
+        if (repositoriesRepository.getRepositoryPassword(selectedRepoKey) == null) {
             return OperationProgress(
                 isFinished = true,
                 error = application.getString(R.string.error_password_not_found_for_repository),
                 finalSummary = application.getString(R.string.summary_password_not_found)
+            )
+        }
+
+        val repository = repositoriesRepository.getRepositoryByKey(selectedRepoKey)
+        if (repository?.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpPassword(selectedRepoKey)) {
+            return OperationProgress(
+                isFinished = true,
+                error = application.getString(R.string.error_sftp_password_not_found_for_repository),
+                finalSummary = application.getString(R.string.summary_sftp_password_not_found)
             )
         }
 

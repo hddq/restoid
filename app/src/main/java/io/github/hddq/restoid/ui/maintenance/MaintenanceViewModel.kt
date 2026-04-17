@@ -63,19 +63,57 @@ class MaintenanceViewModel(
                     return@launch
                 }
 
-                val selectedRepoPath = repositoriesRepository.selectedRepository.value!!
-                val password = repositoriesRepository.getRepositoryPassword(selectedRepoPath)!!
+                val selectedRepoKey = repositoriesRepository.selectedRepository.value!!
+                val repository = repositoriesRepository.getRepositoryByKey(selectedRepoKey)
+                    ?: throw IllegalStateException(context.getString(R.string.summary_no_backup_repository_selected))
+                val selectedRepoPath = repository.path
+                val repositoryEnvironment = repositoriesRepository.getExecutionEnvironmentVariables(selectedRepoKey)
+                val repositoryResticOptions = repositoriesRepository.getExecutionResticOptions(selectedRepoKey)
+                val password = repositoriesRepository.getRepositoryPassword(selectedRepoKey)!!
 
                 val tasksToRun = mutableListOf<Pair<String, suspend () -> Result<String>>>()
-                if (_uiState.value.unlockRepo) tasksToRun.add(context.getString(R.string.maintenance_task_unlock) to { resticRepository.unlock(selectedRepoPath, password) })
+                if (_uiState.value.unlockRepo) {
+                    tasksToRun.add(
+                        context.getString(R.string.maintenance_task_unlock) to {
+                            resticRepository.unlock(selectedRepoPath, password, repositoryEnvironment, repositoryResticOptions)
+                        }
+                    )
+                }
                 if (_uiState.value.forgetSnapshots) {
                     val state = _uiState.value
                     tasksToRun.add(context.getString(R.string.maintenance_task_forget) to {
-                        resticRepository.forget(selectedRepoPath, password, state.keepLast, state.keepDaily, state.keepWeekly, state.keepMonthly)
+                        resticRepository.forget(
+                            selectedRepoPath,
+                            password,
+                            state.keepLast,
+                            state.keepDaily,
+                            state.keepWeekly,
+                            state.keepMonthly,
+                            repositoryEnvironment,
+                            repositoryResticOptions
+                        )
                     })
                 }
-                if (_uiState.value.pruneRepo) tasksToRun.add(context.getString(R.string.maintenance_task_prune) to { resticRepository.prune(selectedRepoPath, password) })
-                if (_uiState.value.checkRepo) tasksToRun.add(context.getString(R.string.maintenance_task_check) to { resticRepository.check(selectedRepoPath, password, _uiState.value.readData) })
+                if (_uiState.value.pruneRepo) {
+                    tasksToRun.add(
+                        context.getString(R.string.maintenance_task_prune) to {
+                            resticRepository.prune(selectedRepoPath, password, repositoryEnvironment, repositoryResticOptions)
+                        }
+                    )
+                }
+                if (_uiState.value.checkRepo) {
+                    tasksToRun.add(
+                        context.getString(R.string.maintenance_task_check) to {
+                            resticRepository.check(
+                                selectedRepoPath,
+                                password,
+                                _uiState.value.readData,
+                                repositoryEnvironment,
+                                repositoryResticOptions
+                            )
+                        }
+                    )
+                }
 
                 if (tasksToRun.isEmpty()) throw IllegalStateException(context.getString(R.string.maintenance_error_no_tasks_selected))
 
@@ -118,10 +156,16 @@ class MaintenanceViewModel(
                 notificationRepository.showOperationFinishedNotification(context.getString(R.string.operation_maintenance), overallSuccess, finalProgress.finalSummary)
 
                 if ((_uiState.value.pruneRepo || _uiState.value.forgetSnapshots) && overallSuccess) {
-                    val repoPath = repositoriesRepository.selectedRepository.value
-                    val password = repoPath?.let { repositoriesRepository.getRepositoryPassword(it) }
-                    if (repoPath != null && password != null) {
-                        resticRepository.refreshSnapshots(repoPath, password)
+                    val repoKey = repositoriesRepository.selectedRepository.value
+                    val repository = repoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
+                    val password = repoKey?.let { repositoriesRepository.getRepositoryPassword(it) }
+                    if (repository != null && password != null) {
+                        resticRepository.refreshSnapshots(
+                            repository.path,
+                            password,
+                            repositoriesRepository.getExecutionEnvironmentVariables(repoKey),
+                            repositoriesRepository.getExecutionResticOptions(repoKey)
+                        )
                     }
                 }
             }
@@ -144,21 +188,31 @@ class MaintenanceViewModel(
                 finalSummary = context.getString(R.string.summary_restic_binary_not_installed)
             )
         }
-        val selectedRepoPath = repositoriesRepository.selectedRepository.value
-        if (selectedRepoPath == null) {
+        val selectedRepoKey = repositoriesRepository.selectedRepository.value
+        if (selectedRepoKey == null || repositoriesRepository.getRepositoryByKey(selectedRepoKey) == null) {
             return OperationProgress(
                 isFinished = true,
                 error = context.getString(R.string.error_no_backup_repository_selected),
                 finalSummary = context.getString(R.string.summary_no_backup_repository_selected)
             )
         }
-        if (repositoriesRepository.getRepositoryPassword(selectedRepoPath) == null) {
+        if (repositoriesRepository.getRepositoryPassword(selectedRepoKey) == null) {
             return OperationProgress(
                 isFinished = true,
                 error = context.getString(R.string.error_password_not_found_for_repository),
                 finalSummary = context.getString(R.string.summary_password_not_found)
             )
         }
+
+        val repository = repositoriesRepository.getRepositoryByKey(selectedRepoKey)
+        if (repository?.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpPassword(selectedRepoKey)) {
+            return OperationProgress(
+                isFinished = true,
+                error = context.getString(R.string.error_sftp_password_not_found_for_repository),
+                finalSummary = context.getString(R.string.summary_sftp_password_not_found)
+            )
+        }
+
         return null
     }
 

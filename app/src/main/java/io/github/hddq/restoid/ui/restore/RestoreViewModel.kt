@@ -11,6 +11,8 @@ import io.github.hddq.restoid.model.BackupDetail
 import io.github.hddq.restoid.model.RestoidMetadata
 import io.github.hddq.restoid.ui.shared.OperationProgress
 import io.github.hddq.restoid.util.ResticOutputParser
+import io.github.hddq.restoid.util.buildShellEnvironmentPrefix
+import io.github.hddq.restoid.util.shellQuote
 import com.topjohnwu.superuser.CallbackList
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
@@ -86,18 +88,25 @@ class RestoreViewModel(
             _error.value = null
             _backupDetails.value = emptyList()
             try {
-                val repoPath = repositoriesRepository.selectedRepository.first()
-                val password = repoPath?.let { repositoriesRepository.getRepositoryPassword(it) }
-                val repo = repositoriesRepository.repositories.value.find { it.path == repoPath }
+                val selectedRepoKey = repositoriesRepository.selectedRepository.first()
+                val repo = selectedRepoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
+                val repoPath = repo?.path
+                val password = selectedRepoKey?.let { repositoriesRepository.getRepositoryPassword(it) }
+                val repoId = repo?.id
 
-                if (repoPath != null && password != null && repo?.id != null) {
-                    val result = resticRepository.getSnapshots(repoPath, password)
+                if (repoPath != null && password != null && repoId != null) {
+                    val result = resticRepository.getSnapshots(
+                        repoPath,
+                        password,
+                        repositoriesRepository.getExecutionEnvironmentVariables(selectedRepoKey),
+                        repositoriesRepository.getExecutionResticOptions(selectedRepoKey)
+                    )
                     result.fold(
                         onSuccess = { snapshots ->
                             val foundSnapshot = snapshots.find { it.id.startsWith(snapshotId) }
                             _snapshot.value = foundSnapshot
                             if (foundSnapshot != null) {
-                                val metadata = metadataRepository.getMetadataForSnapshot(repo.id, foundSnapshot.id)
+                                val metadata = metadataRepository.getMetadataForSnapshot(repoId, foundSnapshot.id)
                                 snapshotMetadata = metadata
                                 processSnapshot(foundSnapshot, metadata)
                             } else {
@@ -300,7 +309,9 @@ class RestoreViewModel(
             try {
                 // Use Manager for state check
                 val resticState = resticBinaryManager.resticState.value
-                val selectedRepoPath = repositoriesRepository.selectedRepository.value
+                val selectedRepoKey = repositoriesRepository.selectedRepository.value
+                val selectedRepository = selectedRepoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
+                val selectedRepoPath = selectedRepository?.path
                 val currentSnapshot = _snapshot.value
                 val selectedApps = _backupDetails.value.filter { it.appInfo.isSelected && (_allowDowngrade.value || !it.isDowngrade) }
 
@@ -309,7 +320,13 @@ class RestoreViewModel(
                 }
                 if (selectedApps.isEmpty()) throw IllegalStateException(application.getString(R.string.restore_error_no_apps_selected))
 
-                val password = repositoriesRepository.getRepositoryPassword(selectedRepoPath)
+                val actualRepoKey = selectedRepoKey
+
+                if (selectedRepository.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpPassword(actualRepoKey)) {
+                    throw IllegalStateException(application.getString(R.string.error_sftp_password_not_found_for_repository))
+                }
+
+                val password = repositoriesRepository.getRepositoryPassword(actualRepoKey)
                     ?: throw IllegalStateException(application.getString(R.string.restore_error_password_not_found))
 
                 passwordFile = File.createTempFile("restic-pass", ".tmp", application.cacheDir)
@@ -324,11 +341,32 @@ class RestoreViewModel(
 
                 // --- Stage 1: Execute restic restore ---
                 val restoreStageTitle = "[${currentStageNum}/${totalStages}] ${stageList[0]}"
-                val includes = pathsToRestore.joinToString(" ") { "--include '$it'" }
+                val includes = pathsToRestore.joinToString(" ") { "--include ${shellQuote(it)}" }
                 // TODO: This should also move to ResticExecutor ideally, but it uses restore output streaming.
                 // We continue manual command construction here for now.
-                val env = "HOME='${application.filesDir.absolutePath}' TMPDIR='${application.cacheDir.absolutePath}'"
-                val command = "$env RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' ${resticState.path} -r '$selectedRepoPath' restore ${currentSnapshot.id} --target '${tempRestoreDir.absolutePath}' --exclude-xattr 'security.selinux' $includes --json"
+                val commandEnvironment = linkedMapOf(
+                    "HOME" to application.filesDir.absolutePath,
+                    "TMPDIR" to application.cacheDir.absolutePath
+                ).apply {
+                    putAll(repositoriesRepository.getExecutionEnvironmentVariables(actualRepoKey))
+                }
+                val envPrefix = buildShellEnvironmentPrefix(commandEnvironment)
+                val resticOptionFlags = io.github.hddq.restoid.util.buildResticOptionFlags(
+                    repositoriesRepository.getExecutionResticOptions(actualRepoKey)
+                )
+                val command = buildString {
+                    if (envPrefix.isNotEmpty()) append(envPrefix).append(' ')
+                    append("RESTIC_PASSWORD_FILE=").append(shellQuote(passwordFile.absolutePath)).append(' ')
+                    append(shellQuote(resticState.path)).append(' ')
+                    if (resticOptionFlags.isNotEmpty()) append(resticOptionFlags).append(' ')
+                    append("-r ")
+                    append(shellQuote(selectedRepoPath)).append(' ')
+                    append("restore ").append(currentSnapshot.id).append(" --target ")
+                    append(shellQuote(tempRestoreDir.absolutePath)).append(' ')
+                    append("--exclude-xattr 'security.selinux' ")
+                    append(includes)
+                    append(" --json")
+                }
 
                 val stdoutCallback = object : CallbackList<String>() {
                     override fun onAddElement(line: String) {

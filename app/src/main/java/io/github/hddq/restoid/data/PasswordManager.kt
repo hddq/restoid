@@ -59,4 +59,36 @@ class PasswordManager(private val context: Context) {
     fun clearTemporaryPasswords() {
         temporaryPasswords.clear()
     }
+
+    private fun sftpPasswordKey(repositoryKey: String): String {
+        return "sftp_ssh_password::$repositoryKey"
+    }
+
+    fun saveSftpPassword(repositoryKey: String, password: String) {
+        savePassword(sftpPasswordKey(repositoryKey), password)
+    }
+
+    fun saveSftpPasswordTemporary(repositoryKey: String, password: String) {
+        savePasswordTemporary(sftpPasswordKey(repositoryKey), password)
+    }
+
+    fun getSftpPassword(repositoryKey: String): String? {
+        return getPassword(sftpPasswordKey(repositoryKey))
+    }
+
+    fun hasSftpPassword(repositoryKey: String): Boolean {
+        return hasPassword(sftpPasswordKey(repositoryKey))
+    }
+
+    fun hasStoredSftpPassword(repositoryKey: String): Boolean {
+        return hasStoredPassword(sftpPasswordKey(repositoryKey))
+    }
+
+    fun removeSftpPassword(repositoryKey: String) {
+        removePassword(sftpPasswordKey(repositoryKey))
+    }
+
+    fun removeStoredSftpPassword(repositoryKey: String) {
+        removeStoredPassword(sftpPasswordKey(repositoryKey))
+    }
 }

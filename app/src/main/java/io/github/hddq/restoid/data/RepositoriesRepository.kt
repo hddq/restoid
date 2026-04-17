@@ -5,6 +5,10 @@ import android.util.Log
 import com.topjohnwu.superuser.Shell
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.util.StorageUtils
+import io.github.hddq.restoid.util.buildResticOptionFlags
+import io.github.hddq.restoid.util.buildShellEnvironmentPrefix
+import io.github.hddq.restoid.util.isValidResticOptionName
+import io.github.hddq.restoid.util.shellQuote
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,8 +30,10 @@ class RepositoriesRepository(
     private val binaryManager: ResticBinaryManager
 ) {
     private val prefs = context.getSharedPreferences("repositories", Context.MODE_PRIVATE)
-    private val REPOS_KEY = "repositories_json_v1"
-    private val SELECTED_REPO_PATH_KEY = "selected_repo_path"
+    private val LEGACY_REPOS_KEY = "repositories_json_v1"
+    private val REPOS_KEY = "repositories_json_v2"
+    private val LEGACY_SELECTED_REPO_PATH_KEY = "selected_repo_path"
+    private val SELECTED_REPO_KEY = "selected_repo_key"
 
     private val _repositories = MutableStateFlow<List<LocalRepository>>(emptyList())
     val repositories = _repositories.asStateFlow()
@@ -36,43 +42,127 @@ class RepositoriesRepository(
     val selectedRepository = _selectedRepository.asStateFlow()
 
     private val json = Json { ignoreUnknownKeys = true }
+    private val defaultSftpSshArgs = "-o BatchMode=no -o StrictHostKeyChecking=accept-new -o ConnectTimeout=15 -o PreferredAuthentications=password,keyboard-interactive -o NumberOfPasswordPrompts=1"
 
     fun loadRepositories() {
-        val repoJsonSet = prefs.getStringSet(REPOS_KEY, emptySet()) ?: emptySet()
+        val reposV2 = prefs.getStringSet(REPOS_KEY, null)
+        val reposV1 = prefs.getStringSet(LEGACY_REPOS_KEY, emptySet()) ?: emptySet()
+
+        val repoJsonSet = mutableSetOf<String>().apply {
+            if (reposV2 != null) addAll(reposV2)
+            addAll(reposV1)
+        }
+
         _repositories.value = repoJsonSet.mapNotNull { jsonString ->
             try {
                 json.decodeFromString<LocalRepository>(jsonString)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 null
             }
         }.sortedBy { it.name }
-        _selectedRepository.value = prefs.getString(SELECTED_REPO_PATH_KEY, null)
+
+        if (reposV2 == null && repoJsonSet.isNotEmpty()) {
+            prefs.edit().putStringSet(REPOS_KEY, repoJsonSet).apply()
+        }
+
+        val selectedKey = prefs.getString(SELECTED_REPO_KEY, null)
+            ?: prefs.getString(LEGACY_SELECTED_REPO_PATH_KEY, null)
+
+        if (selectedKey != null && _repositories.value.any { repositoryKey(it) == selectedKey }) {
+            _selectedRepository.value = selectedKey
+            prefs.edit().putString(SELECTED_REPO_KEY, selectedKey).remove(LEGACY_SELECTED_REPO_PATH_KEY).apply()
+        } else if (selectedKey != null) {
+            val legacySelectedRepository = _repositories.value.find { it.path == selectedKey }
+            if (legacySelectedRepository != null) {
+                val migratedKey = repositoryKey(legacySelectedRepository)
+                _selectedRepository.value = migratedKey
+                prefs.edit().putString(SELECTED_REPO_KEY, migratedKey).remove(LEGACY_SELECTED_REPO_PATH_KEY).apply()
+            } else {
+                _selectedRepository.value = null
+                prefs.edit().remove(SELECTED_REPO_KEY).remove(LEGACY_SELECTED_REPO_PATH_KEY).apply()
+            }
+        } else {
+            _selectedRepository.value = null
+            prefs.edit().remove(SELECTED_REPO_KEY).apply()
+        }
     }
 
-    fun selectRepository(path: String) {
-        prefs.edit().putString(SELECTED_REPO_PATH_KEY, path).apply()
-        _selectedRepository.value = path
+    fun selectRepository(key: String) {
+        if (_repositories.value.none { repositoryKey(it) == key }) {
+            prefs.edit().remove(SELECTED_REPO_KEY).apply()
+            _selectedRepository.value = null
+            return
+        }
+
+        prefs.edit().putString(SELECTED_REPO_KEY, key).apply()
+        _selectedRepository.value = key
     }
 
-    fun getRepositoryPassword(path: String): String? = passwordManager.getPassword(path)
-    fun hasRepositoryPassword(path: String): Boolean = passwordManager.hasPassword(path)
-    fun hasStoredRepositoryPassword(path: String): Boolean = passwordManager.hasStoredPassword(path)
-    fun saveRepositoryPasswordTemporary(path: String, password: String) = passwordManager.savePasswordTemporary(path, password)
-    fun saveRepositoryPassword(path: String, password: String) = passwordManager.savePassword(path, password)
-    fun forgetPassword(path: String) = passwordManager.removeStoredPassword(path)
+    fun getRepositoryPassword(key: String): String? = passwordManager.getPassword(key)
+    fun hasRepositoryPassword(key: String): Boolean = passwordManager.hasPassword(key)
+    fun hasStoredRepositoryPassword(key: String): Boolean = passwordManager.hasStoredPassword(key)
+    fun saveRepositoryPasswordTemporary(key: String, password: String) = passwordManager.savePasswordTemporary(key, password)
+    fun saveRepositoryPassword(key: String, password: String) = passwordManager.savePassword(key, password)
+    fun forgetPassword(key: String) = passwordManager.removeStoredPassword(key)
 
-    fun deleteRepository(path: String) {
+    fun getSftpPassword(key: String): String? = passwordManager.getSftpPassword(key)
+    fun hasSftpPassword(key: String): Boolean = passwordManager.hasSftpPassword(key)
+    fun saveSftpPasswordTemporary(key: String, password: String) = passwordManager.saveSftpPasswordTemporary(key, password)
+    fun saveSftpPassword(key: String, password: String) = passwordManager.saveSftpPassword(key, password)
+    fun forgetSftpPassword(key: String) = passwordManager.removeStoredSftpPassword(key)
+
+    fun getExecutionEnvironmentVariables(key: String): Map<String, String> {
+        val repository = getRepositoryByKey(key) ?: return emptyMap()
+        val sftpPassword = if (repository.backendType == RepositoryBackendType.SFTP) {
+            getSftpPassword(key)
+        } else {
+            null
+        }
+
+        return if (sftpPassword.isNullOrBlank()) {
+            repository.environmentVariables
+        } else {
+            repository.environmentVariables + mapOf("SSHPASS" to sftpPassword)
+        }
+    }
+
+    fun getExecutionResticOptions(key: String): Map<String, String> {
+        val repository = getRepositoryByKey(key) ?: return emptyMap()
+        val sftpPassword = if (repository.backendType == RepositoryBackendType.SFTP) {
+            getSftpPassword(key)
+        } else {
+            null
+        }
+
+        return applySftpPasswordResticOptionDefaults(repository.backendType, repository.resticOptions, sftpPassword)
+    }
+
+    fun getRepositoryByKey(key: String): LocalRepository? {
+        return repositories.value.find { repositoryKey(it) == key }
+    }
+
+    fun repositoryKey(repository: LocalRepository): String {
+        return repository.path
+    }
+
+    fun deleteRepository(key: String) {
         val currentJsonSet = prefs.getStringSet(REPOS_KEY, emptySet())?.toMutableSet() ?: mutableSetOf()
         val repoToRemoveJson = currentJsonSet.find {
-            try { json.decodeFromString<LocalRepository>(it).path == path } catch (e: Exception) { false }
+            try {
+                val decoded = json.decodeFromString<LocalRepository>(it)
+                repositoryKey(decoded) == key
+            } catch (_: Exception) {
+                false
+            }
         }
 
         if (repoToRemoveJson != null && currentJsonSet.remove(repoToRemoveJson)) {
             prefs.edit().putStringSet(REPOS_KEY, currentJsonSet).apply()
-            passwordManager.removePassword(path)
+            passwordManager.removePassword(key)
+            passwordManager.removeSftpPassword(key)
 
-            if (_selectedRepository.value == path) {
-                prefs.edit().remove(SELECTED_REPO_PATH_KEY).apply()
+            if (_selectedRepository.value == key) {
+                prefs.edit().remove(SELECTED_REPO_KEY).apply()
                 _selectedRepository.value = null
             }
             loadRepositories()
@@ -81,14 +171,56 @@ class RepositoriesRepository(
 
     suspend fun addRepository(
         path: String,
+        backendType: RepositoryBackendType,
         password: String,
-        resticRepository: ResticRepository, // Still needed for metadata restore
+        environmentVariables: Map<String, String>,
+        resticOptions: Map<String, String>,
+        sftpPassword: String,
+        resticRepository: ResticRepository,
         savePassword: Boolean
     ): AddRepositoryState {
         return withContext(Dispatchers.IO) {
-            val resolvedPath = StorageUtils.resolvePathForShell(path)
+            val normalizedPath = normalizeRepositoryPath(path, backendType)
+            val resolvedPath = if (backendType == RepositoryBackendType.LOCAL) {
+                StorageUtils.resolvePathForShell(normalizedPath)
+            } else {
+                normalizedPath
+            }
 
-            if (repositories.value.any { it.path == resolvedPath }) {
+            val persistedResticOptions = applySftpPasswordResticOptionDefaults(backendType, resticOptions, sftpPassword)
+
+            val persistedEnvironmentVariables = if (backendType == RepositoryBackendType.SFTP && sftpPassword.isNotBlank()) {
+                val envResult = prepareSftpPasswordEnvironment(environmentVariables)
+                if (envResult.isFailure) {
+                    return@withContext AddRepositoryState.Error(
+                        envResult.exceptionOrNull()?.message
+                            ?: context.getString(R.string.repo_error_sftp_password_setup_failed)
+                    )
+                }
+                envResult.getOrThrow()
+            } else {
+                environmentVariables
+            }
+
+            val executionEnvironmentVariables = if (backendType == RepositoryBackendType.SFTP && sftpPassword.isNotBlank()) {
+                persistedEnvironmentVariables + mapOf("SSHPASS" to sftpPassword)
+            } else {
+                persistedEnvironmentVariables
+            }
+
+            val draftRepository = LocalRepository(
+                path = resolvedPath,
+                backendType = backendType,
+                environmentVariables = persistedEnvironmentVariables,
+                resticOptions = persistedResticOptions
+            )
+            val newRepositoryKey = repositoryKey(draftRepository)
+
+            if (persistedResticOptions.keys.any { !isValidResticOptionName(it) }) {
+                return@withContext AddRepositoryState.Error(context.getString(R.string.settings_error_invalid_restic_options))
+            }
+
+            if (repositories.value.any { repositoryKey(it) == newRepositoryKey }) {
                 return@withContext AddRepositoryState.Error(context.getString(R.string.repo_error_exists))
             }
 
@@ -100,41 +232,115 @@ class RepositoriesRepository(
             val resticPath = binaryState.path
             val wasEmpty = repositories.value.isEmpty()
             val passwordFile = File.createTempFile("restic-pass", ".tmp", context.cacheDir)
+            val envPrefix = buildShellEnvironmentPrefix(executionEnvironmentVariables)
+            val resticOptionFlags = buildResticOptionFlags(persistedResticOptions)
 
             try {
                 passwordFile.writeText(password)
 
-                // Check if exists using shell (bypasses scoped storage limits for root)
-                val repoExists = Shell.cmd("[ -f '$resolvedPath/config' ]").exec().isSuccess
-                val directoryExists = Shell.cmd("[ -d '$resolvedPath' ]").exec().isSuccess
+                if (backendType == RepositoryBackendType.LOCAL) {
+                    val repoExists = Shell.cmd("[ -f ${shellQuote(resolvedPath)}/config ]").exec().isSuccess
+                    val directoryExists = Shell.cmd("[ -d ${shellQuote(resolvedPath)} ]").exec().isSuccess
 
-                if (repoExists) {
-                    // Verify password
-                    val checkResult = Shell.cmd("RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' $resticPath -r '$resolvedPath' list keys --no-lock").exec()
-                    if (checkResult.isSuccess) {
-                        handleSuccessfulRepoAdd(resolvedPath, password, resticRepository, savePassword, wasEmpty)
+                    if (repoExists) {
+                        val checkResult = Shell.cmd(buildString {
+                            if (envPrefix.isNotEmpty()) append(envPrefix).append(' ')
+                            append("RESTIC_PASSWORD_FILE=").append(shellQuote(passwordFile.absolutePath)).append(' ')
+                            append(shellQuote(resticPath)).append(' ')
+                            if (resticOptionFlags.isNotEmpty()) append(resticOptionFlags).append(' ')
+                            append("-r ").append(shellQuote(resolvedPath)).append(" list keys --no-lock")
+                        }).exec()
+                        if (checkResult.isSuccess) {
+                            handleSuccessfulRepoAdd(
+                                draftRepository,
+                                password,
+                                resticRepository,
+                                executionEnvironmentVariables,
+                                savePassword,
+                                wasEmpty,
+                                sftpPassword
+                            )
+                        } else {
+                            AddRepositoryState.Error(context.getString(R.string.repo_error_invalid_password_or_corrupted))
+                        }
                     } else {
-                        AddRepositoryState.Error(context.getString(R.string.repo_error_invalid_password_or_corrupted))
+                        if (directoryExists) {
+                            val directoryHasEntries = Shell.cmd("find ${shellQuote(resolvedPath)} -mindepth 1 -print -quit | grep -q .").exec().isSuccess
+                            if (directoryHasEntries) {
+                                return@withContext AddRepositoryState.Error(context.getString(R.string.repo_error_directory_not_repository))
+                            }
+                        } else {
+                            val mkdirResult = Shell.cmd("mkdir -p ${shellQuote(resolvedPath)}").exec()
+                            if (!mkdirResult.isSuccess) {
+                                return@withContext AddRepositoryState.Error(context.getString(R.string.repo_error_failed_create_directory))
+                            }
+                        }
+
+                        val initResult = Shell.cmd(buildString {
+                            if (envPrefix.isNotEmpty()) append(envPrefix).append(' ')
+                            append("RESTIC_PASSWORD_FILE=").append(shellQuote(passwordFile.absolutePath)).append(' ')
+                            append(shellQuote(resticPath)).append(' ')
+                            if (resticOptionFlags.isNotEmpty()) append(resticOptionFlags).append(' ')
+                            append("-r ").append(shellQuote(resolvedPath)).append(" init")
+                        }).exec()
+                        if (initResult.isSuccess) {
+                            handleSuccessfulRepoAdd(
+                                draftRepository,
+                                password,
+                                resticRepository,
+                                executionEnvironmentVariables,
+                                savePassword,
+                                wasEmpty,
+                                sftpPassword
+                            )
+                        } else {
+                            if (!directoryExists) {
+                                Shell.cmd("rm -rf ${shellQuote(resolvedPath)}").exec()
+                            }
+                            AddRepositoryState.Error(context.getString(R.string.repo_error_failed_initialize))
+                        }
                     }
                 } else {
-                    if (directoryExists) {
-                        val directoryHasEntries = Shell.cmd("find '$resolvedPath' -mindepth 1 -print -quit | grep -q .").exec().isSuccess
-                        if (directoryHasEntries) {
-                            return@withContext AddRepositoryState.Error(context.getString(R.string.repo_error_directory_not_repository))
-                        }
-                    } else {
-                        val mkdirResult = Shell.cmd("mkdir -p '$resolvedPath'").exec()
-                        if (!mkdirResult.isSuccess) return@withContext AddRepositoryState.Error(context.getString(R.string.repo_error_failed_create_directory))
-                    }
+                    val checkResult = Shell.cmd(buildString {
+                        if (envPrefix.isNotEmpty()) append(envPrefix).append(' ')
+                        append("RESTIC_PASSWORD_FILE=").append(shellQuote(passwordFile.absolutePath)).append(' ')
+                        append(shellQuote(resticPath)).append(' ')
+                        if (resticOptionFlags.isNotEmpty()) append(resticOptionFlags).append(' ')
+                        append("-r ").append(shellQuote(resolvedPath)).append(" list keys --no-lock")
+                    }).exec()
 
-                    val initResult = Shell.cmd("RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' $resticPath -r '$resolvedPath' init").exec()
-                    if (initResult.isSuccess) {
-                        handleSuccessfulRepoAdd(resolvedPath, password, resticRepository, savePassword, wasEmpty)
+                    if (checkResult.isSuccess) {
+                        handleSuccessfulRepoAdd(
+                            draftRepository,
+                            password,
+                            resticRepository,
+                            executionEnvironmentVariables,
+                            savePassword,
+                            wasEmpty,
+                            sftpPassword
+                        )
                     } else {
-                        if (!directoryExists) {
-                            Shell.cmd("rm -rf '$resolvedPath'").exec()
+                        val initResult = Shell.cmd(buildString {
+                            if (envPrefix.isNotEmpty()) append(envPrefix).append(' ')
+                            append("RESTIC_PASSWORD_FILE=").append(shellQuote(passwordFile.absolutePath)).append(' ')
+                            append(shellQuote(resticPath)).append(' ')
+                            if (resticOptionFlags.isNotEmpty()) append(resticOptionFlags).append(' ')
+                            append("-r ").append(shellQuote(resolvedPath)).append(" init")
+                        }).exec()
+
+                        if (initResult.isSuccess) {
+                            handleSuccessfulRepoAdd(
+                                draftRepository,
+                                password,
+                                resticRepository,
+                                executionEnvironmentVariables,
+                                savePassword,
+                                wasEmpty,
+                                sftpPassword
+                            )
+                        } else {
+                            AddRepositoryState.Error(context.getString(R.string.repo_error_failed_initialize))
                         }
-                        AddRepositoryState.Error(context.getString(R.string.repo_error_failed_initialize))
                     }
                 }
             } finally {
@@ -143,26 +349,51 @@ class RepositoriesRepository(
         }
     }
 
-    private suspend fun handleSuccessfulRepoAdd(path: String, password: String, resticRepository: ResticRepository, savePassword: Boolean, wasEmpty: Boolean): AddRepositoryState {
-        val configResult = resticRepository.getConfig(path, password)
+    private suspend fun handleSuccessfulRepoAdd(
+        repo: LocalRepository,
+        password: String,
+        resticRepository: ResticRepository,
+        executionEnvironmentVariables: Map<String, String>,
+        savePassword: Boolean,
+        wasEmpty: Boolean,
+        sftpPassword: String
+    ): AddRepositoryState {
+        val configResult = resticRepository.getConfig(
+            repo.path,
+            password,
+            executionEnvironmentVariables,
+            repo.resticOptions
+        )
         if (configResult.isSuccess) {
             val repoId = configResult.getOrNull()?.id
-            // Attempt metadata restore (best effort)
             if (repoId != null) {
-                restoreMetadataForRepo(repoId, path, password, resticRepository)
+                restoreMetadataForRepo(
+                    repoId,
+                    repo.path,
+                    password,
+                    resticRepository,
+                    executionEnvironmentVariables,
+                    repo.resticOptions
+                )
             }
             resticRepository.clearSnapshots()
-            saveNewRepository(LocalRepository(path = path, id = repoId), password, savePassword, wasEmpty)
+            saveNewRepository(repo.copy(id = repoId), password, sftpPassword, savePassword, wasEmpty)
             return AddRepositoryState.Success
-        } else {
-            return AddRepositoryState.Error(context.getString(R.string.repo_error_failed_get_id))
         }
+        return AddRepositoryState.Error(context.getString(R.string.repo_error_failed_get_id))
     }
 
-    private suspend fun restoreMetadataForRepo(repoId: String, repoPath: String, password: String, resticRepository: ResticRepository) {
+    private suspend fun restoreMetadataForRepo(
+        repoId: String,
+        repoPath: String,
+        password: String,
+        resticRepository: ResticRepository,
+        environmentVariables: Map<String, String>,
+        resticOptions: Map<String, String>
+    ) {
         val tempRestoreDir = File(context.cacheDir, "metadata_restore_${System.currentTimeMillis()}").also { it.mkdirs() }
         try {
-            val snapshots = resticRepository.getSnapshots(repoPath, password).getOrNull()
+            val snapshots = resticRepository.getSnapshots(repoPath, password, environmentVariables, resticOptions).getOrNull()
             val metadataSnapshot = snapshots
                 ?.filter { it.tags.contains("restoid") && it.tags.contains("metadata") }
                 ?.maxByOrNull { it.time }
@@ -173,7 +404,9 @@ class RepositoriesRepository(
                     password = password,
                     snapshotId = metadataSnapshot.id,
                     targetPath = tempRestoreDir.absolutePath,
-                    pathsToRestore = emptyList()
+                    pathsToRestore = emptyList(),
+                    environmentVariables = environmentVariables,
+                    resticOptions = resticOptions
                 )
 
                 if (restoreResult.isSuccess) {
@@ -184,25 +417,37 @@ class RepositoriesRepository(
                     val owner = if (ownerResult.isSuccess) ownerResult.out.firstOrNull()?.trim() else null
 
                     if (owner != null) {
-                        Shell.cmd("chown -R $owner '${tempRestoreDir.absolutePath}'").exec()
-                        Shell.cmd("cp -a '${tempRestoreDir.absolutePath}/.' '${finalMetadataParentDir.absolutePath}/'").exec()
+                        Shell.cmd("chown -R $owner ${shellQuote(tempRestoreDir.absolutePath)}").exec()
+                        Shell.cmd("cp -a ${shellQuote(tempRestoreDir.absolutePath + "/.")} ${shellQuote(finalMetadataParentDir.absolutePath + "/")}").exec()
                     }
                 }
             }
         } catch (e: Exception) {
             Log.e("RepoRepo", "Error during metadata restore", e)
         } finally {
-            Shell.cmd("rm -rf '${tempRestoreDir.absolutePath}'").exec()
+            Shell.cmd("rm -rf ${shellQuote(tempRestoreDir.absolutePath)}").exec()
         }
     }
 
-    private fun saveNewRepository(repo: LocalRepository, password: String, save: Boolean, wasEmpty: Boolean) {
+    private fun saveNewRepository(
+        repo: LocalRepository,
+        password: String,
+        sftpPassword: String,
+        save: Boolean,
+        wasEmpty: Boolean
+    ) {
         saveRepository(repo)
-        if (save) passwordManager.savePassword(repo.path, password)
-        else passwordManager.savePasswordTemporary(repo.path, password)
+        val key = repositoryKey(repo)
+        if (save) passwordManager.savePassword(key, password)
+        else passwordManager.savePasswordTemporary(key, password)
+
+        if (repo.backendType == RepositoryBackendType.SFTP && sftpPassword.isNotBlank()) {
+            if (save) passwordManager.saveSftpPassword(key, sftpPassword)
+            else passwordManager.saveSftpPasswordTemporary(key, sftpPassword)
+        }
 
         loadRepositories()
-        if (wasEmpty) selectRepository(repo.path)
+        if (wasEmpty) selectRepository(key)
     }
 
     private fun saveRepository(repository: LocalRepository) {
@@ -210,5 +455,80 @@ class RepositoriesRepository(
         val repoJson = json.encodeToString(repository)
         currentJsonSet.add(repoJson)
         prefs.edit().putStringSet(REPOS_KEY, currentJsonSet).apply()
+    }
+
+    private fun normalizeRepositoryPath(path: String, backendType: RepositoryBackendType): String {
+        val trimmed = path.trim()
+        if (trimmed.isEmpty()) return trimmed
+
+        return when (backendType) {
+            RepositoryBackendType.LOCAL -> trimmed
+            RepositoryBackendType.SFTP -> if (trimmed.startsWith("sftp:")) trimmed else "sftp:$trimmed"
+            RepositoryBackendType.REST -> if (trimmed.startsWith("rest:")) trimmed else "rest:$trimmed"
+            RepositoryBackendType.S3 -> if (trimmed.startsWith("s3:")) trimmed else "s3:$trimmed"
+            RepositoryBackendType.SWIFT -> if (trimmed.startsWith("swift:")) trimmed else "swift:$trimmed"
+            RepositoryBackendType.B2 -> if (trimmed.startsWith("b2:")) trimmed else "b2:$trimmed"
+            RepositoryBackendType.AZURE -> if (trimmed.startsWith("azure:")) trimmed else "azure:$trimmed"
+            RepositoryBackendType.GOOGLE_CLOUD_STORAGE -> if (trimmed.startsWith("gs:")) trimmed else "gs:$trimmed"
+        }
+    }
+
+    private fun prepareSftpPasswordEnvironment(baseEnvironmentVariables: Map<String, String>): Result<Map<String, String>> {
+        val sshPathResult = Shell.cmd("command -v ssh").exec()
+        val sshPath = sshPathResult.out.firstOrNull()?.trim().orEmpty()
+        if (!sshPathResult.isSuccess || sshPath.isBlank()) {
+            return Result.failure(IllegalStateException(context.getString(R.string.repo_error_sftp_ssh_binary_not_found)))
+        }
+
+        val askpassDir = File(context.filesDir, "sftp-askpass")
+        if (!askpassDir.exists() && !askpassDir.mkdirs()) {
+            return Result.failure(IllegalStateException(context.getString(R.string.repo_error_sftp_askpass_create_failed)))
+        }
+
+        val askpassScript = File(askpassDir, "ssh-askpass.sh")
+        runCatching {
+            askpassScript.writeText(
+                "#!/system/bin/sh\n" +
+                    "if [ -n \"\$SSHPASS\" ]; then\n" +
+                    "  printf '%s\\n' \"\$SSHPASS\"\n" +
+                    "  exit 0\n" +
+                    "fi\n" +
+                    "exit 1\n"
+            )
+            askpassScript.setExecutable(true, true)
+            askpassDir.setExecutable(true, true)
+        }.onFailure {
+            return Result.failure(IllegalStateException(context.getString(R.string.repo_error_sftp_askpass_create_failed)))
+        }
+
+        val displayValue = baseEnvironmentVariables["DISPLAY"] ?: "restoid:0"
+
+        return Result.success(
+            baseEnvironmentVariables + mapOf(
+                "SSH_ASKPASS" to askpassScript.absolutePath,
+                "SSH_ASKPASS_REQUIRE" to "force",
+                "DISPLAY" to displayValue
+            )
+        )
+    }
+
+    private fun applySftpPasswordResticOptionDefaults(
+        backendType: RepositoryBackendType,
+        options: Map<String, String>,
+        sftpPassword: String?
+    ): Map<String, String> {
+        if (backendType != RepositoryBackendType.SFTP || sftpPassword.isNullOrBlank()) {
+            return options
+        }
+
+        if (!options["sftp.command"].isNullOrBlank()) {
+            return options
+        }
+
+        if (!options["sftp.args"].isNullOrBlank()) {
+            return options
+        }
+
+        return options + mapOf("sftp.args" to defaultSftpSshArgs)
     }
 }
