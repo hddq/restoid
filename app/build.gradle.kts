@@ -93,6 +93,8 @@ val hasReleaseSigning = listOf(
     signingKeyPassword
 ).all { !it.isNullOrBlank() }
 
+val baseAppVersionCode = 7
+
 android {
     namespace = "io.github.hddq.restoid"
     compileSdk = 36
@@ -104,7 +106,7 @@ android {
         applicationId = "io.github.hddq.restoid"
         minSdk = 33
         targetSdk = 36
-        versionCode = 7
+        versionCode = baseAppVersionCode
         versionName = "0.3.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -184,6 +186,24 @@ android {
         jniLibs {
             keepDebugSymbols += "**/*.so"
             useLegacyPackaging = true
+        }
+    }
+}
+
+androidComponents {
+    onVariants { variant ->
+        variant.outputs.forEach { output ->
+            val abi = output.filters
+                .find { it.filterType.name == "ABI" }
+                ?.identifier
+
+            val abiCode = when (abi) {
+                "arm64-v8a" -> 1
+                "x86_64" -> 2
+                else -> 0
+            }
+
+            output.versionCode.set((baseAppVersionCode * 10) + abiCode)
         }
     }
 }
