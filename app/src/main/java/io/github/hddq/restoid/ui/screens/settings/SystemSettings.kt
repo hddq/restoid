@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.RootState
+import io.github.hddq.restoid.ui.screens.settings.components.AppUnlockOnStartRow
 import io.github.hddq.restoid.ui.screens.settings.components.NotificationPermissionRow
 import io.github.hddq.restoid.ui.screens.settings.components.RootRequestRow
 import io.github.hddq.restoid.ui.screens.settings.components.RootStatusRow
@@ -28,6 +29,7 @@ fun SystemSettings(
 ) {
     val rootState by viewModel.rootState.collectAsStateWithLifecycle()
     val notificationPermissionState by viewModel.notificationPermissionState.collectAsStateWithLifecycle()
+    val requireAppUnlock by viewModel.requireAppUnlock.collectAsStateWithLifecycle()
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -73,6 +75,11 @@ fun SystemSettings(
                 state = notificationPermissionState,
                 onRequestPermission = notificationPermissionLauncher,
                 onOpenSettings = onOpenSettings
+            )
+            Divider(color = MaterialTheme.colorScheme.background)
+            AppUnlockOnStartRow(
+                enabled = requireAppUnlock,
+                onCheckedChange = viewModel::onRequireAppUnlockChanged
             )
         }
     }

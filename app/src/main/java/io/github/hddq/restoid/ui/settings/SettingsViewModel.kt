@@ -26,7 +26,8 @@ class SettingsViewModel(
     private val resticBinaryManager: ResticBinaryManager, // Injected Manager
     private val resticRepository: ResticRepository,
     private val repositoriesRepository: RepositoriesRepository,
-    private val notificationRepository: NotificationRepository
+    private val notificationRepository: NotificationRepository,
+    private val preferencesRepository: PreferencesRepository
 ) : ViewModel() {
 
     val rootState = rootRepository.rootState
@@ -44,6 +45,9 @@ class SettingsViewModel(
 
     private val _changePasswordState = MutableStateFlow(ChangePasswordState.Idle)
     val changePasswordState = _changePasswordState.asStateFlow()
+
+    private val _requireAppUnlock = MutableStateFlow(preferencesRepository.loadRequireAppUnlock())
+    val requireAppUnlock = _requireAppUnlock.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -81,6 +85,11 @@ class SettingsViewModel(
 
     fun resetChangePasswordState() { _changePasswordState.value = ChangePasswordState.Idle }
     fun checkNotificationPermission() = notificationRepository.checkPermissionStatus()
+
+    fun onRequireAppUnlockChanged(required: Boolean) {
+        _requireAppUnlock.value = required
+        preferencesRepository.saveRequireAppUnlock(required)
+    }
 
     fun downloadRestic() {
         viewModelScope.launch { resticBinaryManager.downloadAndInstallRestic() }

@@ -21,6 +21,7 @@ securityCrypto = "1.1.0"
 coilCompose = "2.7.0"
 kotlinxSerializationJson = "1.11.0"
 aboutLibraries = "14.0.1"
+biometric = "1.1.0"
 
 [libraries]
 androidx-compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "materialIconsExtended" }
@@ -51,6 +52,7 @@ apache-commons-compress = { group = "org.apache.commons", name = "commons-compre
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coilCompose" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 aboutlibraries-compose = { module = "com.mikepenz:aboutlibraries-compose", version.ref = "aboutLibraries" }
+androidx-biometric = { module = "androidx.biometric:biometric", version.ref = "biometric" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

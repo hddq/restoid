@@ -133,6 +133,9 @@
     <string name="notifications_enabled">Notifications enabled</string>
     <string name="notifications_disabled">Notifications disabled</string>
     <string name="notification_permission">Notification permission</string>
+    <string name="require_app_unlock_on_start">Require app unlock on start</string>
+    <string name="app_unlock_prompt_title">Unlock Restoid</string>
+    <string name="app_unlock_prompt_subtitle">Use fingerprint or screen lock to continue</string>
     <string name="repository_id_short">ID: %1$s…</string>
     <string name="cd_more_options">More options</string>
     <string name="action_forget_password">Forget Password</string>

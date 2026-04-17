@@ -8,6 +8,10 @@ import io.github.hddq.restoid.ui.restore.RestoreTypes
 class PreferencesRepository(context: Context) {
     private val prefs = context.getSharedPreferences("user_preferences", Context.MODE_PRIVATE)
 
+    private companion object {
+        const val KEY_REQUIRE_APP_UNLOCK = "require_app_unlock"
+    }
+
     // Maintenance Preferences
     fun saveMaintenanceState(state: MaintenanceUiState) {
         with(prefs.edit()) {
@@ -92,5 +96,13 @@ class PreferencesRepository(context: Context) {
 
     fun loadAllowDowngrade(): Boolean {
         return prefs.getBoolean("restore_allowDowngrade", false)
+    }
+
+    fun saveRequireAppUnlock(required: Boolean) {
+        prefs.edit().putBoolean(KEY_REQUIRE_APP_UNLOCK, required).apply()
+    }
+
+    fun loadRequireAppUnlock(): Boolean {
+        return prefs.getBoolean(KEY_REQUIRE_APP_UNLOCK, false)
     }
 }

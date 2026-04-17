@@ -1,9 +1,10 @@
 package io.github.hddq.restoid
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -19,6 +20,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -43,12 +46,78 @@ import io.github.hddq.restoid.ui.snapshot.SnapshotDetailsViewModel
 import io.github.hddq.restoid.ui.snapshot.SnapshotDetailsViewModelFactory
 import io.github.hddq.restoid.ui.theme.RestoidTheme
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
+    private companion object {
+        const val STATE_APP_UNLOCKED = "state_app_unlocked"
+    }
+
+    private var isAppUnlocked = false
+    private var isContentInitialized = false
+
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val app = applicationContext as RestoidApplication
+        isAppUnlocked = savedInstanceState?.getBoolean(STATE_APP_UNLOCKED) ?: false
         enableEdgeToEdge()
+
+        if (app.preferencesRepository.loadRequireAppUnlock() && !isAppUnlocked) {
+            authenticateAndLaunch(app)
+            return
+        }
+
+        launchAppContent(app)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean(STATE_APP_UNLOCKED, isAppUnlocked)
+        super.onSaveInstanceState(outState)
+    }
+
+    private fun authenticateAndLaunch(app: RestoidApplication) {
+        val authenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        val canAuthenticate = BiometricManager.from(this).canAuthenticate(authenticators)
+
+        if (canAuthenticate != BiometricManager.BIOMETRIC_SUCCESS) {
+            launchAppContent(app)
+            return
+        }
+
+        val promptInfo = BiometricPrompt.PromptInfo.Builder()
+            .setTitle(getString(R.string.app_unlock_prompt_title))
+            .setSubtitle(getString(R.string.app_unlock_prompt_subtitle))
+            .setAllowedAuthenticators(authenticators)
+            .build()
+
+        val biometricPrompt = BiometricPrompt(
+            this,
+            ContextCompat.getMainExecutor(this),
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    super.onAuthenticationSucceeded(result)
+                    isAppUnlocked = true
+                    launchAppContent(app)
+                }
+
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    super.onAuthenticationError(errorCode, errString)
+                    if (!isFinishing && !isDestroyed) {
+                        finish()
+                    }
+                }
+            }
+        )
+
+        biometricPrompt.authenticate(promptInfo)
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    private fun launchAppContent(app: RestoidApplication) {
+        if (isContentInitialized) {
+            return
+        }
+        isContentInitialized = true
+
         setContent {
             RestoidTheme {
                 val navController = rememberNavController()
@@ -204,7 +273,7 @@ class MainActivity : ComponentActivity() {
                         }
                         composable(Screen.Settings.route) {
                             val vm: SettingsViewModel = viewModel(
-                                factory = SettingsViewModelFactory(app, app.rootRepository, app.resticBinaryManager, app.resticRepository, app.repositoriesRepository, app.notificationRepository)
+                                factory = SettingsViewModelFactory(app, app.rootRepository, app.resticBinaryManager, app.resticRepository, app.repositoriesRepository, app.notificationRepository, app.preferencesRepository)
                             )
                             SettingsScreen(viewModel = vm, onNavigateToLicenses = { navController.navigate(Screen.Licenses.route) })
                         }
