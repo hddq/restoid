@@ -125,6 +125,8 @@
     <string name="label_environment_variables">Environment variables</string>
     <string name="placeholder_environment_variables">KEY=value (one per line)</string>
     <string name="label_sftp_password">SFTP password</string>
+    <string name="label_trust_sftp_server">Trust this SFTP server</string>
+    <string name="summary_trust_sftp_server">Store and pin the server host key in app storage on first connection.</string>
 
     <string name="repo_backend_local">Local directory</string>
     <string name="repo_backend_sftp">SFTP (SSH)</string>
@@ -301,6 +303,8 @@
     <string name="repo_error_sftp_password_setup_failed">Failed to configure SFTP password authentication.</string>
     <string name="repo_error_sftp_ssh_binary_not_found">SSH binary was not found on this device.</string>
     <string name="repo_error_sftp_askpass_create_failed">Failed to create SSH askpass helper script.</string>
+    <string name="repo_error_sftp_server_trust_required">Please confirm that you trust this SFTP server.</string>
+    <string name="repo_error_sftp_known_hosts_setup_failed">Failed to prepare SSH known hosts storage.</string>
 
     <string name="restic_unknown_version">Unknown version</string>
     <string name="restic_unknown">unknown</string>

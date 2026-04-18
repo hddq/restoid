@@ -29,6 +29,7 @@ fun AddRepositoryDialog(
     onPathChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onSftpPasswordChange: (String) -> Unit,
+    onTrustSftpServerChange: (Boolean) -> Unit,
     onEnvironmentVariablesChange: (String) -> Unit,
     onSavePasswordChange: (Boolean) -> Unit,
     onConfirm: () -> Unit,
@@ -38,6 +39,10 @@ fun AddRepositoryDialog(
     var sftpPasswordVisible by remember { mutableStateOf(false) }
     var backendExpanded by remember { mutableStateOf(false) }
     val isBusy = uiState.state is AddRepositoryState.Initializing
+    val canConfirm = !isBusy &&
+        uiState.path.isNotBlank() &&
+        uiState.password.isNotBlank() &&
+        (uiState.backendType != RepositoryBackendType.SFTP || uiState.trustSftpServer)
 
     val backendOptions = listOf(
         RepositoryBackendType.LOCAL,
@@ -183,6 +188,28 @@ fun AddRepositoryDialog(
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !isBusy
                     )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = uiState.trustSftpServer,
+                            onCheckedChange = onTrustSftpServerChange,
+                            enabled = !isBusy
+                        )
+                        Column(
+                            modifier = Modifier
+                                .clickable(enabled = !isBusy, onClick = { onTrustSftpServerChange(!uiState.trustSftpServer) })
+                                .padding(end = 8.dp)
+                        ) {
+                            Text(text = stringResource(R.string.label_trust_sftp_server))
+                            Text(
+                                text = stringResource(R.string.summary_trust_sftp_server),
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
                 }
 
                 if (uiState.backendType != RepositoryBackendType.LOCAL) {
@@ -225,7 +252,7 @@ fun AddRepositoryDialog(
         confirmButton = {
             Button(
                 onClick = onConfirm,
-                enabled = !isBusy && uiState.path.isNotBlank() && uiState.password.isNotBlank()
+                enabled = canConfirm
             ) {
                 if (isBusy) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)

@@ -16,6 +16,7 @@ data class AddRepoUiState(
     val path: String = "",
     val password: String = "",
     val sftpPassword: String = "",
+    val trustSftpServer: Boolean = false,
     val environmentVariablesRaw: String = "",
     val savePassword: Boolean = true,
     val showDialog: Boolean = false,
@@ -128,6 +129,7 @@ class SettingsViewModel(
                 backendType = backendType,
                 path = "",
                 sftpPassword = "",
+                trustSftpServer = false,
                 environmentVariablesRaw = "",
                 state = AddRepositoryState.Idle
             )
@@ -137,6 +139,7 @@ class SettingsViewModel(
     fun onNewRepoPathChanged(path: String) = _addRepoUiState.update { it.copy(path = path) }
     fun onNewRepoPasswordChanged(password: String) = _addRepoUiState.update { it.copy(password = password) }
     fun onNewRepoSftpPasswordChanged(password: String) = _addRepoUiState.update { it.copy(sftpPassword = password) }
+    fun onTrustSftpServerChanged(trust: Boolean) = _addRepoUiState.update { it.copy(trustSftpServer = trust) }
     fun onNewRepoEnvironmentVariablesChanged(raw: String) = _addRepoUiState.update { it.copy(environmentVariablesRaw = raw) }
     fun onSavePasswordChanged(save: Boolean) = _addRepoUiState.update { it.copy(savePassword = save) }
     fun onNewRepoDialogDismiss() { _addRepoUiState.value = AddRepoUiState() }
@@ -156,12 +159,20 @@ class SettingsViewModel(
         val path = addRepoUiState.value.path.trim()
         val password = addRepoUiState.value.password
         val sftpPassword = addRepoUiState.value.sftpPassword
+        val trustSftpServer = addRepoUiState.value.trustSftpServer
         val savePassword = addRepoUiState.value.savePassword
         val backendType = addRepoUiState.value.backendType
         val envParseResult = parseEnvironmentVariables(addRepoUiState.value.environmentVariablesRaw)
 
         if (path.isBlank() || password.isBlank()) {
             _addRepoUiState.update { it.copy(state = AddRepositoryState.Error(context.getString(R.string.settings_error_path_password_empty))) }
+            return
+        }
+
+        if (backendType == RepositoryBackendType.SFTP && !trustSftpServer) {
+            _addRepoUiState.update {
+                it.copy(state = AddRepositoryState.Error(context.getString(R.string.repo_error_sftp_server_trust_required)))
+            }
             return
         }
 
@@ -188,6 +199,7 @@ class SettingsViewModel(
                 environmentVariables = environmentVariables,
                 resticOptions = emptyMap(),
                 sftpPassword = sftpPassword,
+                trustSftpServer = trustSftpServer,
                 resticRepository = resticRepository,
                 savePassword = savePassword
             )

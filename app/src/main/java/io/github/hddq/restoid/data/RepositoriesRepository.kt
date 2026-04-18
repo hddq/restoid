@@ -42,7 +42,6 @@ class RepositoriesRepository(
     val selectedRepository = _selectedRepository.asStateFlow()
 
     private val json = Json { ignoreUnknownKeys = true }
-    private val defaultSftpSshArgs = "-o BatchMode=no -o StrictHostKeyChecking=accept-new -o ConnectTimeout=15 -o PreferredAuthentications=password,keyboard-interactive -o NumberOfPasswordPrompts=1"
 
     fun loadRepositories() {
         val reposV2 = prefs.getStringSet(REPOS_KEY, null)
@@ -119,22 +118,33 @@ class RepositoriesRepository(
             null
         }
 
-        return if (sftpPassword.isNullOrBlank()) {
-            repository.environmentVariables
+        val environmentWithDefaults = if (repository.backendType == RepositoryBackendType.SFTP) {
+            applySftpClientEnvironmentDefaults(repository.environmentVariables)
         } else {
-            repository.environmentVariables + mapOf("SSHPASS" to sftpPassword)
+            repository.environmentVariables
+        }
+
+        return if (sftpPassword.isNullOrBlank()) {
+            environmentWithDefaults
+        } else {
+            environmentWithDefaults + mapOf("SSHPASS" to sftpPassword)
         }
     }
 
     fun getExecutionResticOptions(key: String): Map<String, String> {
         val repository = getRepositoryByKey(key) ?: return emptyMap()
-        val sftpPassword = if (repository.backendType == RepositoryBackendType.SFTP) {
-            getSftpPassword(key)
+        val knownHostsFile = if (repository.backendType == RepositoryBackendType.SFTP) {
+            ensureSftpKnownHostsFile().getOrNull()
         } else {
             null
         }
 
-        return applySftpPasswordResticOptionDefaults(repository.backendType, repository.resticOptions, sftpPassword)
+        return applySftpResticOptionDefaults(
+            backendType = repository.backendType,
+            options = repository.resticOptions,
+            knownHostsFile = knownHostsFile,
+            strictHostKeyCheckingValue = "yes"
+        )
     }
 
     fun getRepositoryByKey(key: String): LocalRepository? {
@@ -176,6 +186,7 @@ class RepositoriesRepository(
         environmentVariables: Map<String, String>,
         resticOptions: Map<String, String>,
         sftpPassword: String,
+        trustSftpServer: Boolean,
         resticRepository: ResticRepository,
         savePassword: Boolean
     ): AddRepositoryState {
@@ -187,19 +198,53 @@ class RepositoriesRepository(
                 normalizedPath
             }
 
-            val persistedResticOptions = applySftpPasswordResticOptionDefaults(backendType, resticOptions, sftpPassword)
+            if (backendType == RepositoryBackendType.SFTP && !trustSftpServer) {
+                return@withContext AddRepositoryState.Error(context.getString(R.string.repo_error_sftp_server_trust_required))
+            }
 
-            val persistedEnvironmentVariables = if (backendType == RepositoryBackendType.SFTP && sftpPassword.isNotBlank()) {
-                val envResult = prepareSftpPasswordEnvironment(environmentVariables)
-                if (envResult.isFailure) {
+            val knownHostsFile = if (backendType == RepositoryBackendType.SFTP) {
+                val knownHostsResult = ensureSftpKnownHostsFile()
+                if (knownHostsResult.isFailure) {
                     return@withContext AddRepositoryState.Error(
-                        envResult.exceptionOrNull()?.message
-                            ?: context.getString(R.string.repo_error_sftp_password_setup_failed)
+                        knownHostsResult.exceptionOrNull()?.message
+                            ?: context.getString(R.string.repo_error_sftp_known_hosts_setup_failed)
                     )
                 }
-                envResult.getOrThrow()
+                knownHostsResult.getOrThrow()
             } else {
-                environmentVariables
+                null
+            }
+
+            val persistedResticOptions = applySftpResticOptionDefaults(
+                backendType = backendType,
+                options = resticOptions,
+                knownHostsFile = knownHostsFile,
+                strictHostKeyCheckingValue = "yes"
+            )
+            val executionResticOptions = if (backendType == RepositoryBackendType.SFTP && trustSftpServer) {
+                applySftpResticOptionDefaults(
+                    backendType = backendType,
+                    options = resticOptions,
+                    knownHostsFile = knownHostsFile,
+                    strictHostKeyCheckingValue = "accept-new"
+                )
+            } else {
+                persistedResticOptions
+            }
+
+            val persistedEnvironmentVariables = when {
+                backendType == RepositoryBackendType.SFTP && sftpPassword.isNotBlank() -> {
+                    val envResult = prepareSftpPasswordEnvironment(environmentVariables)
+                    if (envResult.isFailure) {
+                        return@withContext AddRepositoryState.Error(
+                            envResult.exceptionOrNull()?.message
+                                ?: context.getString(R.string.repo_error_sftp_password_setup_failed)
+                        )
+                    }
+                    envResult.getOrThrow()
+                }
+                backendType == RepositoryBackendType.SFTP -> applySftpClientEnvironmentDefaults(environmentVariables)
+                else -> environmentVariables
             }
 
             val executionEnvironmentVariables = if (backendType == RepositoryBackendType.SFTP && sftpPassword.isNotBlank()) {
@@ -233,7 +278,7 @@ class RepositoriesRepository(
             val wasEmpty = repositories.value.isEmpty()
             val passwordFile = File.createTempFile("restic-pass", ".tmp", context.cacheDir)
             val envPrefix = buildShellEnvironmentPrefix(executionEnvironmentVariables)
-            val resticOptionFlags = buildResticOptionFlags(persistedResticOptions)
+            val resticOptionFlags = buildResticOptionFlags(executionResticOptions)
 
             try {
                 passwordFile.writeText(password)
@@ -501,10 +546,11 @@ class RepositoriesRepository(
             return Result.failure(IllegalStateException(context.getString(R.string.repo_error_sftp_askpass_create_failed)))
         }
 
-        val displayValue = baseEnvironmentVariables["DISPLAY"] ?: "restoid:0"
+        val environmentWithDefaults = applySftpClientEnvironmentDefaults(baseEnvironmentVariables)
+        val displayValue = environmentWithDefaults["DISPLAY"] ?: "restoid:0"
 
         return Result.success(
-            baseEnvironmentVariables + mapOf(
+            environmentWithDefaults + mapOf(
                 "SSH_ASKPASS" to askpassScript.absolutePath,
                 "SSH_ASKPASS_REQUIRE" to "force",
                 "DISPLAY" to displayValue
@@ -512,12 +558,62 @@ class RepositoriesRepository(
         )
     }
 
-    private fun applySftpPasswordResticOptionDefaults(
+    private fun applySftpClientEnvironmentDefaults(baseEnvironmentVariables: Map<String, String>): Map<String, String> {
+        val result = linkedMapOf<String, String>()
+        result.putAll(baseEnvironmentVariables)
+
+        if (result["HOME"].isNullOrBlank()) {
+            result["HOME"] = context.filesDir.absolutePath
+        }
+        if (result["TMPDIR"].isNullOrBlank()) {
+            result["TMPDIR"] = context.cacheDir.absolutePath
+        }
+
+        return result
+    }
+
+    private fun ensureSftpKnownHostsFile(): Result<File> {
+        val sshDir = File(context.filesDir, "ssh")
+        val knownHostsFile = File(sshDir, "known_hosts")
+
+        return runCatching {
+            if (!sshDir.exists() && !sshDir.mkdirs()) {
+                throw IllegalStateException(context.getString(R.string.repo_error_sftp_known_hosts_setup_failed))
+            }
+            if (!knownHostsFile.exists() && !knownHostsFile.createNewFile()) {
+                throw IllegalStateException(context.getString(R.string.repo_error_sftp_known_hosts_setup_failed))
+            }
+
+            sshDir.setExecutable(true, true)
+            sshDir.setReadable(true, true)
+            sshDir.setWritable(true, true)
+            knownHostsFile.setReadable(true, true)
+            knownHostsFile.setWritable(true, true)
+
+            knownHostsFile
+        }
+    }
+
+    private fun buildDefaultSftpSshArgs(
+        knownHostsFile: File,
+        strictHostKeyCheckingValue: String
+    ): String {
+        return "-o BatchMode=no " +
+            "-o StrictHostKeyChecking=$strictHostKeyCheckingValue " +
+            "-o UserKnownHostsFile=${knownHostsFile.absolutePath} " +
+            "-o GlobalKnownHostsFile=/dev/null " +
+            "-o ConnectTimeout=15 " +
+            "-o PreferredAuthentications=password,keyboard-interactive " +
+            "-o NumberOfPasswordPrompts=1"
+    }
+
+    private fun applySftpResticOptionDefaults(
         backendType: RepositoryBackendType,
         options: Map<String, String>,
-        sftpPassword: String?
+        knownHostsFile: File?,
+        strictHostKeyCheckingValue: String
     ): Map<String, String> {
-        if (backendType != RepositoryBackendType.SFTP || sftpPassword.isNullOrBlank()) {
+        if (backendType != RepositoryBackendType.SFTP) {
             return options
         }
 
@@ -529,6 +625,15 @@ class RepositoriesRepository(
             return options
         }
 
-        return options + mapOf("sftp.args" to defaultSftpSshArgs)
+        if (knownHostsFile == null) {
+            return options
+        }
+
+        return options + mapOf(
+            "sftp.args" to buildDefaultSftpSshArgs(
+                knownHostsFile = knownHostsFile,
+                strictHostKeyCheckingValue = strictHostKeyCheckingValue
+            )
+        )
     }
 }
