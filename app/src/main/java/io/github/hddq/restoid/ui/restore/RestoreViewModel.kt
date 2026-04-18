@@ -506,8 +506,22 @@ class RestoreViewModel(
                 val finalElapsedTime = (System.currentTimeMillis() - startTime) / 1000
                 val summary = buildString {
                     append(application.getString(R.string.restore_summary_finished_in, formatElapsedTime(finalElapsedTime)))
-                    append(application.getString(R.string.restore_summary_processed, successes))
-                    if (failures > 0) append(application.getString(R.string.restore_summary_failed, failures))
+                    append(
+                        application.resources.getQuantityString(
+                            R.plurals.restore_summary_processed,
+                            successes,
+                            successes
+                        )
+                    )
+                    if (failures > 0) {
+                        append(
+                            application.resources.getQuantityString(
+                                R.plurals.restore_summary_failed,
+                                failures,
+                                failures
+                            )
+                        )
+                    }
                     if (failureDetails.isNotEmpty()) append(application.getString(R.string.restore_summary_details, failureDetails.joinToString("\n- ")))
                 }
 

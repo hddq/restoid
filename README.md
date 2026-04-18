@@ -4,6 +4,14 @@ A modern, root-based Android backup tool powered by [`restic`](https://github.co
 
 Restoid gives you control over your app backups through a clean and simple user interface. It's built for users who want robust, encrypted, and deduplicated backups.
 
+## 📸 Screenshots
+
+<p align="center">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.png" alt="Restoid app screenshot 1" width="30%" />&nbsp;&nbsp;
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.png" alt="Restoid app screenshot 2" width="30%" />&nbsp;&nbsp;
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.png" alt="Restoid app screenshot 3" width="30%" />
+</p>
+
 ## 🚧 Project Status
 
 **This is an early beta release.** The application is functional, but you may encounter bugs. The codebase is a work-in-progress and is undergoing active development and refactoring. Feedback, bug reports, and contributions are highly encouraged!

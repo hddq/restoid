@@ -50,10 +50,16 @@
     <string name="restic_not_available_check_settings">Restic not available. Check settings.</string>
     <string name="error_with_message">Error: %1$s</string>
     <string name="no_snapshots_found_for_repository">No snapshots found for the selected repository.</string>
-    <string name="snapshots_count">Snapshots (%1$d)</string>
+    <plurals name="snapshots_count">
+        <item quantity="one">Snapshot (%1$d)</item>
+        <item quantity="other">Snapshots (%1$d)</item>
+    </plurals>
     <string name="repository_password_required">Repository Password Required</string>
     <string name="enter_password_for_repository">Please enter the password for repository: %1$s</string>
-    <string name="apps_count">Apps (%1$d):</string>
+    <plurals name="apps_count">
+        <item quantity="one">App (%1$d):</item>
+        <item quantity="other">Apps (%1$d):</item>
+    </plurals>
     <string name="paths_preview">Paths: %1$s…</string>
     <string name="no_app_info_for_snapshot">No app information available for this snapshot.</string>
 
@@ -70,7 +76,10 @@
     <string name="maintenance_check_options">Check Options</string>
     <string name="maintenance_read_all_data">Read all data</string>
 
-    <string name="snapshot_backed_up_apps_count">Backed up Apps (%1$d)</string>
+    <plurals name="snapshot_backed_up_apps_count">
+        <item quantity="one">Backed up App (%1$d)</item>
+        <item quantity="other">Backed up Apps (%1$d)</item>
+    </plurals>
     <string name="snapshot_backed_up_paths">Backed up paths:</string>
     <string name="snapshot_not_found">No snapshot found.</string>
     <string name="snapshot_forgetting">Forgetting snapshot…</string>
@@ -202,7 +211,10 @@
     <string name="backup_error_no_files_selected">No files found to back up for the selected apps.</string>
     <string name="backup_error_command_failed_with_code">Restic command failed with exit code %1$d.</string>
     <string name="backup_warning_metadata_not_saved">Warning: Could not save backup metadata file locally.</string>
-    <string name="backup_summary_success">Backed up %1$d app(s).</string>
+    <plurals name="backup_summary_success">
+        <item quantity="one">Backed up %1$d app.</item>
+        <item quantity="other">Backed up %1$d apps.</item>
+    </plurals>
 
     <string name="error_fatal_with_message">A fatal error occurred: %1$s</string>
     <string name="error_no_apps_selected">No apps selected.</string>
@@ -237,8 +249,14 @@
     <string name="restore_failure_permissions_app_not_installed">%1$s: Failed to restore permissions because the app is not installed.</string>
     <string name="restore_failure_permissions_partial">%1$s: Failed to restore some permissions: %2$s</string>
     <string name="restore_summary_finished_in">Restore finished in %1$s. </string>
-    <string name="restore_summary_processed">Successfully processed %1$d app(s).</string>
-    <string name="restore_summary_failed"> Failed to restore %1$d app(s).</string>
+    <plurals name="restore_summary_processed">
+        <item quantity="one">Successfully processed %1$d app.</item>
+        <item quantity="other">Successfully processed %1$d apps.</item>
+    </plurals>
+    <plurals name="restore_summary_failed">
+        <item quantity="one"> Failed to restore %1$d app.</item>
+        <item quantity="other"> Failed to restore %1$d apps.</item>
+    </plurals>
     <string name="restore_summary_details">\n\nDetails:\n- %1$s</string>
 
     <string name="maintenance_task_unlock">Unlock</string>
@@ -265,7 +283,10 @@
     <string name="channel_completed_operations">Completed Operations</string>
     <string name="channel_ongoing_description">Shows ongoing backup and restore progress silently.</string>
     <string name="channel_completed_description">Alerts when a backup or restore has finished.</string>
-    <string name="notification_files_progress">%1$d/%2$d files</string>
+    <plurals name="notification_files_progress">
+        <item quantity="one">%1$d/%2$d file</item>
+        <item quantity="other">%1$d/%2$d files</item>
+    </plurals>
     <string name="notification_scanning_files">Scanning files…</string>
     <string name="notification_operation_finished_success">%1$s finished successfully</string>
     <string name="notification_operation_finished_failure">%1$s failed</string>
@@ -307,7 +328,15 @@
     <string name="restic_stage_restoring_files">Restoring files…</string>
     <string name="restic_stage_backing_up">Backing up…</string>
     <string name="restic_stage_finishing">Finishing…</string>
-    <string name="restic_summary_added">Added %1$s (%2$d new, %3$d changed files) in %4$s.</string>
+    <string name="restic_summary_added">Added %1$s (%2$s, %3$s) in %4$s.</string>
+    <plurals name="restic_summary_new_files">
+        <item quantity="one">%1$d new file</item>
+        <item quantity="other">%1$d new files</item>
+    </plurals>
+    <plurals name="restic_summary_changed_files">
+        <item quantity="one">%1$d changed file</item>
+        <item quantity="other">%1$d changed files</item>
+    </plurals>
 
     <string name="restic_executor_failure_command">Restic command failed</string>
     <string name="restic_executor_failure_not_ready">Restic is not installed or ready.</string>
@@ -315,7 +344,10 @@
     <string name="restic_executor_failure_invalid_option_name">One or more restic option names are invalid.</string>
 
     <string name="maintenance_summary_prune_completed">Prune operation completed.</string>
-    <string name="maintenance_summary_removed_snapshots">Removed %1$s snapshot(s).</string>
+    <plurals name="maintenance_summary_removed_snapshots">
+        <item quantity="one">Removed %1$d snapshot.</item>
+        <item quantity="other">Removed %1$d snapshots.</item>
+    </plurals>
     <string name="maintenance_summary_no_snapshots_removed">No snapshots matched the policy to be removed.</string>
     <string name="maintenance_summary_check_completed">Check operation completed.</string>
     <string name="maintenance_summary_unlock_finished">Unlock operation finished.</string>

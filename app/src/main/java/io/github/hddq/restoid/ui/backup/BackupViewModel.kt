@@ -216,7 +216,12 @@ class BackupViewModel(
                 updateProgress(stage3Title, 1.0f, 1.0f, startTime)
 
                 isSuccess = true
-                summary = finalSummaryProgress?.finalSummary ?: application.getString(R.string.backup_summary_success, selectedApps.size)
+                summary = finalSummaryProgress?.finalSummary
+                    ?: application.resources.getQuantityString(
+                        R.plurals.backup_summary_success,
+                        selectedApps.size,
+                        selectedApps.size
+                    )
 
             } catch (e: Exception) {
                 isSuccess = false

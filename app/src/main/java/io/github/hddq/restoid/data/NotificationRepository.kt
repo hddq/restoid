@@ -76,7 +76,12 @@ class NotificationRepository(private val context: Context) {
         val percentage = (progress.stagePercentage * 100).toInt()
         val processedSize = Formatter.formatFileSize(context, progress.bytesProcessed)
         val totalSize = Formatter.formatFileSize(context, progress.totalBytes)
-        val filesText = context.getString(R.string.notification_files_progress, progress.filesProcessed, progress.totalFiles)
+        val filesText = context.resources.getQuantityString(
+            R.plurals.notification_files_progress,
+            progress.totalFiles,
+            progress.filesProcessed,
+            progress.totalFiles
+        )
 
         val contentText = if (progress.totalFiles > 0) {
             "$filesText | $processedSize / $totalSize"

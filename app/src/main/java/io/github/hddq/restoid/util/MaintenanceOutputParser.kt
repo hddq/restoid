@@ -46,8 +46,12 @@ object MaintenanceOutputParser {
         for (line in lines) {
             val match = removeSummaryRegex.find(line)
             if (match != null) {
-                val count = match.groupValues[1]
-                return context.getString(R.string.maintenance_summary_removed_snapshots, count)
+                val count = match.groupValues[1].toIntOrNull() ?: 0
+                return context.resources.getQuantityString(
+                    R.plurals.maintenance_summary_removed_snapshots,
+                    count,
+                    count
+                )
             }
         }
 
@@ -64,7 +68,11 @@ object MaintenanceOutputParser {
         // Fallback 2: If no summary line, count the individual 'remove snapshot' lines.
         val removedCount = lines.count { it.startsWith("remove snapshot", ignoreCase = true) }
         if (removedCount > 0) {
-            return context.getString(R.string.maintenance_summary_removed_snapshots, removedCount.toString())
+            return context.resources.getQuantityString(
+                R.plurals.maintenance_summary_removed_snapshots,
+                removedCount,
+                removedCount
+            )
         }
 
         // Fallback 3: Look for an explicit "no snapshots were removed" message.

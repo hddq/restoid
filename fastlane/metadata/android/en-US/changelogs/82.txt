@@ -1,0 +1,3 @@
+- Added biometric authentication: You can now lock the app and require fingerprint unlock to open it
+- Implemented ABI-specific version codes
+- Added Fastlane metadata

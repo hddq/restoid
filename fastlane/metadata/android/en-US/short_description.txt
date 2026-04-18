@@ -1,0 +1,1 @@
+A modern, root-based Android app backup tool powered by restic
