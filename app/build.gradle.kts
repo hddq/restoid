@@ -93,7 +93,7 @@ val hasReleaseSigning = listOf(
     signingKeyPassword
 ).all { !it.isNullOrBlank() }
 
-val baseAppVersionCode = 7
+val baseAppVersionCode = 8
 
 android {
     namespace = "io.github.hddq.restoid"
@@ -106,8 +106,8 @@ android {
         applicationId = "io.github.hddq.restoid"
         minSdk = 33
         targetSdk = 36
-        versionCode = baseAppVersionCode
-        versionName = "0.3.4"
+        versionCode = 8
+        versionName = "0.3.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
