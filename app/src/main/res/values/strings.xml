@@ -279,6 +279,10 @@
     <string name="maintenance_summary_no_tasks">No maintenance tasks were selected.</string>
 
     <string name="home_error_repository_id_not_found">Repository ID not found</string>
+    <string name="home_error_repository_password_incorrect">Repository password is incorrect.</string>
+    <string name="home_error_sftp_password_incorrect">SFTP password is incorrect.</string>
+    <string name="action_enter_password_again">Enter password again</string>
+    <string name="action_enter_sftp_password_again">Enter SFTP password again</string>
     <string name="settings_error_path_password_empty">Path and password cannot be empty.</string>
     <string name="settings_error_invalid_environment_variables">Invalid environment variables.</string>
     <string name="settings_error_invalid_environment_line">Invalid environment variable format at line %1$d. Use KEY=value.</string>

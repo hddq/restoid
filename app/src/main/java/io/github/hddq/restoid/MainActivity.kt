@@ -269,6 +269,8 @@ class MainActivity : FragmentActivity() {
                                 onRefresh = { vm.refreshSnapshots() },
                                 onPasswordEntered = { p, s -> vm.onPasswordEntered(p, s) },
                                 onSftpPasswordEntered = { p, s -> vm.onSftpPasswordEntered(p, s) },
+                                onRetryRepositoryPasswordEntry = { vm.onRetryRepositoryPasswordEntry() },
+                                onRetrySftpPasswordEntry = { vm.onRetrySftpPasswordEntry() },
                                 onDismissPasswordDialog = { vm.onDismissPasswordDialog() },
                                 onDismissSftpPasswordDialog = { vm.onDismissSftpPasswordDialog() }
                             )

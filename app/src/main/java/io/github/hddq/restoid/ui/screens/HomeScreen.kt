@@ -27,6 +27,7 @@ import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.ui.components.PasswordDialog
+import io.github.hddq.restoid.ui.home.HomeAuthFailure
 import io.github.hddq.restoid.ui.home.HomeUiState
 import io.github.hddq.restoid.ui.home.SnapshotWithMetadata
 
@@ -39,6 +40,8 @@ fun HomeScreen(
     onRefresh: () -> Unit,
     onPasswordEntered: (String, Boolean) -> Unit,
     onSftpPasswordEntered: (String, Boolean) -> Unit,
+    onRetryRepositoryPasswordEntry: () -> Unit,
+    onRetrySftpPasswordEntry: () -> Unit,
     onDismissPasswordDialog: () -> Unit,
     onDismissSftpPasswordDialog: () -> Unit,
     modifier: Modifier = Modifier
@@ -104,12 +107,31 @@ fun HomeScreen(
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                     }
                     uiState.error != null -> {
+                        val errorMessage = uiState.error
                         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                             Text(
-                                text = stringResource(R.string.error_with_message, uiState.error ?: ""),
+                                text = stringResource(R.string.error_with_message, errorMessage),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.error
                             )
+
+                            when (uiState.authFailure) {
+                                HomeAuthFailure.REPOSITORY_PASSWORD -> {
+                                    Spacer(Modifier.height(12.dp))
+                                    Button(onClick = onRetryRepositoryPasswordEntry) {
+                                        Text(stringResource(R.string.action_enter_password_again))
+                                    }
+                                }
+
+                                HomeAuthFailure.SFTP_PASSWORD -> {
+                                    Spacer(Modifier.height(12.dp))
+                                    Button(onClick = onRetrySftpPasswordEntry) {
+                                        Text(stringResource(R.string.action_enter_sftp_password_again))
+                                    }
+                                }
+
+                                null -> Unit
+                            }
                         }
                     }
                     uiState.snapshotsWithMetadata.isEmpty() -> {
