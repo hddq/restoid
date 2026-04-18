@@ -36,7 +36,7 @@ class RestoidApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        Shell.enableVerboseLogging = true
+        Shell.enableVerboseLogging = BuildConfig.DEBUG
         Shell.setDefaultBuilder(
             Shell.Builder.create()
                 .setFlags(Shell.FLAG_MOUNT_MASTER)
