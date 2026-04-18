@@ -25,6 +25,7 @@ data class HomeUiState(
     val selectedRepo: String? = null,
     val resticState: ResticState = ResticState.Idle,
     val showPasswordDialogFor: String? = null,
+    val showSftpPasswordDialogFor: String? = null,
     val hasPasswordForSelectedRepo: Boolean = false
 )
 
@@ -60,8 +61,19 @@ class HomeViewModel(
             val env = repoKey?.let { repositoriesRepository.getExecutionEnvironmentVariables(it) }.orEmpty()
             val resticOptions = repoKey?.let { repositoriesRepository.getExecutionResticOptions(it) }.orEmpty()
 
-            val hasPassword = repoKey?.let { repositoriesRepository.hasRepositoryPassword(it) } ?: false
-            _uiState.update { it.copy(selectedRepo = repoKey, resticState = restic, hasPasswordForSelectedRepo = hasPassword) }
+            val hasRepositoryPassword = repoKey?.let { repositoriesRepository.hasRepositoryPassword(it) } ?: false
+            val hasSftpPassword = if (selectedRepository?.backendType == RepositoryBackendType.SFTP) {
+                repositoriesRepository.hasSftpPassword(repositoriesRepository.repositoryKey(selectedRepository))
+            } else {
+                true
+            }
+            _uiState.update {
+                it.copy(
+                    selectedRepo = repoKey,
+                    resticState = restic,
+                    hasPasswordForSelectedRepo = hasRepositoryPassword && hasSftpPassword
+                )
+            }
 
             if (repoPath == null || restic !is ResticState.Installed) {
                 resticRepository.clearSnapshots()
@@ -119,24 +131,41 @@ class HomeViewModel(
             }
 
         viewModelScope.launch {
-            if (repository.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpPassword(repoKey)) {
+            if (!repositoriesRepository.hasRepositoryPassword(repoKey)) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        error = context.getString(R.string.error_sftp_password_not_found_for_repository)
+                        error = null,
+                        showPasswordDialogFor = repoKey,
+                        showSftpPasswordDialogFor = null
                     )
                 }
                 return@launch
             }
 
-            if (repositoriesRepository.hasRepositoryPassword(repoKey)) {
-                val password = repositoriesRepository.getRepositoryPassword(repoKey)!!
-                val result = resticRepository.getSnapshots(repoPath, password, environmentVariables, resticOptions)
-                if (result.isFailure) {
-                    _uiState.update { it.copy(error = result.exceptionOrNull()?.message, isLoading = false) }
+            if (repository.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpPassword(repoKey)) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = null,
+                        showPasswordDialogFor = null,
+                        showSftpPasswordDialogFor = repoKey
+                    )
                 }
-            } else {
-                _uiState.update { it.copy(isLoading = false, showPasswordDialogFor = repoKey) }
+                return@launch
+            }
+
+            val password = repositoriesRepository.getRepositoryPassword(repoKey)!!
+            val result = resticRepository.getSnapshots(repoPath, password, environmentVariables, resticOptions)
+            if (result.isFailure) {
+                _uiState.update {
+                    it.copy(
+                        error = result.exceptionOrNull()?.message,
+                        isLoading = false,
+                        showPasswordDialogFor = null,
+                        showSftpPasswordDialogFor = null
+                    )
+                }
             }
         }
     }
@@ -152,11 +181,25 @@ class HomeViewModel(
         val resticOptions = repositoriesRepository.getExecutionResticOptions(repoKey)
 
         if (repoPath == null) return
+        if (!repositoriesRepository.hasRepositoryPassword(repoKey)) {
+            _uiState.update {
+                it.copy(
+                    isRefreshing = false,
+                    error = null,
+                    showPasswordDialogFor = repoKey,
+                    showSftpPasswordDialogFor = null
+                )
+            }
+            return
+        }
+
         if (repository.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpPassword(repoKey)) {
             _uiState.update {
                 it.copy(
                     isRefreshing = false,
-                    error = context.getString(R.string.error_sftp_password_not_found_for_repository)
+                    error = null,
+                    showPasswordDialogFor = null,
+                    showSftpPasswordDialogFor = repoKey
                 )
             }
             return
@@ -165,16 +208,12 @@ class HomeViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isRefreshing = true, error = null) }
             try {
-                if (repositoriesRepository.hasRepositoryPassword(repoKey)) {
-                    val password = repositoriesRepository.getRepositoryPassword(repoKey)!!
-                    val result = resticRepository.getSnapshots(repoPath, password, environmentVariables, resticOptions)
-                    if (result.isFailure) {
-                        _uiState.update { it.copy(error = result.exceptionOrNull()?.message) }
-                    } else {
-                        refreshTrigger.update { it + 1 }
-                    }
+                val password = repositoriesRepository.getRepositoryPassword(repoKey)!!
+                val result = resticRepository.getSnapshots(repoPath, password, environmentVariables, resticOptions)
+                if (result.isFailure) {
+                    _uiState.update { it.copy(error = result.exceptionOrNull()?.message) }
                 } else {
-                    _uiState.update { it.copy(showPasswordDialogFor = repoKey) }
+                    refreshTrigger.update { it + 1 }
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message) }
@@ -208,7 +247,14 @@ class HomeViewModel(
     fun onPasswordEntered(password: String, save: Boolean) {
         val repoKey = _uiState.value.showPasswordDialogFor ?: return
         val repository = repositoriesRepository.getRepositoryByKey(repoKey) ?: return
-        _uiState.update { it.copy(showPasswordDialogFor = null, isLoading = true, error = null) }
+        _uiState.update {
+            it.copy(
+                showPasswordDialogFor = null,
+                showSftpPasswordDialogFor = null,
+                isLoading = true,
+                error = null
+            )
+        }
 
         if (save) repositoriesRepository.saveRepositoryPassword(repoKey, password)
         else repositoriesRepository.saveRepositoryPasswordTemporary(repoKey, password)
@@ -223,6 +269,46 @@ class HomeViewModel(
     }
 
     fun onDismissPasswordDialog() {
-        _uiState.update { it.copy(showPasswordDialogFor = null, isLoading = false) }
+        _uiState.update {
+            it.copy(
+                showPasswordDialogFor = null,
+                showSftpPasswordDialogFor = null,
+                isLoading = false
+            )
+        }
+    }
+
+    fun onSftpPasswordEntered(password: String, save: Boolean) {
+        val repoKey = _uiState.value.showSftpPasswordDialogFor ?: return
+        val repository = repositoriesRepository.getRepositoryByKey(repoKey) ?: return
+        _uiState.update {
+            it.copy(
+                showSftpPasswordDialogFor = null,
+                showPasswordDialogFor = null,
+                isLoading = true,
+                error = null
+            )
+        }
+
+        if (save) repositoriesRepository.saveSftpPassword(repoKey, password)
+        else repositoriesRepository.saveSftpPasswordTemporary(repoKey, password)
+
+        loadSnapshots(
+            repository.path,
+            repositoriesRepository.getExecutionEnvironmentVariables(repoKey),
+            repositoriesRepository.getExecutionResticOptions(repoKey),
+            repoKey,
+            uiState.value.resticState
+        )
+    }
+
+    fun onDismissSftpPasswordDialog() {
+        _uiState.update {
+            it.copy(
+                showSftpPasswordDialogFor = null,
+                showPasswordDialogFor = null,
+                isLoading = false
+            )
+        }
     }
 }

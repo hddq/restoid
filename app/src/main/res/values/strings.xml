@@ -56,6 +56,8 @@
     </plurals>
     <string name="repository_password_required">Repository Password Required</string>
     <string name="enter_password_for_repository">Please enter the password for repository: %1$s</string>
+    <string name="sftp_password_required">SFTP Password Required</string>
+    <string name="enter_sftp_password_for_repository">Please enter the SFTP password for repository: %1$s</string>
     <plurals name="apps_count">
         <item quantity="one">App (%1$d):</item>
         <item quantity="other">Apps (%1$d):</item>

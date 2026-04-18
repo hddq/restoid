@@ -38,7 +38,9 @@ fun HomeScreen(
     uiState: HomeUiState,
     onRefresh: () -> Unit,
     onPasswordEntered: (String, Boolean) -> Unit,
+    onSftpPasswordEntered: (String, Boolean) -> Unit,
     onDismissPasswordDialog: () -> Unit,
+    onDismissSftpPasswordDialog: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -148,11 +150,22 @@ fun HomeScreen(
     }
 
     if (uiState.showPasswordDialogFor != null) {
+        val repositoryKey = uiState.showPasswordDialogFor
         PasswordDialog(
             title = stringResource(R.string.repository_password_required),
-            message = stringResource(R.string.enter_password_for_repository, uiState.showPasswordDialogFor ?: ""),
+            message = stringResource(R.string.enter_password_for_repository, repositoryKey),
             onPasswordEntered = onPasswordEntered,
             onDismiss = onDismissPasswordDialog
+        )
+    }
+
+    if (uiState.showSftpPasswordDialogFor != null) {
+        val repositoryKey = uiState.showSftpPasswordDialogFor
+        PasswordDialog(
+            title = stringResource(R.string.sftp_password_required),
+            message = stringResource(R.string.enter_sftp_password_for_repository, repositoryKey),
+            onPasswordEntered = onSftpPasswordEntered,
+            onDismiss = onDismissSftpPasswordDialog
         )
     }
 }

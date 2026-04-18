@@ -268,7 +268,9 @@ class MainActivity : FragmentActivity() {
                                 uiState = uiState,
                                 onRefresh = { vm.refreshSnapshots() },
                                 onPasswordEntered = { p, s -> vm.onPasswordEntered(p, s) },
-                                onDismissPasswordDialog = { vm.onDismissPasswordDialog() }
+                                onSftpPasswordEntered = { p, s -> vm.onSftpPasswordEntered(p, s) },
+                                onDismissPasswordDialog = { vm.onDismissPasswordDialog() },
+                                onDismissSftpPasswordDialog = { vm.onDismissSftpPasswordDialog() }
                             )
                         }
                         composable(Screen.Settings.route) {
