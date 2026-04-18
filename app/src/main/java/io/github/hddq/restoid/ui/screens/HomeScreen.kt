@@ -28,6 +28,7 @@ import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.ui.components.PasswordDialog
 import io.github.hddq.restoid.ui.home.HomeAuthFailure
+import io.github.hddq.restoid.ui.home.HomeCredentialPrompt
 import io.github.hddq.restoid.ui.home.HomeUiState
 import io.github.hddq.restoid.ui.home.SnapshotWithMetadata
 
@@ -131,6 +132,29 @@ fun HomeScreen(
                                 }
 
                                 null -> Unit
+                            }
+                        }
+                    }
+                    uiState.unlockPrompt != null -> {
+                        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                            Text(
+                                text = stringResource(R.string.home_unlock_needed_message),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            when (uiState.unlockPrompt) {
+                                HomeCredentialPrompt.REPOSITORY_PASSWORD -> {
+                                    Button(onClick = onRetryRepositoryPasswordEntry) {
+                                        Text(stringResource(R.string.action_unlock_repository))
+                                    }
+                                }
+
+                                HomeCredentialPrompt.SFTP_PASSWORD -> {
+                                    Button(onClick = onRetrySftpPasswordEntry) {
+                                        Text(stringResource(R.string.action_unlock_sftp))
+                                    }
+                                }
                             }
                         }
                     }
