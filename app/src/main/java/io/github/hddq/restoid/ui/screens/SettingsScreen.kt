@@ -74,11 +74,18 @@ fun SettingsScreen(
             onPathChange = { viewModel.onNewRepoPathChanged(it) },
             onPasswordChange = { viewModel.onNewRepoPasswordChanged(it) },
             onSftpPasswordChange = { viewModel.onNewRepoSftpPasswordChanged(it) },
-            onTrustSftpServerChange = { viewModel.onTrustSftpServerChanged(it) },
             onEnvironmentVariablesChange = { viewModel.onNewRepoEnvironmentVariablesChanged(it) },
             onSavePasswordChange = { viewModel.onSavePasswordChanged(it) },
             onConfirm = { viewModel.addRepository() },
             onSelectPath = { directoryPickerLauncher.launch(null) }
+        )
+    }
+
+    addRepoUiState.sftpServerTrustInfo?.let { trustInfo ->
+        SftpServerTrustDialog(
+            trustInfo = trustInfo,
+            onConfirm = { viewModel.onSftpTrustDialogConfirm() },
+            onDismiss = { viewModel.onSftpTrustDialogDismiss() }
         )
     }
 

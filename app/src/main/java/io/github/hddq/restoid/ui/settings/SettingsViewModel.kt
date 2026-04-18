@@ -16,7 +16,7 @@ data class AddRepoUiState(
     val path: String = "",
     val password: String = "",
     val sftpPassword: String = "",
-    val trustSftpServer: Boolean = false,
+    val sftpServerTrustInfo: SftpServerTrustInfo? = null,
     val environmentVariablesRaw: String = "",
     val savePassword: Boolean = true,
     val showDialog: Boolean = false,
@@ -24,6 +24,20 @@ data class AddRepoUiState(
 )
 
 enum class ChangePasswordState { Idle, InProgress, Success, Error }
+
+private data class AddRepositoryInput(
+    val path: String,
+    val backendType: RepositoryBackendType,
+    val password: String,
+    val sftpPassword: String,
+    val environmentVariables: Map<String, String>,
+    val savePassword: Boolean
+)
+
+private data class PendingSftpTrustRequest(
+    val input: AddRepositoryInput,
+    val knownHostEntries: List<String>
+)
 
 class SettingsViewModel(
     private val context: android.content.Context,
@@ -53,6 +67,8 @@ class SettingsViewModel(
 
     private val _requireAppUnlock = MutableStateFlow(preferencesRepository.loadRequireAppUnlock())
     val requireAppUnlock = _requireAppUnlock.asStateFlow()
+
+    private var pendingSftpTrustRequest: PendingSftpTrustRequest? = null
 
     init {
         viewModelScope.launch {
@@ -124,25 +140,78 @@ class SettingsViewModel(
 
     // UI handlers
     fun onNewRepoBackendTypeChanged(backendType: RepositoryBackendType) {
+        pendingSftpTrustRequest = null
         _addRepoUiState.update {
             if (it.backendType == backendType) it else it.copy(
                 backendType = backendType,
                 path = "",
                 sftpPassword = "",
-                trustSftpServer = false,
+                sftpServerTrustInfo = null,
                 environmentVariablesRaw = "",
                 state = AddRepositoryState.Idle
             )
         }
     }
 
-    fun onNewRepoPathChanged(path: String) = _addRepoUiState.update { it.copy(path = path) }
-    fun onNewRepoPasswordChanged(password: String) = _addRepoUiState.update { it.copy(password = password) }
-    fun onNewRepoSftpPasswordChanged(password: String) = _addRepoUiState.update { it.copy(sftpPassword = password) }
-    fun onTrustSftpServerChanged(trust: Boolean) = _addRepoUiState.update { it.copy(trustSftpServer = trust) }
-    fun onNewRepoEnvironmentVariablesChanged(raw: String) = _addRepoUiState.update { it.copy(environmentVariablesRaw = raw) }
+    fun onNewRepoPathChanged(path: String) {
+        pendingSftpTrustRequest = null
+        _addRepoUiState.update { it.copy(path = path, sftpServerTrustInfo = null) }
+    }
+
+    fun onNewRepoPasswordChanged(password: String) {
+        pendingSftpTrustRequest = null
+        _addRepoUiState.update { it.copy(password = password, sftpServerTrustInfo = null) }
+    }
+
+    fun onNewRepoSftpPasswordChanged(password: String) {
+        pendingSftpTrustRequest = null
+        _addRepoUiState.update { it.copy(sftpPassword = password, sftpServerTrustInfo = null) }
+    }
+
+    fun onNewRepoEnvironmentVariablesChanged(raw: String) {
+        pendingSftpTrustRequest = null
+        _addRepoUiState.update { it.copy(environmentVariablesRaw = raw, sftpServerTrustInfo = null) }
+    }
+
     fun onSavePasswordChanged(save: Boolean) = _addRepoUiState.update { it.copy(savePassword = save) }
-    fun onNewRepoDialogDismiss() { _addRepoUiState.value = AddRepoUiState() }
+    fun onNewRepoDialogDismiss() {
+        pendingSftpTrustRequest = null
+        _addRepoUiState.value = AddRepoUiState()
+    }
+
+    fun onSftpTrustDialogDismiss() {
+        pendingSftpTrustRequest = null
+        _addRepoUiState.update { it.copy(sftpServerTrustInfo = null, state = AddRepositoryState.Idle) }
+    }
+
+    fun onSftpTrustDialogConfirm() {
+        val pendingRequest = pendingSftpTrustRequest ?: run {
+            onSftpTrustDialogDismiss()
+            return
+        }
+
+        viewModelScope.launch {
+            _addRepoUiState.update { it.copy(state = AddRepositoryState.Initializing) }
+
+            val trustResult = repositoriesRepository.trustSftpServer(pendingRequest.knownHostEntries)
+            if (trustResult.isFailure) {
+                val message = trustResult.exceptionOrNull()?.message
+                    ?: context.getString(R.string.repo_error_sftp_known_hosts_setup_failed)
+                pendingSftpTrustRequest = null
+                _addRepoUiState.update {
+                    it.copy(
+                        sftpServerTrustInfo = null,
+                        state = AddRepositoryState.Error(message)
+                    )
+                }
+                return@launch
+            }
+
+            pendingSftpTrustRequest = null
+            _addRepoUiState.update { it.copy(sftpServerTrustInfo = null) }
+            executeAddRepository(pendingRequest.input)
+        }
+    }
 
     fun onShowAddRepoDialog() {
         if (resticState.value is ResticState.Installed) {
@@ -159,20 +228,12 @@ class SettingsViewModel(
         val path = addRepoUiState.value.path.trim()
         val password = addRepoUiState.value.password
         val sftpPassword = addRepoUiState.value.sftpPassword
-        val trustSftpServer = addRepoUiState.value.trustSftpServer
         val savePassword = addRepoUiState.value.savePassword
         val backendType = addRepoUiState.value.backendType
         val envParseResult = parseEnvironmentVariables(addRepoUiState.value.environmentVariablesRaw)
 
         if (path.isBlank() || password.isBlank()) {
             _addRepoUiState.update { it.copy(state = AddRepositoryState.Error(context.getString(R.string.settings_error_path_password_empty))) }
-            return
-        }
-
-        if (backendType == RepositoryBackendType.SFTP && !trustSftpServer) {
-            _addRepoUiState.update {
-                it.copy(state = AddRepositoryState.Error(context.getString(R.string.repo_error_sftp_server_trust_required)))
-            }
             return
         }
 
@@ -189,26 +250,77 @@ class SettingsViewModel(
         }
 
         val environmentVariables = envParseResult.getOrNull().orEmpty()
+        val input = AddRepositoryInput(
+            path = path,
+            backendType = backendType,
+            password = password,
+            sftpPassword = sftpPassword,
+            environmentVariables = environmentVariables,
+            savePassword = savePassword
+        )
 
         viewModelScope.launch {
-            _addRepoUiState.update { it.copy(state = AddRepositoryState.Initializing) }
-            val result = repositoriesRepository.addRepository(
-                path = path,
-                backendType = backendType,
-                password = password,
-                environmentVariables = environmentVariables,
-                resticOptions = emptyMap(),
-                sftpPassword = sftpPassword,
-                trustSftpServer = trustSftpServer,
-                resticRepository = resticRepository,
-                savePassword = savePassword
-            )
-            _addRepoUiState.update { it.copy(state = result) }
+            if (input.backendType == RepositoryBackendType.SFTP) {
+                _addRepoUiState.update { it.copy(state = AddRepositoryState.Initializing, sftpServerTrustInfo = null) }
 
-            if (result is AddRepositoryState.Success) {
-                delay(1000)
-                onNewRepoDialogDismiss()
+                val trustInfoResult = repositoriesRepository.probeSftpServerTrust(
+                    path = input.path,
+                    password = input.password,
+                    environmentVariables = input.environmentVariables,
+                    resticOptions = emptyMap(),
+                    sftpPassword = input.sftpPassword
+                )
+
+                if (trustInfoResult.isFailure) {
+                    _addRepoUiState.update {
+                        it.copy(
+                            state = AddRepositoryState.Error(
+                                trustInfoResult.exceptionOrNull()?.message
+                                    ?: context.getString(R.string.repo_error_sftp_fingerprint_probe_failed)
+                            )
+                        )
+                    }
+                    return@launch
+                }
+
+                val trustInfo = trustInfoResult.getOrThrow()
+                pendingSftpTrustRequest = PendingSftpTrustRequest(
+                    input = input,
+                    knownHostEntries = trustInfo.knownHostEntries
+                )
+
+                _addRepoUiState.update {
+                    it.copy(
+                        state = AddRepositoryState.Idle,
+                        sftpServerTrustInfo = trustInfo
+                    )
+                }
+                return@launch
             }
+
+            executeAddRepository(input)
+        }
+    }
+
+    private suspend fun executeAddRepository(input: AddRepositoryInput) {
+        _addRepoUiState.update { it.copy(state = AddRepositoryState.Initializing) }
+
+        val result = repositoriesRepository.addRepository(
+            path = input.path,
+            backendType = input.backendType,
+            password = input.password,
+            environmentVariables = input.environmentVariables,
+            resticOptions = emptyMap(),
+            sftpPassword = input.sftpPassword,
+            resticRepository = resticRepository,
+            savePassword = input.savePassword
+        )
+
+        _addRepoUiState.update { it.copy(state = result, sftpServerTrustInfo = null) }
+
+        if (result is AddRepositoryState.Success) {
+            delay(1000)
+            onNewRepoDialogDismiss()
         }
     }
 
