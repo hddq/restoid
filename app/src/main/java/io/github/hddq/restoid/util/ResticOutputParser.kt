@@ -94,8 +94,8 @@ object ResticOutputParser {
         return context.getString(
             R.string.restic_summary_added,
             android.text.format.Formatter.formatShortFileSize(context, dataAdded),
-            filesNew,
-            filesChanged,
+            context.resources.getQuantityString(R.plurals.restic_summary_new_files, filesNew, filesNew),
+            context.resources.getQuantityString(R.plurals.restic_summary_changed_files, filesChanged, filesChanged),
             formattedDuration
         )
     }

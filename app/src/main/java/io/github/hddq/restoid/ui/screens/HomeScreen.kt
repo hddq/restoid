@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -121,7 +122,11 @@ fun HomeScreen(
                     else -> {
                         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                             Text(
-                                text = stringResource(R.string.snapshots_count, uiState.snapshotsWithMetadata.size),
+                                text = pluralStringResource(
+                                    R.plurals.snapshots_count,
+                                    uiState.snapshotsWithMetadata.size,
+                                    uiState.snapshotsWithMetadata.size
+                                ),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.padding(bottom = 8.dp)
@@ -166,7 +171,10 @@ private fun SnapshotItem(snapshotWithMetadata: SnapshotWithMetadata, apps: List<
 
         val appCount = snapshotWithMetadata.metadata?.apps?.size ?: 0
         if (appCount > 0) {
-            Text(stringResource(R.string.apps_count, appCount), style = MaterialTheme.typography.labelMedium)
+            Text(
+                pluralStringResource(R.plurals.apps_count, appCount, appCount),
+                style = MaterialTheme.typography.labelMedium
+            )
             if (apps != null && apps.isNotEmpty()) {
                 BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                     val iconSize = 32.dp

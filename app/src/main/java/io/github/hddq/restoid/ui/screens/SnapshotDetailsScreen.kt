@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -92,7 +93,14 @@ fun SnapshotDetailsScreen(
                     }
                     if (backupDetails.isNotEmpty()) {
                         item {
-                            Text(stringResource(R.string.snapshot_backed_up_apps_count, backupDetails.size), style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                pluralStringResource(
+                                    R.plurals.snapshot_backed_up_apps_count,
+                                    backupDetails.size,
+                                    backupDetails.size
+                                ),
+                                style = MaterialTheme.typography.titleMedium
+                            )
                         }
                         item {
                             Card(
