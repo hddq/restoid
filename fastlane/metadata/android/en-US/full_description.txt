@@ -1,0 +1,12 @@
+Restoid gives you complete control over your app backups through a clean, modern, and simple user interface. Powered by the open-source "restic" engine, it's built for users who demand robust, encrypted, and deduplicated backups.
+
+Root access is strictly required to read and write private application data directories.
+
+Features:
+* Restic-Powered: Leverages the speed, security, and efficiency of restic for local, deduplicated, and encrypted backups.
+* Selective Backup: Choose exactly which user-installed applications you want to save.
+* Granular Control: Granularly select what to include for each app: APK files, user data, device-protected data, external/OBB, or media files.
+* Flexible Storage: Create and manage backup repositories on your device's internal storage, SD card, or mounted external drives.
+* Snapshot Management: Easily browse historical backup snapshots, view details of what was backed up, and forget old data to save space.
+* Surgical Restore: Restore entire apps completely, or just specific parts (like restoring only app data without overwriting the APK).
+* Downgrade Protection: Prevents you from accidentally restoring an older app version over a newer one.
