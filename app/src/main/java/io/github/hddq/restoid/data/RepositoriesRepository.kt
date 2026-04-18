@@ -726,7 +726,10 @@ class RepositoriesRepository(
             "-o UserKnownHostsFile=${knownHostsFile.absolutePath} " +
             "-o GlobalKnownHostsFile=/dev/null " +
             "-o ConnectTimeout=15 " +
-            "-o PreferredAuthentications=password,keyboard-interactive " +
+            "-o PubkeyAuthentication=no " +
+            "-o KbdInteractiveAuthentication=no " +
+            "-o PasswordAuthentication=yes " +
+            "-o PreferredAuthentications=password " +
             "-o NumberOfPasswordPrompts=1"
     }
 
@@ -783,10 +786,6 @@ class RepositoriesRepository(
         }
 
         if (!options["sftp.command"].isNullOrBlank()) {
-            return options
-        }
-
-        if (!options["sftp.args"].isNullOrBlank()) {
             return options
         }
 
