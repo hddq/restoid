@@ -179,6 +179,7 @@
     <string name="cd_more_options">More options</string>
     <string name="action_forget_password">Forget Password</string>
     <string name="action_forget_sftp_password">Forget SFTP Password</string>
+    <string name="action_save_sftp_password">Save SFTP Password</string>
     <string name="action_save_password">Save Password</string>
     <string name="action_change_password">Change password</string>
     <string name="cd_more_download_options">More download options</string>
@@ -203,6 +204,7 @@
     <string name="cd_show">Show</string>
     <string name="error_passwords_do_not_match">Passwords do not match.</string>
     <string name="dialog_save_password">Save Password</string>
+    <string name="dialog_save_sftp_password">Save SFTP Password</string>
 
     <string name="backup_item_permissions">Permissions</string>
     <string name="backup_item_unknown">Unknown items</string>

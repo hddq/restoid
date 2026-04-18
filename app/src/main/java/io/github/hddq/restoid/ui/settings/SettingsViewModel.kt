@@ -87,7 +87,9 @@ class SettingsViewModel(
     fun forgetPassword(key: String) = repositoriesRepository.forgetPassword(key)
     fun savePassword(key: String, password: String) = repositoriesRepository.saveRepositoryPassword(key, password)
     fun hasSftpPassword(key: String) = repositoriesRepository.hasSftpPassword(key)
+    fun hasStoredSftpPassword(key: String) = repositoriesRepository.hasStoredSftpPassword(key)
     fun forgetSftpPassword(key: String) = repositoriesRepository.forgetSftpPassword(key)
+    fun saveSftpPassword(key: String, password: String) = repositoriesRepository.saveSftpPassword(key, password)
 
     fun deleteRepository(key: String) {
         viewModelScope.launch { repositoriesRepository.deleteRepository(key) }

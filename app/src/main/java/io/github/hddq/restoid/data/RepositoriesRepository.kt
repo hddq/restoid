@@ -114,6 +114,7 @@ class RepositoriesRepository(
 
     fun getSftpPassword(key: String): String? = passwordManager.getSftpPassword(key)
     fun hasSftpPassword(key: String): Boolean = passwordManager.hasSftpPassword(key)
+    fun hasStoredSftpPassword(key: String): Boolean = passwordManager.hasStoredSftpPassword(key)
     fun saveSftpPasswordTemporary(key: String, password: String) = passwordManager.saveSftpPasswordTemporary(key, password)
     fun saveSftpPassword(key: String, password: String) = passwordManager.saveSftpPassword(key, password)
     fun forgetSftpPassword(key: String) = passwordManager.removeStoredSftpPassword(key)
