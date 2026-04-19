@@ -64,7 +64,7 @@ fun HomeScreen(
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold,
             )
-            val isMaintenanceEnabled = uiState.selectedRepo != null && uiState.hasPasswordForSelectedRepo
+            val isMaintenanceEnabled = uiState.isRepoReady
             OutlinedButton(
                 onClick = onMaintenanceClick,
                 enabled = isMaintenanceEnabled,

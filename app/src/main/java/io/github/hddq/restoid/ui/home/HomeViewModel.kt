@@ -38,7 +38,7 @@ data class HomeUiState(
     val resticState: ResticState = ResticState.Idle,
     val showPasswordDialogFor: String? = null,
     val showSftpPasswordDialogFor: String? = null,
-    val hasPasswordForSelectedRepo: Boolean = false
+    val isRepoReady: Boolean = false
 )
 
 class HomeViewModel(
@@ -81,11 +81,18 @@ class HomeViewModel(
             } else {
                 true
             }
+
+            val isRepoReady =
+                repoKey != null &&
+                    restic is ResticState.Installed &&
+                    hasRepositoryPassword &&
+                    hasSftpPassword
+
             _uiState.update {
                 it.copy(
                     selectedRepo = repoKey,
                     resticState = restic,
-                    hasPasswordForSelectedRepo = hasRepositoryPassword && hasSftpPassword
+                    isRepoReady = isRepoReady
                 )
             }
 

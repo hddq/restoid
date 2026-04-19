@@ -124,6 +124,10 @@ class MainActivity : FragmentActivity() {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentDestination = navBackStackEntry?.destination
                 val showBottomBar = currentDestination?.route in listOf(Screen.Home.route, Screen.Settings.route)
+                val homeViewModel: HomeViewModel = viewModel(
+                    factory = HomeViewModelFactory(app, app.repositoriesRepository, app.resticBinaryManager, app.resticRepository, app.appInfoRepository, app.metadataRepository)
+                )
+                val homeUiState by homeViewModel.uiState.collectAsState()
 
                 Scaffold(
                     topBar = {
@@ -187,14 +191,13 @@ class MainActivity : FragmentActivity() {
                     floatingActionButton = {
                         when (currentDestination?.route) {
                             Screen.Home.route -> {
-                                val selectedRepo by app.repositoriesRepository.selectedRepository.collectAsState()
-                                val isRepoSelected = selectedRepo != null
+                                val isRepoReady = homeUiState.isRepoReady
                                 ExtendedFloatingActionButton(
                                     text = { Text(stringResource(R.string.fab_backup)) },
                                     icon = { Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.fab_backup)) },
-                                    onClick = { if (isRepoSelected) { navController.navigate(Screen.Backup.route) } },
-                                    containerColor = if (isRepoSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                                    contentColor = if (isRepoSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                    onClick = { if (isRepoReady) { navController.navigate(Screen.Backup.route) } },
+                                    containerColor = if (isRepoReady) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                                    contentColor = if (isRepoReady) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                                 )
                             }
                             Screen.Backup.route -> {
@@ -257,22 +260,17 @@ class MainActivity : FragmentActivity() {
                         modifier = Modifier.padding(innerPadding)
                     ) {
                         composable(Screen.Home.route) {
-                            // Use Application for factory creation to avoid explicit passing
-                            val vm: HomeViewModel = viewModel(
-                                factory = HomeViewModelFactory(app, app.repositoriesRepository, app.resticBinaryManager, app.resticRepository, app.appInfoRepository, app.metadataRepository)
-                            )
-                            val uiState by vm.uiState.collectAsState()
                             HomeScreen(
                                 onSnapshotClick = { snapshotId -> navController.navigate("${Screen.SnapshotDetails.route}/$snapshotId") },
                                 onMaintenanceClick = { navController.navigate(Screen.Maintenance.route) },
-                                uiState = uiState,
-                                onRefresh = { vm.refreshSnapshots() },
-                                onPasswordEntered = { p, s -> vm.onPasswordEntered(p, s) },
-                                onSftpPasswordEntered = { p, s -> vm.onSftpPasswordEntered(p, s) },
-                                onRetryRepositoryPasswordEntry = { vm.onRetryRepositoryPasswordEntry() },
-                                onRetrySftpPasswordEntry = { vm.onRetrySftpPasswordEntry() },
-                                onDismissPasswordDialog = { vm.onDismissPasswordDialog() },
-                                onDismissSftpPasswordDialog = { vm.onDismissSftpPasswordDialog() }
+                                uiState = homeUiState,
+                                onRefresh = { homeViewModel.refreshSnapshots() },
+                                onPasswordEntered = { p, s -> homeViewModel.onPasswordEntered(p, s) },
+                                onSftpPasswordEntered = { p, s -> homeViewModel.onSftpPasswordEntered(p, s) },
+                                onRetryRepositoryPasswordEntry = { homeViewModel.onRetryRepositoryPasswordEntry() },
+                                onRetrySftpPasswordEntry = { homeViewModel.onRetrySftpPasswordEntry() },
+                                onDismissPasswordDialog = { homeViewModel.onDismissPasswordDialog() },
+                                onDismissSftpPasswordDialog = { homeViewModel.onDismissSftpPasswordDialog() }
                             )
                         }
                         composable(Screen.Settings.route) {
