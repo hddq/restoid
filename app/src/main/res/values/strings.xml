@@ -180,6 +180,7 @@
     <string name="action_forget_sftp_password">Forget SFTP Password</string>
     <string name="action_save_sftp_password">Save SFTP Password</string>
     <string name="action_save_password">Save Password</string>
+    <string name="action_save_passwords">Save Passwords</string>
     <string name="action_change_password">Change password</string>
     <string name="cd_more_download_options">More download options</string>
 

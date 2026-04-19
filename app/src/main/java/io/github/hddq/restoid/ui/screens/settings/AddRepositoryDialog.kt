@@ -63,6 +63,11 @@ fun AddRepositoryDialog(
         RepositoryBackendType.S3 -> stringResource(R.string.repo_hint_s3)
     }
 
+    val savePasswordLabel = when (uiState.backendType) {
+        RepositoryBackendType.SFTP -> stringResource(R.string.action_save_passwords)
+        else -> stringResource(R.string.action_save_password)
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.dialog_add_repository_title)) },
@@ -195,7 +200,7 @@ fun AddRepositoryDialog(
                         enabled = !isBusy
                     )
                     Text(
-                        text = stringResource(R.string.save_password),
+                        text = savePasswordLabel,
                         modifier = Modifier.clickable(enabled = !isBusy, onClick = { onSavePasswordChange(!uiState.savePassword) })
                     )
                 }
