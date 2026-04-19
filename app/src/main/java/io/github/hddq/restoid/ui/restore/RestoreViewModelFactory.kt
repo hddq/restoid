@@ -14,6 +14,8 @@ class RestoreViewModelFactory(
     private val notificationRepository: NotificationRepository,
     private val metadataRepository: MetadataRepository,
     private val preferencesRepository: PreferencesRepository,
+    private val operationCoordinator: OperationCoordinator,
+    private val operationLockManager: OperationLockManager,
     private val snapshotId: String
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -28,6 +30,8 @@ class RestoreViewModelFactory(
                 notificationRepository,
                 metadataRepository,
                 preferencesRepository,
+                operationCoordinator,
+                operationLockManager,
                 snapshotId
             ) as T
         }

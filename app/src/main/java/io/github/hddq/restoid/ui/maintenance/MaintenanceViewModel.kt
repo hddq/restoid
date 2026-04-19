@@ -34,12 +34,17 @@ class MaintenanceViewModel(
     private val resticBinaryManager: ResticBinaryManager, // Inject Manager
     private val resticRepository: ResticRepository,
     private val notificationRepository: NotificationRepository,
-    private val preferencesRepository: PreferencesRepository
+    private val preferencesRepository: PreferencesRepository,
+    private val operationCoordinator: OperationCoordinator,
+    private val operationLockManager: OperationLockManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MaintenanceUiState())
     val uiState = _uiState.asStateFlow()
     private var maintenanceJob: Job? = null
+
+    private val _operationBlocked = MutableStateFlow(false)
+    val operationBlocked = _operationBlocked.asStateFlow()
 
     init {
         _uiState.value = preferencesRepository.loadMaintenanceState()
@@ -52,6 +57,7 @@ class MaintenanceViewModel(
         maintenanceJob = viewModelScope.launch(Dispatchers.IO) {
             val startTime = System.currentTimeMillis()
             _uiState.update { it.copy(isRunning = true, progress = OperationProgress(stageTitle = context.getString(R.string.progress_initializing))) }
+            var operationStarted = false
 
             var finalSummary = StringBuilder()
             var overallSuccess = true
@@ -66,6 +72,25 @@ class MaintenanceViewModel(
                 val selectedRepoKey = repositoriesRepository.selectedRepository.value!!
                 val repository = repositoriesRepository.getRepositoryByKey(selectedRepoKey)
                     ?: throw IllegalStateException(context.getString(R.string.summary_no_backup_repository_selected))
+
+                if (!operationCoordinator.tryStart(OperationType.MAINTENANCE, repository.backendType)) {
+                    _operationBlocked.value = true
+                    _uiState.update {
+                        it.copy(
+                            isRunning = false,
+                            progress = OperationProgress(
+                                isFinished = true,
+                                error = context.getString(R.string.error_operation_already_running),
+                                finalSummary = context.getString(R.string.summary_operation_already_running)
+                            )
+                        )
+                    }
+                    return@launch
+                }
+                operationStarted = true
+
+                operationLockManager.acquire(repository.backendType)
+
                 val selectedRepoPath = repository.path
                 val repositoryEnvironment = repositoriesRepository.getExecutionEnvironmentVariables(selectedRepoKey)
                 val repositoryResticOptions = repositoriesRepository.getExecutionResticOptions(selectedRepoKey)
@@ -146,6 +171,10 @@ class MaintenanceViewModel(
                 overallSuccess = false
                 finalSummary.append(context.getString(R.string.error_fatal_with_message, e.message ?: ""))
             } finally {
+                if (operationStarted) {
+                    operationLockManager.release()
+                    operationCoordinator.finish(OperationType.MAINTENANCE)
+                }
                 val finalProgress = _uiState.value.progress.copy(
                     isFinished = true,
                     finalSummary = finalSummary.toString().trim(),
@@ -217,6 +246,7 @@ class MaintenanceViewModel(
     }
 
     fun onDone() { _uiState.update { it.copy(progress = OperationProgress()) } }
+    fun consumeOperationBlocked() { _operationBlocked.value = false }
     fun setCheckRepo(value: Boolean) = _uiState.update { it.copy(checkRepo = value) }
     fun setPruneRepo(value: Boolean) = _uiState.update { it.copy(pruneRepo = value) }
     fun setUnlockRepo(value: Boolean) = _uiState.update { it.copy(unlockRepo = value) }

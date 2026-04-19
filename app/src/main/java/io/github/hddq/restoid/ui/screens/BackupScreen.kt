@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -23,6 +24,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
+import android.widget.Toast
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.RestoidApplication
 import io.github.hddq.restoid.model.AppInfo
@@ -42,7 +44,9 @@ fun BackupScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
             application.resticRepository,
             application.notificationRepository,
             application.appInfoRepository,
-            application.preferencesRepository
+            application.preferencesRepository,
+            application.operationCoordinator,
+            application.operationLockManager
         )
     )
     val apps by viewModel.apps.collectAsState()
@@ -50,6 +54,14 @@ fun BackupScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
     val backupTypes by viewModel.backupTypes.collectAsState()
     val isBackingUp by viewModel.isBackingUp.collectAsState()
     val backupProgress by viewModel.backupProgress.collectAsState()
+    val operationBlocked by viewModel.operationBlocked.collectAsState()
+
+    LaunchedEffect(operationBlocked) {
+        if (operationBlocked) {
+            Toast.makeText(application, application.getString(R.string.error_operation_already_running), Toast.LENGTH_SHORT).show()
+            viewModel.consumeOperationBlocked()
+        }
+    }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {

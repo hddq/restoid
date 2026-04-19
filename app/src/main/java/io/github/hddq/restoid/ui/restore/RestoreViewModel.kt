@@ -43,6 +43,8 @@ class RestoreViewModel(
     private val notificationRepository: NotificationRepository,
     private val metadataRepository: MetadataRepository,
     private val preferencesRepository: PreferencesRepository,
+    private val operationCoordinator: OperationCoordinator,
+    private val operationLockManager: OperationLockManager,
     val snapshotId: String
 ) : ViewModel() {
 
@@ -71,6 +73,9 @@ class RestoreViewModel(
 
     private val _restoreProgress = MutableStateFlow(OperationProgress())
     val restoreProgress = _restoreProgress.asStateFlow()
+
+    private val _operationBlocked = MutableStateFlow(false)
+    val operationBlocked = _operationBlocked.asStateFlow()
 
     private var restoreJob: Job? = null
 
@@ -290,6 +295,7 @@ class RestoreViewModel(
             val startTime = System.currentTimeMillis()
             _isRestoring.value = true
             _restoreProgress.value = OperationProgress()
+            var operationStarted = false
 
             var tempRestoreDir: File? = null
             var passwordFile: File? = null
@@ -319,6 +325,19 @@ class RestoreViewModel(
                     throw IllegalStateException(application.getString(R.string.restore_error_preflight_failed))
                 }
                 if (selectedApps.isEmpty()) throw IllegalStateException(application.getString(R.string.restore_error_no_apps_selected))
+
+                if (!operationCoordinator.tryStart(OperationType.RESTORE, selectedRepository.backendType)) {
+                    _operationBlocked.value = true
+                    _restoreProgress.value = OperationProgress(
+                        isFinished = true,
+                        error = application.getString(R.string.error_operation_already_running),
+                        finalSummary = application.getString(R.string.summary_operation_already_running)
+                    )
+                    return@launch
+                }
+                operationStarted = true
+
+                operationLockManager.acquire(selectedRepository.backendType)
 
                 val actualRepoKey = selectedRepoKey
 
@@ -544,6 +563,10 @@ class RestoreViewModel(
                 )
                 notificationRepository.showOperationFinishedNotification(application.getString(R.string.operation_restore), false, _restoreProgress.value.finalSummary)
             } finally {
+                if (operationStarted) {
+                    operationLockManager.release()
+                    operationCoordinator.finish(OperationType.RESTORE)
+                }
                 passwordFile?.delete()
                 tempRestoreDir?.let { dir -> Shell.cmd("rm -rf '${dir.absolutePath}'").exec() }
                 _isRestoring.value = false
@@ -563,6 +586,10 @@ class RestoreViewModel(
     }
 
     fun onDone() { _restoreProgress.value = OperationProgress() }
+
+    fun consumeOperationBlocked() {
+        _operationBlocked.value = false
+    }
     fun toggleRestoreAppSelection(packageName: String) {
         _backupDetails.update { currentDetails ->
             currentDetails.map { detail ->

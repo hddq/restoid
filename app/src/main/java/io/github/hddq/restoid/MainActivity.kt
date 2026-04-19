@@ -203,7 +203,17 @@ class MainActivity : FragmentActivity() {
                             Screen.Backup.route -> {
                                 val viewModel: BackupViewModel = viewModel(
                                     viewModelStoreOwner = navBackStackEntry!!,
-                                    factory = BackupViewModelFactory(app, app.repositoriesRepository, app.resticBinaryManager, app.resticRepository, app.notificationRepository, app.appInfoRepository, app.preferencesRepository)
+                                    factory = BackupViewModelFactory(
+                                        app,
+                                        app.repositoriesRepository,
+                                        app.resticBinaryManager,
+                                        app.resticRepository,
+                                        app.notificationRepository,
+                                        app.appInfoRepository,
+                                        app.preferencesRepository,
+                                        app.operationCoordinator,
+                                        app.operationLockManager
+                                    )
                                 )
                                 val isBackingUp by viewModel.isBackingUp.collectAsState()
                                 val backupProgress by viewModel.backupProgress.collectAsState()
@@ -218,7 +228,16 @@ class MainActivity : FragmentActivity() {
                             Screen.Maintenance.route -> {
                                 val viewModel: MaintenanceViewModel = viewModel(
                                     viewModelStoreOwner = navBackStackEntry!!,
-                                    factory = MaintenanceViewModelFactory(app, app.repositoriesRepository, app.resticBinaryManager, app.resticRepository, app.notificationRepository, app.preferencesRepository)
+                                    factory = MaintenanceViewModelFactory(
+                                        app,
+                                        app.repositoriesRepository,
+                                        app.resticBinaryManager,
+                                        app.resticRepository,
+                                        app.notificationRepository,
+                                        app.preferencesRepository,
+                                        app.operationCoordinator,
+                                        app.operationLockManager
+                                    )
                                 )
                                 val uiState by viewModel.uiState.collectAsState()
                                 if (!uiState.isRunning && !uiState.progress.isFinished) {
@@ -239,7 +258,19 @@ class MainActivity : FragmentActivity() {
                             Screen.Restore.route + "/{snapshotId}" -> {
                                 val viewModel: RestoreViewModel = viewModel(
                                     viewModelStoreOwner = navBackStackEntry!!,
-                                    factory = RestoreViewModelFactory(app, app.repositoriesRepository, app.resticBinaryManager, app.resticRepository, app.appInfoRepository, app.notificationRepository, app.metadataRepository, app.preferencesRepository, navBackStackEntry?.arguments?.getString("snapshotId") ?: "")
+                                    factory = RestoreViewModelFactory(
+                                        app,
+                                        app.repositoriesRepository,
+                                        app.resticBinaryManager,
+                                        app.resticRepository,
+                                        app.appInfoRepository,
+                                        app.notificationRepository,
+                                        app.metadataRepository,
+                                        app.preferencesRepository,
+                                        app.operationCoordinator,
+                                        app.operationLockManager,
+                                        navBackStackEntry?.arguments?.getString("snapshotId") ?: ""
+                                    )
                                 )
                                 val isRestoring by viewModel.isRestoring.collectAsState()
                                 val restoreProgress by viewModel.restoreProgress.collectAsState()

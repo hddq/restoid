@@ -32,6 +32,10 @@ class RestoidApplication : Application() {
         private set
     lateinit var preferencesRepository: PreferencesRepository
         private set
+    lateinit var operationCoordinator: OperationCoordinator
+        private set
+    lateinit var operationLockManager: OperationLockManager
+        private set
 
     override fun onCreate() {
         super.onCreate()
@@ -56,6 +60,8 @@ class RestoidApplication : Application() {
         appInfoRepository = AppInfoRepository(applicationContext)
         metadataRepository = MetadataRepository(applicationContext)
         preferencesRepository = PreferencesRepository(applicationContext)
+        operationCoordinator = OperationCoordinator()
+        operationLockManager = OperationLockManager(applicationContext)
 
         passwordManager.clearTemporaryPasswords()
         notificationRepository.createNotificationChannels()

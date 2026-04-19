@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -20,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import android.widget.Toast
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.RestoidApplication
 import io.github.hddq.restoid.model.BackupDetail
@@ -42,6 +44,8 @@ fun RestoreScreen(navController: NavController, snapshotId: String?, modifier: M
             application.notificationRepository,
             application.metadataRepository,
             application.preferencesRepository,
+            application.operationCoordinator,
+            application.operationLockManager,
             snapshotId ?: ""
         )
     )
@@ -52,6 +56,14 @@ fun RestoreScreen(navController: NavController, snapshotId: String?, modifier: M
     val allowDowngrade by viewModel.allowDowngrade.collectAsState()
     val isRestoring by viewModel.isRestoring.collectAsState()
     val restoreProgress by viewModel.restoreProgress.collectAsState()
+    val operationBlocked by viewModel.operationBlocked.collectAsState()
+
+    LaunchedEffect(operationBlocked) {
+        if (operationBlocked) {
+            Toast.makeText(application, application.getString(R.string.error_operation_already_running), Toast.LENGTH_SHORT).show()
+            viewModel.consumeOperationBlocked()
+        }
+    }
 
     val showProgressScreen = isRestoring || restoreProgress.isFinished
     val apkLabel = stringResource(R.string.backup_type_apk)

@@ -12,7 +12,9 @@ class BackupViewModelFactory(
     private val resticRepository: ResticRepository,
     private val notificationRepository: NotificationRepository,
     private val appInfoRepository: AppInfoRepository,
-    private val preferencesRepository: PreferencesRepository
+    private val preferencesRepository: PreferencesRepository,
+    private val operationCoordinator: OperationCoordinator,
+    private val operationLockManager: OperationLockManager
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(BackupViewModel::class.java)) {
@@ -24,7 +26,9 @@ class BackupViewModelFactory(
                 resticRepository,
                 notificationRepository,
                 appInfoRepository,
-                preferencesRepository
+                preferencesRepository,
+                operationCoordinator,
+                operationLockManager
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

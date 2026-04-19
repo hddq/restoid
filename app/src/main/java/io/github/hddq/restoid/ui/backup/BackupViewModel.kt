@@ -37,7 +37,9 @@ class BackupViewModel(
     private val resticRepository: ResticRepository,
     private val notificationRepository: NotificationRepository,
     private val appInfoRepository: AppInfoRepository,
-    private val preferencesRepository: PreferencesRepository
+    private val preferencesRepository: PreferencesRepository,
+    private val operationCoordinator: OperationCoordinator,
+    private val operationLockManager: OperationLockManager
 ) : ViewModel() {
 
     private val _apps = MutableStateFlow<List<AppInfo>>(emptyList())
@@ -54,6 +56,9 @@ class BackupViewModel(
 
     private val _backupProgress = MutableStateFlow(OperationProgress())
     val backupProgress = _backupProgress.asStateFlow()
+
+    private val _operationBlocked = MutableStateFlow(false)
+    val operationBlocked = _operationBlocked.asStateFlow()
 
     private var backupJob: Job? = null
 
@@ -80,6 +85,7 @@ class BackupViewModel(
             val startTime = System.currentTimeMillis()
             _isBackingUp.value = true
             _backupProgress.value = OperationProgress(stageTitle = application.getString(R.string.progress_initializing))
+            var operationStarted = false
 
             var fileList: File? = null
             var passwordFile: File? = null
@@ -103,11 +109,25 @@ class BackupViewModel(
                     return@launch
                 }
 
-                // Use Manager for state check
-                val resticState = resticBinaryManager.resticState.value as ResticState.Installed
                 val selectedRepoKey = repositoriesRepository.selectedRepository.value!!
                 val repository = repositoriesRepository.getRepositoryByKey(selectedRepoKey)
                     ?: throw IllegalStateException(application.getString(R.string.error_no_backup_repository_selected))
+
+                if (!operationCoordinator.tryStart(OperationType.BACKUP, repository.backendType)) {
+                    _operationBlocked.value = true
+                    _backupProgress.value = OperationProgress(
+                        isFinished = true,
+                        error = application.getString(R.string.error_operation_already_running),
+                        finalSummary = application.getString(R.string.summary_operation_already_running)
+                    )
+                    return@launch
+                }
+                operationStarted = true
+
+                operationLockManager.acquire(repository.backendType)
+
+                // Use Manager for state check
+                val resticState = resticBinaryManager.resticState.value as ResticState.Installed
                 repositoryId = repository.id
 
                 if (repositoryId == null) throw IllegalStateException(application.getString(R.string.backup_error_repository_id_not_found))
@@ -227,6 +247,10 @@ class BackupViewModel(
                 isSuccess = false
                 summary = application.getString(R.string.error_fatal_with_message, e.message ?: "")
             } finally {
+                if (operationStarted) {
+                    operationLockManager.release()
+                    operationCoordinator.finish(OperationType.BACKUP)
+                }
                 fileList?.delete()
                 passwordFile?.delete()
                 restoidMetadataFile?.delete()
@@ -419,6 +443,10 @@ class BackupViewModel(
     }
 
     fun onDone() { _backupProgress.value = OperationProgress() }
+
+    fun consumeOperationBlocked() {
+        _operationBlocked.value = false
+    }
 
     fun setBackupApk(value: Boolean) = _backupTypes.update { it.copy(apk = value) }
     fun setBackupData(value: Boolean) = _backupTypes.update { it.copy(data = value) }

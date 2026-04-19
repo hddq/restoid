@@ -26,6 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -40,6 +41,7 @@ import io.github.hddq.restoid.ui.maintenance.MaintenanceViewModel
 import io.github.hddq.restoid.ui.maintenance.MaintenanceViewModelFactory
 import io.github.hddq.restoid.ui.shared.ProgressScreenContent
 import kotlin.math.roundToInt
+import android.widget.Toast
 
 @Composable
 fun MaintenanceScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
@@ -51,10 +53,21 @@ fun MaintenanceScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
             application.resticBinaryManager, // Added this!
             application.resticRepository,
             application.notificationRepository,
-            application.preferencesRepository
+            application.preferencesRepository,
+            application.operationCoordinator,
+            application.operationLockManager
         )
     )
     val uiState by viewModel.uiState.collectAsState()
+    val operationBlocked by viewModel.operationBlocked.collectAsState()
+
+    LaunchedEffect(operationBlocked) {
+        if (operationBlocked) {
+            Toast.makeText(application, application.getString(R.string.error_operation_already_running), Toast.LENGTH_SHORT).show()
+            viewModel.consumeOperationBlocked()
+        }
+    }
+
     val showProgressScreen = uiState.isRunning || uiState.progress.isFinished
 
     Crossfade(

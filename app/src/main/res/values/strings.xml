@@ -228,6 +228,8 @@
     <string name="summary_password_not_found">Could not find the password.</string>
     <string name="error_sftp_password_not_found_for_repository">SFTP password for repository not found.</string>
     <string name="summary_sftp_password_not_found">Could not find the SFTP password.</string>
+    <string name="error_operation_already_running">Another operation is already running.</string>
+    <string name="summary_operation_already_running">Another operation is running. Wait for it to finish.</string>
 
     <string name="error_snapshot_not_found">Snapshot not found.</string>
     <string name="error_repository_password_or_id_not_found">Repository, password, or repo ID not found</string>
