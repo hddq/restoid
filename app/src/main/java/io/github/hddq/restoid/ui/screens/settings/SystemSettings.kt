@@ -94,11 +94,7 @@ fun SystemSettings(
                         }
                 }
             )
-            Divider(color = MaterialTheme.colorScheme.background)
-            AppUnlockOnStartRow(
-                enabled = requireAppUnlock,
-                onCheckedChange = viewModel::onRequireAppUnlockChanged
-            )
+            // App unlock moved to separate Options card
         }
     }
 }

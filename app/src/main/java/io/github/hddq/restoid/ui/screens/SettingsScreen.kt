@@ -110,6 +110,7 @@ fun SettingsScreen(
         }
         item { DependencySettings(viewModel = viewModel) }
         item { RepositorySettings(viewModel = viewModel) }
+        item { OptionsSettings(viewModel = viewModel) }
         item { AboutSettings(onNavigateToLicenses = onNavigateToLicenses) }
     }
 }

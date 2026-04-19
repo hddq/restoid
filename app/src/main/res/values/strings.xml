@@ -171,6 +171,7 @@
     <string name="battery_optimization_disabled">Battery optimization disabled</string>
     <string name="battery_optimization_description">Disable this to improve reliability of long background operations.</string>
     <string name="require_app_unlock_on_start">Require app unlock on start</string>
+    <string name="options_title">Options</string>
     <string name="app_unlock_prompt_title">Unlock Restoid</string>
     <string name="app_unlock_prompt_subtitle">Use fingerprint or screen lock to continue</string>
     <string name="repository_id_short">ID: %1$s…</string>
