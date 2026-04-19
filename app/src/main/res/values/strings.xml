@@ -8,9 +8,11 @@
     <string name="screen_restore">Restore</string>
     <string name="screen_licenses">Licenses</string>
     <string name="screen_maintenance">Maintenance</string>
+    <string name="screen_operation_progress">Operation Progress</string>
 
     <string name="topbar_new_backup">New Backup</string>
     <string name="topbar_maintenance">Maintenance</string>
+    <string name="topbar_operation_progress">Operation Progress</string>
     <string name="topbar_open_source_licenses">Open Source Licenses</string>
     <string name="topbar_snapshot_details">Snapshot Details</string>
     <string name="topbar_restore_snapshot">Restore Snapshot</string>
@@ -108,6 +110,7 @@
     <string name="action_update">Update</string>
     <string name="action_forget">Forget</string>
     <string name="action_try_again">Try Again</string>
+    <string name="action_disable">Disable</string>
 
     <string name="progress_initializing">Initializing…</string>
     <string name="progress_operation_complete">%1$s Complete</string>
@@ -164,6 +167,9 @@
     <string name="notifications_enabled">Notifications enabled</string>
     <string name="notifications_disabled">Notifications disabled</string>
     <string name="notification_permission">Notification permission</string>
+    <string name="battery_optimization_enabled">Battery optimization enabled</string>
+    <string name="battery_optimization_disabled">Battery optimization disabled</string>
+    <string name="battery_optimization_description">Disable this to improve reliability of long background operations.</string>
     <string name="require_app_unlock_on_start">Require app unlock on start</string>
     <string name="app_unlock_prompt_title">Unlock Restoid</string>
     <string name="app_unlock_prompt_subtitle">Use fingerprint or screen lock to continue</string>
@@ -298,6 +304,8 @@
     <string name="notification_scanning_files">Scanning files…</string>
     <string name="notification_operation_finished_success">%1$s finished successfully</string>
     <string name="notification_operation_finished_failure">%1$s failed</string>
+    <string name="operation_progress_no_active_operation">No active operation right now.</string>
+    <string name="operation_interrupted">Operation was interrupted.</string>
 
     <string name="repo_error_exists">Repository already exists.</string>
     <string name="repo_error_binary_not_ready">Restic binary not ready.</string>

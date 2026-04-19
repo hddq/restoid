@@ -2,6 +2,8 @@ package io.github.hddq.restoid
 
 import android.app.Application
 import io.github.hddq.restoid.data.*
+import io.github.hddq.restoid.work.OperationRequestStore
+import io.github.hddq.restoid.work.OperationWorkRepository
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,6 +38,12 @@ class RestoidApplication : Application() {
         private set
     lateinit var operationLockManager: OperationLockManager
         private set
+    lateinit var operationRequestStore: OperationRequestStore
+        private set
+    lateinit var operationRuntimeRepository: OperationRuntimeRepository
+        private set
+    lateinit var operationWorkRepository: OperationWorkRepository
+        private set
 
     override fun onCreate() {
         super.onCreate()
@@ -62,6 +70,13 @@ class RestoidApplication : Application() {
         preferencesRepository = PreferencesRepository(applicationContext)
         operationCoordinator = OperationCoordinator()
         operationLockManager = OperationLockManager(applicationContext)
+        operationRequestStore = OperationRequestStore(applicationContext)
+        operationRuntimeRepository = OperationRuntimeRepository(applicationContext)
+        operationWorkRepository = OperationWorkRepository(
+            applicationContext,
+            operationRequestStore,
+            operationRuntimeRepository
+        )
 
         passwordManager.clearTemporaryPasswords()
         notificationRepository.createNotificationChannels()
@@ -71,6 +86,10 @@ class RestoidApplication : Application() {
             resticBinaryManager.checkResticStatus() // New manager handles checks
             repositoriesRepository.loadRepositories()
             notificationRepository.checkPermissionStatus()
+        }
+
+        applicationScope.launch(Dispatchers.IO) {
+            operationWorkRepository.reconcileStateWithWorkManager()
         }
     }
 }

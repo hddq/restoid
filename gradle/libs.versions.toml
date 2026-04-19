@@ -22,6 +22,7 @@ coilCompose = "2.7.0"
 kotlinxSerializationJson = "1.11.0"
 aboutLibraries = "14.0.1"
 biometric = "1.1.0"
+work = "2.11.2"
 
 [libraries]
 androidx-compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "materialIconsExtended" }
@@ -53,6 +54,7 @@ coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coi
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 aboutlibraries-compose = { module = "com.mikepenz:aboutlibraries-compose", version.ref = "aboutLibraries" }
 androidx-biometric = { module = "androidx.biometric:biometric", version.ref = "biometric" }
+androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -69,7 +69,6 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
-    // Apply AboutLibraries plugin
     alias(libs.plugins.aboutlibraries)
 }
 
@@ -229,6 +228,7 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.biometric)
+    implementation(libs.androidx.work.runtime.ktx)
     // Add AboutLibraries UI
     implementation(libs.aboutlibraries.compose)
 
