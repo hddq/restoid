@@ -1,67 +1,20 @@
 import java.io.File
 
 // This task builds the restic binary from the submodule for each required Android architecture.
-tasks.register("buildResticForBundledFlavor") {
+tasks.register<Exec>("buildResticForBundledFlavor") {
     group = "restic"
-    description = "Builds restic binary from submodule for bundled flavor ABIs"
+    description = "Builds restic binary from submodule using bash script"
 
-    // Use the submodule as an input directory for Gradle's up-to-date checks.
     inputs.dir(rootProject.file("restic"))
-    // Define the output directory for the compiled binaries - NOW USING jniLibs!
-    val outputJniLibsDir = file("src/bundled/jniLibs")
-    outputs.dir(outputJniLibsDir)
+    outputs.dir(file("src/bundled/jniLibs"))
 
-    doLast {
-        // Build Restic for each architecture
-        val targetAbis = setOf("x86_64", "arm64-v8a")
-
-        targetAbis.forEach { abi ->
-            // Map Android ABI names to Go architecture names.
-            val goArch = when (abi) {
-                "arm64-v8a" -> "arm64"
-                "x86_64" -> "amd64"
-                else -> null
-            }
-
-            if (goArch != null) {
-                println("Building restic for $abi (GOARCH: $goArch)...")
-
-                val finalOutputDir = File(outputJniLibsDir, abi)
-                finalOutputDir.mkdirs()
-                // IMPORTANT: Prefix with "lib" and use ".so" extension for Android to recognize it
-                val outputFile = File(finalOutputDir, "librestic.so")
-
-                // Using ProcessBuilder for the build command
-                val buildProcess = ProcessBuilder(
-                    "go", "build",
-                    "-buildvcs=false",
-                    "-ldflags=-s -w", // Strip debug info to reduce binary size
-                    "-trimpath",
-                    "-o", outputFile.absolutePath,
-                    "./cmd/restic"
-                )
-
-                buildProcess.directory(rootProject.file("restic"))
-
-                // Set environment variables cleanly
-                val env = buildProcess.environment()
-                env["GOOS"] = "linux" // Target is Android (Linux)
-                env["GOARCH"] = goArch
-                env["CGO_ENABLED"] = "0" // Create a static binary
-
-                buildProcess.redirectErrorStream(true)
-                val process = buildProcess.start()
-
-                // Capture output to show if something goes wrong
-                val buildOutput = process.inputStream.bufferedReader().readText()
-                val exitCode = process.waitFor()
-
-                if (exitCode != 0) {
-                    throw GradleException("Failed to build restic for $abi.\nOutput: $buildOutput")
-                }
-            }
-        }
+    onlyIf("binaries not yet built") {
+        !file("src/bundled/jniLibs/arm64-v8a/librestic.so").exists() ||
+                !file("src/bundled/jniLibs/x86_64/librestic.so").exists()
     }
+
+    workingDir = rootProject.projectDir
+    commandLine = listOf("bash", "scripts/build_restic.sh")
 }
 
 plugins {
@@ -93,7 +46,7 @@ val hasReleaseSigning = listOf(
     signingKeyPassword
 ).all { !it.isNullOrBlank() }
 
-val baseAppVersionCode = 8
+val baseAppVersionCode = 9
 
 android {
     namespace = "io.github.hddq.restoid"
@@ -106,8 +59,8 @@ android {
         applicationId = "io.github.hddq.restoid"
         minSdk = 33
         targetSdk = 36
-        versionCode = 8
-        versionName = "0.3.5"
+        versionCode = 9
+        versionName = "0.3.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
