@@ -335,7 +335,15 @@ class MainActivity : FragmentActivity() {
                             )
                             SettingsScreen(viewModel = vm, onNavigateToLicenses = { navController.navigate(Screen.Licenses.route) })
                         }
-                        composable(Screen.Backup.route) { BackupScreen(onNavigateUp = { navController.navigateUp() }) }
+                        composable(Screen.Backup.route) {
+                            BackupScreen(
+                                onNavigateToOperationProgress = {
+                                    navController.navigate(Screen.OperationProgress.route) {
+                                        launchSingleTop = true
+                                    }
+                                }
+                            )
+                        }
                         composable(
                             route = "${Screen.SnapshotDetails.route}/{snapshotId}",
                             arguments = listOf(navArgument("snapshotId") { type = NavType.StringType })
@@ -355,7 +363,15 @@ class MainActivity : FragmentActivity() {
                             )
                         }
                         composable(Screen.Licenses.route) { LicensesScreen(onNavigateUp = { navController.navigateUp() }) }
-                        composable(Screen.Maintenance.route) { MaintenanceScreen(onNavigateUp = { navController.navigateUp() }) }
+                        composable(Screen.Maintenance.route) {
+                            MaintenanceScreen(
+                                onNavigateToOperationProgress = {
+                                    navController.navigate(Screen.OperationProgress.route) {
+                                        launchSingleTop = true
+                                    }
+                                }
+                            )
+                        }
                         composable(Screen.OperationProgress.route) {
                             OperationProgressScreen(onNavigateUp = { navController.navigateUp() })
                         }

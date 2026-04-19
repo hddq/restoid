@@ -1,6 +1,5 @@
 package io.github.hddq.restoid.ui.screens
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -12,6 +11,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -24,11 +26,11 @@ import coil.compose.rememberAsyncImagePainter
 import android.widget.Toast
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.RestoidApplication
+import io.github.hddq.restoid.Screen
 import io.github.hddq.restoid.model.BackupDetail
 import io.github.hddq.restoid.ui.restore.RestoreTypes
 import io.github.hddq.restoid.ui.restore.RestoreViewModel
 import io.github.hddq.restoid.ui.restore.RestoreViewModelFactory
-import io.github.hddq.restoid.ui.shared.ProgressScreenContent
 import io.github.hddq.restoid.ui.theme.Orange
 
 @Composable
@@ -53,8 +55,8 @@ fun RestoreScreen(navController: NavController, snapshotId: String?, modifier: M
     val restoreTypes by viewModel.restoreTypes.collectAsState()
     val allowDowngrade by viewModel.allowDowngrade.collectAsState()
     val isRestoring by viewModel.isRestoring.collectAsState()
-    val restoreProgress by viewModel.restoreProgress.collectAsState()
     val operationBlocked by viewModel.operationBlocked.collectAsState()
+    var hasNavigatedForCurrentRun by remember { mutableStateOf(false) }
 
     LaunchedEffect(operationBlocked) {
         if (operationBlocked) {
@@ -63,7 +65,17 @@ fun RestoreScreen(navController: NavController, snapshotId: String?, modifier: M
         }
     }
 
-    val showProgressScreen = isRestoring || restoreProgress.isFinished
+    LaunchedEffect(isRestoring) {
+        if (!isRestoring) {
+            hasNavigatedForCurrentRun = false
+        } else if (!hasNavigatedForCurrentRun) {
+            hasNavigatedForCurrentRun = true
+            navController.navigate(Screen.OperationProgress.route) {
+                launchSingleTop = true
+            }
+        }
+    }
+
     val apkLabel = stringResource(R.string.backup_type_apk)
     val dataLabel = stringResource(R.string.backup_type_data)
     val deviceProtectedDataLabel = stringResource(R.string.backup_type_device_protected_data)
@@ -72,43 +84,26 @@ fun RestoreScreen(navController: NavController, snapshotId: String?, modifier: M
     val mediaDataLabel = stringResource(R.string.backup_type_media_data)
     val allowDowngradeLabel = stringResource(R.string.allow_downgrade)
 
-    Crossfade(
-        targetState = showProgressScreen,
-        label = "RestoreScreenCrossfade",
-        modifier = modifier.fillMaxSize()
-    ) { showProgress ->
-        if (showProgress) {
-            ProgressScreenContent(
-                progress = restoreProgress,
-                operationType = stringResource(R.string.operation_restore),
-                onDone = {
-                    viewModel.onDone()
-                    navController.popBackStack()
-                }
-            )
-        } else {
-            RestoreSelectionContent(
-                backupDetails = backupDetails,
-                isLoading = isLoading,
-                restoreTypes = restoreTypes,
-                allowDowngrade = allowDowngrade,
-                onToggleApp = viewModel::toggleRestoreAppSelection,
-                onToggleAll = viewModel::toggleAllRestoreSelection,
-                onToggleRestoreType = { type, value ->
-                    when (type) {
-                        apkLabel -> viewModel.setRestoreApk(value)
-                        dataLabel -> viewModel.setRestoreData(value)
-                        deviceProtectedDataLabel -> viewModel.setRestoreDeviceProtectedData(value)
-                        externalDataLabel -> viewModel.setRestoreExternalData(value)
-                        obbDataLabel -> viewModel.setRestoreObb(value)
-                        mediaDataLabel -> viewModel.setRestoreMedia(value)
-                        allowDowngradeLabel -> viewModel.setAllowDowngrade(value)
-                    }
-                },
-                onToggleAllowDowngrade = viewModel::setAllowDowngrade
-            )
-        }
-    }
+    RestoreSelectionContent(
+        backupDetails = backupDetails,
+        isLoading = isLoading,
+        restoreTypes = restoreTypes,
+        allowDowngrade = allowDowngrade,
+        onToggleApp = viewModel::toggleRestoreAppSelection,
+        onToggleAll = viewModel::toggleAllRestoreSelection,
+        onToggleRestoreType = { type, value ->
+            when (type) {
+                apkLabel -> viewModel.setRestoreApk(value)
+                dataLabel -> viewModel.setRestoreData(value)
+                deviceProtectedDataLabel -> viewModel.setRestoreDeviceProtectedData(value)
+                externalDataLabel -> viewModel.setRestoreExternalData(value)
+                obbDataLabel -> viewModel.setRestoreObb(value)
+                mediaDataLabel -> viewModel.setRestoreMedia(value)
+                allowDowngradeLabel -> viewModel.setAllowDowngrade(value)
+            }
+        },
+        onToggleAllowDowngrade = viewModel::setAllowDowngrade
+    )
 }
 
 @Composable

@@ -1,7 +1,6 @@
 package io.github.hddq.restoid.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -27,6 +26,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -39,12 +41,11 @@ import io.github.hddq.restoid.RestoidApplication
 import io.github.hddq.restoid.ui.maintenance.MaintenanceUiState
 import io.github.hddq.restoid.ui.maintenance.MaintenanceViewModel
 import io.github.hddq.restoid.ui.maintenance.MaintenanceViewModelFactory
-import io.github.hddq.restoid.ui.shared.ProgressScreenContent
 import kotlin.math.roundToInt
 import android.widget.Toast
 
 @Composable
-fun MaintenanceScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
+fun MaintenanceScreen(onNavigateToOperationProgress: () -> Unit, modifier: Modifier = Modifier) {
     val application = LocalContext.current.applicationContext as RestoidApplication
     val viewModel: MaintenanceViewModel = viewModel(
         factory = MaintenanceViewModelFactory(
@@ -57,6 +58,7 @@ fun MaintenanceScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
     )
     val uiState by viewModel.uiState.collectAsState()
     val operationBlocked by viewModel.operationBlocked.collectAsState()
+    var hasNavigatedForCurrentRun by remember { mutableStateOf(false) }
 
     LaunchedEffect(operationBlocked) {
         if (operationBlocked) {
@@ -65,37 +67,27 @@ fun MaintenanceScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
         }
     }
 
-    val showProgressScreen = uiState.isRunning || uiState.progress.isFinished
-
-    Crossfade(
-        targetState = showProgressScreen,
-        label = "MaintenanceScreenCrossfade",
-        modifier = modifier.fillMaxSize()
-    ) { showProgress ->
-        if (showProgress) {
-            ProgressScreenContent(
-                progress = uiState.progress,
-                operationType = stringResource(R.string.operation_maintenance),
-                onDone = {
-                    viewModel.onDone()
-                    onNavigateUp()
-                }
-            )
-        } else {
-            MaintenanceSelectionContent(
-                uiState = uiState,
-                onSetCheckRepo = viewModel::setCheckRepo,
-                onSetPruneRepo = viewModel::setPruneRepo,
-                onSetUnlockRepo = viewModel::setUnlockRepo,
-                onSetReadData = viewModel::setReadData,
-                onSetForgetSnapshots = viewModel::setForgetSnapshots,
-                onSetKeepLast = viewModel::setKeepLast,
-                onSetKeepDaily = viewModel::setKeepDaily,
-                onSetKeepWeekly = viewModel::setKeepWeekly,
-                onSetKeepMonthly = viewModel::setKeepMonthly
-            )
+    LaunchedEffect(uiState.isRunning) {
+        if (!uiState.isRunning) {
+            hasNavigatedForCurrentRun = false
+        } else if (!hasNavigatedForCurrentRun) {
+            hasNavigatedForCurrentRun = true
+            onNavigateToOperationProgress()
         }
     }
+
+    MaintenanceSelectionContent(
+        uiState = uiState,
+        onSetCheckRepo = viewModel::setCheckRepo,
+        onSetPruneRepo = viewModel::setPruneRepo,
+        onSetUnlockRepo = viewModel::setUnlockRepo,
+        onSetReadData = viewModel::setReadData,
+        onSetForgetSnapshots = viewModel::setForgetSnapshots,
+        onSetKeepLast = viewModel::setKeepLast,
+        onSetKeepDaily = viewModel::setKeepDaily,
+        onSetKeepWeekly = viewModel::setKeepWeekly,
+        onSetKeepMonthly = viewModel::setKeepMonthly
+    )
 }
 
 @Composable

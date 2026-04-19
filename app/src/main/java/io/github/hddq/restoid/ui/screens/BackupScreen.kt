@@ -1,6 +1,5 @@
 package io.github.hddq.restoid.ui.screens
 
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -13,6 +12,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -31,10 +33,12 @@ import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.ui.backup.BackupTypes
 import io.github.hddq.restoid.ui.backup.BackupViewModel
 import io.github.hddq.restoid.ui.backup.BackupViewModelFactory
-import io.github.hddq.restoid.ui.shared.ProgressScreenContent
 
 @Composable
-fun BackupScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
+fun BackupScreen(
+    onNavigateToOperationProgress: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     val application = LocalContext.current.applicationContext as RestoidApplication
     val viewModel: BackupViewModel = viewModel(
         factory = BackupViewModelFactory(
@@ -50,13 +54,22 @@ fun BackupScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
     val isLoadingApps by viewModel.isLoadingApps.collectAsState()
     val backupTypes by viewModel.backupTypes.collectAsState()
     val isBackingUp by viewModel.isBackingUp.collectAsState()
-    val backupProgress by viewModel.backupProgress.collectAsState()
     val operationBlocked by viewModel.operationBlocked.collectAsState()
+    var hasNavigatedForCurrentRun by remember { mutableStateOf(false) }
 
     LaunchedEffect(operationBlocked) {
         if (operationBlocked) {
             Toast.makeText(application, application.getString(R.string.error_operation_already_running), Toast.LENGTH_SHORT).show()
             viewModel.consumeOperationBlocked()
+        }
+    }
+
+    LaunchedEffect(isBackingUp) {
+        if (!isBackingUp) {
+            hasNavigatedForCurrentRun = false
+        } else if (!hasNavigatedForCurrentRun) {
+            hasNavigatedForCurrentRun = true
+            onNavigateToOperationProgress()
         }
     }
 
@@ -73,31 +86,12 @@ fun BackupScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
         }
     }
 
-    val showProgressScreen = isBackingUp || backupProgress.isFinished
-
-    Crossfade(
-        targetState = showProgressScreen,
-        label = "BackupScreenCrossfade",
-        modifier = modifier.fillMaxSize()
-    ) { showProgress ->
-        if (showProgress) {
-            ProgressScreenContent(
-                progress = backupProgress,
-                operationType = stringResource(R.string.operation_backup),
-                onDone = {
-                    viewModel.onDone()
-                    onNavigateUp()
-                }
-            )
-        } else {
-            BackupSelectionContent(
-                viewModel = viewModel,
-                apps = apps,
-                isLoading = isLoadingApps,
-                backupTypes = backupTypes
-            )
-        }
-    }
+    BackupSelectionContent(
+        viewModel = viewModel,
+        apps = apps,
+        isLoading = isLoadingApps,
+        backupTypes = backupTypes
+    )
 }
 
 @Composable
