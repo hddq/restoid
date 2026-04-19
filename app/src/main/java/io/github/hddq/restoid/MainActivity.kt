@@ -64,7 +64,7 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         val app = applicationContext as RestoidApplication
         isAppUnlocked = savedInstanceState?.getBoolean(STATE_APP_UNLOCKED) ?: false
-        openOperationProgressOnLaunch = intent?.getBooleanExtra(NotificationRepository.EXTRA_OPEN_OPERATION_PROGRESS, false) == true
+        openOperationProgressOnLaunch = consumeOpenOperationProgressFlag(intent)
         enableEdgeToEdge()
 
         if (app.preferencesRepository.loadRequireAppUnlock() && !isAppUnlocked) {
@@ -82,10 +82,19 @@ class MainActivity : FragmentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        setIntent(intent)
-        if (intent.getBooleanExtra(NotificationRepository.EXTRA_OPEN_OPERATION_PROGRESS, false)) {
+        if (consumeOpenOperationProgressFlag(intent)) {
             openOperationProgressOnLaunch = true
         }
+    }
+
+    private fun consumeOpenOperationProgressFlag(sourceIntent: Intent?): Boolean {
+        if (sourceIntent == null) return false
+        val shouldOpen = sourceIntent.getBooleanExtra(NotificationRepository.EXTRA_OPEN_OPERATION_PROGRESS, false)
+        if (shouldOpen) {
+            sourceIntent.removeExtra(NotificationRepository.EXTRA_OPEN_OPERATION_PROGRESS)
+        }
+        setIntent(sourceIntent)
+        return shouldOpen
     }
 
     private fun authenticateAndLaunch(app: RestoidApplication) {
