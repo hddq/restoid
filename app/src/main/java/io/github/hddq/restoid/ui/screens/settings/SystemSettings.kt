@@ -1,8 +1,13 @@
 package io.github.hddq.restoid.ui.screens.settings
 
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BatteryAlert
+import androidx.compose.material.icons.filled.BatterySaver
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material3.*
@@ -30,6 +35,8 @@ fun SystemSettings(
     val rootState by viewModel.rootState.collectAsStateWithLifecycle()
     val notificationPermissionState by viewModel.notificationPermissionState.collectAsStateWithLifecycle()
     val requireAppUnlock by viewModel.requireAppUnlock.collectAsStateWithLifecycle()
+    val batteryOptimizationDisabled by viewModel.isIgnoringBatteryOptimizations.collectAsStateWithLifecycle()
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -80,6 +87,72 @@ fun SystemSettings(
             AppUnlockOnStartRow(
                 enabled = requireAppUnlock,
                 onCheckedChange = viewModel::onRequireAppUnlockChanged
+            )
+            Divider(color = MaterialTheme.colorScheme.background)
+            BatteryOptimizationRow(
+                disabled = batteryOptimizationDisabled,
+                onRequestDisable = {
+                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                        data = Uri.parse("package:${context.packageName}")
+                    }
+                    runCatching { context.startActivity(intent) }
+                        .onFailure {
+                            context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                        }
+                },
+                onOpenSettings = {
+                    context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun BatteryOptimizationRow(
+    disabled: Boolean,
+    onRequestDisable: () -> Unit,
+    onOpenSettings: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
+            Icon(
+                imageVector = if (disabled) Icons.Default.BatterySaver else Icons.Default.BatteryAlert,
+                contentDescription = null,
+                modifier = Modifier.padding(end = 16.dp),
+                tint = if (disabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+            )
+            Column {
+                Text(
+                    text = if (disabled) {
+                        stringResource(R.string.battery_optimization_disabled)
+                    } else {
+                        stringResource(R.string.battery_optimization_enabled)
+                    }
+                )
+                Text(
+                    text = stringResource(R.string.battery_optimization_description),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        Button(onClick = if (disabled) onOpenSettings else onRequestDisable) {
+            Text(
+                if (disabled) {
+                    stringResource(R.string.action_settings)
+                } else {
+                    stringResource(R.string.action_disable)
+                }
             )
         }
     }

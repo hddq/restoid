@@ -1,5 +1,6 @@
 package io.github.hddq.restoid.ui.settings
 
+import android.os.PowerManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.hddq.restoid.data.*
@@ -68,11 +69,15 @@ class SettingsViewModel(
     private val _requireAppUnlock = MutableStateFlow(preferencesRepository.loadRequireAppUnlock())
     val requireAppUnlock = _requireAppUnlock.asStateFlow()
 
+    private val _isIgnoringBatteryOptimizations = MutableStateFlow(false)
+    val isIgnoringBatteryOptimizations = _isIgnoringBatteryOptimizations.asStateFlow()
+
     private var pendingSftpTrustRequest: PendingSftpTrustRequest? = null
 
     init {
         viewModelScope.launch {
             resticBinaryManager.fetchLatestResticVersion()
+            refreshBatteryOptimizationStatus()
         }
     }
 
@@ -128,6 +133,11 @@ class SettingsViewModel(
     fun onRequireAppUnlockChanged(required: Boolean) {
         _requireAppUnlock.value = required
         preferencesRepository.saveRequireAppUnlock(required)
+    }
+
+    fun refreshBatteryOptimizationStatus() {
+        val powerManager = context.getSystemService(android.content.Context.POWER_SERVICE) as PowerManager
+        _isIgnoringBatteryOptimizations.value = powerManager.isIgnoringBatteryOptimizations(context.packageName)
     }
 
     fun downloadRestic() {

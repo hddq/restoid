@@ -36,6 +36,7 @@ fun SettingsScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 viewModel.checkNotificationPermission()
+                viewModel.refreshBatteryOptimizationStatus()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
