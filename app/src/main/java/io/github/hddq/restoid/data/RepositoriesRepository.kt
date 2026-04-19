@@ -634,10 +634,6 @@ class RepositoriesRepository(
             RepositoryBackendType.SFTP -> if (trimmed.startsWith("sftp:")) trimmed else "sftp:$trimmed"
             RepositoryBackendType.REST -> if (trimmed.startsWith("rest:")) trimmed else "rest:$trimmed"
             RepositoryBackendType.S3 -> if (trimmed.startsWith("s3:")) trimmed else "s3:$trimmed"
-            RepositoryBackendType.SWIFT -> if (trimmed.startsWith("swift:")) trimmed else "swift:$trimmed"
-            RepositoryBackendType.B2 -> if (trimmed.startsWith("b2:")) trimmed else "b2:$trimmed"
-            RepositoryBackendType.AZURE -> if (trimmed.startsWith("azure:")) trimmed else "azure:$trimmed"
-            RepositoryBackendType.GOOGLE_CLOUD_STORAGE -> if (trimmed.startsWith("gs:")) trimmed else "gs:$trimmed"
         }
     }
 

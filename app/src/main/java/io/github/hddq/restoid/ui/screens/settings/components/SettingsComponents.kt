@@ -198,10 +198,6 @@ fun SelectableRepositoryRow(
                     RepositoryBackendType.SFTP -> stringResource(R.string.repo_backend_sftp)
                     RepositoryBackendType.REST -> stringResource(R.string.repo_backend_rest)
                     RepositoryBackendType.S3 -> stringResource(R.string.repo_backend_s3)
-                    RepositoryBackendType.SWIFT -> stringResource(R.string.repo_backend_swift)
-                    RepositoryBackendType.B2 -> stringResource(R.string.repo_backend_b2)
-                    RepositoryBackendType.AZURE -> stringResource(R.string.repo_backend_azure)
-                    RepositoryBackendType.GOOGLE_CLOUD_STORAGE -> stringResource(R.string.repo_backend_gcs)
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = LocalContentColor.current.copy(alpha = 0.75f)

@@ -21,7 +21,7 @@ Restoid gives you control over your app backups through a clean and simple user 
 * **Restic-Powered**: Leverages the speed, security, and efficiency of `restic` for deduplicated and encrypted backups.
 * **Selective App Backup**: Choose exactly which user-installed applications you want to back up.
 * **Full Control Over What You Back Up**: Granularly select what to include for each app: APK files, user data, device-protected data, external/OBB/media files.
-* **Flexible Repository Management**: Create and manage repositories across multiple native restic backends: Local directory, SFTP, REST server, Amazon S3/MinIO, OpenStack Swift, Backblaze B2, Azure Blob Storage, and Google Cloud Storage.
+* **Flexible Repository Management**: Create and manage repositories across native restic backends: Local directory, SFTP, REST server, and Amazon S3/MinIO.
 * **Snapshot Management**: Easily browse backup snapshots, view details of what was backed up, and forget old snapshots.
 * **Flexible Restore**: Restore entire apps or just specific parts (like only app data).
 * **Downgrade Protection**: Prevents you from accidentally restoring an older app version over a newer one (can be overridden).

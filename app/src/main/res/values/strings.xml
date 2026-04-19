@@ -135,18 +135,10 @@
     <string name="repo_backend_sftp">SFTP (SSH)</string>
     <string name="repo_backend_rest">HTTP REST server</string>
     <string name="repo_backend_s3">Amazon S3 / MinIO</string>
-    <string name="repo_backend_swift">OpenStack Swift</string>
-    <string name="repo_backend_b2">Backblaze B2</string>
-    <string name="repo_backend_azure">Azure Blob Storage</string>
-    <string name="repo_backend_gcs">Google Cloud Storage</string>
 
     <string name="repo_hint_sftp">user@host:/srv/restic-repo</string>
     <string name="repo_hint_rest">http://host:8000/</string>
     <string name="repo_hint_s3">s3.us-east-1.amazonaws.com/bucket_name</string>
-    <string name="repo_hint_swift">container_name:/path</string>
-    <string name="repo_hint_b2">bucketname:path/to/repo</string>
-    <string name="repo_hint_azure">container:/</string>
-    <string name="repo_hint_gcs">bucket:/</string>
 
     <string name="label_path">Path</string>
     <string name="placeholder_select_directory">Select a directory…</string>

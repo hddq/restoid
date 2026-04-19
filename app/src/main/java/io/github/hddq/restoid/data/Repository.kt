@@ -14,11 +14,7 @@ enum class RepositoryBackendType {
     LOCAL,
     SFTP,
     REST,
-    S3,
-    SWIFT,
-    B2,
-    AZURE,
-    GOOGLE_CLOUD_STORAGE
+    S3
 }
 
 @Serializable
@@ -37,15 +33,9 @@ private fun defaultRepositoryName(path: String, backendType: RepositoryBackendTy
 
     return when (backendType) {
         RepositoryBackendType.LOCAL -> File(trimmed).name.ifBlank { trimmed }
-        RepositoryBackendType.SWIFT,
-        RepositoryBackendType.B2,
-        RepositoryBackendType.AZURE,
-        RepositoryBackendType.GOOGLE_CLOUD_STORAGE -> {
-            val target = trimmed.substringAfter(':', missingDelimiterValue = trimmed)
-            val name = target.substringBefore(':').substringBefore('/')
-            if (name.isBlank()) trimmed else name
-        }
-        else -> {
+        RepositoryBackendType.SFTP,
+        RepositoryBackendType.REST,
+        RepositoryBackendType.S3 -> {
             val segment = trimmed.substringAfterLast('/').substringAfterLast(':')
             if (segment.isBlank()) trimmed else segment
         }

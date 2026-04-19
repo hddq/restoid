@@ -46,11 +46,7 @@ fun AddRepositoryDialog(
         RepositoryBackendType.LOCAL,
         RepositoryBackendType.SFTP,
         RepositoryBackendType.REST,
-        RepositoryBackendType.S3,
-        RepositoryBackendType.SWIFT,
-        RepositoryBackendType.B2,
-        RepositoryBackendType.AZURE,
-        RepositoryBackendType.GOOGLE_CLOUD_STORAGE
+        RepositoryBackendType.S3
     )
 
     val selectedBackendLabel = when (uiState.backendType) {
@@ -58,10 +54,6 @@ fun AddRepositoryDialog(
         RepositoryBackendType.SFTP -> stringResource(R.string.repo_backend_sftp)
         RepositoryBackendType.REST -> stringResource(R.string.repo_backend_rest)
         RepositoryBackendType.S3 -> stringResource(R.string.repo_backend_s3)
-        RepositoryBackendType.SWIFT -> stringResource(R.string.repo_backend_swift)
-        RepositoryBackendType.B2 -> stringResource(R.string.repo_backend_b2)
-        RepositoryBackendType.AZURE -> stringResource(R.string.repo_backend_azure)
-        RepositoryBackendType.GOOGLE_CLOUD_STORAGE -> stringResource(R.string.repo_backend_gcs)
     }
 
     val pathPlaceholder = when (uiState.backendType) {
@@ -69,10 +61,6 @@ fun AddRepositoryDialog(
         RepositoryBackendType.SFTP -> stringResource(R.string.repo_hint_sftp)
         RepositoryBackendType.REST -> stringResource(R.string.repo_hint_rest)
         RepositoryBackendType.S3 -> stringResource(R.string.repo_hint_s3)
-        RepositoryBackendType.SWIFT -> stringResource(R.string.repo_hint_swift)
-        RepositoryBackendType.B2 -> stringResource(R.string.repo_hint_b2)
-        RepositoryBackendType.AZURE -> stringResource(R.string.repo_hint_azure)
-        RepositoryBackendType.GOOGLE_CLOUD_STORAGE -> stringResource(R.string.repo_hint_gcs)
     }
 
     AlertDialog(
@@ -106,10 +94,6 @@ fun AddRepositoryDialog(
                                 RepositoryBackendType.SFTP -> stringResource(R.string.repo_backend_sftp)
                                 RepositoryBackendType.REST -> stringResource(R.string.repo_backend_rest)
                                 RepositoryBackendType.S3 -> stringResource(R.string.repo_backend_s3)
-                                RepositoryBackendType.SWIFT -> stringResource(R.string.repo_backend_swift)
-                                RepositoryBackendType.B2 -> stringResource(R.string.repo_backend_b2)
-                                RepositoryBackendType.AZURE -> stringResource(R.string.repo_backend_azure)
-                                RepositoryBackendType.GOOGLE_CLOUD_STORAGE -> stringResource(R.string.repo_backend_gcs)
                             }
 
                             DropdownMenuItem(
