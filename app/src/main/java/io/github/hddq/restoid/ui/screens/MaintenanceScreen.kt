@@ -50,12 +50,9 @@ fun MaintenanceScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
         factory = MaintenanceViewModelFactory(
             application,
             application.repositoriesRepository,
-            application.resticBinaryManager, // Added this!
-            application.resticRepository,
-            application.notificationRepository,
+            application.resticBinaryManager,
             application.preferencesRepository,
-            application.operationCoordinator,
-            application.operationLockManager
+            application.operationWorkRepository
         )
     )
     val uiState by viewModel.uiState.collectAsState()

@@ -3,6 +3,7 @@ package io.github.hddq.restoid
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import android.content.Intent
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.layout.padding
@@ -18,6 +19,8 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
@@ -45,6 +48,7 @@ import io.github.hddq.restoid.ui.settings.SettingsViewModelFactory
 import io.github.hddq.restoid.ui.snapshot.SnapshotDetailsViewModel
 import io.github.hddq.restoid.ui.snapshot.SnapshotDetailsViewModelFactory
 import io.github.hddq.restoid.ui.theme.RestoidTheme
+import io.github.hddq.restoid.data.NotificationRepository
 
 class MainActivity : FragmentActivity() {
     private companion object {
@@ -53,12 +57,14 @@ class MainActivity : FragmentActivity() {
 
     private var isAppUnlocked = false
     private var isContentInitialized = false
+    private var openOperationProgressOnLaunch by mutableStateOf(false)
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val app = applicationContext as RestoidApplication
         isAppUnlocked = savedInstanceState?.getBoolean(STATE_APP_UNLOCKED) ?: false
+        openOperationProgressOnLaunch = intent?.getBooleanExtra(NotificationRepository.EXTRA_OPEN_OPERATION_PROGRESS, false) == true
         enableEdgeToEdge()
 
         if (app.preferencesRepository.loadRequireAppUnlock() && !isAppUnlocked) {
@@ -72,6 +78,14 @@ class MainActivity : FragmentActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putBoolean(STATE_APP_UNLOCKED, isAppUnlocked)
         super.onSaveInstanceState(outState)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent.getBooleanExtra(NotificationRepository.EXTRA_OPEN_OPERATION_PROGRESS, false)) {
+            openOperationProgressOnLaunch = true
+        }
     }
 
     private fun authenticateAndLaunch(app: RestoidApplication) {
@@ -129,6 +143,15 @@ class MainActivity : FragmentActivity() {
                 )
                 val homeUiState by homeViewModel.uiState.collectAsState()
 
+                if (openOperationProgressOnLaunch) {
+                    androidx.compose.runtime.LaunchedEffect(openOperationProgressOnLaunch) {
+                        navController.navigate(Screen.OperationProgress.route) {
+                            launchSingleTop = true
+                        }
+                        openOperationProgressOnLaunch = false
+                    }
+                }
+
                 Scaffold(
                     topBar = {
                         if (!showBottomBar) {
@@ -137,6 +160,7 @@ class MainActivity : FragmentActivity() {
                                     val titleRes = when {
                                         currentDestination?.route == Screen.Backup.route -> R.string.topbar_new_backup
                                         currentDestination?.route == Screen.Maintenance.route -> R.string.topbar_maintenance
+                                        currentDestination?.route == Screen.OperationProgress.route -> R.string.topbar_operation_progress
                                         currentDestination?.route == Screen.Licenses.route -> R.string.topbar_open_source_licenses
                                         currentDestination?.route?.startsWith(Screen.SnapshotDetails.route) == true -> R.string.topbar_snapshot_details
                                         currentDestination?.route?.startsWith(Screen.Restore.route) == true -> R.string.topbar_restore_snapshot
@@ -207,12 +231,9 @@ class MainActivity : FragmentActivity() {
                                         app,
                                         app.repositoriesRepository,
                                         app.resticBinaryManager,
-                                        app.resticRepository,
-                                        app.notificationRepository,
                                         app.appInfoRepository,
                                         app.preferencesRepository,
-                                        app.operationCoordinator,
-                                        app.operationLockManager
+                                        app.operationWorkRepository
                                     )
                                 )
                                 val isBackingUp by viewModel.isBackingUp.collectAsState()
@@ -232,11 +253,8 @@ class MainActivity : FragmentActivity() {
                                         app,
                                         app.repositoriesRepository,
                                         app.resticBinaryManager,
-                                        app.resticRepository,
-                                        app.notificationRepository,
                                         app.preferencesRepository,
-                                        app.operationCoordinator,
-                                        app.operationLockManager
+                                        app.operationWorkRepository
                                     )
                                 )
                                 val uiState by viewModel.uiState.collectAsState()
@@ -264,11 +282,9 @@ class MainActivity : FragmentActivity() {
                                         app.resticBinaryManager,
                                         app.resticRepository,
                                         app.appInfoRepository,
-                                        app.notificationRepository,
                                         app.metadataRepository,
                                         app.preferencesRepository,
-                                        app.operationCoordinator,
-                                        app.operationLockManager,
+                                        app.operationWorkRepository,
                                         navBackStackEntry?.arguments?.getString("snapshotId") ?: ""
                                     )
                                 )
@@ -331,6 +347,9 @@ class MainActivity : FragmentActivity() {
                         }
                         composable(Screen.Licenses.route) { LicensesScreen(onNavigateUp = { navController.navigateUp() }) }
                         composable(Screen.Maintenance.route) { MaintenanceScreen(onNavigateUp = { navController.navigateUp() }) }
+                        composable(Screen.OperationProgress.route) {
+                            OperationProgressScreen(onNavigateUp = { navController.navigateUp() })
+                        }
                     }
                 }
             }

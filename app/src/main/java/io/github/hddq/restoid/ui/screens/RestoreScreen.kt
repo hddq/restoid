@@ -38,14 +38,12 @@ fun RestoreScreen(navController: NavController, snapshotId: String?, modifier: M
         factory = RestoreViewModelFactory(
             application,
             application.repositoriesRepository,
-            application.resticBinaryManager, // Added this!
+            application.resticBinaryManager,
             application.resticRepository,
             application.appInfoRepository,
-            application.notificationRepository,
             application.metadataRepository,
             application.preferencesRepository,
-            application.operationCoordinator,
-            application.operationLockManager,
+            application.operationWorkRepository,
             snapshotId ?: ""
         )
     )

@@ -8,4 +8,5 @@ sealed class Screen(val route: String, val titleRes: Int) {
     object Restore : Screen("restore", R.string.screen_restore)
     object Licenses : Screen("licenses", R.string.screen_licenses)
     object Maintenance : Screen("maintenance", R.string.screen_maintenance)
+    object OperationProgress : Screen("operation_progress", R.string.screen_operation_progress)
 }
