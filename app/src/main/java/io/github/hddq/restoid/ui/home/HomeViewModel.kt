@@ -35,7 +35,7 @@ data class HomeUiState(
     val isRefreshing: Boolean = false,
     val error: String? = null,
     val authFailure: HomeAuthFailure? = null,
-    val unlockPrompt: HomeCredentialPrompt? = null,
+    val openPrompt: HomeCredentialPrompt? = null,
     val selectedRepo: String? = null,
     val resticState: ResticState = ResticState.Idle,
     val showPasswordDialogFor: String? = null,
@@ -124,7 +124,7 @@ class HomeViewModel(
                         isRefreshing = false,
                         error = null,
                         authFailure = null,
-                        unlockPrompt = null,
+                        openPrompt = null,
                         showPasswordDialogFor = null,
                         showSftpPasswordDialogFor = null,
                         showRestCredentialsDialogFor = null
@@ -147,7 +147,7 @@ class HomeViewModel(
                         isLoading = false,
                         error = null,
                         authFailure = null,
-                        unlockPrompt = null,
+                        openPrompt = null,
                         showPasswordDialogFor = null,
                         showSftpPasswordDialogFor = null,
                         showRestCredentialsDialogFor = null
@@ -158,7 +158,7 @@ class HomeViewModel(
 
             if (snapshots == null) {
                 if (!_uiState.value.isRefreshing) {
-                    _uiState.update { it.copy(isLoading = true, error = null, unlockPrompt = null) }
+                    _uiState.update { it.copy(isLoading = true, error = null, openPrompt = null) }
                 }
                 loadSnapshots(repoPath, env, resticOptions, repoKey, restic)
                 return@combine
@@ -169,7 +169,7 @@ class HomeViewModel(
                     isLoading = false,
                     error = null,
                     authFailure = null,
-                    unlockPrompt = null,
+                    openPrompt = null,
                     showPasswordDialogFor = null,
                     showSftpPasswordDialogFor = null,
                     showRestCredentialsDialogFor = null
@@ -186,7 +186,7 @@ class HomeViewModel(
                         appInfoMap = emptyMap(),
                         error = errorMsg,
                         authFailure = null,
-                        unlockPrompt = null
+                        openPrompt = null
                     )
                 }
                 return@combine
@@ -219,7 +219,7 @@ class HomeViewModel(
                     appInfoMap = emptyMap(),
                     isLoading = false,
                     authFailure = null,
-                    unlockPrompt = null
+                    openPrompt = null
                 )
             }
             return
@@ -233,7 +233,7 @@ class HomeViewModel(
                         appInfoMap = emptyMap(),
                         isLoading = false,
                         authFailure = null,
-                        unlockPrompt = null
+                        openPrompt = null
                     )
                 }
                 return
@@ -246,7 +246,7 @@ class HomeViewModel(
                         isLoading = false,
                         error = null,
                         authFailure = null,
-                        unlockPrompt = null,
+                        openPrompt = null,
                         showPasswordDialogFor = null,
                         showSftpPasswordDialogFor = repoKey,
                         showRestCredentialsDialogFor = null
@@ -265,7 +265,7 @@ class HomeViewModel(
                         isLoading = false,
                         error = null,
                         authFailure = null,
-                        unlockPrompt = null,
+                        openPrompt = null,
                         showPasswordDialogFor = null,
                         showSftpPasswordDialogFor = null,
                         showRestCredentialsDialogFor = repoKey
@@ -280,7 +280,7 @@ class HomeViewModel(
                         isLoading = false,
                         error = null,
                         authFailure = null,
-                        unlockPrompt = null,
+                        openPrompt = null,
                         showPasswordDialogFor = repoKey,
                         showSftpPasswordDialogFor = null,
                         showRestCredentialsDialogFor = null
@@ -303,7 +303,7 @@ class HomeViewModel(
                             null -> rawMessage
                         },
                         authFailure = authFailure,
-                        unlockPrompt = null,
+                        openPrompt = null,
                         isLoading = false,
                         showPasswordDialogFor = null,
                         showSftpPasswordDialogFor = null,
@@ -330,7 +330,7 @@ class HomeViewModel(
                     isRefreshing = false,
                     error = null,
                     authFailure = null,
-                    unlockPrompt = null,
+                    openPrompt = null,
                     showPasswordDialogFor = null,
                     showSftpPasswordDialogFor = repoKey,
                     showRestCredentialsDialogFor = null
@@ -349,7 +349,7 @@ class HomeViewModel(
                     isRefreshing = false,
                     error = null,
                     authFailure = null,
-                    unlockPrompt = null,
+                    openPrompt = null,
                     showPasswordDialogFor = null,
                     showSftpPasswordDialogFor = null,
                     showRestCredentialsDialogFor = repoKey
@@ -364,7 +364,7 @@ class HomeViewModel(
                     isRefreshing = false,
                     error = null,
                     authFailure = null,
-                    unlockPrompt = null,
+                    openPrompt = null,
                     showPasswordDialogFor = repoKey,
                     showSftpPasswordDialogFor = null,
                     showRestCredentialsDialogFor = null
@@ -374,7 +374,7 @@ class HomeViewModel(
         }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isRefreshing = true, error = null, authFailure = null, unlockPrompt = null) }
+            _uiState.update { it.copy(isRefreshing = true, error = null, authFailure = null, openPrompt = null) }
             try {
                 val password = repositoriesRepository.getRepositoryPassword(repoKey)!!
                 val result = resticRepository.getSnapshots(repoPath, password, environmentVariables, resticOptions)
@@ -390,14 +390,14 @@ class HomeViewModel(
                                 null -> rawMessage
                             },
                             authFailure = authFailure,
-                            unlockPrompt = null
+                            openPrompt = null
                         )
                     }
                 } else {
                     refreshTrigger.update { it + 1 }
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message, authFailure = null, unlockPrompt = null) }
+                _uiState.update { it.copy(error = e.message, authFailure = null, openPrompt = null) }
             } finally {
                 _uiState.update { it.copy(isRefreshing = false) }
             }
@@ -484,7 +484,7 @@ class HomeViewModel(
                 isLoading = true,
                 error = null,
                 authFailure = null,
-                unlockPrompt = null
+                openPrompt = null
             )
         }
 
@@ -511,7 +511,7 @@ class HomeViewModel(
                 isLoading = false,
                 error = null,
                 authFailure = null,
-                unlockPrompt = HomeCredentialPrompt.REPOSITORY_PASSWORD
+                openPrompt = HomeCredentialPrompt.REPOSITORY_PASSWORD
             )
         }
     }
@@ -527,7 +527,7 @@ class HomeViewModel(
                 isLoading = true,
                 error = null,
                 authFailure = null,
-                unlockPrompt = null
+                openPrompt = null
             )
         }
 
@@ -554,7 +554,7 @@ class HomeViewModel(
                 isLoading = false,
                 error = null,
                 authFailure = null,
-                unlockPrompt = HomeCredentialPrompt.SFTP_PASSWORD
+                openPrompt = HomeCredentialPrompt.SFTP_PASSWORD
             )
         }
     }
@@ -570,7 +570,7 @@ class HomeViewModel(
                 isLoading = true,
                 error = null,
                 authFailure = null,
-                unlockPrompt = null
+                openPrompt = null
             )
         }
 
@@ -597,7 +597,7 @@ class HomeViewModel(
                 isLoading = false,
                 error = null,
                 authFailure = null,
-                unlockPrompt = HomeCredentialPrompt.REST_CREDENTIALS
+                openPrompt = HomeCredentialPrompt.REST_CREDENTIALS
             )
         }
     }
@@ -612,7 +612,7 @@ class HomeViewModel(
                 isLoading = false,
                 error = null,
                 authFailure = null,
-                unlockPrompt = null
+                openPrompt = null
             )
         }
     }
@@ -630,7 +630,7 @@ class HomeViewModel(
                 isLoading = false,
                 error = null,
                 authFailure = null,
-                unlockPrompt = null
+                openPrompt = null
             )
         }
     }
@@ -648,7 +648,7 @@ class HomeViewModel(
                 isLoading = false,
                 error = null,
                 authFailure = null,
-                unlockPrompt = null
+                openPrompt = null
             )
         }
     }

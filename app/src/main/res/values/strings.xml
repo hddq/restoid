@@ -299,13 +299,13 @@
     <string name="home_error_repository_password_incorrect">Repository password is incorrect.</string>
     <string name="home_error_sftp_password_incorrect">SFTP password is incorrect.</string>
     <string name="home_error_rest_credentials_incorrect">REST credentials are incorrect.</string>
-    <string name="home_unlock_needed_message">Repository is locked. Unlock it to load snapshots.</string>
+    <string name="home_open_needed_message">Repository is closed. Open it to load snapshots.</string>
     <string name="action_enter_password_again">Enter password again</string>
     <string name="action_enter_sftp_password_again">Enter SFTP password again</string>
     <string name="action_enter_rest_credentials_again">Enter REST credentials again</string>
-    <string name="action_unlock_repository">Unlock repository</string>
-    <string name="action_unlock_sftp">Unlock SFTP</string>
-    <string name="action_unlock_rest">Unlock REST</string>
+    <string name="action_open_repository">Open repository</string>
+    <string name="action_open_sftp">Open SFTP</string>
+    <string name="action_open_rest">Open REST</string>
     <string name="settings_error_path_password_empty">Path and password cannot be empty.</string>
     <string name="settings_error_rest_credentials_incomplete">Enter both REST username and password, or leave both empty.</string>
     <string name="settings_error_invalid_environment_variables">Invalid environment variables.</string>

@@ -146,30 +146,30 @@ fun HomeScreen(
                             }
                         }
                     }
-                    uiState.unlockPrompt != null -> {
+                    uiState.openPrompt != null -> {
                         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                             Text(
-                                text = stringResource(R.string.home_unlock_needed_message),
+                                text = stringResource(R.string.home_open_needed_message),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(Modifier.height(12.dp))
-                            when (uiState.unlockPrompt) {
+                            when (uiState.openPrompt) {
                                 HomeCredentialPrompt.REPOSITORY_PASSWORD -> {
                                     Button(onClick = onRetryRepositoryPasswordEntry) {
-                                        Text(stringResource(R.string.action_unlock_repository))
+                                        Text(stringResource(R.string.action_open_repository))
                                     }
                                 }
 
                                 HomeCredentialPrompt.SFTP_PASSWORD -> {
                                     Button(onClick = onRetrySftpPasswordEntry) {
-                                        Text(stringResource(R.string.action_unlock_sftp))
+                                        Text(stringResource(R.string.action_open_sftp))
                                     }
                                 }
 
                                 HomeCredentialPrompt.REST_CREDENTIALS -> {
                                     Button(onClick = onRetryRestCredentialsEntry) {
-                                        Text(stringResource(R.string.action_unlock_rest))
+                                        Text(stringResource(R.string.action_open_rest))
                                     }
                                 }
                             }
