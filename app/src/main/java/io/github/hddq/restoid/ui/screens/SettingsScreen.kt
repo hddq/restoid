@@ -75,6 +75,8 @@ fun SettingsScreen(
             onPathChange = { viewModel.onNewRepoPathChanged(it) },
             onPasswordChange = { viewModel.onNewRepoPasswordChanged(it) },
             onSftpPasswordChange = { viewModel.onNewRepoSftpPasswordChanged(it) },
+            onRestUsernameChange = { viewModel.onNewRepoRestUsernameChanged(it) },
+            onRestPasswordChange = { viewModel.onNewRepoRestPasswordChanged(it) },
             onEnvironmentVariablesChange = { viewModel.onNewRepoEnvironmentVariablesChanged(it) },
             onSavePasswordChange = { viewModel.onSavePasswordChanged(it) },
             onConfirm = { viewModel.addRepository() },

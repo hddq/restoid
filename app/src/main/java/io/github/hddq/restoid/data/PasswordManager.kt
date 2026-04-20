@@ -64,6 +64,14 @@ class PasswordManager(private val context: Context) {
         return "sftp_ssh_password::$repositoryKey"
     }
 
+    private fun restUsernameKey(repositoryKey: String): String {
+        return "rest_http_username::$repositoryKey"
+    }
+
+    private fun restPasswordKey(repositoryKey: String): String {
+        return "rest_http_password::$repositoryKey"
+    }
+
     fun saveSftpPassword(repositoryKey: String, password: String) {
         savePassword(sftpPasswordKey(repositoryKey), password)
     }
@@ -90,5 +98,61 @@ class PasswordManager(private val context: Context) {
 
     fun removeStoredSftpPassword(repositoryKey: String) {
         removeStoredPassword(sftpPasswordKey(repositoryKey))
+    }
+
+    fun saveRestUsername(repositoryKey: String, username: String) {
+        savePassword(restUsernameKey(repositoryKey), username)
+    }
+
+    fun saveRestUsernameTemporary(repositoryKey: String, username: String) {
+        savePasswordTemporary(restUsernameKey(repositoryKey), username)
+    }
+
+    fun getRestUsername(repositoryKey: String): String? {
+        return getPassword(restUsernameKey(repositoryKey))
+    }
+
+    fun hasRestUsername(repositoryKey: String): Boolean {
+        return hasPassword(restUsernameKey(repositoryKey))
+    }
+
+    fun hasStoredRestUsername(repositoryKey: String): Boolean {
+        return hasStoredPassword(restUsernameKey(repositoryKey))
+    }
+
+    fun removeRestUsername(repositoryKey: String) {
+        removePassword(restUsernameKey(repositoryKey))
+    }
+
+    fun removeStoredRestUsername(repositoryKey: String) {
+        removeStoredPassword(restUsernameKey(repositoryKey))
+    }
+
+    fun saveRestPassword(repositoryKey: String, password: String) {
+        savePassword(restPasswordKey(repositoryKey), password)
+    }
+
+    fun saveRestPasswordTemporary(repositoryKey: String, password: String) {
+        savePasswordTemporary(restPasswordKey(repositoryKey), password)
+    }
+
+    fun getRestPassword(repositoryKey: String): String? {
+        return getPassword(restPasswordKey(repositoryKey))
+    }
+
+    fun hasRestPassword(repositoryKey: String): Boolean {
+        return hasPassword(restPasswordKey(repositoryKey))
+    }
+
+    fun hasStoredRestPassword(repositoryKey: String): Boolean {
+        return hasStoredPassword(restPasswordKey(repositoryKey))
+    }
+
+    fun removeRestPassword(repositoryKey: String) {
+        removePassword(restPasswordKey(repositoryKey))
+    }
+
+    fun removeStoredRestPassword(repositoryKey: String) {
+        removeStoredPassword(restPasswordKey(repositoryKey))
     }
 }

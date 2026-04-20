@@ -253,6 +253,19 @@ class RestoreViewModel(
             return
         }
 
+        if (
+            selectedRepository.backendType == RepositoryBackendType.REST &&
+            selectedRepository.restAuthRequired &&
+            !repositoriesRepository.hasRestCredentials(selectedRepoKey)
+        ) {
+            _restoreProgress.value = OperationProgress(
+                isFinished = true,
+                error = application.getString(R.string.error_rest_credentials_not_found_for_repository),
+                finalSummary = application.getString(R.string.summary_rest_credentials_not_found)
+            )
+            return
+        }
+
         val password = repositoriesRepository.getRepositoryPassword(selectedRepoKey)
         if (password == null) {
             _restoreProgress.value = OperationProgress(

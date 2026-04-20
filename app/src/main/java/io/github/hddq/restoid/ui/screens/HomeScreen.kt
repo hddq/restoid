@@ -27,6 +27,7 @@ import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.ui.components.PasswordDialog
+import io.github.hddq.restoid.ui.components.UsernamePasswordDialog
 import io.github.hddq.restoid.ui.home.HomeAuthFailure
 import io.github.hddq.restoid.ui.home.HomeCredentialPrompt
 import io.github.hddq.restoid.ui.home.HomeUiState
@@ -41,10 +42,13 @@ fun HomeScreen(
     onRefresh: () -> Unit,
     onPasswordEntered: (String, Boolean) -> Unit,
     onSftpPasswordEntered: (String, Boolean) -> Unit,
+    onRestCredentialsEntered: (String, String, Boolean) -> Unit,
     onRetryRepositoryPasswordEntry: () -> Unit,
     onRetrySftpPasswordEntry: () -> Unit,
+    onRetryRestCredentialsEntry: () -> Unit,
     onDismissPasswordDialog: () -> Unit,
     onDismissSftpPasswordDialog: () -> Unit,
+    onDismissRestCredentialsDialog: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -131,6 +135,13 @@ fun HomeScreen(
                                     }
                                 }
 
+                                HomeAuthFailure.REST_CREDENTIALS -> {
+                                    Spacer(Modifier.height(12.dp))
+                                    Button(onClick = onRetryRestCredentialsEntry) {
+                                        Text(stringResource(R.string.action_enter_rest_credentials_again))
+                                    }
+                                }
+
                                 null -> Unit
                             }
                         }
@@ -153,6 +164,12 @@ fun HomeScreen(
                                 HomeCredentialPrompt.SFTP_PASSWORD -> {
                                     Button(onClick = onRetrySftpPasswordEntry) {
                                         Text(stringResource(R.string.action_unlock_sftp))
+                                    }
+                                }
+
+                                HomeCredentialPrompt.REST_CREDENTIALS -> {
+                                    Button(onClick = onRetryRestCredentialsEntry) {
+                                        Text(stringResource(R.string.action_unlock_rest))
                                     }
                                 }
                             }
@@ -212,6 +229,18 @@ fun HomeScreen(
             message = stringResource(R.string.enter_sftp_password_for_repository, repositoryKey),
             onPasswordEntered = onSftpPasswordEntered,
             onDismiss = onDismissSftpPasswordDialog
+        )
+    }
+
+    if (uiState.showRestCredentialsDialogFor != null) {
+        val repositoryKey = uiState.showRestCredentialsDialogFor
+        UsernamePasswordDialog(
+            title = stringResource(R.string.rest_credentials_required),
+            message = stringResource(R.string.enter_rest_credentials_for_repository, repositoryKey),
+            usernameLabel = stringResource(R.string.label_rest_username),
+            passwordLabel = stringResource(R.string.label_rest_password),
+            onCredentialsEntered = onRestCredentialsEntered,
+            onDismiss = onDismissRestCredentialsDialog
         )
     }
 }

@@ -18,12 +18,14 @@ data class SnapshotWithMetadata(
 
 enum class HomeAuthFailure {
     REPOSITORY_PASSWORD,
-    SFTP_PASSWORD
+    SFTP_PASSWORD,
+    REST_CREDENTIALS
 }
 
 enum class HomeCredentialPrompt {
     REPOSITORY_PASSWORD,
-    SFTP_PASSWORD
+    SFTP_PASSWORD,
+    REST_CREDENTIALS
 }
 
 data class HomeUiState(
@@ -38,6 +40,7 @@ data class HomeUiState(
     val resticState: ResticState = ResticState.Idle,
     val showPasswordDialogFor: String? = null,
     val showSftpPasswordDialogFor: String? = null,
+    val showRestCredentialsDialogFor: String? = null,
     val isRepoReady: Boolean = false
 )
 
@@ -81,12 +84,21 @@ class HomeViewModel(
             } else {
                 true
             }
+            val hasRestCredentials = if (
+                selectedRepository?.backendType == RepositoryBackendType.REST &&
+                selectedRepository.restAuthRequired
+            ) {
+                repositoriesRepository.hasRestCredentials(repositoriesRepository.repositoryKey(selectedRepository))
+            } else {
+                true
+            }
 
             val isRepoReady =
                 repoKey != null &&
                     restic is ResticState.Installed &&
                     hasRepositoryPassword &&
-                    hasSftpPassword
+                    hasSftpPassword &&
+                    hasRestCredentials
 
             _uiState.update {
                 it.copy(
@@ -114,7 +126,8 @@ class HomeViewModel(
                         authFailure = null,
                         unlockPrompt = null,
                         showPasswordDialogFor = null,
-                        showSftpPasswordDialogFor = null
+                        showSftpPasswordDialogFor = null,
+                        showRestCredentialsDialogFor = null
                     )
                 }
 
@@ -136,7 +149,8 @@ class HomeViewModel(
                         authFailure = null,
                         unlockPrompt = null,
                         showPasswordDialogFor = null,
-                        showSftpPasswordDialogFor = null
+                        showSftpPasswordDialogFor = null,
+                        showRestCredentialsDialogFor = null
                     )
                 }
                 return@combine
@@ -150,7 +164,17 @@ class HomeViewModel(
                 return@combine
             }
 
-            _uiState.update { it.copy(isLoading = false, error = null, authFailure = null, unlockPrompt = null) }
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    error = null,
+                    authFailure = null,
+                    unlockPrompt = null,
+                    showPasswordDialogFor = null,
+                    showSftpPasswordDialogFor = null,
+                    showRestCredentialsDialogFor = null
+                )
+            }
 
             val repo = repos.find { repositoriesRepository.repositoryKey(it) == repoKey }
             if (repo?.id == null) {
@@ -224,7 +248,27 @@ class HomeViewModel(
                         authFailure = null,
                         unlockPrompt = null,
                         showPasswordDialogFor = null,
-                        showSftpPasswordDialogFor = repoKey
+                        showSftpPasswordDialogFor = repoKey,
+                        showRestCredentialsDialogFor = null
+                    )
+                }
+                return@launch
+            }
+
+            if (
+                repository.backendType == RepositoryBackendType.REST &&
+                repository.restAuthRequired &&
+                !repositoriesRepository.hasRestCredentials(repoKey)
+            ) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = null,
+                        authFailure = null,
+                        unlockPrompt = null,
+                        showPasswordDialogFor = null,
+                        showSftpPasswordDialogFor = null,
+                        showRestCredentialsDialogFor = repoKey
                     )
                 }
                 return@launch
@@ -238,7 +282,8 @@ class HomeViewModel(
                         authFailure = null,
                         unlockPrompt = null,
                         showPasswordDialogFor = repoKey,
-                        showSftpPasswordDialogFor = null
+                        showSftpPasswordDialogFor = null,
+                        showRestCredentialsDialogFor = null
                     )
                 }
                 return@launch
@@ -254,13 +299,15 @@ class HomeViewModel(
                         error = when (authFailure) {
                             HomeAuthFailure.REPOSITORY_PASSWORD -> context.getString(R.string.home_error_repository_password_incorrect)
                             HomeAuthFailure.SFTP_PASSWORD -> context.getString(R.string.home_error_sftp_password_incorrect)
+                            HomeAuthFailure.REST_CREDENTIALS -> context.getString(R.string.home_error_rest_credentials_incorrect)
                             null -> rawMessage
                         },
                         authFailure = authFailure,
                         unlockPrompt = null,
                         isLoading = false,
                         showPasswordDialogFor = null,
-                        showSftpPasswordDialogFor = null
+                        showSftpPasswordDialogFor = null,
+                        showRestCredentialsDialogFor = null
                     )
                 }
             }
@@ -285,7 +332,27 @@ class HomeViewModel(
                     authFailure = null,
                     unlockPrompt = null,
                     showPasswordDialogFor = null,
-                    showSftpPasswordDialogFor = repoKey
+                    showSftpPasswordDialogFor = repoKey,
+                    showRestCredentialsDialogFor = null
+                )
+            }
+            return
+        }
+
+        if (
+            repository.backendType == RepositoryBackendType.REST &&
+            repository.restAuthRequired &&
+            !repositoriesRepository.hasRestCredentials(repoKey)
+        ) {
+            _uiState.update {
+                it.copy(
+                    isRefreshing = false,
+                    error = null,
+                    authFailure = null,
+                    unlockPrompt = null,
+                    showPasswordDialogFor = null,
+                    showSftpPasswordDialogFor = null,
+                    showRestCredentialsDialogFor = repoKey
                 )
             }
             return
@@ -299,7 +366,8 @@ class HomeViewModel(
                     authFailure = null,
                     unlockPrompt = null,
                     showPasswordDialogFor = repoKey,
-                    showSftpPasswordDialogFor = null
+                    showSftpPasswordDialogFor = null,
+                    showRestCredentialsDialogFor = null
                 )
             }
             return
@@ -318,6 +386,7 @@ class HomeViewModel(
                             error = when (authFailure) {
                                 HomeAuthFailure.REPOSITORY_PASSWORD -> context.getString(R.string.home_error_repository_password_incorrect)
                                 HomeAuthFailure.SFTP_PASSWORD -> context.getString(R.string.home_error_sftp_password_incorrect)
+                                HomeAuthFailure.REST_CREDENTIALS -> context.getString(R.string.home_error_rest_credentials_incorrect)
                                 null -> rawMessage
                             },
                             authFailure = authFailure,
@@ -364,6 +433,22 @@ class HomeViewModel(
             }
         }
 
+        if (repository.backendType == RepositoryBackendType.REST && repository.restAuthRequired) {
+            val isRestAuthError =
+                normalized.contains("401") ||
+                    normalized.contains("403") ||
+                    normalized.contains("unauthorized") ||
+                    normalized.contains("forbidden") ||
+                    normalized.contains("authentication required") ||
+                    normalized.contains("authentication failed") ||
+                    normalized.contains("authorization failed") ||
+                    normalized.contains("access denied")
+
+            if (isRestAuthError) {
+                return HomeAuthFailure.REST_CREDENTIALS
+            }
+        }
+
         return null
     }
 
@@ -395,6 +480,7 @@ class HomeViewModel(
             it.copy(
                 showPasswordDialogFor = null,
                 showSftpPasswordDialogFor = null,
+                showRestCredentialsDialogFor = null,
                 isLoading = true,
                 error = null,
                 authFailure = null,
@@ -419,6 +505,7 @@ class HomeViewModel(
             it.copy(
                 showPasswordDialogFor = null,
                 showSftpPasswordDialogFor = null,
+                showRestCredentialsDialogFor = null,
                 snapshotsWithMetadata = emptyList(),
                 appInfoMap = emptyMap(),
                 isLoading = false,
@@ -436,6 +523,7 @@ class HomeViewModel(
             it.copy(
                 showSftpPasswordDialogFor = null,
                 showPasswordDialogFor = null,
+                showRestCredentialsDialogFor = null,
                 isLoading = true,
                 error = null,
                 authFailure = null,
@@ -460,6 +548,7 @@ class HomeViewModel(
             it.copy(
                 showSftpPasswordDialogFor = null,
                 showPasswordDialogFor = null,
+                showRestCredentialsDialogFor = null,
                 snapshotsWithMetadata = emptyList(),
                 appInfoMap = emptyMap(),
                 isLoading = false,
@@ -470,12 +559,56 @@ class HomeViewModel(
         }
     }
 
+    fun onRestCredentialsEntered(username: String, password: String, save: Boolean) {
+        val repoKey = _uiState.value.showRestCredentialsDialogFor ?: return
+        val repository = repositoriesRepository.getRepositoryByKey(repoKey) ?: return
+        _uiState.update {
+            it.copy(
+                showRestCredentialsDialogFor = null,
+                showSftpPasswordDialogFor = null,
+                showPasswordDialogFor = null,
+                isLoading = true,
+                error = null,
+                authFailure = null,
+                unlockPrompt = null
+            )
+        }
+
+        if (save) repositoriesRepository.saveRestCredentials(repoKey, username, password)
+        else repositoriesRepository.saveRestCredentialsTemporary(repoKey, username, password)
+
+        loadSnapshots(
+            repository.path,
+            repositoriesRepository.getExecutionEnvironmentVariables(repoKey),
+            repositoriesRepository.getExecutionResticOptions(repoKey),
+            repoKey,
+            uiState.value.resticState
+        )
+    }
+
+    fun onDismissRestCredentialsDialog() {
+        _uiState.update {
+            it.copy(
+                showRestCredentialsDialogFor = null,
+                showSftpPasswordDialogFor = null,
+                showPasswordDialogFor = null,
+                snapshotsWithMetadata = emptyList(),
+                appInfoMap = emptyMap(),
+                isLoading = false,
+                error = null,
+                authFailure = null,
+                unlockPrompt = HomeCredentialPrompt.REST_CREDENTIALS
+            )
+        }
+    }
+
     fun onRetryRepositoryPasswordEntry() {
         val repoKey = _uiState.value.selectedRepo ?: return
         _uiState.update {
             it.copy(
                 showPasswordDialogFor = repoKey,
                 showSftpPasswordDialogFor = null,
+                showRestCredentialsDialogFor = null,
                 isLoading = false,
                 error = null,
                 authFailure = null,
@@ -492,6 +625,25 @@ class HomeViewModel(
         _uiState.update {
             it.copy(
                 showSftpPasswordDialogFor = repoKey,
+                showPasswordDialogFor = null,
+                showRestCredentialsDialogFor = null,
+                isLoading = false,
+                error = null,
+                authFailure = null,
+                unlockPrompt = null
+            )
+        }
+    }
+
+    fun onRetryRestCredentialsEntry() {
+        val repoKey = _uiState.value.selectedRepo ?: return
+        val repository = repositoriesRepository.getRepositoryByKey(repoKey) ?: return
+        if (repository.backendType != RepositoryBackendType.REST || !repository.restAuthRequired) return
+
+        _uiState.update {
+            it.copy(
+                showRestCredentialsDialogFor = repoKey,
+                showSftpPasswordDialogFor = null,
                 showPasswordDialogFor = null,
                 isLoading = false,
                 error = null,

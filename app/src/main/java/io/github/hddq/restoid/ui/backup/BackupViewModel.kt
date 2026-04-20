@@ -206,6 +206,18 @@ class BackupViewModel(
             )
         }
 
+        if (
+            repository?.backendType == RepositoryBackendType.REST &&
+            repository.restAuthRequired &&
+            !repositoriesRepository.hasRestCredentials(selectedRepoKey)
+        ) {
+            return OperationProgress(
+                isFinished = true,
+                error = application.getString(R.string.error_rest_credentials_not_found_for_repository),
+                finalSummary = application.getString(R.string.summary_rest_credentials_not_found)
+            )
+        }
+
         return null
     }
 

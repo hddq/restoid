@@ -172,6 +172,18 @@ class MaintenanceViewModel(
             )
         }
 
+        if (
+            repository?.backendType == RepositoryBackendType.REST &&
+            repository.restAuthRequired &&
+            !repositoriesRepository.hasRestCredentials(selectedRepoKey)
+        ) {
+            return OperationProgress(
+                isFinished = true,
+                error = context.getString(R.string.error_rest_credentials_not_found_for_repository),
+                finalSummary = context.getString(R.string.summary_rest_credentials_not_found)
+            )
+        }
+
         return null
     }
 

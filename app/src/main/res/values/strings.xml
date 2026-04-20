@@ -60,6 +60,8 @@
     <string name="enter_password_for_repository">Please enter the password for repository: %1$s</string>
     <string name="sftp_password_required">SFTP Password Required</string>
     <string name="enter_sftp_password_for_repository">Please enter the SFTP password for repository: %1$s</string>
+    <string name="rest_credentials_required">REST Credentials Required</string>
+    <string name="enter_rest_credentials_for_repository">Please enter the REST username and password for repository: %1$s</string>
     <plurals name="apps_count">
         <item quantity="one">App (%1$d):</item>
         <item quantity="other">Apps (%1$d):</item>
@@ -94,9 +96,14 @@
     <string name="dialog_forget_snapshot_message">This will remove the snapshot entry. The actual data will only be deleted after running a prune. Are you sure?</string>
 
     <string name="label_password">Password</string>
+    <string name="label_username">Username</string>
     <string name="label_repository_password">Repository password</string>
+    <string name="label_rest_username">REST username</string>
+    <string name="label_rest_password">REST password</string>
     <string name="error_password_cannot_be_empty">Password cannot be empty</string>
+    <string name="error_username_cannot_be_empty">Username cannot be empty</string>
     <string name="save_password">Save password</string>
+    <string name="save_credentials">Save credentials</string>
     <string name="action_ok">OK</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_stop">Stop</string>
@@ -181,6 +188,8 @@
     <string name="action_forget_password">Forget Password</string>
     <string name="action_forget_sftp_password">Forget SFTP Password</string>
     <string name="action_save_sftp_password">Save SFTP Password</string>
+    <string name="action_forget_rest_credentials">Forget REST Credentials</string>
+    <string name="action_save_rest_credentials">Save REST Credentials</string>
     <string name="action_save_password">Save Password</string>
     <string name="action_save_passwords">Save Passwords</string>
     <string name="action_change_password">Change password</string>
@@ -207,6 +216,8 @@
     <string name="error_passwords_do_not_match">Passwords do not match.</string>
     <string name="dialog_save_password">Save Password</string>
     <string name="dialog_save_sftp_password">Save SFTP Password</string>
+    <string name="dialog_save_rest_credentials">Save REST Credentials</string>
+    <string name="rest_credentials_hint">Stored credentials are encrypted on this device.</string>
 
     <string name="backup_item_permissions">Permissions</string>
     <string name="backup_item_unknown">Unknown items</string>
@@ -238,6 +249,8 @@
     <string name="summary_password_not_found">Could not find the password.</string>
     <string name="error_sftp_password_not_found_for_repository">SFTP password for repository not found.</string>
     <string name="summary_sftp_password_not_found">Could not find the SFTP password.</string>
+    <string name="error_rest_credentials_not_found_for_repository">REST credentials for repository not found.</string>
+    <string name="summary_rest_credentials_not_found">Could not find REST credentials.</string>
     <string name="error_operation_already_running">Another operation is already running.</string>
     <string name="summary_operation_already_running">Another operation is running. Wait for it to finish.</string>
 
@@ -285,12 +298,16 @@
     <string name="home_error_repository_id_not_found">Repository ID not found</string>
     <string name="home_error_repository_password_incorrect">Repository password is incorrect.</string>
     <string name="home_error_sftp_password_incorrect">SFTP password is incorrect.</string>
+    <string name="home_error_rest_credentials_incorrect">REST credentials are incorrect.</string>
     <string name="home_unlock_needed_message">Repository is locked. Unlock it to load snapshots.</string>
     <string name="action_enter_password_again">Enter password again</string>
     <string name="action_enter_sftp_password_again">Enter SFTP password again</string>
+    <string name="action_enter_rest_credentials_again">Enter REST credentials again</string>
     <string name="action_unlock_repository">Unlock repository</string>
     <string name="action_unlock_sftp">Unlock SFTP</string>
+    <string name="action_unlock_rest">Unlock REST</string>
     <string name="settings_error_path_password_empty">Path and password cannot be empty.</string>
+    <string name="settings_error_rest_credentials_incomplete">Enter both REST username and password, or leave both empty.</string>
     <string name="settings_error_invalid_environment_variables">Invalid environment variables.</string>
     <string name="settings_error_invalid_environment_line">Invalid environment variable format at line %1$d. Use KEY=value.</string>
     <string name="settings_error_invalid_environment_name">Invalid environment variable name: %1$s</string>

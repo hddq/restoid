@@ -23,6 +23,7 @@ data class LocalRepository(
     val backendType: RepositoryBackendType = RepositoryBackendType.LOCAL,
     val name: String = defaultRepositoryName(path, backendType),
     val id: String? = null,
+    val restAuthRequired: Boolean = false,
     val environmentVariables: Map<String, String> = emptyMap(),
     val resticOptions: Map<String, String> = emptyMap()
 )

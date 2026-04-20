@@ -89,6 +89,14 @@ class RestoreOperationRunner(
                 throw IllegalStateException(context.getString(R.string.error_sftp_password_not_found_for_repository))
             }
 
+            if (
+                selectedRepository.backendType == RepositoryBackendType.REST &&
+                selectedRepository.restAuthRequired &&
+                !repositoriesRepository.hasRestCredentials(request.repositoryKey)
+            ) {
+                throw IllegalStateException(context.getString(R.string.error_rest_credentials_not_found_for_repository))
+            }
+
             val password = repositoriesRepository.getRepositoryPassword(request.repositoryKey)
                 ?: throw IllegalStateException(context.getString(R.string.restore_error_password_not_found))
 

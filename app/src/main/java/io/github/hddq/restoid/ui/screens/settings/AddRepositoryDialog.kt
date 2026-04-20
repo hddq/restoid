@@ -29,6 +29,8 @@ fun AddRepositoryDialog(
     onPathChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onSftpPasswordChange: (String) -> Unit,
+    onRestUsernameChange: (String) -> Unit,
+    onRestPasswordChange: (String) -> Unit,
     onEnvironmentVariablesChange: (String) -> Unit,
     onSavePasswordChange: (Boolean) -> Unit,
     onConfirm: () -> Unit,
@@ -36,11 +38,16 @@ fun AddRepositoryDialog(
 ) {
     var repositoryPasswordVisible by remember { mutableStateOf(false) }
     var sftpPasswordVisible by remember { mutableStateOf(false) }
+    var restPasswordVisible by remember { mutableStateOf(false) }
     var backendExpanded by remember { mutableStateOf(false) }
     val isBusy = uiState.state is AddRepositoryState.Initializing
+    val hasIncompleteRestCredentials =
+        uiState.backendType == RepositoryBackendType.REST &&
+            (uiState.restUsername.isBlank() != uiState.restPassword.isBlank())
     val canConfirm = !isBusy &&
         uiState.path.isNotBlank() &&
-        uiState.password.isNotBlank()
+        uiState.password.isNotBlank() &&
+        !hasIncompleteRestCredentials
 
     val backendOptions = listOf(
         RepositoryBackendType.LOCAL,
@@ -64,7 +71,8 @@ fun AddRepositoryDialog(
     }
 
     val savePasswordLabel = when (uiState.backendType) {
-        RepositoryBackendType.SFTP -> stringResource(R.string.action_save_passwords)
+        RepositoryBackendType.SFTP,
+        RepositoryBackendType.REST -> stringResource(R.string.action_save_passwords)
         else -> stringResource(R.string.action_save_password)
     }
 
@@ -168,6 +176,36 @@ fun AddRepositoryDialog(
                             val image = if (sftpPasswordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
                             val description = if (sftpPasswordVisible) stringResource(R.string.cd_hide_password) else stringResource(R.string.cd_show_password)
                             IconButton(onClick = { sftpPasswordVisible = !sftpPasswordVisible }, enabled = !isBusy) {
+                                Icon(imageVector = image, contentDescription = description)
+                            }
+                        },
+                        isError = uiState.state is AddRepositoryState.Error,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isBusy
+                    )
+                }
+
+                if (uiState.backendType == RepositoryBackendType.REST) {
+                    OutlinedTextField(
+                        value = uiState.restUsername,
+                        onValueChange = onRestUsernameChange,
+                        label = { Text(stringResource(R.string.label_rest_username)) },
+                        singleLine = true,
+                        isError = uiState.state is AddRepositoryState.Error,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isBusy
+                    )
+
+                    OutlinedTextField(
+                        value = uiState.restPassword,
+                        onValueChange = onRestPasswordChange,
+                        label = { Text(stringResource(R.string.label_rest_password)) },
+                        singleLine = true,
+                        visualTransformation = if (restPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            val image = if (restPasswordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
+                            val description = if (restPasswordVisible) stringResource(R.string.cd_hide_password) else stringResource(R.string.cd_show_password)
+                            IconButton(onClick = { restPasswordVisible = !restPasswordVisible }, enabled = !isBusy) {
                                 Icon(imageVector = image, contentDescription = description)
                             }
                         },

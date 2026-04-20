@@ -17,6 +17,8 @@ data class AddRepoUiState(
     val path: String = "",
     val password: String = "",
     val sftpPassword: String = "",
+    val restUsername: String = "",
+    val restPassword: String = "",
     val sftpServerTrustInfo: SftpServerTrustInfo? = null,
     val environmentVariablesRaw: String = "",
     val savePassword: Boolean = true,
@@ -31,6 +33,8 @@ private data class AddRepositoryInput(
     val backendType: RepositoryBackendType,
     val password: String,
     val sftpPassword: String,
+    val restUsername: String,
+    val restPassword: String,
     val environmentVariables: Map<String, String>,
     val savePassword: Boolean
 )
@@ -95,6 +99,12 @@ class SettingsViewModel(
     fun hasStoredSftpPassword(key: String) = repositoriesRepository.hasStoredSftpPassword(key)
     fun forgetSftpPassword(key: String) = repositoriesRepository.forgetSftpPassword(key)
     fun saveSftpPassword(key: String, password: String) = repositoriesRepository.saveSftpPassword(key, password)
+    fun hasRestCredentials(key: String) = repositoriesRepository.hasRestCredentials(key)
+    fun hasStoredRestCredentials(key: String) = repositoriesRepository.hasStoredRestCredentials(key)
+    fun forgetRestCredentials(key: String) = repositoriesRepository.forgetRestCredentials(key)
+    fun saveRestCredentials(key: String, username: String, password: String) {
+        repositoriesRepository.saveRestCredentials(key, username, password)
+    }
 
     fun deleteRepository(key: String) {
         viewModelScope.launch { repositoriesRepository.deleteRepository(key) }
@@ -158,6 +168,8 @@ class SettingsViewModel(
                 backendType = backendType,
                 path = "",
                 sftpPassword = "",
+                restUsername = "",
+                restPassword = "",
                 sftpServerTrustInfo = null,
                 environmentVariablesRaw = "",
                 state = AddRepositoryState.Idle
@@ -178,6 +190,16 @@ class SettingsViewModel(
     fun onNewRepoSftpPasswordChanged(password: String) {
         pendingSftpTrustRequest = null
         _addRepoUiState.update { it.copy(sftpPassword = password, sftpServerTrustInfo = null) }
+    }
+
+    fun onNewRepoRestUsernameChanged(username: String) {
+        pendingSftpTrustRequest = null
+        _addRepoUiState.update { it.copy(restUsername = username, sftpServerTrustInfo = null) }
+    }
+
+    fun onNewRepoRestPasswordChanged(password: String) {
+        pendingSftpTrustRequest = null
+        _addRepoUiState.update { it.copy(restPassword = password, sftpServerTrustInfo = null) }
     }
 
     fun onNewRepoEnvironmentVariablesChanged(raw: String) {
@@ -240,6 +262,8 @@ class SettingsViewModel(
         val path = addRepoUiState.value.path.trim()
         val password = addRepoUiState.value.password
         val sftpPassword = addRepoUiState.value.sftpPassword
+        val restUsername = addRepoUiState.value.restUsername
+        val restPassword = addRepoUiState.value.restPassword
         val savePassword = addRepoUiState.value.savePassword
         val backendType = addRepoUiState.value.backendType
         val envParseResult = parseEnvironmentVariables(addRepoUiState.value.environmentVariablesRaw)
@@ -247,6 +271,17 @@ class SettingsViewModel(
         if (path.isBlank() || password.isBlank()) {
             _addRepoUiState.update { it.copy(state = AddRepositoryState.Error(context.getString(R.string.settings_error_path_password_empty))) }
             return
+        }
+
+        if (backendType == RepositoryBackendType.REST) {
+            val hasRestUsername = restUsername.isNotBlank()
+            val hasRestPassword = restPassword.isNotBlank()
+            if (hasRestUsername != hasRestPassword) {
+                _addRepoUiState.update {
+                    it.copy(state = AddRepositoryState.Error(context.getString(R.string.settings_error_rest_credentials_incomplete)))
+                }
+                return
+            }
         }
 
         if (envParseResult.isFailure) {
@@ -267,6 +302,8 @@ class SettingsViewModel(
             backendType = backendType,
             password = password,
             sftpPassword = sftpPassword,
+            restUsername = restUsername,
+            restPassword = restPassword,
             environmentVariables = environmentVariables,
             savePassword = savePassword
         )
@@ -324,6 +361,8 @@ class SettingsViewModel(
             environmentVariables = input.environmentVariables,
             resticOptions = emptyMap(),
             sftpPassword = input.sftpPassword,
+            restUsername = input.restUsername,
+            restPassword = input.restPassword,
             resticRepository = resticRepository,
             savePassword = input.savePassword
         )

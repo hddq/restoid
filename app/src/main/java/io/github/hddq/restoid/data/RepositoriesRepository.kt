@@ -32,6 +32,11 @@ data class SftpServerTrustInfo(
     val knownHostEntries: List<String>
 )
 
+data class RestCredentials(
+    val username: String,
+    val password: String
+)
+
 class RepositoriesRepository(
     private val context: Context,
     private val passwordManager: PasswordManager,
@@ -119,25 +124,68 @@ class RepositoriesRepository(
     fun saveSftpPassword(key: String, password: String) = passwordManager.saveSftpPassword(key, password)
     fun forgetSftpPassword(key: String) = passwordManager.removeStoredSftpPassword(key)
 
+    fun getRestUsername(key: String): String? = passwordManager.getRestUsername(key)
+    fun getRestPassword(key: String): String? = passwordManager.getRestPassword(key)
+
+    fun getRestCredentials(key: String): RestCredentials? {
+        val username = getRestUsername(key)
+        val password = getRestPassword(key)
+        return if (username.isNullOrBlank() || password.isNullOrBlank()) {
+            null
+        } else {
+            RestCredentials(username = username, password = password)
+        }
+    }
+
+    fun hasRestCredentials(key: String): Boolean = getRestCredentials(key) != null
+
+    fun hasStoredRestCredentials(key: String): Boolean {
+        return passwordManager.hasStoredRestUsername(key) && passwordManager.hasStoredRestPassword(key)
+    }
+
+    fun saveRestCredentialsTemporary(key: String, username: String, password: String) {
+        passwordManager.saveRestUsernameTemporary(key, username)
+        passwordManager.saveRestPasswordTemporary(key, password)
+    }
+
+    fun saveRestCredentials(key: String, username: String, password: String) {
+        passwordManager.saveRestUsername(key, username)
+        passwordManager.saveRestPassword(key, password)
+    }
+
+    fun forgetRestCredentials(key: String) {
+        passwordManager.removeStoredRestUsername(key)
+        passwordManager.removeStoredRestPassword(key)
+    }
+
     fun getExecutionEnvironmentVariables(key: String): Map<String, String> {
         val repository = getRepositoryByKey(key) ?: return emptyMap()
-        val sftpPassword = if (repository.backendType == RepositoryBackendType.SFTP) {
-            getSftpPassword(key)
-        } else {
-            null
-        }
-
         val environmentWithDefaults = if (repository.backendType == RepositoryBackendType.SFTP) {
             applySftpClientEnvironmentDefaults(repository.environmentVariables)
         } else {
             repository.environmentVariables
         }
 
-        return if (sftpPassword.isNullOrBlank()) {
-            environmentWithDefaults
-        } else {
-            environmentWithDefaults + mapOf("SSHPASS" to sftpPassword)
+        var executionEnvironment = environmentWithDefaults
+
+        if (repository.backendType == RepositoryBackendType.SFTP) {
+            val sftpPassword = getSftpPassword(key)
+            if (!sftpPassword.isNullOrBlank()) {
+                executionEnvironment = executionEnvironment + mapOf("SSHPASS" to sftpPassword)
+            }
         }
+
+        if (repository.backendType == RepositoryBackendType.REST) {
+            val restCredentials = getRestCredentials(key)
+            if (restCredentials != null) {
+                executionEnvironment = executionEnvironment + mapOf(
+                    "RESTIC_REST_USERNAME" to restCredentials.username,
+                    "RESTIC_REST_PASSWORD" to restCredentials.password
+                )
+            }
+        }
+
+        return executionEnvironment
     }
 
     fun getExecutionResticOptions(key: String): Map<String, String> {
@@ -179,6 +227,8 @@ class RepositoriesRepository(
             prefs.edit().putStringSet(REPOS_KEY, currentJsonSet).apply()
             passwordManager.removePassword(key)
             passwordManager.removeSftpPassword(key)
+            passwordManager.removeRestUsername(key)
+            passwordManager.removeRestPassword(key)
 
             if (_selectedRepository.value == key) {
                 prefs.edit().remove(SELECTED_REPO_KEY).apply()
@@ -324,6 +374,8 @@ class RepositoriesRepository(
         environmentVariables: Map<String, String>,
         resticOptions: Map<String, String>,
         sftpPassword: String,
+        restUsername: String,
+        restPassword: String,
         resticRepository: ResticRepository,
         savePassword: Boolean
     ): AddRepositoryState {
@@ -347,6 +399,10 @@ class RepositoriesRepository(
             } else {
                 null
             }
+
+            val hasRestAuthCredentials = backendType == RepositoryBackendType.REST &&
+                restUsername.isNotBlank() &&
+                restPassword.isNotBlank()
 
             val persistedResticOptions = applySftpResticOptionDefaults(
                 backendType = backendType,
@@ -372,6 +428,11 @@ class RepositoriesRepository(
 
             val executionEnvironmentVariables = if (backendType == RepositoryBackendType.SFTP && sftpPassword.isNotBlank()) {
                 persistedEnvironmentVariables + mapOf("SSHPASS" to sftpPassword)
+            } else if (hasRestAuthCredentials) {
+                persistedEnvironmentVariables + mapOf(
+                    "RESTIC_REST_USERNAME" to restUsername,
+                    "RESTIC_REST_PASSWORD" to restPassword
+                )
             } else {
                 persistedEnvironmentVariables
             }
@@ -379,6 +440,7 @@ class RepositoriesRepository(
             val draftRepository = LocalRepository(
                 path = resolvedPath,
                 backendType = backendType,
+                restAuthRequired = hasRestAuthCredentials,
                 environmentVariables = persistedEnvironmentVariables,
                 resticOptions = persistedResticOptions
             )
@@ -426,7 +488,9 @@ class RepositoriesRepository(
                                 executionEnvironmentVariables,
                                 savePassword,
                                 wasEmpty,
-                                sftpPassword
+                                sftpPassword,
+                                restUsername,
+                                restPassword
                             )
                         } else {
                             AddRepositoryState.Error(context.getString(R.string.repo_error_invalid_password_or_corrupted))
@@ -459,7 +523,9 @@ class RepositoriesRepository(
                                 executionEnvironmentVariables,
                                 savePassword,
                                 wasEmpty,
-                                sftpPassword
+                                sftpPassword,
+                                restUsername,
+                                restPassword
                             )
                         } else {
                             if (!directoryExists) {
@@ -485,7 +551,9 @@ class RepositoriesRepository(
                             executionEnvironmentVariables,
                             savePassword,
                             wasEmpty,
-                            sftpPassword
+                            sftpPassword,
+                            restUsername,
+                            restPassword
                         )
                     } else {
                         val initResult = Shell.cmd(buildString {
@@ -504,7 +572,9 @@ class RepositoriesRepository(
                                 executionEnvironmentVariables,
                                 savePassword,
                                 wasEmpty,
-                                sftpPassword
+                                sftpPassword,
+                                restUsername,
+                                restPassword
                             )
                         } else {
                             AddRepositoryState.Error(context.getString(R.string.repo_error_failed_initialize))
@@ -524,7 +594,9 @@ class RepositoriesRepository(
         executionEnvironmentVariables: Map<String, String>,
         savePassword: Boolean,
         wasEmpty: Boolean,
-        sftpPassword: String
+        sftpPassword: String,
+        restUsername: String,
+        restPassword: String
     ): AddRepositoryState {
         val configResult = resticRepository.getConfig(
             repo.path,
@@ -545,7 +617,15 @@ class RepositoriesRepository(
                 )
             }
             resticRepository.clearSnapshots()
-            saveNewRepository(repo.copy(id = repoId), password, sftpPassword, savePassword, wasEmpty)
+            saveNewRepository(
+                repo = repo.copy(id = repoId),
+                password = password,
+                sftpPassword = sftpPassword,
+                restUsername = restUsername,
+                restPassword = restPassword,
+                save = savePassword,
+                wasEmpty = wasEmpty
+            )
             return AddRepositoryState.Success
         }
         return AddRepositoryState.Error(context.getString(R.string.repo_error_failed_get_id))
@@ -601,6 +681,8 @@ class RepositoriesRepository(
         repo: LocalRepository,
         password: String,
         sftpPassword: String,
+        restUsername: String,
+        restPassword: String,
         save: Boolean,
         wasEmpty: Boolean
     ) {
@@ -612,6 +694,16 @@ class RepositoriesRepository(
         if (repo.backendType == RepositoryBackendType.SFTP && sftpPassword.isNotBlank()) {
             if (save) passwordManager.saveSftpPassword(key, sftpPassword)
             else passwordManager.saveSftpPasswordTemporary(key, sftpPassword)
+        }
+
+        if (repo.backendType == RepositoryBackendType.REST && restUsername.isNotBlank() && restPassword.isNotBlank()) {
+            if (save) {
+                passwordManager.saveRestUsername(key, restUsername)
+                passwordManager.saveRestPassword(key, restPassword)
+            } else {
+                passwordManager.saveRestUsernameTemporary(key, restUsername)
+                passwordManager.saveRestPasswordTemporary(key, restPassword)
+            }
         }
 
         loadRepositories()
