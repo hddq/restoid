@@ -12,9 +12,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -31,6 +28,7 @@ import io.github.hddq.restoid.R
 import io.github.hddq.restoid.RestoidApplication
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.ui.backup.BackupTypes
+import io.github.hddq.restoid.ui.backup.BackupUiEvent
 import io.github.hddq.restoid.ui.backup.BackupViewModel
 import io.github.hddq.restoid.ui.backup.BackupViewModelFactory
 
@@ -53,9 +51,7 @@ fun BackupScreen(
     val apps by viewModel.apps.collectAsState()
     val isLoadingApps by viewModel.isLoadingApps.collectAsState()
     val backupTypes by viewModel.backupTypes.collectAsState()
-    val isBackingUp by viewModel.isBackingUp.collectAsState()
     val operationBlocked by viewModel.operationBlocked.collectAsState()
-    var hasNavigatedForCurrentRun by remember { mutableStateOf(false) }
 
     LaunchedEffect(operationBlocked) {
         if (operationBlocked) {
@@ -64,12 +60,11 @@ fun BackupScreen(
         }
     }
 
-    LaunchedEffect(isBackingUp) {
-        if (!isBackingUp) {
-            hasNavigatedForCurrentRun = false
-        } else if (!hasNavigatedForCurrentRun) {
-            hasNavigatedForCurrentRun = true
-            onNavigateToOperationProgress()
+    LaunchedEffect(viewModel) {
+        viewModel.uiEvents.collect { event ->
+            when (event) {
+                BackupUiEvent.NavigateToOperationProgress -> onNavigateToOperationProgress()
+            }
         }
     }
 

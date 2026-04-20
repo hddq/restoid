@@ -26,9 +26,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -38,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.RestoidApplication
+import io.github.hddq.restoid.ui.maintenance.MaintenanceUiEvent
 import io.github.hddq.restoid.ui.maintenance.MaintenanceUiState
 import io.github.hddq.restoid.ui.maintenance.MaintenanceViewModel
 import io.github.hddq.restoid.ui.maintenance.MaintenanceViewModelFactory
@@ -58,7 +56,6 @@ fun MaintenanceScreen(onNavigateToOperationProgress: () -> Unit, modifier: Modif
     )
     val uiState by viewModel.uiState.collectAsState()
     val operationBlocked by viewModel.operationBlocked.collectAsState()
-    var hasNavigatedForCurrentRun by remember { mutableStateOf(false) }
 
     LaunchedEffect(operationBlocked) {
         if (operationBlocked) {
@@ -67,12 +64,11 @@ fun MaintenanceScreen(onNavigateToOperationProgress: () -> Unit, modifier: Modif
         }
     }
 
-    LaunchedEffect(uiState.isRunning) {
-        if (!uiState.isRunning) {
-            hasNavigatedForCurrentRun = false
-        } else if (!hasNavigatedForCurrentRun) {
-            hasNavigatedForCurrentRun = true
-            onNavigateToOperationProgress()
+    LaunchedEffect(viewModel) {
+        viewModel.uiEvents.collect { event ->
+            when (event) {
+                MaintenanceUiEvent.NavigateToOperationProgress -> onNavigateToOperationProgress()
+            }
         }
     }
 

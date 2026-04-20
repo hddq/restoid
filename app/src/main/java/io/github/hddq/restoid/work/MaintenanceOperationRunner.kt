@@ -19,16 +19,29 @@ class MaintenanceOperationRunner(
     private val operationLockManager: OperationLockManager
 ) {
 
-    suspend fun run(request: MaintenanceWorkRequest, onProgress: (OperationProgress) -> Unit): OperationRunResult {
+    suspend fun run(
+        request: MaintenanceWorkRequest,
+        onProgress: (OperationProgress) -> Unit,
+        shouldStop: () -> Boolean = { false }
+    ): OperationRunResult {
+        fun throwIfCancelled() {
+            if (shouldStop()) {
+                throw OperationCancelledException(context.getString(R.string.operation_interrupted))
+            }
+        }
+
         val startTime = System.currentTimeMillis()
         var progressState = OperationProgress(stageTitle = context.getString(R.string.progress_initializing))
         onProgress(progressState)
+        throwIfCancelled()
 
         var operationLockAcquired = false
         var finalSummary = StringBuilder()
         var overallSuccess = true
+        var wasCancelled = false
 
         try {
+            throwIfCancelled()
             val errorState = preflightChecks(request)
             if (errorState != null) {
                 return OperationRunResult(success = false, progress = errorState)
@@ -94,6 +107,7 @@ class MaintenanceOperationRunner(
             if (tasksToRun.isEmpty()) throw IllegalStateException(context.getString(R.string.maintenance_error_no_tasks_selected))
 
             tasksToRun.forEachIndexed { index, (taskName, taskAction) ->
+                throwIfCancelled()
                 val stageTitle = context.getString(R.string.maintenance_stage_running_task, index + 1, tasksToRun.size, taskName)
                 progressState = progressState.copy(
                     stageTitle = stageTitle,
@@ -105,6 +119,7 @@ class MaintenanceOperationRunner(
                 onProgress(progressState)
 
                 val result = taskAction()
+                throwIfCancelled()
 
                 progressState = progressState.copy(
                     overallPercentage = (index + 1f) / tasksToRun.size,
@@ -133,6 +148,10 @@ class MaintenanceOperationRunner(
                     repositoryResticOptions
                 )
             }
+        } catch (e: OperationCancelledException) {
+            overallSuccess = false
+            wasCancelled = true
+            finalSummary.append(context.getString(R.string.operation_interrupted))
         } catch (e: Exception) {
             overallSuccess = false
             finalSummary.append(context.getString(R.string.error_fatal_with_message, e.message ?: ""))
@@ -145,7 +164,12 @@ class MaintenanceOperationRunner(
         val finalProgress = progressState.copy(
             isFinished = true,
             finalSummary = finalSummary.toString().trim(),
-            error = if (!overallSuccess) context.getString(R.string.maintenance_error_one_or_more_failed) else null,
+            error = if (!overallSuccess) {
+                if (wasCancelled) context.getString(R.string.operation_interrupted)
+                else context.getString(R.string.maintenance_error_one_or_more_failed)
+            } else {
+                null
+            },
             elapsedTime = (System.currentTimeMillis() - startTime) / 1000,
             overallPercentage = 1f,
             stagePercentage = 1f

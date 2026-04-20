@@ -178,7 +178,13 @@ class MainActivity : FragmentActivity() {
                                     titleRes?.let { Text(stringResource(it)) }
                                 },
                                 navigationIcon = {
-                                    IconButton(onClick = { navController.navigateUp() }) {
+                                    IconButton(onClick = {
+                                        if (currentDestination?.route == Screen.OperationProgress.route) {
+                                            this@MainActivity.onBackPressedDispatcher.onBackPressed()
+                                        } else {
+                                            navController.navigateUp()
+                                        }
+                                    }) {
                                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                                     }
                                 },
@@ -246,8 +252,7 @@ class MainActivity : FragmentActivity() {
                                     )
                                 )
                                 val isBackingUp by viewModel.isBackingUp.collectAsState()
-                                val backupProgress by viewModel.backupProgress.collectAsState()
-                                if (!isBackingUp && !backupProgress.isFinished) {
+                                if (!isBackingUp) {
                                     ExtendedFloatingActionButton(
                                         onClick = { viewModel.startBackup() },
                                         icon = { Icon(Icons.Default.Backup, contentDescription = stringResource(R.string.fab_start_backup)) },
@@ -267,7 +272,7 @@ class MainActivity : FragmentActivity() {
                                     )
                                 )
                                 val uiState by viewModel.uiState.collectAsState()
-                                if (!uiState.isRunning && !uiState.progress.isFinished) {
+                                if (!uiState.isRunning) {
                                     ExtendedFloatingActionButton(
                                         onClick = { viewModel.runTasks() },
                                         icon = { Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.fab_run_tasks)) },
@@ -298,8 +303,7 @@ class MainActivity : FragmentActivity() {
                                     )
                                 )
                                 val isRestoring by viewModel.isRestoring.collectAsState()
-                                val restoreProgress by viewModel.restoreProgress.collectAsState()
-                                if (!isRestoring && !restoreProgress.isFinished) {
+                                if (!isRestoring) {
                                     ExtendedFloatingActionButton(
                                         onClick = { viewModel.startRestore() },
                                         icon = { Icon(Icons.Default.Restore, contentDescription = stringResource(R.string.fab_start_restore)) },

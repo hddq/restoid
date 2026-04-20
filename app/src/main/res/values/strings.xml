@@ -99,6 +99,7 @@
     <string name="save_password">Save password</string>
     <string name="action_ok">OK</string>
     <string name="action_cancel">Cancel</string>
+    <string name="action_stop">Stop</string>
     <string name="action_done">Done</string>
     <string name="action_add">Add</string>
     <string name="action_delete">Delete</string>
@@ -113,6 +114,7 @@
     <string name="action_disable">Disable</string>
 
     <string name="progress_initializing">Initializing…</string>
+    <string name="progress_stopping">Stopping…</string>
     <string name="progress_operation_complete">%1$s Complete</string>
     <string name="progress_operation_failed">%1$s Failed</string>
     <string name="progress_overall">Overall Progress</string>
@@ -308,6 +310,8 @@
     <string name="notification_operation_finished_failure">%1$s failed</string>
     <string name="operation_progress_no_active_operation">No active operation right now.</string>
     <string name="operation_interrupted">Operation was interrupted.</string>
+    <string name="dialog_stop_operation_title">Stop operation?</string>
+    <string name="dialog_stop_operation_message">Do you want to stop the current operation? Any unfinished work will be canceled.</string>
 
     <string name="repo_error_exists">Repository already exists.</string>
     <string name="repo_error_binary_not_ready">Restic binary not ready.</string>

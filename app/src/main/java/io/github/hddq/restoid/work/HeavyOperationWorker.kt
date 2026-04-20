@@ -11,6 +11,7 @@ import io.github.hddq.restoid.RestoidApplication
 import io.github.hddq.restoid.data.NotificationRepository
 import io.github.hddq.restoid.data.OperationType
 import io.github.hddq.restoid.ui.shared.OperationProgress
+import kotlinx.coroutines.CancellationException
 import kotlin.math.abs
 
 class HeavyOperationWorker(
@@ -36,6 +37,7 @@ class HeavyOperationWorker(
         setProgress(OperationWorkContract.progressToData(operationType, initialProgress))
 
         val notifier = WorkerProgressNotifier(operationType)
+        val shouldStop = { isStopped || app.operationRuntimeRepository.state.value.stopRequested }
 
         val runResult = try {
             when (operationType) {
@@ -49,7 +51,7 @@ class HeavyOperationWorker(
                         appInfoRepository = app.appInfoRepository,
                         operationLockManager = app.operationLockManager
                     )
-                    runner.run(request, notifier::onProgress)
+                    runner.run(request, notifier::onProgress, shouldStop)
                 }
 
                 OperationType.RESTORE -> {
@@ -62,7 +64,7 @@ class HeavyOperationWorker(
                         metadataRepository = app.metadataRepository,
                         operationLockManager = app.operationLockManager
                     )
-                    runner.run(request, notifier::onProgress)
+                    runner.run(request, notifier::onProgress, shouldStop)
                 }
 
                 OperationType.MAINTENANCE -> {
@@ -74,33 +76,61 @@ class HeavyOperationWorker(
                         resticRepository = app.resticRepository,
                         operationLockManager = app.operationLockManager
                     )
-                    runner.run(request, notifier::onProgress)
+                    runner.run(request, notifier::onProgress, shouldStop)
                 }
             }
         } catch (e: Exception) {
-            val failedProgress = OperationProgress(
-                stageTitle = applicationContext.getString(R.string.progress_operation_failed, operationName(operationType)),
-                isFinished = true,
-                error = applicationContext.getString(R.string.error_fatal_with_message, e.message ?: ""),
-                finalSummary = applicationContext.getString(R.string.error_fatal_with_message, e.message ?: "")
-            )
-            OperationRunResult(success = false, progress = failedProgress)
+            if (e is CancellationException || isStopped) {
+                cancelledRunResult(operationType)
+            } else {
+                val failedProgress = OperationProgress(
+                    stageTitle = applicationContext.getString(R.string.progress_operation_failed, operationName(operationType)),
+                    isFinished = true,
+                    error = applicationContext.getString(R.string.error_fatal_with_message, e.message ?: ""),
+                    finalSummary = applicationContext.getString(R.string.error_fatal_with_message, e.message ?: "")
+                )
+                OperationRunResult(success = false, progress = failedProgress)
+            }
         } finally {
             app.operationRequestStore.deleteRequest(requestId)
         }
 
-        notifier.forceNotify(runResult.progress)
-        app.operationRuntimeRepository.markFinished(operationType, runResult.success, runResult.progress)
-        setProgress(OperationWorkContract.progressToData(operationType, runResult.progress))
+        val interruptedSummary = applicationContext.getString(R.string.operation_interrupted)
+        val finalResult = when {
+            runResult.success -> runResult
+            runResult.progress.error == interruptedSummary || runResult.progress.finalSummary == interruptedSummary -> runResult
+            isStopped || app.operationRuntimeRepository.state.value.stopRequested -> cancelledRunResult(operationType)
+            else -> runResult
+        }
+
+        notifier.forceNotify(finalResult.progress)
+        app.operationRuntimeRepository.markFinished(operationType, finalResult.success, finalResult.progress)
+        setProgress(OperationWorkContract.progressToData(operationType, finalResult.progress))
 
         notificationRepository.showOperationFinishedNotification(
             operationName(operationType),
-            runResult.success,
-            runResult.progress.finalSummary
+            finalResult.success,
+            finalResult.progress.finalSummary
         )
 
-        val output = OperationWorkContract.outputToData(operationType, runResult.success, runResult.progress)
-        return if (runResult.success) Result.success(output) else Result.failure(output)
+        val output = OperationWorkContract.outputToData(operationType, finalResult.success, finalResult.progress)
+        return if (finalResult.success) Result.success(output) else Result.failure(output)
+    }
+
+    private fun cancelledRunResult(operationType: OperationType): OperationRunResult {
+        val summary = applicationContext.getString(R.string.operation_interrupted)
+        return OperationRunResult(
+            success = false,
+            progress = OperationProgress(
+                stageTitle = applicationContext.getString(
+                    R.string.progress_operation_failed,
+                    operationName(operationType)
+                ),
+                isFinished = true,
+                error = summary,
+                finalSummary = summary
+            )
+        )
     }
 
     private fun operationName(operationType: OperationType): String {

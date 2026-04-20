@@ -14,6 +14,7 @@ data class OperationRuntimeState(
     val operationType: OperationType? = null,
     val isRunning: Boolean = false,
     val success: Boolean? = null,
+    val stopRequested: Boolean = false,
     val progress: OperationProgress = OperationProgress()
 )
 
@@ -31,17 +32,20 @@ class OperationRuntimeRepository(context: Context) {
                 operationType = operationType,
                 isRunning = true,
                 success = null,
+                stopRequested = false,
                 progress = initialProgress.copy(isFinished = false)
             )
         )
     }
 
     fun markProgress(operationType: OperationType, progress: OperationProgress) {
+        val current = _state.value
         updateState(
             OperationRuntimeState(
                 operationType = operationType,
                 isRunning = !progress.isFinished,
                 success = null,
+                stopRequested = current.stopRequested && current.operationType == operationType,
                 progress = progress
             )
         )
@@ -53,7 +57,19 @@ class OperationRuntimeRepository(context: Context) {
                 operationType = operationType,
                 isRunning = false,
                 success = success,
+                stopRequested = false,
                 progress = progress.copy(isFinished = true)
+            )
+        )
+    }
+
+    fun markStopRequested(operationType: OperationType, progress: OperationProgress) {
+        val current = _state.value
+        if (!current.isRunning || current.operationType != operationType) return
+        updateState(
+            current.copy(
+                stopRequested = true,
+                progress = progress.copy(isFinished = false)
             )
         )
     }
@@ -73,6 +89,7 @@ class OperationRuntimeRepository(context: Context) {
             current.copy(
                 isRunning = false,
                 success = false,
+                stopRequested = false,
                 progress = current.progress.copy(
                     isFinished = true,
                     error = current.progress.error ?: interruptedSummary,
@@ -107,6 +124,7 @@ class OperationRuntimeRepository(context: Context) {
         val operationType: String? = null,
         val isRunning: Boolean = false,
         val success: Boolean? = null,
+        val stopRequested: Boolean = false,
         val progress: OperationProgress = OperationProgress()
     ) {
         fun toRuntimeState(): OperationRuntimeState {
@@ -114,6 +132,7 @@ class OperationRuntimeRepository(context: Context) {
                 operationType = operationType?.let { name -> runCatching { OperationType.valueOf(name) }.getOrNull() },
                 isRunning = isRunning,
                 success = success,
+                stopRequested = stopRequested,
                 progress = progress
             )
         }
@@ -124,6 +143,7 @@ class OperationRuntimeRepository(context: Context) {
                     operationType = state.operationType?.name,
                     isRunning = state.isRunning,
                     success = state.success,
+                    stopRequested = state.stopRequested,
                     progress = state.progress
                 )
             }

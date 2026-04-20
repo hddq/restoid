@@ -23,6 +23,9 @@ import io.github.hddq.restoid.work.RestoreTypeSelection
 import io.github.hddq.restoid.work.RestoreWorkRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
@@ -36,6 +39,10 @@ data class RestoreTypes(
     val obb: Boolean = false,
     val media: Boolean = false
 )
+
+sealed interface RestoreUiEvent {
+    data object NavigateToOperationProgress : RestoreUiEvent
+}
 
 class RestoreViewModel(
     private val application: Application,
@@ -77,6 +84,8 @@ class RestoreViewModel(
 
     private val _operationBlocked = MutableStateFlow(false)
     val operationBlocked = _operationBlocked.asStateFlow()
+    private val _uiEvents = MutableSharedFlow<RestoreUiEvent>(extraBufferCapacity = 1)
+    val uiEvents: SharedFlow<RestoreUiEvent> = _uiEvents.asSharedFlow()
 
     init {
         _restoreTypes.value = preferencesRepository.loadRestoreTypes()
@@ -95,6 +104,7 @@ class RestoreViewModel(
                     _restoreProgress.value = state.progress
                 } else {
                     _isRestoring.value = false
+                    _restoreProgress.value = OperationProgress()
                 }
             }
         }
@@ -275,7 +285,9 @@ class RestoreViewModel(
 
         viewModelScope.launch(Dispatchers.IO) {
             val enqueued = operationWorkRepository.enqueueRestore(request)
-            if (!enqueued) {
+            if (enqueued) {
+                _uiEvents.tryEmit(RestoreUiEvent.NavigateToOperationProgress)
+            } else {
                 _operationBlocked.value = true
                 _restoreProgress.value = OperationProgress(
                     isFinished = true,

@@ -30,10 +30,21 @@ class RestoreOperationRunner(
     private val operationLockManager: OperationLockManager
 ) {
 
-    suspend fun run(request: RestoreWorkRequest, onProgress: (OperationProgress) -> Unit): OperationRunResult {
+    suspend fun run(
+        request: RestoreWorkRequest,
+        onProgress: (OperationProgress) -> Unit,
+        shouldStop: () -> Boolean = { false }
+    ): OperationRunResult {
+        fun throwIfCancelled() {
+            if (shouldStop()) {
+                throw OperationCancelledException(context.getString(R.string.operation_interrupted))
+            }
+        }
+
         val startTime = System.currentTimeMillis()
         var progressState = OperationProgress(stageTitle = context.getString(R.string.progress_initializing))
         onProgress(progressState)
+        throwIfCancelled()
 
         var operationLockAcquired = false
         var tempRestoreDir: File? = null
@@ -55,6 +66,7 @@ class RestoreOperationRunner(
         var currentStageNum = 1
 
         val finalResult = try {
+            throwIfCancelled()
             val resticState = resticBinaryManager.resticState.value
             val selectedRepository = repositoriesRepository.getRepositoryByKey(request.repositoryKey)
             val selectedRepoPath = selectedRepository?.path
@@ -149,6 +161,7 @@ class RestoreOperationRunner(
             }
             val stderr = mutableListOf<String>()
             val restoreResult = Shell.cmd(command).to(stdoutCallback, stderr).exec()
+            throwIfCancelled()
 
             if (!restoreResult.isSuccess) {
                 val errorOutput = stderr.joinToString("\n")
@@ -161,6 +174,7 @@ class RestoreOperationRunner(
                 val processingStageTitle = context.getString(R.string.restore_stage_processing_template, currentStageNum, totalStages)
 
                 for ((index, packageName) in selectedAppPackages.withIndex()) {
+                    throwIfCancelled()
                     val appName = selectedAppNames[packageName] ?: packageName
                     var appProcessSuccess = true
                     val processProgress = (index + 1).toFloat() / selectedAppPackages.size.toFloat()
@@ -178,6 +192,7 @@ class RestoreOperationRunner(
                     onProgress(progressState)
 
                     if (apkRestoreSelected) {
+                        throwIfCancelled()
                         val originalApkPath = pathsToRestore.find { it.startsWith("/data/app/") && it.contains("/$packageName-") }
                         val restoredContentDir = originalApkPath?.let { File(tempRestoreDir, it.drop(1)) }
                         val apkFiles = restoredContentDir?.walk()?.filter { it.isFile && it.extension == "apk" }?.toList() ?: emptyList()
@@ -271,6 +286,7 @@ class RestoreOperationRunner(
             tempRestoreDir.let { dir -> Shell.cmd("rm -rf '${dir.absolutePath}'").exec() }
             progressState = progressState.copy(stagePercentage = 1f, overallPercentage = 1f)
             onProgress(progressState)
+            throwIfCancelled()
 
             val finalElapsedTime = (System.currentTimeMillis() - startTime) / 1000
             val summary = buildString {
@@ -306,6 +322,14 @@ class RestoreOperationRunner(
             )
 
             OperationRunResult(success = failures == 0, progress = finalProgress)
+        } catch (e: OperationCancelledException) {
+            val finalProgress = progressState.copy(
+                isFinished = true,
+                error = context.getString(R.string.operation_interrupted),
+                finalSummary = context.getString(R.string.operation_interrupted),
+                elapsedTime = (System.currentTimeMillis() - startTime) / 1000
+            )
+            OperationRunResult(success = false, progress = finalProgress)
         } catch (e: Exception) {
             val finalProgress = progressState.copy(
                 isFinished = true,

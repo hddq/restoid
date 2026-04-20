@@ -31,10 +31,21 @@ class BackupOperationRunner(
     private val operationLockManager: OperationLockManager
 ) {
 
-    suspend fun run(request: BackupWorkRequest, onProgress: (OperationProgress) -> Unit): OperationRunResult {
+    suspend fun run(
+        request: BackupWorkRequest,
+        onProgress: (OperationProgress) -> Unit,
+        shouldStop: () -> Boolean = { false }
+    ): OperationRunResult {
+        fun throwIfCancelled() {
+            if (shouldStop()) {
+                throw OperationCancelledException(context.getString(R.string.operation_interrupted))
+            }
+        }
+
         val startTime = System.currentTimeMillis()
         var progressState = OperationProgress(stageTitle = context.getString(R.string.progress_initializing))
         onProgress(progressState)
+        throwIfCancelled()
 
         var operationLockAcquired = false
         var fileList: File? = null
@@ -53,6 +64,7 @@ class BackupOperationRunner(
         var currentStage = 1
 
         try {
+            throwIfCancelled()
             val selectedApps = appInfoRepository.getAppInfoForPackages(request.selectedPackageNames)
             val errorState = preflightChecks(request, selectedApps)
             if (errorState != null) {
@@ -89,8 +101,13 @@ class BackupOperationRunner(
             }
 
             emitStageProgress(context.getString(R.string.backup_stage_preparing, currentStage, totalStages), 0f, 0f)
+            throwIfCancelled()
 
-            val (pathsToBackup, excludePatterns, metadata) = prepareBackupData(selectedApps, request.backupTypes)
+            val (pathsToBackup, excludePatterns, metadata) = prepareBackupData(
+                selectedApps,
+                request.backupTypes,
+                shouldStop
+            )
             restoidMetadataFile = File(context.cacheDir, "restoid.json")
             val json = Json { prettyPrint = true }
             restoidMetadataFile.writeText(json.encodeToString(metadata))
@@ -101,6 +118,7 @@ class BackupOperationRunner(
             currentStage = 2
             val stage2Title = context.getString(R.string.backup_stage_running, currentStage, totalStages)
             emitStageProgress(stage2Title, 0f, (currentStage - 1f) / totalStages)
+            throwIfCancelled()
 
             fileList = File.createTempFile("restic-files-", ".txt", context.cacheDir)
             fileList.writeText(pathsToBackup.distinct().joinToString("\n"))
@@ -148,6 +166,7 @@ class BackupOperationRunner(
             }
             val stderr = mutableListOf<String>()
             val result = Shell.cmd(command).to(stdoutCallback, stderr).exec()
+            throwIfCancelled()
 
             if (!result.isSuccess || snapshotId == null) {
                 val errorOutput = stderr.joinToString("\n")
@@ -163,6 +182,7 @@ class BackupOperationRunner(
             currentStage = 3
             val stage3Title = context.getString(R.string.backup_stage_finalizing, currentStage, totalStages)
             emitStageProgress(stage3Title, 0f, (currentStage - 1f) / totalStages)
+            throwIfCancelled()
 
             try {
                 val metadataDir = File(context.filesDir, "metadata/$repositoryId")
@@ -180,6 +200,7 @@ class BackupOperationRunner(
                 repositoryEnvironment,
                 repositoryResticOptions
             )
+            throwIfCancelled()
             emitStageProgress(stage3Title, 1f, 1f)
 
             isSuccess = true
@@ -189,6 +210,9 @@ class BackupOperationRunner(
                     selectedApps.size,
                     selectedApps.size
                 )
+        } catch (e: OperationCancelledException) {
+            isSuccess = false
+            summary = context.getString(R.string.operation_interrupted)
         } catch (e: Exception) {
             isSuccess = false
             summary = context.getString(R.string.error_fatal_with_message, e.message ?: "")
@@ -226,8 +250,15 @@ class BackupOperationRunner(
 
     private suspend fun prepareBackupData(
         selectedApps: List<AppInfo>,
-        backupTypes: BackupTypeSelection
+        backupTypes: BackupTypeSelection,
+        shouldStop: () -> Boolean
     ): Triple<MutableList<String>, List<String>, RestoidMetadata> {
+        fun throwIfCancelled() {
+            if (shouldStop()) {
+                throw OperationCancelledException(context.getString(R.string.operation_interrupted))
+            }
+        }
+
         val pathsToBackup = mutableListOf<String>()
         val excludePatterns = mutableListOf<String>()
         val appMetadataMap = mutableMapOf<String, AppMetadata>()
@@ -241,6 +272,7 @@ class BackupOperationRunner(
         }
 
         selectedApps.forEach { app ->
+            throwIfCancelled()
             val appPaths = generateFilePathsForApp(app, backupTypes)
             val existingAppPaths = appPaths.filter { Shell.cmd("[ -e '$it' ]").exec().isSuccess }
             pathsToBackup.addAll(existingAppPaths)
@@ -253,6 +285,7 @@ class BackupOperationRunner(
                 excludePatterns.add("'/storage/emulated/0/Android/data/${app.packageName}/cache'")
             }
 
+            throwIfCancelled()
             val size = getDirectorySize(existingAppPaths)
             val grantedRuntimePermissions = appInfoRepository.getGrantedRuntimePermissions(app.packageName)
             appMetadataMap[app.packageName] = AppMetadata(

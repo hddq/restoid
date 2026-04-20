@@ -14,6 +14,9 @@ import io.github.hddq.restoid.work.MaintenanceWorkRequest
 import io.github.hddq.restoid.work.OperationWorkRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -32,6 +35,10 @@ data class MaintenanceUiState(
     val progress: OperationProgress = OperationProgress(),
 )
 
+sealed interface MaintenanceUiEvent {
+    data object NavigateToOperationProgress : MaintenanceUiEvent
+}
+
 class MaintenanceViewModel(
     private val context: Context,
     private val repositoriesRepository: RepositoriesRepository,
@@ -45,6 +52,8 @@ class MaintenanceViewModel(
 
     private val _operationBlocked = MutableStateFlow(false)
     val operationBlocked = _operationBlocked.asStateFlow()
+    private val _uiEvents = MutableSharedFlow<MaintenanceUiEvent>(extraBufferCapacity = 1)
+    val uiEvents: SharedFlow<MaintenanceUiEvent> = _uiEvents.asSharedFlow()
 
     init {
         _uiState.value = preferencesRepository.loadMaintenanceState()
@@ -57,7 +66,7 @@ class MaintenanceViewModel(
                 if (state.operationType == OperationType.MAINTENANCE) {
                     _uiState.update { it.copy(isRunning = state.isRunning, progress = state.progress) }
                 } else {
-                    _uiState.update { it.copy(isRunning = false) }
+                    _uiState.update { it.copy(isRunning = false, progress = OperationProgress()) }
                 }
             }
         }
@@ -102,7 +111,9 @@ class MaintenanceViewModel(
 
         viewModelScope.launch(Dispatchers.IO) {
             val enqueued = operationWorkRepository.enqueueMaintenance(request)
-            if (!enqueued) {
+            if (enqueued) {
+                _uiEvents.tryEmit(MaintenanceUiEvent.NavigateToOperationProgress)
+            } else {
                 _operationBlocked.value = true
                 _uiState.update {
                     it.copy(

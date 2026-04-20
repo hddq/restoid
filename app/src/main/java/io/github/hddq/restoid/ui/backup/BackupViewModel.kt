@@ -17,6 +17,9 @@ import io.github.hddq.restoid.work.BackupWorkRequest
 import io.github.hddq.restoid.work.OperationWorkRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -29,6 +32,10 @@ data class BackupTypes(
     val obb: Boolean = false,
     val media: Boolean = false
 )
+
+sealed interface BackupUiEvent {
+    data object NavigateToOperationProgress : BackupUiEvent
+}
 
 class BackupViewModel(
     private val application: Application,
@@ -56,6 +63,8 @@ class BackupViewModel(
 
     private val _operationBlocked = MutableStateFlow(false)
     val operationBlocked = _operationBlocked.asStateFlow()
+    private val _uiEvents = MutableSharedFlow<BackupUiEvent>(extraBufferCapacity = 1)
+    val uiEvents: SharedFlow<BackupUiEvent> = _uiEvents.asSharedFlow()
 
     init {
         _backupTypes.value = preferencesRepository.loadBackupTypes()
@@ -83,6 +92,7 @@ class BackupViewModel(
                     _backupProgress.value = state.progress
                 } else {
                     _isBackingUp.value = false
+                    _backupProgress.value = OperationProgress()
                 }
             }
         }
@@ -122,7 +132,9 @@ class BackupViewModel(
 
         viewModelScope.launch(Dispatchers.IO) {
             val enqueued = operationWorkRepository.enqueueBackup(request)
-            if (!enqueued) {
+            if (enqueued) {
+                _uiEvents.tryEmit(BackupUiEvent.NavigateToOperationProgress)
+            } else {
                 _operationBlocked.value = true
                 _backupProgress.value = OperationProgress(
                     isFinished = true,

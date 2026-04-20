@@ -11,9 +11,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -28,6 +25,7 @@ import io.github.hddq.restoid.R
 import io.github.hddq.restoid.RestoidApplication
 import io.github.hddq.restoid.Screen
 import io.github.hddq.restoid.model.BackupDetail
+import io.github.hddq.restoid.ui.restore.RestoreUiEvent
 import io.github.hddq.restoid.ui.restore.RestoreTypes
 import io.github.hddq.restoid.ui.restore.RestoreViewModel
 import io.github.hddq.restoid.ui.restore.RestoreViewModelFactory
@@ -54,9 +52,7 @@ fun RestoreScreen(navController: NavController, snapshotId: String?, modifier: M
     val isLoading by viewModel.isLoading.collectAsState()
     val restoreTypes by viewModel.restoreTypes.collectAsState()
     val allowDowngrade by viewModel.allowDowngrade.collectAsState()
-    val isRestoring by viewModel.isRestoring.collectAsState()
     val operationBlocked by viewModel.operationBlocked.collectAsState()
-    var hasNavigatedForCurrentRun by remember { mutableStateOf(false) }
 
     LaunchedEffect(operationBlocked) {
         if (operationBlocked) {
@@ -65,13 +61,12 @@ fun RestoreScreen(navController: NavController, snapshotId: String?, modifier: M
         }
     }
 
-    LaunchedEffect(isRestoring) {
-        if (!isRestoring) {
-            hasNavigatedForCurrentRun = false
-        } else if (!hasNavigatedForCurrentRun) {
-            hasNavigatedForCurrentRun = true
-            navController.navigate(Screen.OperationProgress.route) {
-                launchSingleTop = true
+    LaunchedEffect(viewModel) {
+        viewModel.uiEvents.collect { event ->
+            when (event) {
+                RestoreUiEvent.NavigateToOperationProgress -> navController.navigate(Screen.OperationProgress.route) {
+                    launchSingleTop = true
+                }
             }
         }
     }
