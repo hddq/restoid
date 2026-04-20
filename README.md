@@ -27,12 +27,6 @@ Restoid gives you control over your app backups through a clean and simple user 
 * **Downgrade Protection**: Prevents you from accidentally restoring an older app version over a newer one (can be overridden).
 * **Zero-Hassle Dependencies**: Automatically downloads and manages the `restic` binary for your device's architecture.
 
-## ⚡ Beyond Local Backups: Sync with Syncthing!
-
-While Restoid creates local backup repositories, its true power shines when combined with tools like [**Syncthing**](https://syncthing.net/).
-
-You can set up your repository in a folder that is synchronized by Syncthing. This allows you to automatically and securely transfer your encrypted Android backups to your server, laptop, or any other device in your private network. It's a perfect, decentralized setup for keeping your data safe and under your control.
-
 ## ⚠️ Requirements
 
 * **Root Access**: This is non-negotiable. Restoid requires elevated privileges to access app data directories. It uses `libsu` for robust root command execution.
