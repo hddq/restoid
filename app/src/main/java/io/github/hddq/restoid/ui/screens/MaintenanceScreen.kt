@@ -166,8 +166,11 @@ fun MaintenanceSelectionContent(
                     ) {
                         Column {
                             PolicySlider(label = stringResource(R.string.maintenance_keep_last), value = uiState.keepLast, range = 0..20, onValueChange = onSetKeepLast)
+                            HorizontalDivider(color = MaterialTheme.colorScheme.background)
                             PolicySlider(label = stringResource(R.string.maintenance_keep_daily), value = uiState.keepDaily, range = 0..30, onValueChange = onSetKeepDaily)
+                            HorizontalDivider(color = MaterialTheme.colorScheme.background)
                             PolicySlider(label = stringResource(R.string.maintenance_keep_weekly), value = uiState.keepWeekly, range = 0..12, onValueChange = onSetKeepWeekly)
+                            HorizontalDivider(color = MaterialTheme.colorScheme.background)
                             PolicySlider(label = stringResource(R.string.maintenance_keep_monthly), value = uiState.keepMonthly, range = 0..24, onValueChange = onSetKeepMonthly)
                         }
                     }
