@@ -120,6 +120,8 @@ fun RestoreSelectionContent(
     val externalDataLabel = stringResource(R.string.backup_type_external_data)
     val obbDataLabel = stringResource(R.string.backup_type_obb_data)
     val mediaDataLabel = stringResource(R.string.backup_type_media_data)
+    val selectableBackupDetails = backupDetails.filter { allowDowngrade || !it.isDowngrade }
+    val isAllSelected = selectableBackupDetails.isNotEmpty() && selectableBackupDetails.all { it.appInfo.isSelected }
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -159,23 +161,6 @@ fun RestoreSelectionContent(
             }
         }
 
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.apps_to_restore_title),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                FilledTonalButton(onClick = onToggleAll) {
-                    Text(stringResource(R.string.toggle_all))
-                }
-            }
-        }
-
         if (isLoading) {
             item {
                 Box(
@@ -196,21 +181,36 @@ fun RestoreSelectionContent(
             }
         } else {
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                Column {
+                    Text(
+                        text = stringResource(R.string.apps_to_restore_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 8.dp)
                     )
-                ) {
-                    Column {
-                        backupDetails.forEachIndexed { index, detail ->
-                            RestoreAppListItem(
-                                detail = detail,
-                                allowDowngrade = allowDowngrade,
-                                onToggle = { onToggleApp(detail.appInfo.packageName) }
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer
+                        )
+                    ) {
+                        Column {
+                            SelectAllListItem(
+                                isChecked = isAllSelected,
+                                onToggle = onToggleAll
                             )
-                            if (index < backupDetails.size - 1) {
-                                HorizontalDivider(color = MaterialTheme.colorScheme.background)
+
+                            HorizontalDivider(color = MaterialTheme.colorScheme.background)
+
+                            backupDetails.forEachIndexed { index, detail ->
+                                RestoreAppListItem(
+                                    detail = detail,
+                                    allowDowngrade = allowDowngrade,
+                                    onToggle = { onToggleApp(detail.appInfo.packageName) }
+                                )
+                                if (index < backupDetails.size - 1) {
+                                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                                }
                             }
                         }
                     }

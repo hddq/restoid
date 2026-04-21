@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -24,6 +25,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import android.widget.Toast
+import androidx.compose.ui.text.font.FontWeight
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.RestoidApplication
 import io.github.hddq.restoid.model.AppInfo
@@ -134,23 +136,6 @@ fun BackupSelectionContent(
             }
         }
 
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.apps_title),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                FilledTonalButton(onClick = { viewModel.toggleAll() }) {
-                    Text(stringResource(R.string.toggle_all))
-                }
-            }
-        }
-
         if (isLoading) {
             item {
                 Box(
@@ -164,6 +149,14 @@ fun BackupSelectionContent(
             }
         } else {
             item {
+                Column {
+                    Text(
+                        text = stringResource(R.string.apps_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -171,6 +164,17 @@ fun BackupSelectionContent(
                     )
                 ) {
                     Column {
+                        val isAllSelected = apps.isNotEmpty() && apps.all { it.isSelected }
+
+                        SelectAllListItem(
+                            isChecked = isAllSelected,
+                            onToggle = { viewModel.toggleAll() }
+                        )
+
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.background,
+                        )
+
                         apps.forEachIndexed { index, app ->
                             AppListItem(app = app) { viewModel.toggleAppSelection(app.packageName) }
                             if (index < apps.size - 1) {
@@ -181,6 +185,49 @@ fun BackupSelectionContent(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun SelectAllListItem(isChecked: Boolean, onToggle: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onToggle)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Default.SelectAll,
+            contentDescription = null,
+            modifier = Modifier
+                .size(48.dp)
+                .padding(8.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(Modifier.width(16.dp))
+        Text(
+            text = stringResource(R.string.toggle_all),
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.weight(1f)
+        )
+        Switch(
+            checked = isChecked,
+            onCheckedChange = { onToggle() },
+            thumbContent = if (isChecked) {
+                {
+                    Icon(
+                        imageVector = Icons.Filled.Check,
+                        contentDescription = null,
+                        modifier = Modifier.size(SwitchDefaults.IconSize),
+                    )
+                }
+            } else {
+                null
+            }
+        )
     }
 }
 

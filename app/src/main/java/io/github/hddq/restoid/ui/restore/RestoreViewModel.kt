@@ -351,10 +351,11 @@ class RestoreViewModel(
 
     fun toggleAllRestoreSelection() {
         _backupDetails.update { currentDetails ->
-            val shouldSelectAll = currentDetails.any { !it.appInfo.isSelected }
+            val selectableDetails = currentDetails.filter { _allowDowngrade.value || !it.isDowngrade }
+            val shouldSelectAll = selectableDetails.any { !it.appInfo.isSelected }
             currentDetails.map { detail ->
                 val canBeSelected = _allowDowngrade.value || !detail.isDowngrade
-                detail.copy(appInfo = detail.appInfo.copy(isSelected = if (shouldSelectAll) canBeSelected else false))
+                detail.copy(appInfo = detail.appInfo.copy(isSelected = shouldSelectAll && canBeSelected))
             }
         }
     }
