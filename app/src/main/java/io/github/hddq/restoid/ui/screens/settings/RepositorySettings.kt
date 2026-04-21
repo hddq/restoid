@@ -1,18 +1,19 @@
 package io.github.hddq.restoid.ui.screens.settings
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -35,24 +36,14 @@ fun RepositorySettings(viewModel: SettingsViewModel) {
     val selectedRepository by viewModel.selectedRepository.collectAsStateWithLifecycle()
 
     Column {
-        Row(
+        Text(
+            text = stringResource(R.string.backup_repositories_title),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(R.string.backup_repositories_title),
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary
-            )
-            if (resticState is ResticState.Installed) {
-                IconButton(onClick = { viewModel.onShowAddRepoDialog() }) {
-                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_add_repository))
-                }
-            }
-        }
+                .padding(bottom = 8.dp)
+        )
 
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -99,6 +90,21 @@ fun RepositorySettings(viewModel: SettingsViewModel) {
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
+            }
+        }
+
+        if (resticState is ResticState.Installed) {
+            FilledTonalButton(
+                onClick = { viewModel.onShowAddRepoDialog() },
+                modifier = Modifier.padding(top = 12.dp),
+                shape = MaterialTheme.shapes.extraLarge
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = null
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = stringResource(R.string.cd_add_repository))
             }
         }
     }
