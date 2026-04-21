@@ -140,11 +140,11 @@ class ResticRepository(
             return Result.failure(Exception(context.getString(R.string.restic_failure_no_forget_policy)))
         }
 
-        val tagOptions = " --tag 'restoid' --tag 'backup'"
+        val groupingAndTagOptions = " --group-by host,tags --tag 'restoid' --tag 'backup'"
         return executor.execute(
             repoPath,
             password,
-            "forget$forgetOptions$tagOptions",
+            "forget$forgetOptions$groupingAndTagOptions",
             context.getString(R.string.restic_failure_forget_snapshots),
             environmentVariables = environmentVariables,
             resticOptions = resticOptions
