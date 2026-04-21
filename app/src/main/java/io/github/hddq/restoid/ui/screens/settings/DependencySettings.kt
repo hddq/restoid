@@ -22,26 +22,28 @@ fun DependencySettings(viewModel: SettingsViewModel) {
     val resticState by viewModel.resticState.collectAsStateWithLifecycle()
     val latestResticVersion by viewModel.latestResticVersion.collectAsStateWithLifecycle()
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
+    Column {
+        Text(
+            text = stringResource(R.string.dependencies_title),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(bottom = 8.dp)
         )
-    ) {
-        Column {
-            Text(
-                stringResource(R.string.dependencies_title),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(16.dp)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
             )
-            ResticDependencyRow(
-                state = resticState,
-                stableResticVersion = viewModel.stableResticVersion,
-                latestResticVersion = latestResticVersion,
-                onDownloadClick = { viewModel.downloadRestic() },
-                onDownloadLatestClick = { viewModel.downloadLatestRestic() }
-            )
+        ) {
+            Column {
+                ResticDependencyRow(
+                    state = resticState,
+                    stableResticVersion = viewModel.stableResticVersion,
+                    latestResticVersion = latestResticVersion,
+                    onDownloadClick = { viewModel.downloadRestic() },
+                    onDownloadLatestClick = { viewModel.downloadLatestRestic() }
+                )
+            }
         }
     }
 }

@@ -34,28 +34,32 @@ fun RepositorySettings(viewModel: SettingsViewModel) {
     val repositories by viewModel.repositories.collectAsStateWithLifecycle()
     val selectedRepository by viewModel.selectedRepository.collectAsStateWithLifecycle()
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        )
-    ) {
-        Column {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(stringResource(R.string.backup_repositories_title), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                if (resticState is ResticState.Installed) {
-                    IconButton(onClick = { viewModel.onShowAddRepoDialog() }) {
-                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_add_repository))
-                    }
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.backup_repositories_title),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+            if (resticState is ResticState.Installed) {
+                IconButton(onClick = { viewModel.onShowAddRepoDialog() }) {
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_add_repository))
                 }
             }
+        }
 
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
+            )
+        ) {
             if (resticState is ResticState.Installed) {
                 if (repositories.isEmpty()) {
                     Text(
@@ -64,16 +68,18 @@ fun RepositorySettings(viewModel: SettingsViewModel) {
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                     )
                 } else {
-                    repositories.forEachIndexed { index, repo ->
-                        val repoKey = viewModel.repositoryKey(repo)
-                        SelectableRepositoryRow(
-                            repo = repo,
-                            isSelected = repoKey == selectedRepository,
-                            onSelected = { viewModel.selectRepository(repoKey) },
-                            viewModel = viewModel
-                        )
-                        if (index < repositories.size - 1) {
-                            Divider(color = MaterialTheme.colorScheme.background)
+                    Column {
+                        repositories.forEachIndexed { index, repo ->
+                            val repoKey = viewModel.repositoryKey(repo)
+                            SelectableRepositoryRow(
+                                repo = repo,
+                                isSelected = repoKey == selectedRepository,
+                                onSelected = { viewModel.selectRepository(repoKey) },
+                                viewModel = viewModel
+                            )
+                            if (index < repositories.size - 1) {
+                                Divider(color = MaterialTheme.colorScheme.background)
+                            }
                         }
                     }
                 }

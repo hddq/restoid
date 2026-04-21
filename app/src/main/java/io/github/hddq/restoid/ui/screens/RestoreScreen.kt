@@ -80,6 +80,7 @@ fun RestoreScreen(navController: NavController, snapshotId: String?, modifier: M
     val allowDowngradeLabel = stringResource(R.string.allow_downgrade)
 
     RestoreSelectionContent(
+        modifier = modifier,
         backupDetails = backupDetails,
         isLoading = isLoading,
         restoreTypes = restoreTypes,
@@ -103,6 +104,7 @@ fun RestoreScreen(navController: NavController, snapshotId: String?, modifier: M
 
 @Composable
 fun RestoreSelectionContent(
+    modifier: Modifier = Modifier,
     backupDetails: List<BackupDetail>,
     isLoading: Boolean,
     restoreTypes: RestoreTypes,
@@ -120,36 +122,39 @@ fun RestoreSelectionContent(
     val mediaDataLabel = stringResource(R.string.backup_type_media_data)
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp, top = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+            Column {
+                Text(
+                    text = stringResource(R.string.restore_options_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
-            ) {
-                Column {
-                    Text(
-                        text = stringResource(R.string.restore_options_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(16.dp)
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
                     )
-                    RestoreTypeToggle(apkLabel, checked = restoreTypes.apk) { onToggleRestoreType(apkLabel, it) }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    RestoreTypeToggle(dataLabel, checked = restoreTypes.data) { onToggleRestoreType(dataLabel, it) }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    RestoreTypeToggle(deviceProtectedDataLabel, checked = restoreTypes.deviceProtectedData) { onToggleRestoreType(deviceProtectedDataLabel, it) }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    RestoreTypeToggle(externalDataLabel, checked = restoreTypes.externalData) { onToggleRestoreType(externalDataLabel, it) }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    RestoreTypeToggle(obbDataLabel, checked = restoreTypes.obb) { onToggleRestoreType(obbDataLabel, it) }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    RestoreTypeToggle(mediaDataLabel, checked = restoreTypes.media) { onToggleRestoreType(mediaDataLabel, it) }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    RestoreTypeToggle(stringResource(R.string.allow_downgrade), checked = allowDowngrade) { onToggleAllowDowngrade(it) }
+                ) {
+                    Column {
+                        RestoreTypeToggle(apkLabel, checked = restoreTypes.apk) { onToggleRestoreType(apkLabel, it) }
+                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                        RestoreTypeToggle(dataLabel, checked = restoreTypes.data) { onToggleRestoreType(dataLabel, it) }
+                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                        RestoreTypeToggle(deviceProtectedDataLabel, checked = restoreTypes.deviceProtectedData) { onToggleRestoreType(deviceProtectedDataLabel, it) }
+                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                        RestoreTypeToggle(externalDataLabel, checked = restoreTypes.externalData) { onToggleRestoreType(externalDataLabel, it) }
+                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                        RestoreTypeToggle(obbDataLabel, checked = restoreTypes.obb) { onToggleRestoreType(obbDataLabel, it) }
+                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                        RestoreTypeToggle(mediaDataLabel, checked = restoreTypes.media) { onToggleRestoreType(mediaDataLabel, it) }
+                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                        RestoreTypeToggle(stringResource(R.string.allow_downgrade), checked = allowDowngrade) { onToggleAllowDowngrade(it) }
+                    }
                 }
             }
         }
@@ -162,7 +167,8 @@ fun RestoreSelectionContent(
             ) {
                 Text(
                     text = stringResource(R.string.apps_to_restore_title),
-                    style = MaterialTheme.typography.titleMedium
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary
                 )
                 FilledTonalButton(onClick = onToggleAll) {
                     Text(stringResource(R.string.toggle_all))

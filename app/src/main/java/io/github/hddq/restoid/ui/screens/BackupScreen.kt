@@ -82,6 +82,7 @@ fun BackupScreen(
     }
 
     BackupSelectionContent(
+        modifier = modifier,
         viewModel = viewModel,
         apps = apps,
         isLoading = isLoadingApps,
@@ -91,40 +92,44 @@ fun BackupScreen(
 
 @Composable
 fun BackupSelectionContent(
+    modifier: Modifier = Modifier,
     viewModel: BackupViewModel,
     apps: List<AppInfo>,
     isLoading: Boolean,
     backupTypes: BackupTypes
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp, top = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+            Column {
+                Text(
+                    text = stringResource(R.string.backup_types_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
-            ) {
-                Column {
-                    Text(
-                        text = stringResource(R.string.backup_types_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(16.dp)
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
                     )
-                    BackupTypeToggle(stringResource(R.string.backup_type_apk), backupTypes.apk) { viewModel.setBackupApk(it) }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    BackupTypeToggle(stringResource(R.string.backup_type_data), backupTypes.data) { viewModel.setBackupData(it) }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    BackupTypeToggle(stringResource(R.string.backup_type_device_protected_data), backupTypes.deviceProtectedData) { viewModel.setBackupDeviceProtectedData(it) }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    BackupTypeToggle(stringResource(R.string.backup_type_external_data), backupTypes.externalData) { viewModel.setBackupExternalData(it) }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    BackupTypeToggle(stringResource(R.string.backup_type_obb_data), backupTypes.obb) { viewModel.setBackupObb(it) }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    BackupTypeToggle(stringResource(R.string.backup_type_media_data), backupTypes.media) { viewModel.setBackupMedia(it) }
+                ) {
+                    Column {
+                        BackupTypeToggle(stringResource(R.string.backup_type_apk), backupTypes.apk) { viewModel.setBackupApk(it) }
+                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                        BackupTypeToggle(stringResource(R.string.backup_type_data), backupTypes.data) { viewModel.setBackupData(it) }
+                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                        BackupTypeToggle(stringResource(R.string.backup_type_device_protected_data), backupTypes.deviceProtectedData) { viewModel.setBackupDeviceProtectedData(it) }
+                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                        BackupTypeToggle(stringResource(R.string.backup_type_external_data), backupTypes.externalData) { viewModel.setBackupExternalData(it) }
+                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                        BackupTypeToggle(stringResource(R.string.backup_type_obb_data), backupTypes.obb) { viewModel.setBackupObb(it) }
+                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                        BackupTypeToggle(stringResource(R.string.backup_type_media_data), backupTypes.media) { viewModel.setBackupMedia(it) }
+                    }
                 }
             }
         }
@@ -137,7 +142,8 @@ fun BackupSelectionContent(
             ) {
                 Text(
                     text = stringResource(R.string.apps_title),
-                    style = MaterialTheme.typography.titleMedium
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary
                 )
                 FilledTonalButton(onClick = { viewModel.toggleAll() }) {
                     Text(stringResource(R.string.toggle_all))

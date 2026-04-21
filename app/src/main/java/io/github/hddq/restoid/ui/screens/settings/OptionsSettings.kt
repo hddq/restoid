@@ -21,21 +21,23 @@ import io.github.hddq.restoid.ui.settings.SettingsViewModel
 fun OptionsSettings(viewModel: SettingsViewModel) {
     val requireAppUnlock by viewModel.requireAppUnlock.collectAsStateWithLifecycle()
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-    ) {
-        Column {
-            Text(
-                text = stringResource(R.string.options_title),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(16.dp)
-            )
-            AppUnlockOnStartRow(
-                enabled = requireAppUnlock,
-                onCheckedChange = viewModel::onRequireAppUnlockChanged
-            )
+    Column {
+        Text(
+            text = stringResource(R.string.options_title),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+        ) {
+            Column {
+                AppUnlockOnStartRow(
+                    enabled = requireAppUnlock,
+                    onCheckedChange = viewModel::onRequireAppUnlockChanged
+                )
+            }
         }
     }
 }
