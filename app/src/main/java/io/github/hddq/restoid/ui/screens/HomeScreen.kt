@@ -33,6 +33,10 @@ import io.github.hddq.restoid.ui.home.HomeCredentialPrompt
 import io.github.hddq.restoid.ui.home.HomeUiState
 import io.github.hddq.restoid.ui.home.SnapshotWithMetadata
 
+private fun homeCredentialsSaveLabel(prompt: HomeCredentialPrompt): Int {
+    return if (prompt == HomeCredentialPrompt.S3_CREDENTIALS) R.string.action_save_passwords else R.string.save_credentials
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -43,12 +47,15 @@ fun HomeScreen(
     onPasswordEntered: (String, Boolean) -> Unit,
     onSftpPasswordEntered: (String, Boolean) -> Unit,
     onRestCredentialsEntered: (String, String, Boolean) -> Unit,
+    onS3CredentialsEntered: (String, String, Boolean) -> Unit,
     onRetryRepositoryPasswordEntry: () -> Unit,
     onRetrySftpPasswordEntry: () -> Unit,
     onRetryRestCredentialsEntry: () -> Unit,
+    onRetryS3CredentialsEntry: () -> Unit,
     onDismissPasswordDialog: () -> Unit,
     onDismissSftpPasswordDialog: () -> Unit,
     onDismissRestCredentialsDialog: () -> Unit,
+    onDismissS3CredentialsDialog: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -142,6 +149,13 @@ fun HomeScreen(
                                     }
                                 }
 
+                                HomeAuthFailure.S3_CREDENTIALS -> {
+                                    Spacer(Modifier.height(12.dp))
+                                    Button(onClick = onRetryS3CredentialsEntry) {
+                                        Text(stringResource(R.string.action_enter_s3_credentials_again))
+                                    }
+                                }
+
                                 null -> Unit
                             }
                         }
@@ -170,6 +184,12 @@ fun HomeScreen(
                                 HomeCredentialPrompt.REST_CREDENTIALS -> {
                                     Button(onClick = onRetryRestCredentialsEntry) {
                                         Text(stringResource(R.string.action_open_rest))
+                                    }
+                                }
+
+                                HomeCredentialPrompt.S3_CREDENTIALS -> {
+                                    Button(onClick = onRetryS3CredentialsEntry) {
+                                        Text(stringResource(R.string.action_open_s3))
                                     }
                                 }
                             }
@@ -240,7 +260,21 @@ fun HomeScreen(
             usernameLabel = stringResource(R.string.label_rest_username),
             passwordLabel = stringResource(R.string.label_rest_password),
             onCredentialsEntered = onRestCredentialsEntered,
-            onDismiss = onDismissRestCredentialsDialog
+            onDismiss = onDismissRestCredentialsDialog,
+            saveCredentialsLabel = stringResource(homeCredentialsSaveLabel(HomeCredentialPrompt.REST_CREDENTIALS))
+        )
+    }
+
+    if (uiState.showS3CredentialsDialogFor != null) {
+        val repositoryKey = uiState.showS3CredentialsDialogFor
+        UsernamePasswordDialog(
+            title = stringResource(R.string.s3_credentials_required),
+            message = stringResource(R.string.enter_s3_credentials_for_repository, repositoryKey),
+            usernameLabel = stringResource(R.string.label_s3_access_key_id),
+            passwordLabel = stringResource(R.string.label_s3_secret_access_key),
+            onCredentialsEntered = onS3CredentialsEntered,
+            onDismiss = onDismissS3CredentialsDialog,
+            saveCredentialsLabel = stringResource(homeCredentialsSaveLabel(HomeCredentialPrompt.S3_CREDENTIALS))
         )
     }
 }

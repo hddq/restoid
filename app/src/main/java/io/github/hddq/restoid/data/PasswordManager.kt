@@ -72,6 +72,14 @@ class PasswordManager(private val context: Context) {
         return "rest_http_password::$repositoryKey"
     }
 
+    private fun s3AccessKeyIdKey(repositoryKey: String): String {
+        return "s3_access_key_id::$repositoryKey"
+    }
+
+    private fun s3SecretAccessKeyKey(repositoryKey: String): String {
+        return "s3_secret_access_key::$repositoryKey"
+    }
+
     fun saveSftpPassword(repositoryKey: String, password: String) {
         savePassword(sftpPasswordKey(repositoryKey), password)
     }
@@ -154,5 +162,61 @@ class PasswordManager(private val context: Context) {
 
     fun removeStoredRestPassword(repositoryKey: String) {
         removeStoredPassword(restPasswordKey(repositoryKey))
+    }
+
+    fun saveS3AccessKeyId(repositoryKey: String, accessKeyId: String) {
+        savePassword(s3AccessKeyIdKey(repositoryKey), accessKeyId)
+    }
+
+    fun saveS3AccessKeyIdTemporary(repositoryKey: String, accessKeyId: String) {
+        savePasswordTemporary(s3AccessKeyIdKey(repositoryKey), accessKeyId)
+    }
+
+    fun getS3AccessKeyId(repositoryKey: String): String? {
+        return getPassword(s3AccessKeyIdKey(repositoryKey))
+    }
+
+    fun hasS3AccessKeyId(repositoryKey: String): Boolean {
+        return hasPassword(s3AccessKeyIdKey(repositoryKey))
+    }
+
+    fun hasStoredS3AccessKeyId(repositoryKey: String): Boolean {
+        return hasStoredPassword(s3AccessKeyIdKey(repositoryKey))
+    }
+
+    fun removeS3AccessKeyId(repositoryKey: String) {
+        removePassword(s3AccessKeyIdKey(repositoryKey))
+    }
+
+    fun removeStoredS3AccessKeyId(repositoryKey: String) {
+        removeStoredPassword(s3AccessKeyIdKey(repositoryKey))
+    }
+
+    fun saveS3SecretAccessKey(repositoryKey: String, secretAccessKey: String) {
+        savePassword(s3SecretAccessKeyKey(repositoryKey), secretAccessKey)
+    }
+
+    fun saveS3SecretAccessKeyTemporary(repositoryKey: String, secretAccessKey: String) {
+        savePasswordTemporary(s3SecretAccessKeyKey(repositoryKey), secretAccessKey)
+    }
+
+    fun getS3SecretAccessKey(repositoryKey: String): String? {
+        return getPassword(s3SecretAccessKeyKey(repositoryKey))
+    }
+
+    fun hasS3SecretAccessKey(repositoryKey: String): Boolean {
+        return hasPassword(s3SecretAccessKeyKey(repositoryKey))
+    }
+
+    fun hasStoredS3SecretAccessKey(repositoryKey: String): Boolean {
+        return hasStoredPassword(s3SecretAccessKeyKey(repositoryKey))
+    }
+
+    fun removeS3SecretAccessKey(repositoryKey: String) {
+        removePassword(s3SecretAccessKeyKey(repositoryKey))
+    }
+
+    fun removeStoredS3SecretAccessKey(repositoryKey: String) {
+        removeStoredPassword(s3SecretAccessKeyKey(repositoryKey))
     }
 }

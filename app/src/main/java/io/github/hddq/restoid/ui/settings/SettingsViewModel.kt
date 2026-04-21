@@ -17,6 +17,8 @@ data class AddRepoUiState(
     val path: String = "",
     val password: String = "",
     val sftpPassword: String = "",
+    val s3AccessKeyId: String = "",
+    val s3SecretAccessKey: String = "",
     val restUsername: String = "",
     val restPassword: String = "",
     val sftpServerTrustInfo: SftpServerTrustInfo? = null,
@@ -33,6 +35,8 @@ private data class AddRepositoryInput(
     val backendType: RepositoryBackendType,
     val password: String,
     val sftpPassword: String,
+    val s3AccessKeyId: String,
+    val s3SecretAccessKey: String,
     val restUsername: String,
     val restPassword: String,
     val environmentVariables: Map<String, String>,
@@ -105,6 +109,12 @@ class SettingsViewModel(
     fun saveRestCredentials(key: String, username: String, password: String) {
         repositoriesRepository.saveRestCredentials(key, username, password)
     }
+    fun hasS3Credentials(key: String) = repositoriesRepository.hasS3Credentials(key)
+    fun hasStoredS3Credentials(key: String) = repositoriesRepository.hasStoredS3Credentials(key)
+    fun forgetS3Credentials(key: String) = repositoriesRepository.forgetS3Credentials(key)
+    fun saveS3Credentials(key: String, accessKeyId: String, secretAccessKey: String) {
+        repositoriesRepository.saveS3Credentials(key, accessKeyId, secretAccessKey)
+    }
 
     fun deleteRepository(key: String) {
         viewModelScope.launch { repositoriesRepository.deleteRepository(key) }
@@ -168,6 +178,8 @@ class SettingsViewModel(
                 backendType = backendType,
                 path = "",
                 sftpPassword = "",
+                s3AccessKeyId = "",
+                s3SecretAccessKey = "",
                 restUsername = "",
                 restPassword = "",
                 sftpServerTrustInfo = null,
@@ -190,6 +202,16 @@ class SettingsViewModel(
     fun onNewRepoSftpPasswordChanged(password: String) {
         pendingSftpTrustRequest = null
         _addRepoUiState.update { it.copy(sftpPassword = password, sftpServerTrustInfo = null) }
+    }
+
+    fun onNewRepoS3AccessKeyIdChanged(accessKeyId: String) {
+        pendingSftpTrustRequest = null
+        _addRepoUiState.update { it.copy(s3AccessKeyId = accessKeyId, sftpServerTrustInfo = null) }
+    }
+
+    fun onNewRepoS3SecretAccessKeyChanged(secretAccessKey: String) {
+        pendingSftpTrustRequest = null
+        _addRepoUiState.update { it.copy(s3SecretAccessKey = secretAccessKey, sftpServerTrustInfo = null) }
     }
 
     fun onNewRepoRestUsernameChanged(username: String) {
@@ -262,6 +284,8 @@ class SettingsViewModel(
         val path = addRepoUiState.value.path.trim()
         val password = addRepoUiState.value.password
         val sftpPassword = addRepoUiState.value.sftpPassword
+        val s3AccessKeyId = addRepoUiState.value.s3AccessKeyId
+        val s3SecretAccessKey = addRepoUiState.value.s3SecretAccessKey
         val restUsername = addRepoUiState.value.restUsername
         val restPassword = addRepoUiState.value.restPassword
         val savePassword = addRepoUiState.value.savePassword
@@ -279,6 +303,17 @@ class SettingsViewModel(
             if (hasRestUsername != hasRestPassword) {
                 _addRepoUiState.update {
                     it.copy(state = AddRepositoryState.Error(context.getString(R.string.settings_error_rest_credentials_incomplete)))
+                }
+                return
+            }
+        }
+
+        if (backendType == RepositoryBackendType.S3) {
+            val hasS3AccessKeyId = s3AccessKeyId.isNotBlank()
+            val hasS3SecretAccessKey = s3SecretAccessKey.isNotBlank()
+            if (hasS3AccessKeyId != hasS3SecretAccessKey) {
+                _addRepoUiState.update {
+                    it.copy(state = AddRepositoryState.Error(context.getString(R.string.settings_error_s3_credentials_incomplete)))
                 }
                 return
             }
@@ -302,6 +337,8 @@ class SettingsViewModel(
             backendType = backendType,
             password = password,
             sftpPassword = sftpPassword,
+            s3AccessKeyId = s3AccessKeyId,
+            s3SecretAccessKey = s3SecretAccessKey,
             restUsername = restUsername,
             restPassword = restPassword,
             environmentVariables = environmentVariables,
@@ -361,6 +398,8 @@ class SettingsViewModel(
             environmentVariables = input.environmentVariables,
             resticOptions = emptyMap(),
             sftpPassword = input.sftpPassword,
+            s3AccessKeyId = input.s3AccessKeyId,
+            s3SecretAccessKey = input.s3SecretAccessKey,
             restUsername = input.restUsername,
             restPassword = input.restPassword,
             resticRepository = resticRepository,

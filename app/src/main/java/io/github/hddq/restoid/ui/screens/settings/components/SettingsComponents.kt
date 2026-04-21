@@ -65,6 +65,7 @@ import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.ui.screens.settings.dialogs.ChangePasswordDialog
 import io.github.hddq.restoid.ui.screens.settings.dialogs.SavePasswordDialog
 import io.github.hddq.restoid.ui.screens.settings.dialogs.SaveRestCredentialsDialog
+import io.github.hddq.restoid.ui.screens.settings.dialogs.SaveS3CredentialsDialog
 import io.github.hddq.restoid.ui.screens.settings.dialogs.SaveSftpPasswordDialog
 import io.github.hddq.restoid.ui.settings.SettingsViewModel
 
@@ -216,6 +217,7 @@ fun SelectableRepositoryRow(
         var showSavePasswordDialog by remember { mutableStateOf(false) }
         var showSaveSftpPasswordDialog by remember { mutableStateOf(false) }
         var showSaveRestCredentialsDialog by remember { mutableStateOf(false) }
+        var showSaveS3CredentialsDialog by remember { mutableStateOf(false) }
 
         if (showChangePasswordDialog) {
             ChangePasswordDialog(
@@ -246,6 +248,14 @@ fun SelectableRepositoryRow(
                 viewModel = viewModel,
                 repositoryKey = repoKey,
                 onDismiss = { showSaveRestCredentialsDialog = false }
+            )
+        }
+
+        if (showSaveS3CredentialsDialog) {
+            SaveS3CredentialsDialog(
+                viewModel = viewModel,
+                repositoryKey = repoKey,
+                onDismiss = { showSaveS3CredentialsDialog = false }
             )
         }
 
@@ -297,6 +307,25 @@ fun SelectableRepositoryRow(
                             text = { Text(stringResource(R.string.action_save_rest_credentials)) },
                             onClick = {
                                 showSaveRestCredentialsDialog = true
+                                showMenu = false
+                            }
+                        )
+                    }
+                }
+                if (repo.backendType == RepositoryBackendType.S3) {
+                    if (viewModel.hasStoredS3Credentials(repoKey)) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_forget_s3_credentials)) },
+                            onClick = {
+                                viewModel.forgetS3Credentials(repoKey)
+                                showMenu = false
+                            }
+                        )
+                    } else {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_save_s3_credentials)) },
+                            onClick = {
+                                showSaveS3CredentialsDialog = true
                                 showMenu = false
                             }
                         )

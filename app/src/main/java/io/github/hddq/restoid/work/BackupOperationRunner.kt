@@ -366,6 +366,18 @@ class BackupOperationRunner(
             )
         }
 
+        if (
+            repository.backendType == RepositoryBackendType.S3 &&
+            repository.s3AuthRequired &&
+            !repositoriesRepository.hasS3Credentials(request.repositoryKey)
+        ) {
+            return OperationProgress(
+                isFinished = true,
+                error = context.getString(R.string.error_s3_credentials_not_found_for_repository),
+                finalSummary = context.getString(R.string.summary_s3_credentials_not_found)
+            )
+        }
+
         return null
     }
 

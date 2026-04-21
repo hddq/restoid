@@ -42,7 +42,8 @@ fun UsernamePasswordDialog(
     usernameLabel: String,
     passwordLabel: String,
     onCredentialsEntered: (String, String, Boolean) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    saveCredentialsLabel: String = ""
 ) {
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -140,7 +141,13 @@ fun UsernamePasswordDialog(
                         checked = saveCredentials,
                         onCheckedChange = { saveCredentials = it }
                     )
-                    Text(text = stringResource(R.string.save_credentials))
+                    Text(
+                        text = if (saveCredentialsLabel.isBlank()) {
+                            stringResource(R.string.save_credentials)
+                        } else {
+                            saveCredentialsLabel
+                        }
+                    )
                 }
             }
         },

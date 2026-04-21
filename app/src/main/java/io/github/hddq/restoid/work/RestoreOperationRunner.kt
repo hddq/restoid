@@ -97,6 +97,14 @@ class RestoreOperationRunner(
                 throw IllegalStateException(context.getString(R.string.error_rest_credentials_not_found_for_repository))
             }
 
+            if (
+                selectedRepository.backendType == RepositoryBackendType.S3 &&
+                selectedRepository.s3AuthRequired &&
+                !repositoriesRepository.hasS3Credentials(request.repositoryKey)
+            ) {
+                throw IllegalStateException(context.getString(R.string.error_s3_credentials_not_found_for_repository))
+            }
+
             val password = repositoriesRepository.getRepositoryPassword(request.repositoryKey)
                 ?: throw IllegalStateException(context.getString(R.string.restore_error_password_not_found))
 

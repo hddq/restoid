@@ -218,6 +218,18 @@ class BackupViewModel(
             )
         }
 
+        if (
+            repository?.backendType == RepositoryBackendType.S3 &&
+            repository.s3AuthRequired &&
+            !repositoriesRepository.hasS3Credentials(selectedRepoKey)
+        ) {
+            return OperationProgress(
+                isFinished = true,
+                error = application.getString(R.string.error_s3_credentials_not_found_for_repository),
+                finalSummary = application.getString(R.string.summary_s3_credentials_not_found)
+            )
+        }
+
         return null
     }
 

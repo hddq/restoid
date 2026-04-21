@@ -328,12 +328,15 @@ class MainActivity : FragmentActivity() {
                                 onPasswordEntered = { p, s -> homeViewModel.onPasswordEntered(p, s) },
                                 onSftpPasswordEntered = { p, s -> homeViewModel.onSftpPasswordEntered(p, s) },
                                 onRestCredentialsEntered = { u, p, s -> homeViewModel.onRestCredentialsEntered(u, p, s) },
+                                onS3CredentialsEntered = { u, p, s -> homeViewModel.onS3CredentialsEntered(u, p, s) },
                                 onRetryRepositoryPasswordEntry = { homeViewModel.onRetryRepositoryPasswordEntry() },
                                 onRetrySftpPasswordEntry = { homeViewModel.onRetrySftpPasswordEntry() },
                                 onRetryRestCredentialsEntry = { homeViewModel.onRetryRestCredentialsEntry() },
+                                onRetryS3CredentialsEntry = { homeViewModel.onRetryS3CredentialsEntry() },
                                 onDismissPasswordDialog = { homeViewModel.onDismissPasswordDialog() },
                                 onDismissSftpPasswordDialog = { homeViewModel.onDismissSftpPasswordDialog() },
-                                onDismissRestCredentialsDialog = { homeViewModel.onDismissRestCredentialsDialog() }
+                                onDismissRestCredentialsDialog = { homeViewModel.onDismissRestCredentialsDialog() },
+                                onDismissS3CredentialsDialog = { homeViewModel.onDismissS3CredentialsDialog() }
                             )
                         }
                         composable(Screen.Settings.route) {

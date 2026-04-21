@@ -62,6 +62,8 @@
     <string name="enter_sftp_password_for_repository">Please enter the SFTP password for repository: %1$s</string>
     <string name="rest_credentials_required">REST Credentials Required</string>
     <string name="enter_rest_credentials_for_repository">Please enter the REST username and password for repository: %1$s</string>
+    <string name="s3_credentials_required">S3 Credentials Required</string>
+    <string name="enter_s3_credentials_for_repository">Please enter the S3 access key and secret key for repository: %1$s</string>
     <plurals name="apps_count">
         <item quantity="one">App (%1$d):</item>
         <item quantity="other">Apps (%1$d):</item>
@@ -100,6 +102,8 @@
     <string name="label_repository_password">Repository password</string>
     <string name="label_rest_username">REST username</string>
     <string name="label_rest_password">REST password</string>
+    <string name="label_s3_access_key_id">S3 access key ID</string>
+    <string name="label_s3_secret_access_key">S3 secret access key</string>
     <string name="error_password_cannot_be_empty">Password cannot be empty</string>
     <string name="error_username_cannot_be_empty">Username cannot be empty</string>
     <string name="save_password">Save password</string>
@@ -190,6 +194,8 @@
     <string name="action_save_sftp_password">Save SFTP Password</string>
     <string name="action_forget_rest_credentials">Forget REST Credentials</string>
     <string name="action_save_rest_credentials">Save REST Credentials</string>
+    <string name="action_forget_s3_credentials">Forget S3 Credentials</string>
+    <string name="action_save_s3_credentials">Save S3 Credentials</string>
     <string name="action_save_password">Save Password</string>
     <string name="action_save_passwords">Save Passwords</string>
     <string name="action_change_password">Change password</string>
@@ -217,7 +223,9 @@
     <string name="dialog_save_password">Save Password</string>
     <string name="dialog_save_sftp_password">Save SFTP Password</string>
     <string name="dialog_save_rest_credentials">Save REST Credentials</string>
+    <string name="dialog_save_s3_credentials">Save S3 Credentials</string>
     <string name="rest_credentials_hint">Stored credentials are encrypted on this device.</string>
+    <string name="s3_credentials_hint">Stored credentials are encrypted on this device.</string>
 
     <string name="backup_item_permissions">Permissions</string>
     <string name="backup_item_unknown">Unknown items</string>
@@ -251,6 +259,8 @@
     <string name="summary_sftp_password_not_found">Could not find the SFTP password.</string>
     <string name="error_rest_credentials_not_found_for_repository">REST credentials for repository not found.</string>
     <string name="summary_rest_credentials_not_found">Could not find REST credentials.</string>
+    <string name="error_s3_credentials_not_found_for_repository">S3 credentials for repository not found.</string>
+    <string name="summary_s3_credentials_not_found">Could not find S3 credentials.</string>
     <string name="error_operation_already_running">Another operation is already running.</string>
     <string name="summary_operation_already_running">Another operation is running. Wait for it to finish.</string>
 
@@ -299,15 +309,19 @@
     <string name="home_error_repository_password_incorrect">Repository password is incorrect.</string>
     <string name="home_error_sftp_password_incorrect">SFTP password is incorrect.</string>
     <string name="home_error_rest_credentials_incorrect">REST credentials are incorrect.</string>
+    <string name="home_error_s3_credentials_incorrect">S3 credentials are incorrect.</string>
     <string name="home_open_needed_message">Repository is closed. Open it to load snapshots.</string>
     <string name="action_enter_password_again">Enter password again</string>
     <string name="action_enter_sftp_password_again">Enter SFTP password again</string>
     <string name="action_enter_rest_credentials_again">Enter REST credentials again</string>
+    <string name="action_enter_s3_credentials_again">Enter S3 credentials again</string>
     <string name="action_open_repository">Open repository</string>
     <string name="action_open_sftp">Open SFTP</string>
     <string name="action_open_rest">Open REST</string>
+    <string name="action_open_s3">Open S3</string>
     <string name="settings_error_path_password_empty">Path and password cannot be empty.</string>
     <string name="settings_error_rest_credentials_incomplete">Enter both REST username and password, or leave both empty.</string>
+    <string name="settings_error_s3_credentials_incomplete">Enter both S3 access key and secret key, or leave both empty.</string>
     <string name="settings_error_invalid_environment_variables">Invalid environment variables.</string>
     <string name="settings_error_invalid_environment_line">Invalid environment variable format at line %1$d. Use KEY=value.</string>
     <string name="settings_error_invalid_environment_name">Invalid environment variable name: %1$s</string>

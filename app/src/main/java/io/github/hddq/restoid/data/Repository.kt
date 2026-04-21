@@ -24,6 +24,7 @@ data class LocalRepository(
     val name: String = defaultRepositoryName(path, backendType),
     val id: String? = null,
     val restAuthRequired: Boolean = false,
+    val s3AuthRequired: Boolean = false,
     val environmentVariables: Map<String, String> = emptyMap(),
     val resticOptions: Map<String, String> = emptyMap()
 )

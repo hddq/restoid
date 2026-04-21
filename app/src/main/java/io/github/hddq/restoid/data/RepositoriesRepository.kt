@@ -37,6 +37,11 @@ data class RestCredentials(
     val password: String
 )
 
+data class S3Credentials(
+    val accessKeyId: String,
+    val secretAccessKey: String
+)
+
 class RepositoriesRepository(
     private val context: Context,
     private val passwordManager: PasswordManager,
@@ -158,6 +163,40 @@ class RepositoriesRepository(
         passwordManager.removeStoredRestPassword(key)
     }
 
+    fun getS3AccessKeyId(key: String): String? = passwordManager.getS3AccessKeyId(key)
+    fun getS3SecretAccessKey(key: String): String? = passwordManager.getS3SecretAccessKey(key)
+
+    fun getS3Credentials(key: String): S3Credentials? {
+        val accessKeyId = getS3AccessKeyId(key)
+        val secretAccessKey = getS3SecretAccessKey(key)
+        return if (accessKeyId.isNullOrBlank() || secretAccessKey.isNullOrBlank()) {
+            null
+        } else {
+            S3Credentials(accessKeyId = accessKeyId, secretAccessKey = secretAccessKey)
+        }
+    }
+
+    fun hasS3Credentials(key: String): Boolean = getS3Credentials(key) != null
+
+    fun hasStoredS3Credentials(key: String): Boolean {
+        return passwordManager.hasStoredS3AccessKeyId(key) && passwordManager.hasStoredS3SecretAccessKey(key)
+    }
+
+    fun saveS3CredentialsTemporary(key: String, accessKeyId: String, secretAccessKey: String) {
+        passwordManager.saveS3AccessKeyIdTemporary(key, accessKeyId)
+        passwordManager.saveS3SecretAccessKeyTemporary(key, secretAccessKey)
+    }
+
+    fun saveS3Credentials(key: String, accessKeyId: String, secretAccessKey: String) {
+        passwordManager.saveS3AccessKeyId(key, accessKeyId)
+        passwordManager.saveS3SecretAccessKey(key, secretAccessKey)
+    }
+
+    fun forgetS3Credentials(key: String) {
+        passwordManager.removeStoredS3AccessKeyId(key)
+        passwordManager.removeStoredS3SecretAccessKey(key)
+    }
+
     fun getExecutionEnvironmentVariables(key: String): Map<String, String> {
         val repository = getRepositoryByKey(key) ?: return emptyMap()
         val environmentWithDefaults = if (repository.backendType == RepositoryBackendType.SFTP) {
@@ -181,6 +220,16 @@ class RepositoriesRepository(
                 executionEnvironment = executionEnvironment + mapOf(
                     "RESTIC_REST_USERNAME" to restCredentials.username,
                     "RESTIC_REST_PASSWORD" to restCredentials.password
+                )
+            }
+        }
+
+        if (repository.backendType == RepositoryBackendType.S3) {
+            val s3Credentials = getS3Credentials(key)
+            if (s3Credentials != null) {
+                executionEnvironment = executionEnvironment + mapOf(
+                    "AWS_ACCESS_KEY_ID" to s3Credentials.accessKeyId,
+                    "AWS_SECRET_ACCESS_KEY" to s3Credentials.secretAccessKey
                 )
             }
         }
@@ -229,6 +278,8 @@ class RepositoriesRepository(
             passwordManager.removeSftpPassword(key)
             passwordManager.removeRestUsername(key)
             passwordManager.removeRestPassword(key)
+            passwordManager.removeS3AccessKeyId(key)
+            passwordManager.removeS3SecretAccessKey(key)
 
             if (_selectedRepository.value == key) {
                 prefs.edit().remove(SELECTED_REPO_KEY).apply()
@@ -374,6 +425,8 @@ class RepositoriesRepository(
         environmentVariables: Map<String, String>,
         resticOptions: Map<String, String>,
         sftpPassword: String,
+        s3AccessKeyId: String,
+        s3SecretAccessKey: String,
         restUsername: String,
         restPassword: String,
         resticRepository: ResticRepository,
@@ -403,6 +456,9 @@ class RepositoriesRepository(
             val hasRestAuthCredentials = backendType == RepositoryBackendType.REST &&
                 restUsername.isNotBlank() &&
                 restPassword.isNotBlank()
+            val hasS3AuthCredentials = backendType == RepositoryBackendType.S3 &&
+                s3AccessKeyId.isNotBlank() &&
+                s3SecretAccessKey.isNotBlank()
 
             val persistedResticOptions = applySftpResticOptionDefaults(
                 backendType = backendType,
@@ -433,6 +489,11 @@ class RepositoriesRepository(
                     "RESTIC_REST_USERNAME" to restUsername,
                     "RESTIC_REST_PASSWORD" to restPassword
                 )
+            } else if (hasS3AuthCredentials) {
+                persistedEnvironmentVariables + mapOf(
+                    "AWS_ACCESS_KEY_ID" to s3AccessKeyId,
+                    "AWS_SECRET_ACCESS_KEY" to s3SecretAccessKey
+                )
             } else {
                 persistedEnvironmentVariables
             }
@@ -441,6 +502,7 @@ class RepositoriesRepository(
                 path = resolvedPath,
                 backendType = backendType,
                 restAuthRequired = hasRestAuthCredentials,
+                s3AuthRequired = hasS3AuthCredentials,
                 environmentVariables = persistedEnvironmentVariables,
                 resticOptions = persistedResticOptions
             )
@@ -489,6 +551,8 @@ class RepositoriesRepository(
                                 savePassword,
                                 wasEmpty,
                                 sftpPassword,
+                                s3AccessKeyId,
+                                s3SecretAccessKey,
                                 restUsername,
                                 restPassword
                             )
@@ -524,6 +588,8 @@ class RepositoriesRepository(
                                 savePassword,
                                 wasEmpty,
                                 sftpPassword,
+                                s3AccessKeyId,
+                                s3SecretAccessKey,
                                 restUsername,
                                 restPassword
                             )
@@ -552,6 +618,8 @@ class RepositoriesRepository(
                             savePassword,
                             wasEmpty,
                             sftpPassword,
+                            s3AccessKeyId,
+                            s3SecretAccessKey,
                             restUsername,
                             restPassword
                         )
@@ -573,6 +641,8 @@ class RepositoriesRepository(
                                 savePassword,
                                 wasEmpty,
                                 sftpPassword,
+                                s3AccessKeyId,
+                                s3SecretAccessKey,
                                 restUsername,
                                 restPassword
                             )
@@ -595,6 +665,8 @@ class RepositoriesRepository(
         savePassword: Boolean,
         wasEmpty: Boolean,
         sftpPassword: String,
+        s3AccessKeyId: String,
+        s3SecretAccessKey: String,
         restUsername: String,
         restPassword: String
     ): AddRepositoryState {
@@ -621,6 +693,8 @@ class RepositoriesRepository(
                 repo = repo.copy(id = repoId),
                 password = password,
                 sftpPassword = sftpPassword,
+                s3AccessKeyId = s3AccessKeyId,
+                s3SecretAccessKey = s3SecretAccessKey,
                 restUsername = restUsername,
                 restPassword = restPassword,
                 save = savePassword,
@@ -681,6 +755,8 @@ class RepositoriesRepository(
         repo: LocalRepository,
         password: String,
         sftpPassword: String,
+        s3AccessKeyId: String,
+        s3SecretAccessKey: String,
         restUsername: String,
         restPassword: String,
         save: Boolean,
@@ -694,6 +770,16 @@ class RepositoriesRepository(
         if (repo.backendType == RepositoryBackendType.SFTP && sftpPassword.isNotBlank()) {
             if (save) passwordManager.saveSftpPassword(key, sftpPassword)
             else passwordManager.saveSftpPasswordTemporary(key, sftpPassword)
+        }
+
+        if (repo.backendType == RepositoryBackendType.S3 && s3AccessKeyId.isNotBlank() && s3SecretAccessKey.isNotBlank()) {
+            if (save) {
+                passwordManager.saveS3AccessKeyId(key, s3AccessKeyId)
+                passwordManager.saveS3SecretAccessKey(key, s3SecretAccessKey)
+            } else {
+                passwordManager.saveS3AccessKeyIdTemporary(key, s3AccessKeyId)
+                passwordManager.saveS3SecretAccessKeyTemporary(key, s3SecretAccessKey)
+            }
         }
 
         if (repo.backendType == RepositoryBackendType.REST && restUsername.isNotBlank() && restPassword.isNotBlank()) {

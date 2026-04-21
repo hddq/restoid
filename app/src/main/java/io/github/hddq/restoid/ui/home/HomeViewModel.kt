@@ -19,13 +19,15 @@ data class SnapshotWithMetadata(
 enum class HomeAuthFailure {
     REPOSITORY_PASSWORD,
     SFTP_PASSWORD,
-    REST_CREDENTIALS
+    REST_CREDENTIALS,
+    S3_CREDENTIALS
 }
 
 enum class HomeCredentialPrompt {
     REPOSITORY_PASSWORD,
     SFTP_PASSWORD,
-    REST_CREDENTIALS
+    REST_CREDENTIALS,
+    S3_CREDENTIALS
 }
 
 data class HomeUiState(
@@ -41,6 +43,7 @@ data class HomeUiState(
     val showPasswordDialogFor: String? = null,
     val showSftpPasswordDialogFor: String? = null,
     val showRestCredentialsDialogFor: String? = null,
+    val showS3CredentialsDialogFor: String? = null,
     val isRepoReady: Boolean = false
 )
 
@@ -92,13 +95,22 @@ class HomeViewModel(
             } else {
                 true
             }
+            val hasS3Credentials = if (
+                selectedRepository?.backendType == RepositoryBackendType.S3 &&
+                selectedRepository.s3AuthRequired
+            ) {
+                repositoriesRepository.hasS3Credentials(repositoriesRepository.repositoryKey(selectedRepository))
+            } else {
+                true
+            }
 
             val isRepoReady =
                 repoKey != null &&
                     restic is ResticState.Installed &&
                     hasRepositoryPassword &&
                     hasSftpPassword &&
-                    hasRestCredentials
+                    hasRestCredentials &&
+                    hasS3Credentials
 
             _uiState.update {
                 it.copy(
@@ -127,7 +139,8 @@ class HomeViewModel(
                         openPrompt = null,
                         showPasswordDialogFor = null,
                         showSftpPasswordDialogFor = null,
-                        showRestCredentialsDialogFor = null
+                        showRestCredentialsDialogFor = null,
+                        showS3CredentialsDialogFor = null
                     )
                 }
 
@@ -150,7 +163,8 @@ class HomeViewModel(
                         openPrompt = null,
                         showPasswordDialogFor = null,
                         showSftpPasswordDialogFor = null,
-                        showRestCredentialsDialogFor = null
+                        showRestCredentialsDialogFor = null,
+                        showS3CredentialsDialogFor = null
                     )
                 }
                 return@combine
@@ -172,7 +186,8 @@ class HomeViewModel(
                     openPrompt = null,
                     showPasswordDialogFor = null,
                     showSftpPasswordDialogFor = null,
-                    showRestCredentialsDialogFor = null
+                    showRestCredentialsDialogFor = null,
+                    showS3CredentialsDialogFor = null
                 )
             }
 
@@ -249,7 +264,8 @@ class HomeViewModel(
                         openPrompt = null,
                         showPasswordDialogFor = null,
                         showSftpPasswordDialogFor = repoKey,
-                        showRestCredentialsDialogFor = null
+                        showRestCredentialsDialogFor = null,
+                        showS3CredentialsDialogFor = null
                     )
                 }
                 return@launch
@@ -268,7 +284,28 @@ class HomeViewModel(
                         openPrompt = null,
                         showPasswordDialogFor = null,
                         showSftpPasswordDialogFor = null,
-                        showRestCredentialsDialogFor = repoKey
+                        showRestCredentialsDialogFor = repoKey,
+                        showS3CredentialsDialogFor = null
+                    )
+                }
+                return@launch
+            }
+
+            if (
+                repository.backendType == RepositoryBackendType.S3 &&
+                repository.s3AuthRequired &&
+                !repositoriesRepository.hasS3Credentials(repoKey)
+            ) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = null,
+                        authFailure = null,
+                        openPrompt = null,
+                        showPasswordDialogFor = null,
+                        showSftpPasswordDialogFor = null,
+                        showRestCredentialsDialogFor = null,
+                        showS3CredentialsDialogFor = repoKey
                     )
                 }
                 return@launch
@@ -283,7 +320,8 @@ class HomeViewModel(
                         openPrompt = null,
                         showPasswordDialogFor = repoKey,
                         showSftpPasswordDialogFor = null,
-                        showRestCredentialsDialogFor = null
+                        showRestCredentialsDialogFor = null,
+                        showS3CredentialsDialogFor = null
                     )
                 }
                 return@launch
@@ -300,6 +338,7 @@ class HomeViewModel(
                             HomeAuthFailure.REPOSITORY_PASSWORD -> context.getString(R.string.home_error_repository_password_incorrect)
                             HomeAuthFailure.SFTP_PASSWORD -> context.getString(R.string.home_error_sftp_password_incorrect)
                             HomeAuthFailure.REST_CREDENTIALS -> context.getString(R.string.home_error_rest_credentials_incorrect)
+                            HomeAuthFailure.S3_CREDENTIALS -> context.getString(R.string.home_error_s3_credentials_incorrect)
                             null -> rawMessage
                         },
                         authFailure = authFailure,
@@ -307,7 +346,8 @@ class HomeViewModel(
                         isLoading = false,
                         showPasswordDialogFor = null,
                         showSftpPasswordDialogFor = null,
-                        showRestCredentialsDialogFor = null
+                        showRestCredentialsDialogFor = null,
+                        showS3CredentialsDialogFor = null
                     )
                 }
             }
@@ -333,7 +373,8 @@ class HomeViewModel(
                     openPrompt = null,
                     showPasswordDialogFor = null,
                     showSftpPasswordDialogFor = repoKey,
-                    showRestCredentialsDialogFor = null
+                    showRestCredentialsDialogFor = null,
+                    showS3CredentialsDialogFor = null
                 )
             }
             return
@@ -352,7 +393,28 @@ class HomeViewModel(
                     openPrompt = null,
                     showPasswordDialogFor = null,
                     showSftpPasswordDialogFor = null,
-                    showRestCredentialsDialogFor = repoKey
+                    showRestCredentialsDialogFor = repoKey,
+                    showS3CredentialsDialogFor = null
+                )
+            }
+            return
+        }
+
+        if (
+            repository.backendType == RepositoryBackendType.S3 &&
+            repository.s3AuthRequired &&
+            !repositoriesRepository.hasS3Credentials(repoKey)
+        ) {
+            _uiState.update {
+                it.copy(
+                    isRefreshing = false,
+                    error = null,
+                    authFailure = null,
+                    openPrompt = null,
+                    showPasswordDialogFor = null,
+                    showSftpPasswordDialogFor = null,
+                    showRestCredentialsDialogFor = null,
+                    showS3CredentialsDialogFor = repoKey
                 )
             }
             return
@@ -367,7 +429,8 @@ class HomeViewModel(
                     openPrompt = null,
                     showPasswordDialogFor = repoKey,
                     showSftpPasswordDialogFor = null,
-                    showRestCredentialsDialogFor = null
+                    showRestCredentialsDialogFor = null,
+                    showS3CredentialsDialogFor = null
                 )
             }
             return
@@ -387,6 +450,7 @@ class HomeViewModel(
                                 HomeAuthFailure.REPOSITORY_PASSWORD -> context.getString(R.string.home_error_repository_password_incorrect)
                                 HomeAuthFailure.SFTP_PASSWORD -> context.getString(R.string.home_error_sftp_password_incorrect)
                                 HomeAuthFailure.REST_CREDENTIALS -> context.getString(R.string.home_error_rest_credentials_incorrect)
+                                HomeAuthFailure.S3_CREDENTIALS -> context.getString(R.string.home_error_s3_credentials_incorrect)
                                 null -> rawMessage
                             },
                             authFailure = authFailure,
@@ -449,6 +513,22 @@ class HomeViewModel(
             }
         }
 
+        if (repository.backendType == RepositoryBackendType.S3 && repository.s3AuthRequired) {
+            val isS3AuthError =
+                normalized.contains("access key") ||
+                    normalized.contains("secret key") ||
+                    normalized.contains("invalidaccesskeyid") ||
+                    normalized.contains("signaturedoesnotmatch") ||
+                    normalized.contains("invalidtoken") ||
+                    normalized.contains("invalid argument") && normalized.contains("credentials") ||
+                    normalized.contains("the access key id") ||
+                    normalized.contains("request signature")
+
+            if (isS3AuthError) {
+                return HomeAuthFailure.S3_CREDENTIALS
+            }
+        }
+
         return null
     }
 
@@ -481,6 +561,7 @@ class HomeViewModel(
                 showPasswordDialogFor = null,
                 showSftpPasswordDialogFor = null,
                 showRestCredentialsDialogFor = null,
+                showS3CredentialsDialogFor = null,
                 isLoading = true,
                 error = null,
                 authFailure = null,
@@ -506,6 +587,7 @@ class HomeViewModel(
                 showPasswordDialogFor = null,
                 showSftpPasswordDialogFor = null,
                 showRestCredentialsDialogFor = null,
+                showS3CredentialsDialogFor = null,
                 snapshotsWithMetadata = emptyList(),
                 appInfoMap = emptyMap(),
                 isLoading = false,
@@ -524,6 +606,7 @@ class HomeViewModel(
                 showSftpPasswordDialogFor = null,
                 showPasswordDialogFor = null,
                 showRestCredentialsDialogFor = null,
+                showS3CredentialsDialogFor = null,
                 isLoading = true,
                 error = null,
                 authFailure = null,
@@ -549,6 +632,7 @@ class HomeViewModel(
                 showSftpPasswordDialogFor = null,
                 showPasswordDialogFor = null,
                 showRestCredentialsDialogFor = null,
+                showS3CredentialsDialogFor = null,
                 snapshotsWithMetadata = emptyList(),
                 appInfoMap = emptyMap(),
                 isLoading = false,
@@ -567,6 +651,7 @@ class HomeViewModel(
                 showRestCredentialsDialogFor = null,
                 showSftpPasswordDialogFor = null,
                 showPasswordDialogFor = null,
+                showS3CredentialsDialogFor = null,
                 isLoading = true,
                 error = null,
                 authFailure = null,
@@ -586,9 +671,55 @@ class HomeViewModel(
         )
     }
 
+    fun onS3CredentialsEntered(accessKeyId: String, secretAccessKey: String, save: Boolean) {
+        val repoKey = _uiState.value.showS3CredentialsDialogFor ?: return
+        val repository = repositoriesRepository.getRepositoryByKey(repoKey) ?: return
+        _uiState.update {
+            it.copy(
+                showS3CredentialsDialogFor = null,
+                showRestCredentialsDialogFor = null,
+                showSftpPasswordDialogFor = null,
+                showPasswordDialogFor = null,
+                isLoading = true,
+                error = null,
+                authFailure = null,
+                openPrompt = null
+            )
+        }
+
+        if (save) repositoriesRepository.saveS3Credentials(repoKey, accessKeyId, secretAccessKey)
+        else repositoriesRepository.saveS3CredentialsTemporary(repoKey, accessKeyId, secretAccessKey)
+
+        loadSnapshots(
+            repository.path,
+            repositoriesRepository.getExecutionEnvironmentVariables(repoKey),
+            repositoriesRepository.getExecutionResticOptions(repoKey),
+            repoKey,
+            uiState.value.resticState
+        )
+    }
+
     fun onDismissRestCredentialsDialog() {
         _uiState.update {
             it.copy(
+                showRestCredentialsDialogFor = null,
+                showSftpPasswordDialogFor = null,
+                showPasswordDialogFor = null,
+                showS3CredentialsDialogFor = null,
+                snapshotsWithMetadata = emptyList(),
+                appInfoMap = emptyMap(),
+                isLoading = false,
+                error = null,
+                authFailure = null,
+                openPrompt = HomeCredentialPrompt.REST_CREDENTIALS
+            )
+        }
+    }
+
+    fun onDismissS3CredentialsDialog() {
+        _uiState.update {
+            it.copy(
+                showS3CredentialsDialogFor = null,
                 showRestCredentialsDialogFor = null,
                 showSftpPasswordDialogFor = null,
                 showPasswordDialogFor = null,
@@ -597,7 +728,7 @@ class HomeViewModel(
                 isLoading = false,
                 error = null,
                 authFailure = null,
-                openPrompt = HomeCredentialPrompt.REST_CREDENTIALS
+                openPrompt = HomeCredentialPrompt.S3_CREDENTIALS
             )
         }
     }
@@ -609,6 +740,7 @@ class HomeViewModel(
                 showPasswordDialogFor = repoKey,
                 showSftpPasswordDialogFor = null,
                 showRestCredentialsDialogFor = null,
+                showS3CredentialsDialogFor = null,
                 isLoading = false,
                 error = null,
                 authFailure = null,
@@ -627,6 +759,7 @@ class HomeViewModel(
                 showSftpPasswordDialogFor = repoKey,
                 showPasswordDialogFor = null,
                 showRestCredentialsDialogFor = null,
+                showS3CredentialsDialogFor = null,
                 isLoading = false,
                 error = null,
                 authFailure = null,
@@ -643,6 +776,26 @@ class HomeViewModel(
         _uiState.update {
             it.copy(
                 showRestCredentialsDialogFor = repoKey,
+                showSftpPasswordDialogFor = null,
+                showPasswordDialogFor = null,
+                showS3CredentialsDialogFor = null,
+                isLoading = false,
+                error = null,
+                authFailure = null,
+                openPrompt = null
+            )
+        }
+    }
+
+    fun onRetryS3CredentialsEntry() {
+        val repoKey = _uiState.value.selectedRepo ?: return
+        val repository = repositoriesRepository.getRepositoryByKey(repoKey) ?: return
+        if (repository.backendType != RepositoryBackendType.S3 || !repository.s3AuthRequired) return
+
+        _uiState.update {
+            it.copy(
+                showS3CredentialsDialogFor = repoKey,
+                showRestCredentialsDialogFor = null,
                 showSftpPasswordDialogFor = null,
                 showPasswordDialogFor = null,
                 isLoading = false,

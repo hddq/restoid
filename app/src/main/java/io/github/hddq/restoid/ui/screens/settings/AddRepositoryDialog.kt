@@ -29,6 +29,8 @@ fun AddRepositoryDialog(
     onPathChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onSftpPasswordChange: (String) -> Unit,
+    onS3AccessKeyIdChange: (String) -> Unit,
+    onS3SecretAccessKeyChange: (String) -> Unit,
     onRestUsernameChange: (String) -> Unit,
     onRestPasswordChange: (String) -> Unit,
     onEnvironmentVariablesChange: (String) -> Unit,
@@ -38,16 +40,21 @@ fun AddRepositoryDialog(
 ) {
     var repositoryPasswordVisible by remember { mutableStateOf(false) }
     var sftpPasswordVisible by remember { mutableStateOf(false) }
+    var s3SecretAccessKeyVisible by remember { mutableStateOf(false) }
     var restPasswordVisible by remember { mutableStateOf(false) }
     var backendExpanded by remember { mutableStateOf(false) }
     val isBusy = uiState.state is AddRepositoryState.Initializing
     val hasIncompleteRestCredentials =
         uiState.backendType == RepositoryBackendType.REST &&
             (uiState.restUsername.isBlank() != uiState.restPassword.isBlank())
+    val hasIncompleteS3Credentials =
+        uiState.backendType == RepositoryBackendType.S3 &&
+            (uiState.s3AccessKeyId.isBlank() != uiState.s3SecretAccessKey.isBlank())
     val canConfirm = !isBusy &&
         uiState.path.isNotBlank() &&
         uiState.password.isNotBlank() &&
-        !hasIncompleteRestCredentials
+        !hasIncompleteRestCredentials &&
+        !hasIncompleteS3Credentials
 
     val backendOptions = listOf(
         RepositoryBackendType.LOCAL,
@@ -72,7 +79,8 @@ fun AddRepositoryDialog(
 
     val savePasswordLabel = when (uiState.backendType) {
         RepositoryBackendType.SFTP,
-        RepositoryBackendType.REST -> stringResource(R.string.action_save_passwords)
+        RepositoryBackendType.REST,
+        RepositoryBackendType.S3 -> stringResource(R.string.action_save_passwords)
         else -> stringResource(R.string.action_save_password)
     }
 
@@ -206,6 +214,36 @@ fun AddRepositoryDialog(
                             val image = if (restPasswordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
                             val description = if (restPasswordVisible) stringResource(R.string.cd_hide_password) else stringResource(R.string.cd_show_password)
                             IconButton(onClick = { restPasswordVisible = !restPasswordVisible }, enabled = !isBusy) {
+                                Icon(imageVector = image, contentDescription = description)
+                            }
+                        },
+                        isError = uiState.state is AddRepositoryState.Error,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isBusy
+                    )
+                }
+
+                if (uiState.backendType == RepositoryBackendType.S3) {
+                    OutlinedTextField(
+                        value = uiState.s3AccessKeyId,
+                        onValueChange = onS3AccessKeyIdChange,
+                        label = { Text(stringResource(R.string.label_s3_access_key_id)) },
+                        singleLine = true,
+                        isError = uiState.state is AddRepositoryState.Error,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isBusy
+                    )
+
+                    OutlinedTextField(
+                        value = uiState.s3SecretAccessKey,
+                        onValueChange = onS3SecretAccessKeyChange,
+                        label = { Text(stringResource(R.string.label_s3_secret_access_key)) },
+                        singleLine = true,
+                        visualTransformation = if (s3SecretAccessKeyVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            val image = if (s3SecretAccessKeyVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
+                            val description = if (s3SecretAccessKeyVisible) stringResource(R.string.cd_hide_password) else stringResource(R.string.cd_show_password)
+                            IconButton(onClick = { s3SecretAccessKeyVisible = !s3SecretAccessKeyVisible }, enabled = !isBusy) {
                                 Icon(imageVector = image, contentDescription = description)
                             }
                         },
