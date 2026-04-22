@@ -76,11 +76,10 @@ fun HomeScreen(
                 fontWeight = FontWeight.Bold,
             )
             val isMaintenanceEnabled = uiState.isRepoReady
-            OutlinedButton(
+            FilledTonalButton(
                 onClick = onMaintenanceClick,
                 enabled = isMaintenanceEnabled,
-                border = BorderStroke(1.dp, if (isMaintenanceEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
+                colors = ButtonDefaults.filledTonalButtonColors(contentColor = MaterialTheme.colorScheme.primary)
             ) {
                 Icon(Icons.Default.Build, contentDescription = stringResource(R.string.maintenance_button))
                 Spacer(Modifier.size(ButtonDefaults.IconSpacing))
