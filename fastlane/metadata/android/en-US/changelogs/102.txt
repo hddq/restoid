@@ -1,0 +1,8 @@
+- Added support for remote repo backends: SFTP, S3, HTTP REST Server
+- Operations like backups etc will now work properly when the app is in the background. This may require disabling battery optimizations in app settings
+- You can now cancel ongoing operations like backup
+- Fixed forget task in maintenance not deleting old backups
+- Entering a wrong password now allows you to retry without restarting the app
+- UI improvements, better consistency across screens
+- Fixed unintended Restic update checks in bundled flavor
+- Fixed tapping on progress notification not opening the operation screen
