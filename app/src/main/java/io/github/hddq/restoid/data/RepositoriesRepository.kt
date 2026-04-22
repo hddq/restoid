@@ -47,6 +47,12 @@ class RepositoriesRepository(
     private val passwordManager: PasswordManager,
     private val binaryManager: ResticBinaryManager
 ) {
+    private companion object {
+        private const val MISSING_S3_BUCKET_ERROR = "The specified bucket does not exist"
+        // Timeout for S3 repo existence check — restic retries indefinitely when bucket is missing
+        private const val S3_CHECK_TIMEOUT_SECONDS = 10
+    }
+
     private val prefs = context.getSharedPreferences("repositories", Context.MODE_PRIVATE)
     private val LEGACY_REPOS_KEY = "repositories_json_v1"
     private val REPOS_KEY = "repositories_json_v2"
@@ -454,11 +460,11 @@ class RepositoriesRepository(
             }
 
             val hasRestAuthCredentials = backendType == RepositoryBackendType.REST &&
-                restUsername.isNotBlank() &&
-                restPassword.isNotBlank()
+                    restUsername.isNotBlank() &&
+                    restPassword.isNotBlank()
             val hasS3AuthCredentials = backendType == RepositoryBackendType.S3 &&
-                s3AccessKeyId.isNotBlank() &&
-                s3SecretAccessKey.isNotBlank()
+                    s3AccessKeyId.isNotBlank() &&
+                    s3SecretAccessKey.isNotBlank()
 
             val persistedResticOptions = applySftpResticOptionDefaults(
                 backendType = backendType,
@@ -601,13 +607,19 @@ class RepositoriesRepository(
                         }
                     }
                 } else {
-                    val checkResult = Shell.cmd(buildString {
+                    // For S3: wrap list keys with a timeout so a missing/nonexistent bucket
+                    // doesn't cause infinite retrying. `timeout` returns exit code 124 when it kills the process.
+                    val checkCommand = buildString {
                         if (envPrefix.isNotEmpty()) append(envPrefix).append(' ')
                         append("RESTIC_PASSWORD_FILE=").append(shellQuote(passwordFile.absolutePath)).append(' ')
+                        if (backendType == RepositoryBackendType.S3) {
+                            append("timeout ${S3_CHECK_TIMEOUT_SECONDS}s ")
+                        }
                         append(shellQuote(resticPath)).append(' ')
                         if (resticOptionFlags.isNotEmpty()) append(resticOptionFlags).append(' ')
                         append("-r ").append(shellQuote(resolvedPath)).append(" list keys --no-lock")
-                    }).exec()
+                    }
+                    val (checkResult, checkErrorOutput) = execShellWithCapturedError(checkCommand)
 
                     if (checkResult.isSuccess) {
                         handleSuccessfulRepoAdd(
@@ -624,6 +636,17 @@ class RepositoriesRepository(
                             restPassword
                         )
                     } else {
+                        // exit code 124 = killed by timeout, or stderr explicitly says bucket missing
+                        if (backendType == RepositoryBackendType.S3) {
+                            val timedOut = checkResult.code == 124
+                            val bucketMissing = checkErrorOutput.contains(MISSING_S3_BUCKET_ERROR, ignoreCase = true)
+                            if (timedOut || bucketMissing) {
+                                return@withContext AddRepositoryState.Error(
+                                    context.getString(R.string.repo_error_s3_bucket_not_found)
+                                )
+                            }
+                        }
+
                         val initResult = Shell.cmd(buildString {
                             if (envPrefix.isNotEmpty()) append(envPrefix).append(' ')
                             append("RESTIC_PASSWORD_FILE=").append(shellQuote(passwordFile.absolutePath)).append(' ')
@@ -796,6 +819,18 @@ class RepositoriesRepository(
         if (wasEmpty) selectRepository(key)
     }
 
+    // Captures stderr separately so callers can inspect the error message,
+    // e.g. to distinguish a missing S3 bucket from a wrong password.
+    private fun execShellWithCapturedError(command: String): Pair<Shell.Result, String> {
+        val stdout = ArrayList<String>()
+        val stderr = ArrayList<String>()
+        val result = Shell.cmd(command).to(stdout, stderr).exec()
+        val errorOutput = stderr.joinToString("\n").trim().ifBlank {
+            result.err.joinToString("\n").trim()
+        }
+        return result to errorOutput
+    }
+
     private fun saveRepository(repository: LocalRepository) {
         val currentJsonSet = prefs.getStringSet(REPOS_KEY, emptySet())?.toMutableSet() ?: mutableSetOf()
         val repoJson = json.encodeToString(repository)
@@ -831,11 +866,11 @@ class RepositoriesRepository(
         runCatching {
             askpassScript.writeText(
                 "#!/system/bin/sh\n" +
-                    "if [ -n \"\$SSHPASS\" ]; then\n" +
-                    "  printf '%s\\n' \"\$SSHPASS\"\n" +
-                    "  exit 0\n" +
-                    "fi\n" +
-                    "exit 1\n"
+                        "if [ -n \"\$SSHPASS\" ]; then\n" +
+                        "  printf '%s\\n' \"\$SSHPASS\"\n" +
+                        "  exit 0\n" +
+                        "fi\n" +
+                        "exit 1\n"
             )
             askpassScript.setExecutable(true, true)
             askpassDir.setExecutable(true, true)
@@ -896,15 +931,15 @@ class RepositoriesRepository(
         strictHostKeyCheckingValue: String
     ): String {
         return "-o BatchMode=no " +
-            "-o StrictHostKeyChecking=$strictHostKeyCheckingValue " +
-            "-o UserKnownHostsFile=${knownHostsFile.absolutePath} " +
-            "-o GlobalKnownHostsFile=/dev/null " +
-            "-o ConnectTimeout=15 " +
-            "-o PubkeyAuthentication=no " +
-            "-o KbdInteractiveAuthentication=no " +
-            "-o PasswordAuthentication=yes " +
-            "-o PreferredAuthentications=password " +
-            "-o NumberOfPasswordPrompts=1"
+                "-o StrictHostKeyChecking=$strictHostKeyCheckingValue " +
+                "-o UserKnownHostsFile=${knownHostsFile.absolutePath} " +
+                "-o GlobalKnownHostsFile=/dev/null " +
+                "-o ConnectTimeout=15 " +
+                "-o PubkeyAuthentication=no " +
+                "-o KbdInteractiveAuthentication=no " +
+                "-o PasswordAuthentication=yes " +
+                "-o PreferredAuthentications=password " +
+                "-o NumberOfPasswordPrompts=1"
     }
 
     private fun readKnownHostEntries(file: File): List<String> {

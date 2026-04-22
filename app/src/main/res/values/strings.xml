@@ -356,6 +356,7 @@
     <string name="repo_error_sftp_askpass_create_failed">Failed to create SSH askpass helper script.</string>
     <string name="repo_error_sftp_known_hosts_setup_failed">Failed to prepare SSH known hosts storage.</string>
     <string name="repo_error_sftp_fingerprint_probe_failed">Failed to fetch SFTP server fingerprint.</string>
+    <string name="repo_error_s3_bucket_not_found">S3 Bucket not found</string>
     <string name="action_trust">Trust</string>
 
     <string name="restic_unknown_version">Unknown version</string>
