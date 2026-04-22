@@ -106,12 +106,21 @@ jobs:
           set -euo pipefail
           (cd release-assets && sha256sum *.apk > SHA256SUMS.txt)
 
+      - name: Grab latest Fastlane changelog
+        id: changelog
+        run: |
+          set -euo pipefail
+          CHANGELOG_FILE=$(find fastlane/metadata/android/en-US/changelogs -type f -name '*.txt' | sort -V | tail -n 1)
+          echo "Found changelog: $CHANGELOG_FILE"
+          echo "path=$CHANGELOG_FILE" >> "$GITHUB_OUTPUT"
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v3
         with:
           name: Restoid ${{ github.ref_name }}
           tag_name: ${{ github.ref_name }}
-          generate_release_notes: true
+          generate_release_notes: false
+          body_path: ${{ steps.changelog.outputs.path }}
           files: |
             ${{ steps.collect_apks.outputs.files }}
             release-assets/SHA256SUMS.txt
