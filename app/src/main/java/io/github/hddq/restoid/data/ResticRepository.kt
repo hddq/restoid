@@ -5,6 +5,11 @@ import android.util.Log
 import com.topjohnwu.superuser.Shell
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.model.ResticConfig
+import io.github.hddq.restoid.util.buildResticOptionFlags
+import io.github.hddq.restoid.util.buildShellEnvironmentPrefix
+import io.github.hddq.restoid.util.isValidEnvironmentVariableName
+import io.github.hddq.restoid.util.isValidResticOptionName
+import io.github.hddq.restoid.util.shellQuote
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,13 +36,20 @@ class ResticRepository(
         _snapshots.value = null
     }
 
-    suspend fun getSnapshots(repoPath: String, password: String): Result<List<SnapshotInfo>> {
+    suspend fun getSnapshots(
+        repoPath: String,
+        password: String,
+        environmentVariables: Map<String, String> = emptyMap(),
+        resticOptions: Map<String, String> = emptyMap()
+    ): Result<List<SnapshotInfo>> {
         return withContext(Dispatchers.IO) {
             val result = executor.execute(
                 repoPath = repoPath,
                 password = password,
                 command = "snapshots --json",
-                failureMessage = context.getString(R.string.restic_failure_load_snapshots)
+                failureMessage = context.getString(R.string.restic_failure_load_snapshots),
+                environmentVariables = environmentVariables,
+                resticOptions = resticOptions
             )
 
             result.map { output ->
@@ -48,21 +60,63 @@ class ResticRepository(
         }
     }
 
-    suspend fun refreshSnapshots(repoPath: String, password: String) {
-        getSnapshots(repoPath, password)
+    suspend fun refreshSnapshots(
+        repoPath: String,
+        password: String,
+        environmentVariables: Map<String, String> = emptyMap(),
+        resticOptions: Map<String, String> = emptyMap()
+    ) {
+        getSnapshots(repoPath, password, environmentVariables, resticOptions)
     }
 
-    suspend fun check(repoPath: String, password: String, readAllData: Boolean): Result<String> {
+    suspend fun check(
+        repoPath: String,
+        password: String,
+        readAllData: Boolean,
+        environmentVariables: Map<String, String> = emptyMap(),
+        resticOptions: Map<String, String> = emptyMap()
+    ): Result<String> {
         val args = if (readAllData) "check --read-data" else "check"
-        return executor.execute(repoPath, password, args, context.getString(R.string.restic_failure_check_repository))
+        return executor.execute(
+            repoPath,
+            password,
+            args,
+            context.getString(R.string.restic_failure_check_repository),
+            environmentVariables = environmentVariables,
+            resticOptions = resticOptions
+        )
     }
 
-    suspend fun prune(repoPath: String, password: String): Result<String> {
-        return executor.execute(repoPath, password, "prune", context.getString(R.string.restic_failure_prune_repository))
+    suspend fun prune(
+        repoPath: String,
+        password: String,
+        environmentVariables: Map<String, String> = emptyMap(),
+        resticOptions: Map<String, String> = emptyMap()
+    ): Result<String> {
+        return executor.execute(
+            repoPath,
+            password,
+            "prune",
+            context.getString(R.string.restic_failure_prune_repository),
+            environmentVariables = environmentVariables,
+            resticOptions = resticOptions
+        )
     }
 
-    suspend fun unlock(repoPath: String, password: String): Result<String> {
-        return executor.execute(repoPath, password, "unlock", context.getString(R.string.restic_failure_unlock_repository))
+    suspend fun unlock(
+        repoPath: String,
+        password: String,
+        environmentVariables: Map<String, String> = emptyMap(),
+        resticOptions: Map<String, String> = emptyMap()
+    ): Result<String> {
+        return executor.execute(
+            repoPath,
+            password,
+            "unlock",
+            context.getString(R.string.restic_failure_unlock_repository),
+            environmentVariables = environmentVariables,
+            resticOptions = resticOptions
+        )
     }
 
     suspend fun forget(
@@ -71,7 +125,9 @@ class ResticRepository(
         keepLast: Int,
         keepDaily: Int,
         keepWeekly: Int,
-        keepMonthly: Int
+        keepMonthly: Int,
+        environmentVariables: Map<String, String> = emptyMap(),
+        resticOptions: Map<String, String> = emptyMap()
     ): Result<String> {
         val forgetOptions = buildString {
             if (keepLast > 0) append(" --keep-last $keepLast")
@@ -84,37 +140,94 @@ class ResticRepository(
             return Result.failure(Exception(context.getString(R.string.restic_failure_no_forget_policy)))
         }
 
-        val tagOptions = " --tag 'restoid' --tag 'backup'"
-        return executor.execute(repoPath, password, "forget$forgetOptions$tagOptions", context.getString(R.string.restic_failure_forget_snapshots))
+        val groupingAndTagOptions = " --group-by host,tags --tag 'restoid' --tag 'backup'"
+        return executor.execute(
+            repoPath,
+            password,
+            "forget$forgetOptions$groupingAndTagOptions",
+            context.getString(R.string.restic_failure_forget_snapshots),
+            environmentVariables = environmentVariables,
+            resticOptions = resticOptions
+        )
     }
 
-    suspend fun forgetSnapshot(repoPath: String, password: String, snapshotId: String): Result<Unit> {
-        return executor.execute(repoPath, password, "forget $snapshotId", context.getString(R.string.restic_failure_delete_snapshot))
+    suspend fun forgetSnapshot(
+        repoPath: String,
+        password: String,
+        snapshotId: String,
+        environmentVariables: Map<String, String> = emptyMap(),
+        resticOptions: Map<String, String> = emptyMap()
+    ): Result<Unit> {
+        return executor.execute(
+            repoPath,
+            password,
+            "forget $snapshotId",
+            context.getString(R.string.restic_failure_delete_snapshot),
+            environmentVariables = environmentVariables,
+            resticOptions = resticOptions
+        )
             .map {
-                refreshSnapshots(repoPath, password)
+                refreshSnapshots(repoPath, password, environmentVariables, resticOptions)
                 Unit
             }
     }
 
-    suspend fun forgetMetadataSnapshots(repoPath: String, password: String): Result<String> {
+    suspend fun forgetMetadataSnapshots(
+        repoPath: String,
+        password: String,
+        environmentVariables: Map<String, String> = emptyMap(),
+        resticOptions: Map<String, String> = emptyMap()
+    ): Result<String> {
         val command = "forget --keep-last 5 --tag 'restoid' --tag 'metadata'"
-        return executor.execute(repoPath, password, command, context.getString(R.string.restic_failure_forget_metadata))
+        return executor.execute(
+            repoPath,
+            password,
+            command,
+            context.getString(R.string.restic_failure_forget_metadata),
+            environmentVariables = environmentVariables,
+            resticOptions = resticOptions
+        )
     }
 
-    suspend fun getConfig(repoPath: String, password: String): Result<ResticConfig> {
-        return executor.execute(repoPath, password, "cat config --json", context.getString(R.string.restic_failure_get_repo_config))
+    suspend fun getConfig(
+        repoPath: String,
+        password: String,
+        environmentVariables: Map<String, String> = emptyMap(),
+        resticOptions: Map<String, String> = emptyMap()
+    ): Result<ResticConfig> {
+        return executor.execute(
+            repoPath,
+            password,
+            "cat config --json",
+            context.getString(R.string.restic_failure_get_repo_config),
+            environmentVariables = environmentVariables,
+            resticOptions = resticOptions
+        )
             .mapCatching { jsonOutput ->
                 json.decodeFromString<ResticConfig>(jsonOutput)
             }
     }
 
-    suspend fun changePassword(repoPath: String, oldPassword: String, newPassword: String): Result<Unit> {
+    suspend fun changePassword(
+        repoPath: String,
+        oldPassword: String,
+        newPassword: String,
+        environmentVariables: Map<String, String> = emptyMap(),
+        resticOptions: Map<String, String> = emptyMap()
+    ): Result<Unit> {
         return withContext(Dispatchers.IO) {
             val newPassFile = File.createTempFile("restic-new-pass", ".tmp", context.cacheDir)
             try {
                 newPassFile.writeText(newPassword)
-                val command = "key passwd --new-password-file '${newPassFile.absolutePath}'"
-                executor.execute(repoPath, oldPassword, command, context.getString(R.string.restic_failure_change_password))
+                val command = "key passwd --new-password-file ${shellQuote(newPassFile.absolutePath)}"
+                executor.execute(
+                    repoPath,
+                    oldPassword,
+                    command,
+                    context.getString(R.string.restic_failure_change_password),
+                    environmentVariables = environmentVariables,
+                    resticOptions = resticOptions
+                )
                     .map { Unit }
             } finally {
                 newPassFile.delete()
@@ -127,16 +240,34 @@ class ResticRepository(
         password: String,
         snapshotId: String,
         targetPath: String,
-        pathsToRestore: List<String>
+        pathsToRestore: List<String>,
+        environmentVariables: Map<String, String> = emptyMap(),
+        resticOptions: Map<String, String> = emptyMap()
     ): Result<String> {
-        val includes = pathsToRestore.joinToString(" ") { "--include \"$it\"" }
-        val command = "restore $snapshotId --target '$targetPath' $includes"
-        return executor.execute(repoPath, password, command, context.getString(R.string.restic_failure_restore_snapshot))
+        val includes = pathsToRestore.joinToString(" ") { "--include ${shellQuote(it)}" }
+        val command = "restore $snapshotId --target ${shellQuote(targetPath)} $includes"
+        return executor.execute(
+            repoPath,
+            password,
+            command,
+            context.getString(R.string.restic_failure_restore_snapshot),
+            environmentVariables = environmentVariables,
+            resticOptions = resticOptions
+        )
     }
 
-    suspend fun backupMetadata(repositoryId: String, repoPath: String, password: String) {
+    suspend fun backupMetadata(
+        repositoryId: String,
+        repoPath: String,
+        password: String,
+        environmentVariables: Map<String, String> = emptyMap(),
+        resticOptions: Map<String, String> = emptyMap()
+    ) {
         // Backing up metadata requires specific CD commands to avoid recursive paths in the snapshot.
         // We bypass the executor here to replicate the pre-refactor logic exactly.
+
+        if (environmentVariables.keys.any { !isValidEnvironmentVariableName(it) }) return
+        if (resticOptions.keys.any { !isValidResticOptionName(it) }) return
 
         val resticFile = File(context.filesDir, "restic")
         // Simple check if binary exists (we assume it is executable if it exists at this point)
@@ -153,9 +284,20 @@ class ResticRepository(
             val tags = listOf("restoid", "metadata")
             val tagFlags = tags.joinToString(" ") { "--tag '$it'" }
 
+            val envPrefix = buildShellEnvironmentPrefix(environmentVariables)
+            val optionFlags = buildResticOptionFlags(resticOptions)
+
             // Use 'cd' to ensure relative paths in the backup for simpler restore.
             // This specific structure prevents absolute path recursion in the snapshot.
-            val command = "cd '${metadataDir.absolutePath}' && RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' ${resticFile.absolutePath} -r '$repoPath' backup '$repositoryId' --json $tagFlags"
+            val command = buildString {
+                append("cd ").append(shellQuote(metadataDir.absolutePath)).append(" && ")
+                if (envPrefix.isNotEmpty()) append(envPrefix).append(' ')
+                append("RESTIC_PASSWORD_FILE=").append(shellQuote(passwordFile.absolutePath)).append(' ')
+                append(shellQuote(resticFile.absolutePath)).append(' ')
+                if (optionFlags.isNotEmpty()) append(optionFlags).append(' ')
+                append("-r ").append(shellQuote(repoPath)).append(' ')
+                append("backup ").append(shellQuote(repositoryId)).append(" --json ").append(tagFlags)
+            }
 
             withContext(Dispatchers.IO) {
                 val result = Shell.cmd(command).exec()
@@ -163,7 +305,7 @@ class ResticRepository(
                     Log.e("ResticRepo", "Metadata backup failed: ${result.err.joinToString("\n")}")
                 } else {
                     // After a successful metadata backup, prune the old ones.
-                    val forgetResult = forgetMetadataSnapshots(repoPath, password)
+                    val forgetResult = forgetMetadataSnapshots(repoPath, password, environmentVariables, resticOptions)
                     if (forgetResult.isFailure) {
                         Log.e("ResticRepo", "Forgetting old metadata snapshots failed: ${forgetResult.exceptionOrNull()?.message}")
                     } else {

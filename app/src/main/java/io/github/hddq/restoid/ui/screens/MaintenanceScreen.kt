@@ -1,7 +1,6 @@
 package io.github.hddq.restoid.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -26,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -35,61 +35,61 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.RestoidApplication
+import io.github.hddq.restoid.ui.maintenance.MaintenanceUiEvent
 import io.github.hddq.restoid.ui.maintenance.MaintenanceUiState
 import io.github.hddq.restoid.ui.maintenance.MaintenanceViewModel
 import io.github.hddq.restoid.ui.maintenance.MaintenanceViewModelFactory
-import io.github.hddq.restoid.ui.shared.ProgressScreenContent
 import kotlin.math.roundToInt
+import android.widget.Toast
 
 @Composable
-fun MaintenanceScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
+fun MaintenanceScreen(onNavigateToOperationProgress: () -> Unit, modifier: Modifier = Modifier) {
     val application = LocalContext.current.applicationContext as RestoidApplication
     val viewModel: MaintenanceViewModel = viewModel(
         factory = MaintenanceViewModelFactory(
             application,
             application.repositoriesRepository,
-            application.resticBinaryManager, // Added this!
-            application.resticRepository,
-            application.notificationRepository,
-            application.preferencesRepository
+            application.resticBinaryManager,
+            application.preferencesRepository,
+            application.operationWorkRepository
         )
     )
     val uiState by viewModel.uiState.collectAsState()
-    val showProgressScreen = uiState.isRunning || uiState.progress.isFinished
+    val operationBlocked by viewModel.operationBlocked.collectAsState()
 
-    Crossfade(
-        targetState = showProgressScreen,
-        label = "MaintenanceScreenCrossfade",
-        modifier = modifier.fillMaxSize()
-    ) { showProgress ->
-        if (showProgress) {
-            ProgressScreenContent(
-                progress = uiState.progress,
-                operationType = stringResource(R.string.operation_maintenance),
-                onDone = {
-                    viewModel.onDone()
-                    onNavigateUp()
-                }
-            )
-        } else {
-            MaintenanceSelectionContent(
-                uiState = uiState,
-                onSetCheckRepo = viewModel::setCheckRepo,
-                onSetPruneRepo = viewModel::setPruneRepo,
-                onSetUnlockRepo = viewModel::setUnlockRepo,
-                onSetReadData = viewModel::setReadData,
-                onSetForgetSnapshots = viewModel::setForgetSnapshots,
-                onSetKeepLast = viewModel::setKeepLast,
-                onSetKeepDaily = viewModel::setKeepDaily,
-                onSetKeepWeekly = viewModel::setKeepWeekly,
-                onSetKeepMonthly = viewModel::setKeepMonthly
-            )
+    LaunchedEffect(operationBlocked) {
+        if (operationBlocked) {
+            Toast.makeText(application, application.getString(R.string.error_operation_already_running), Toast.LENGTH_SHORT).show()
+            viewModel.consumeOperationBlocked()
         }
     }
+
+    LaunchedEffect(viewModel) {
+        viewModel.uiEvents.collect { event ->
+            when (event) {
+                MaintenanceUiEvent.NavigateToOperationProgress -> onNavigateToOperationProgress()
+            }
+        }
+    }
+
+    MaintenanceSelectionContent(
+        modifier = modifier,
+        uiState = uiState,
+        onSetCheckRepo = viewModel::setCheckRepo,
+        onSetPruneRepo = viewModel::setPruneRepo,
+        onSetUnlockRepo = viewModel::setUnlockRepo,
+        onSetReadData = viewModel::setReadData,
+        onSetForgetSnapshots = viewModel::setForgetSnapshots,
+        onSetKeepLast = viewModel::setKeepLast,
+        onSetKeepDaily = viewModel::setKeepDaily,
+        onSetKeepWeekly = viewModel::setKeepWeekly,
+        onSetKeepMonthly = viewModel::setKeepMonthly
+    )
 }
 
 @Composable
 fun MaintenanceSelectionContent(
+    modifier: Modifier = Modifier,
     uiState: MaintenanceUiState,
     onSetCheckRepo: (Boolean) -> Unit,
     onSetPruneRepo: (Boolean) -> Unit,
@@ -102,52 +102,18 @@ fun MaintenanceSelectionContent(
     onSetKeepMonthly: (Int) -> Unit
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp, top = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+            Column {
+                Text(
+                    text = stringResource(R.string.maintenance_tasks_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
-            ) {
-                Column {
-                    Text(
-                        text = stringResource(R.string.maintenance_tasks_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(16.dp)
-                    )
-                    MaintenanceTaskToggle(
-                        label = stringResource(R.string.maintenance_task_unlock_repository),
-                        checked = uiState.unlockRepo,
-                        onCheckedChange = onSetUnlockRepo
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    MaintenanceTaskToggle(
-                        label = stringResource(R.string.maintenance_task_forget_old_snapshots),
-                        checked = uiState.forgetSnapshots,
-                        onCheckedChange = onSetForgetSnapshots
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    MaintenanceTaskToggle(
-                        label = stringResource(R.string.maintenance_task_prune_repository),
-                        checked = uiState.pruneRepo,
-                        onCheckedChange = onSetPruneRepo
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    MaintenanceTaskToggle(
-                        label = stringResource(R.string.maintenance_task_check_repository_integrity),
-                        checked = uiState.checkRepo,
-                        onCheckedChange = onSetCheckRepo
-                    )
-                }
-            }
-        }
-
-        item {
-            AnimatedVisibility(visible = uiState.forgetSnapshots) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -155,15 +121,58 @@ fun MaintenanceSelectionContent(
                     )
                 ) {
                     Column {
-                        Text(
-                            text = stringResource(R.string.maintenance_forget_policy_options),
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(16.dp)
+                        MaintenanceTaskToggle(
+                            label = stringResource(R.string.maintenance_task_unlock_repository),
+                            checked = uiState.unlockRepo,
+                            onCheckedChange = onSetUnlockRepo
                         )
-                        PolicySlider(label = stringResource(R.string.maintenance_keep_last), value = uiState.keepLast, range = 0..20, onValueChange = onSetKeepLast)
-                        PolicySlider(label = stringResource(R.string.maintenance_keep_daily), value = uiState.keepDaily, range = 0..30, onValueChange = onSetKeepDaily)
-                        PolicySlider(label = stringResource(R.string.maintenance_keep_weekly), value = uiState.keepWeekly, range = 0..12, onValueChange = onSetKeepWeekly)
-                        PolicySlider(label = stringResource(R.string.maintenance_keep_monthly), value = uiState.keepMonthly, range = 0..24, onValueChange = onSetKeepMonthly)
+                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                        MaintenanceTaskToggle(
+                            label = stringResource(R.string.maintenance_task_forget_old_snapshots),
+                            checked = uiState.forgetSnapshots,
+                            onCheckedChange = onSetForgetSnapshots
+                        )
+                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                        MaintenanceTaskToggle(
+                            label = stringResource(R.string.maintenance_task_prune_repository),
+                            checked = uiState.pruneRepo,
+                            onCheckedChange = onSetPruneRepo
+                        )
+                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                        MaintenanceTaskToggle(
+                            label = stringResource(R.string.maintenance_task_check_repository_integrity),
+                            checked = uiState.checkRepo,
+                            onCheckedChange = onSetCheckRepo
+                        )
+                    }
+                }
+            }
+        }
+
+        item {
+            AnimatedVisibility(visible = uiState.forgetSnapshots) {
+                Column {
+                    Text(
+                        text = stringResource(R.string.maintenance_forget_policy_options),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer
+                        )
+                    ) {
+                        Column {
+                            PolicySlider(label = stringResource(R.string.maintenance_keep_last), value = uiState.keepLast, range = 0..20, onValueChange = onSetKeepLast)
+                            HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                            PolicySlider(label = stringResource(R.string.maintenance_keep_daily), value = uiState.keepDaily, range = 0..30, onValueChange = onSetKeepDaily)
+                            HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                            PolicySlider(label = stringResource(R.string.maintenance_keep_weekly), value = uiState.keepWeekly, range = 0..12, onValueChange = onSetKeepWeekly)
+                            HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                            PolicySlider(label = stringResource(R.string.maintenance_keep_monthly), value = uiState.keepMonthly, range = 0..24, onValueChange = onSetKeepMonthly)
+                        }
                     }
                 }
             }
@@ -171,23 +180,26 @@ fun MaintenanceSelectionContent(
 
         item {
             AnimatedVisibility(visible = uiState.checkRepo) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                Column {
+                    Text(
+                        text = stringResource(R.string.maintenance_check_options),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 8.dp)
                     )
-                ) {
-                    Column {
-                        Text(
-                            text = stringResource(R.string.maintenance_check_options),
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(16.dp)
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainer
                         )
-                        MaintenanceTaskToggle(
-                            label = stringResource(R.string.maintenance_read_all_data),
-                            checked = uiState.readData,
-                            onCheckedChange = onSetReadData
-                        )
+                    ) {
+                        Column {
+                            MaintenanceTaskToggle(
+                                label = stringResource(R.string.maintenance_read_all_data),
+                                checked = uiState.readData,
+                                onCheckedChange = onSetReadData
+                            )
+                        }
                     }
                 }
             }

@@ -60,9 +60,13 @@ import io.github.hddq.restoid.BuildConfig
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.LocalRepository
 import io.github.hddq.restoid.data.NotificationPermissionState
+import io.github.hddq.restoid.data.RepositoryBackendType
 import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.ui.screens.settings.dialogs.ChangePasswordDialog
 import io.github.hddq.restoid.ui.screens.settings.dialogs.SavePasswordDialog
+import io.github.hddq.restoid.ui.screens.settings.dialogs.SaveRestCredentialsDialog
+import io.github.hddq.restoid.ui.screens.settings.dialogs.SaveS3CredentialsDialog
+import io.github.hddq.restoid.ui.screens.settings.dialogs.SaveSftpPasswordDialog
 import io.github.hddq.restoid.ui.settings.SettingsViewModel
 
 @Composable
@@ -164,6 +168,7 @@ fun SelectableRepositoryRow(
     viewModel: SettingsViewModel
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    val repoKey = viewModel.repositoryKey(repo)
 
     Row(
         modifier = Modifier
@@ -189,6 +194,16 @@ fun SelectableRepositoryRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            Text(
+                text = when (repo.backendType) {
+                    RepositoryBackendType.LOCAL -> stringResource(R.string.repo_backend_local)
+                    RepositoryBackendType.SFTP -> stringResource(R.string.repo_backend_sftp)
+                    RepositoryBackendType.REST -> stringResource(R.string.repo_backend_rest)
+                    RepositoryBackendType.S3 -> stringResource(R.string.repo_backend_s3)
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = LocalContentColor.current.copy(alpha = 0.75f)
+            )
             repo.id?.let {
                 Text(
                     stringResource(R.string.repository_id_short, it.take(12)),
@@ -200,11 +215,14 @@ fun SelectableRepositoryRow(
         }
         var showChangePasswordDialog by remember { mutableStateOf(false) }
         var showSavePasswordDialog by remember { mutableStateOf(false) }
+        var showSaveSftpPasswordDialog by remember { mutableStateOf(false) }
+        var showSaveRestCredentialsDialog by remember { mutableStateOf(false) }
+        var showSaveS3CredentialsDialog by remember { mutableStateOf(false) }
 
         if (showChangePasswordDialog) {
             ChangePasswordDialog(
                 viewModel = viewModel,
-                repoPath = repo.path,
+                repositoryKey = repoKey,
                 onDismiss = { showChangePasswordDialog = false }
             )
         }
@@ -212,8 +230,32 @@ fun SelectableRepositoryRow(
         if (showSavePasswordDialog) {
             SavePasswordDialog(
                 viewModel = viewModel,
-                repoPath = repo.path,
+                repositoryKey = repoKey,
                 onDismiss = { showSavePasswordDialog = false }
+            )
+        }
+
+        if (showSaveSftpPasswordDialog) {
+            SaveSftpPasswordDialog(
+                viewModel = viewModel,
+                repositoryKey = repoKey,
+                onDismiss = { showSaveSftpPasswordDialog = false }
+            )
+        }
+
+        if (showSaveRestCredentialsDialog) {
+            SaveRestCredentialsDialog(
+                viewModel = viewModel,
+                repositoryKey = repoKey,
+                onDismiss = { showSaveRestCredentialsDialog = false }
+            )
+        }
+
+        if (showSaveS3CredentialsDialog) {
+            SaveS3CredentialsDialog(
+                viewModel = viewModel,
+                repositoryKey = repoKey,
+                onDismiss = { showSaveS3CredentialsDialog = false }
             )
         }
 
@@ -228,15 +270,72 @@ fun SelectableRepositoryRow(
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_delete)) },
                     onClick = {
-                        viewModel.deleteRepository(repo.path)
+                        viewModel.deleteRepository(repoKey)
                         showMenu = false
                     }
                 )
-                if (viewModel.hasStoredRepositoryPassword(repo.path)) {
+                if (repo.backendType == RepositoryBackendType.SFTP) {
+                    if (viewModel.hasStoredSftpPassword(repoKey)) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_forget_sftp_password)) },
+                            onClick = {
+                                viewModel.forgetSftpPassword(repoKey)
+                                showMenu = false
+                            }
+                        )
+                    } else {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_save_sftp_password)) },
+                            onClick = {
+                                showSaveSftpPasswordDialog = true
+                                showMenu = false
+                            }
+                        )
+                    }
+                }
+                if (repo.backendType == RepositoryBackendType.REST) {
+                    if (viewModel.hasStoredRestCredentials(repoKey)) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_forget_rest_credentials)) },
+                            onClick = {
+                                viewModel.forgetRestCredentials(repoKey)
+                                showMenu = false
+                            }
+                        )
+                    } else {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_save_rest_credentials)) },
+                            onClick = {
+                                showSaveRestCredentialsDialog = true
+                                showMenu = false
+                            }
+                        )
+                    }
+                }
+                if (repo.backendType == RepositoryBackendType.S3) {
+                    if (viewModel.hasStoredS3Credentials(repoKey)) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_forget_s3_credentials)) },
+                            onClick = {
+                                viewModel.forgetS3Credentials(repoKey)
+                                showMenu = false
+                            }
+                        )
+                    } else {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_save_s3_credentials)) },
+                            onClick = {
+                                showSaveS3CredentialsDialog = true
+                                showMenu = false
+                            }
+                        )
+                    }
+                }
+                if (viewModel.hasStoredRepositoryPassword(repoKey)) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_forget_password)) },
                         onClick = {
-                            viewModel.forgetPassword(repo.path)
+                            viewModel.forgetPassword(repoKey)
                             showMenu = false
                         }
                     )

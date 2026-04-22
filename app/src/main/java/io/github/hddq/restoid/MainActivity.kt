@@ -3,6 +3,7 @@ package io.github.hddq.restoid
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import android.content.Intent
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.layout.padding
@@ -18,6 +19,8 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
@@ -45,6 +48,7 @@ import io.github.hddq.restoid.ui.settings.SettingsViewModelFactory
 import io.github.hddq.restoid.ui.snapshot.SnapshotDetailsViewModel
 import io.github.hddq.restoid.ui.snapshot.SnapshotDetailsViewModelFactory
 import io.github.hddq.restoid.ui.theme.RestoidTheme
+import io.github.hddq.restoid.data.NotificationRepository
 
 class MainActivity : FragmentActivity() {
     private companion object {
@@ -53,12 +57,14 @@ class MainActivity : FragmentActivity() {
 
     private var isAppUnlocked = false
     private var isContentInitialized = false
+    private var openOperationProgressOnLaunch by mutableStateOf(false)
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val app = applicationContext as RestoidApplication
         isAppUnlocked = savedInstanceState?.getBoolean(STATE_APP_UNLOCKED) ?: false
+        openOperationProgressOnLaunch = consumeOpenOperationProgressFlag(intent)
         enableEdgeToEdge()
 
         if (app.preferencesRepository.loadRequireAppUnlock() && !isAppUnlocked) {
@@ -72,6 +78,23 @@ class MainActivity : FragmentActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putBoolean(STATE_APP_UNLOCKED, isAppUnlocked)
         super.onSaveInstanceState(outState)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (consumeOpenOperationProgressFlag(intent)) {
+            openOperationProgressOnLaunch = true
+        }
+    }
+
+    private fun consumeOpenOperationProgressFlag(sourceIntent: Intent?): Boolean {
+        if (sourceIntent == null) return false
+        val shouldOpen = sourceIntent.getBooleanExtra(NotificationRepository.EXTRA_OPEN_OPERATION_PROGRESS, false)
+        if (shouldOpen) {
+            sourceIntent.removeExtra(NotificationRepository.EXTRA_OPEN_OPERATION_PROGRESS)
+        }
+        setIntent(sourceIntent)
+        return shouldOpen
     }
 
     private fun authenticateAndLaunch(app: RestoidApplication) {
@@ -124,6 +147,19 @@ class MainActivity : FragmentActivity() {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentDestination = navBackStackEntry?.destination
                 val showBottomBar = currentDestination?.route in listOf(Screen.Home.route, Screen.Settings.route)
+                val homeViewModel: HomeViewModel = viewModel(
+                    factory = HomeViewModelFactory(app, app.repositoriesRepository, app.resticBinaryManager, app.resticRepository, app.appInfoRepository, app.metadataRepository)
+                )
+                val homeUiState by homeViewModel.uiState.collectAsState()
+
+                if (openOperationProgressOnLaunch) {
+                    androidx.compose.runtime.LaunchedEffect(openOperationProgressOnLaunch) {
+                        navController.navigate(Screen.OperationProgress.route) {
+                            launchSingleTop = true
+                        }
+                        openOperationProgressOnLaunch = false
+                    }
+                }
 
                 Scaffold(
                     topBar = {
@@ -133,6 +169,7 @@ class MainActivity : FragmentActivity() {
                                     val titleRes = when {
                                         currentDestination?.route == Screen.Backup.route -> R.string.topbar_new_backup
                                         currentDestination?.route == Screen.Maintenance.route -> R.string.topbar_maintenance
+                                        currentDestination?.route == Screen.OperationProgress.route -> R.string.topbar_operation_progress
                                         currentDestination?.route == Screen.Licenses.route -> R.string.topbar_open_source_licenses
                                         currentDestination?.route?.startsWith(Screen.SnapshotDetails.route) == true -> R.string.topbar_snapshot_details
                                         currentDestination?.route?.startsWith(Screen.Restore.route) == true -> R.string.topbar_restore_snapshot
@@ -141,7 +178,13 @@ class MainActivity : FragmentActivity() {
                                     titleRes?.let { Text(stringResource(it)) }
                                 },
                                 navigationIcon = {
-                                    IconButton(onClick = { navController.navigateUp() }) {
+                                    IconButton(onClick = {
+                                        if (currentDestination?.route == Screen.OperationProgress.route) {
+                                            this@MainActivity.onBackPressedDispatcher.onBackPressed()
+                                        } else {
+                                            navController.navigateUp()
+                                        }
+                                    }) {
                                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                                     }
                                 },
@@ -187,24 +230,29 @@ class MainActivity : FragmentActivity() {
                     floatingActionButton = {
                         when (currentDestination?.route) {
                             Screen.Home.route -> {
-                                val selectedRepo by app.repositoriesRepository.selectedRepository.collectAsState()
-                                val isRepoSelected = selectedRepo != null
+                                val isRepoReady = homeUiState.isRepoReady
                                 ExtendedFloatingActionButton(
                                     text = { Text(stringResource(R.string.fab_backup)) },
                                     icon = { Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.fab_backup)) },
-                                    onClick = { if (isRepoSelected) { navController.navigate(Screen.Backup.route) } },
-                                    containerColor = if (isRepoSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                                    contentColor = if (isRepoSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                    onClick = { if (isRepoReady) { navController.navigate(Screen.Backup.route) } },
+                                    containerColor = if (isRepoReady) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                                    contentColor = if (isRepoReady) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                                 )
                             }
                             Screen.Backup.route -> {
                                 val viewModel: BackupViewModel = viewModel(
                                     viewModelStoreOwner = navBackStackEntry!!,
-                                    factory = BackupViewModelFactory(app, app.repositoriesRepository, app.resticBinaryManager, app.resticRepository, app.notificationRepository, app.appInfoRepository, app.preferencesRepository)
+                                    factory = BackupViewModelFactory(
+                                        app,
+                                        app.repositoriesRepository,
+                                        app.resticBinaryManager,
+                                        app.appInfoRepository,
+                                        app.preferencesRepository,
+                                        app.operationWorkRepository
+                                    )
                                 )
                                 val isBackingUp by viewModel.isBackingUp.collectAsState()
-                                val backupProgress by viewModel.backupProgress.collectAsState()
-                                if (!isBackingUp && !backupProgress.isFinished) {
+                                if (!isBackingUp) {
                                     ExtendedFloatingActionButton(
                                         onClick = { viewModel.startBackup() },
                                         icon = { Icon(Icons.Default.Backup, contentDescription = stringResource(R.string.fab_start_backup)) },
@@ -215,10 +263,16 @@ class MainActivity : FragmentActivity() {
                             Screen.Maintenance.route -> {
                                 val viewModel: MaintenanceViewModel = viewModel(
                                     viewModelStoreOwner = navBackStackEntry!!,
-                                    factory = MaintenanceViewModelFactory(app, app.repositoriesRepository, app.resticBinaryManager, app.resticRepository, app.notificationRepository, app.preferencesRepository)
+                                    factory = MaintenanceViewModelFactory(
+                                        app,
+                                        app.repositoriesRepository,
+                                        app.resticBinaryManager,
+                                        app.preferencesRepository,
+                                        app.operationWorkRepository
+                                    )
                                 )
                                 val uiState by viewModel.uiState.collectAsState()
-                                if (!uiState.isRunning && !uiState.progress.isFinished) {
+                                if (!uiState.isRunning) {
                                     ExtendedFloatingActionButton(
                                         onClick = { viewModel.runTasks() },
                                         icon = { Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.fab_run_tasks)) },
@@ -236,11 +290,20 @@ class MainActivity : FragmentActivity() {
                             Screen.Restore.route + "/{snapshotId}" -> {
                                 val viewModel: RestoreViewModel = viewModel(
                                     viewModelStoreOwner = navBackStackEntry!!,
-                                    factory = RestoreViewModelFactory(app, app.repositoriesRepository, app.resticBinaryManager, app.resticRepository, app.appInfoRepository, app.notificationRepository, app.metadataRepository, app.preferencesRepository, navBackStackEntry?.arguments?.getString("snapshotId") ?: "")
+                                    factory = RestoreViewModelFactory(
+                                        app,
+                                        app.repositoriesRepository,
+                                        app.resticBinaryManager,
+                                        app.resticRepository,
+                                        app.appInfoRepository,
+                                        app.metadataRepository,
+                                        app.preferencesRepository,
+                                        app.operationWorkRepository,
+                                        navBackStackEntry?.arguments?.getString("snapshotId") ?: ""
+                                    )
                                 )
                                 val isRestoring by viewModel.isRestoring.collectAsState()
-                                val restoreProgress by viewModel.restoreProgress.collectAsState()
-                                if (!isRestoring && !restoreProgress.isFinished) {
+                                if (!isRestoring) {
                                     ExtendedFloatingActionButton(
                                         onClick = { viewModel.startRestore() },
                                         icon = { Icon(Icons.Default.Restore, contentDescription = stringResource(R.string.fab_start_restore)) },
@@ -257,18 +320,23 @@ class MainActivity : FragmentActivity() {
                         modifier = Modifier.padding(innerPadding)
                     ) {
                         composable(Screen.Home.route) {
-                            // Use Application for factory creation to avoid explicit passing
-                            val vm: HomeViewModel = viewModel(
-                                factory = HomeViewModelFactory(app, app.repositoriesRepository, app.resticBinaryManager, app.resticRepository, app.appInfoRepository, app.metadataRepository)
-                            )
-                            val uiState by vm.uiState.collectAsState()
                             HomeScreen(
                                 onSnapshotClick = { snapshotId -> navController.navigate("${Screen.SnapshotDetails.route}/$snapshotId") },
                                 onMaintenanceClick = { navController.navigate(Screen.Maintenance.route) },
-                                uiState = uiState,
-                                onRefresh = { vm.refreshSnapshots() },
-                                onPasswordEntered = { p, s -> vm.onPasswordEntered(p, s) },
-                                onDismissPasswordDialog = { vm.onDismissPasswordDialog() }
+                                uiState = homeUiState,
+                                onRefresh = { homeViewModel.refreshSnapshots() },
+                                onPasswordEntered = { p, s -> homeViewModel.onPasswordEntered(p, s) },
+                                onSftpPasswordEntered = { p, s -> homeViewModel.onSftpPasswordEntered(p, s) },
+                                onRestCredentialsEntered = { u, p, s -> homeViewModel.onRestCredentialsEntered(u, p, s) },
+                                onS3CredentialsEntered = { u, p, s -> homeViewModel.onS3CredentialsEntered(u, p, s) },
+                                onRetryRepositoryPasswordEntry = { homeViewModel.onRetryRepositoryPasswordEntry() },
+                                onRetrySftpPasswordEntry = { homeViewModel.onRetrySftpPasswordEntry() },
+                                onRetryRestCredentialsEntry = { homeViewModel.onRetryRestCredentialsEntry() },
+                                onRetryS3CredentialsEntry = { homeViewModel.onRetryS3CredentialsEntry() },
+                                onDismissPasswordDialog = { homeViewModel.onDismissPasswordDialog() },
+                                onDismissSftpPasswordDialog = { homeViewModel.onDismissSftpPasswordDialog() },
+                                onDismissRestCredentialsDialog = { homeViewModel.onDismissRestCredentialsDialog() },
+                                onDismissS3CredentialsDialog = { homeViewModel.onDismissS3CredentialsDialog() }
                             )
                         }
                         composable(Screen.Settings.route) {
@@ -277,7 +345,15 @@ class MainActivity : FragmentActivity() {
                             )
                             SettingsScreen(viewModel = vm, onNavigateToLicenses = { navController.navigate(Screen.Licenses.route) })
                         }
-                        composable(Screen.Backup.route) { BackupScreen(onNavigateUp = { navController.navigateUp() }) }
+                        composable(Screen.Backup.route) {
+                            BackupScreen(
+                                onNavigateToOperationProgress = {
+                                    navController.navigate(Screen.OperationProgress.route) {
+                                        launchSingleTop = true
+                                    }
+                                }
+                            )
+                        }
                         composable(
                             route = "${Screen.SnapshotDetails.route}/{snapshotId}",
                             arguments = listOf(navArgument("snapshotId") { type = NavType.StringType })
@@ -297,7 +373,18 @@ class MainActivity : FragmentActivity() {
                             )
                         }
                         composable(Screen.Licenses.route) { LicensesScreen(onNavigateUp = { navController.navigateUp() }) }
-                        composable(Screen.Maintenance.route) { MaintenanceScreen(onNavigateUp = { navController.navigateUp() }) }
+                        composable(Screen.Maintenance.route) {
+                            MaintenanceScreen(
+                                onNavigateToOperationProgress = {
+                                    navController.navigate(Screen.OperationProgress.route) {
+                                        launchSingleTop = true
+                                    }
+                                }
+                            )
+                        }
+                        composable(Screen.OperationProgress.route) {
+                            OperationProgressScreen(onNavigateUp = { navController.navigateUp() })
+                        }
                     }
                 }
             }

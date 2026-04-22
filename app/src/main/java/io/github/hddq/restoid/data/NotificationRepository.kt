@@ -1,6 +1,7 @@
 package io.github.hddq.restoid.data
 
 import android.Manifest
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -30,10 +31,11 @@ class NotificationRepository(private val context: Context) {
     val permissionState = _permissionState.asStateFlow()
 
     companion object {
+        const val EXTRA_OPEN_OPERATION_PROGRESS = "extra_open_operation_progress"
         const val PROGRESS_CHANNEL_ID = "progress_channel"
         const val FINISHED_CHANNEL_ID = "finished_channel"
-        private const val PROGRESS_NOTIFICATION_ID = 1
-        private const val FINISHED_NOTIFICATION_ID = 2
+        const val PROGRESS_NOTIFICATION_ID = 1
+        const val FINISHED_NOTIFICATION_ID = 2
     }
 
     fun createNotificationChannels() {
@@ -63,17 +65,14 @@ class NotificationRepository(private val context: Context) {
 
     private fun createPendingIntent(): PendingIntent {
         val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra(EXTRA_OPEN_OPERATION_PROGRESS, true)
         }
         return PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
     }
 
-    fun showOperationProgressNotification(operationName: String, progress: OperationProgress) {
-        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            return
-        }
-
-        val percentage = (progress.stagePercentage * 100).toInt()
+    fun buildOperationProgressNotification(operationName: String, progress: OperationProgress): Notification {
+        val percentage = (progress.stagePercentage.coerceIn(0f, 1f) * 100).toInt()
         val processedSize = Formatter.formatFileSize(context, progress.bytesProcessed)
         val totalSize = Formatter.formatFileSize(context, progress.totalBytes)
         val filesText = context.resources.getQuantityString(
@@ -91,21 +90,53 @@ class NotificationRepository(private val context: Context) {
 
         val title = progress.stageTitle.let { "$it ($percentage%)" }
 
-        val builder = NotificationCompat.Builder(context, PROGRESS_CHANNEL_ID) // Use progress channel
+        return NotificationCompat.Builder(context, PROGRESS_CHANNEL_ID)
             .setContentTitle(title)
             .setContentText(contentText)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setPriority(NotificationCompat.PRIORITY_LOW) // Keep progress low priority to avoid spam
+            .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setProgress(100, percentage, false)
-            .setContentIntent(createPendingIntent()) // Make it clickable
+            .setContentIntent(createPendingIntent())
+            .build()
+    }
 
-        NotificationManagerCompat.from(context).notify(PROGRESS_NOTIFICATION_ID, builder.build())
+    fun buildOperationFinishedNotification(operationName: String, success: Boolean, summary: String): Notification {
+        val title = if (success) {
+            context.getString(R.string.notification_operation_finished_success, operationName)
+        } else {
+            context.getString(R.string.notification_operation_finished_failure, operationName)
+        }
+
+        return NotificationCompat.Builder(context, FINISHED_CHANNEL_ID)
+            .setContentTitle(title)
+            .setContentText(summary)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(summary))
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setContentIntent(createPendingIntent())
+            .build()
+    }
+
+    fun cancelProgressNotification() {
+        NotificationManagerCompat.from(context).cancel(PROGRESS_NOTIFICATION_ID)
+    }
+
+    fun showOperationProgressNotification(operationName: String, progress: OperationProgress) {
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            return
+        }
+
+        NotificationManagerCompat.from(context)
+            .notify(PROGRESS_NOTIFICATION_ID, buildOperationProgressNotification(operationName, progress))
     }
 
 
     fun showOperationFinishedNotification(operationName: String, success: Boolean, summary: String) {
+        cancelProgressNotification()
+
         if (ActivityCompat.checkSelfPermission(
                 context,
                 Manifest.permission.POST_NOTIFICATIONS
@@ -113,25 +144,9 @@ class NotificationRepository(private val context: Context) {
         ) {
             return
         }
-        // Cancel the ongoing progress notification
-        NotificationManagerCompat.from(context).cancel(PROGRESS_NOTIFICATION_ID)
 
-        val title = if (success) {
-            context.getString(R.string.notification_operation_finished_success, operationName)
-        } else {
-            context.getString(R.string.notification_operation_finished_failure, operationName)
-        }
-
-        val builder = NotificationCompat.Builder(context, FINISHED_CHANNEL_ID) // Use finished channel
-            .setContentTitle(title)
-            .setContentText(summary)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(summary))
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setPriority(NotificationCompat.PRIORITY_HIGH) // Make it pop
-            .setAutoCancel(true)
-            .setContentIntent(createPendingIntent()) // Make it clickable
-
-        NotificationManagerCompat.from(context).notify(FINISHED_NOTIFICATION_ID, builder.build())
+        NotificationManagerCompat.from(context)
+            .notify(FINISHED_NOTIFICATION_ID, buildOperationFinishedNotification(operationName, success, summary))
     }
 
 

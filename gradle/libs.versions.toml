@@ -11,9 +11,7 @@ lifecycleRuntimeKtx = "2.10.0"
 activityCompose = "1.13.0"
 composeBom = "2026.03.01"
 materialIconsExtended = "1.7.8"
-materialIconsExtendedVersion = "1.7.8"
 navigationCompose = "2.9.7"
-navigationComposeVersion = "2.9.7"
 libsu = "6.0.0"
 lifecycle = "2.10.0"
 apacheCommonsCompress = "1.28.0"
@@ -22,13 +20,12 @@ coilCompose = "2.7.0"
 kotlinxSerializationJson = "1.11.0"
 aboutLibraries = "14.0.1"
 biometric = "1.1.0"
+work = "2.11.2"
 
 [libraries]
 androidx-compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "materialIconsExtended" }
-androidx-compose-material-icons-extended-v167 = { module = "androidx.compose.material:material-icons-extended", version.ref = "materialIconsExtendedVersion" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
-androidx-navigation-compose-v277 = { module = "androidx.navigation:navigation-compose", version.ref = "navigationComposeVersion" }
 androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
@@ -53,6 +50,7 @@ coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coi
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 aboutlibraries-compose = { module = "com.mikepenz:aboutlibraries-compose", version.ref = "aboutLibraries" }
 androidx-biometric = { module = "androidx.biometric:biometric", version.ref = "biometric" }
+androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

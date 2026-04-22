@@ -46,55 +46,57 @@ fun AboutSettings(onNavigateToLicenses: () -> Unit) {
     val githubIntent = remember { Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/hddq/restoid")) }
 
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
+    Column {
+        Text(
+            text = stringResource(R.string.about_title),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(bottom = 8.dp)
         )
-    ) {
-        Column {
-            Text(
-                stringResource(R.string.about_title),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(16.dp)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
             )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onNavigateToLicenses() }
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Notes,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 16.dp)
-                )
-                Text(stringResource(R.string.open_source_licenses), style = MaterialTheme.typography.bodyLarge)
-            }
-
-            Divider(color = MaterialTheme.colorScheme.background)
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { context.startActivity(githubIntent) }
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = null,
-                    modifier = Modifier.padding(end = 16.dp)
-                )
-                Column {
-                    Text(stringResource(R.string.version_label), style = MaterialTheme.typography.bodyLarge)
-                    Text(
-                        versionText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+        ) {
+            Column {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onNavigateToLicenses() }
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Notes,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 16.dp)
                     )
+                    Text(stringResource(R.string.open_source_licenses), style = MaterialTheme.typography.bodyLarge)
+                }
+
+                Divider(color = MaterialTheme.colorScheme.background)
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { context.startActivity(githubIntent) }
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 16.dp)
+                    )
+                    Column {
+                        Text(stringResource(R.string.version_label), style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            versionText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }

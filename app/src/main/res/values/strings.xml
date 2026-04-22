@@ -8,9 +8,11 @@
     <string name="screen_restore">Restore</string>
     <string name="screen_licenses">Licenses</string>
     <string name="screen_maintenance">Maintenance</string>
+    <string name="screen_operation_progress">Operation Progress</string>
 
     <string name="topbar_new_backup">New Backup</string>
     <string name="topbar_maintenance">Maintenance</string>
+    <string name="topbar_operation_progress">Operation Progress</string>
     <string name="topbar_open_source_licenses">Open Source Licenses</string>
     <string name="topbar_snapshot_details">Snapshot Details</string>
     <string name="topbar_restore_snapshot">Restore Snapshot</string>
@@ -56,6 +58,12 @@
     </plurals>
     <string name="repository_password_required">Repository Password Required</string>
     <string name="enter_password_for_repository">Please enter the password for repository: %1$s</string>
+    <string name="sftp_password_required">SFTP Password Required</string>
+    <string name="enter_sftp_password_for_repository">Please enter the SFTP password for repository: %1$s</string>
+    <string name="rest_credentials_required">REST Credentials Required</string>
+    <string name="enter_rest_credentials_for_repository">Please enter the REST username and password for repository: %1$s</string>
+    <string name="s3_credentials_required">S3 Credentials Required</string>
+    <string name="enter_s3_credentials_for_repository">Please enter the S3 access key and secret key for repository: %1$s</string>
     <plurals name="apps_count">
         <item quantity="one">App (%1$d):</item>
         <item quantity="other">Apps (%1$d):</item>
@@ -90,10 +98,19 @@
     <string name="dialog_forget_snapshot_message">This will remove the snapshot entry. The actual data will only be deleted after running a prune. Are you sure?</string>
 
     <string name="label_password">Password</string>
+    <string name="label_username">Username</string>
+    <string name="label_repository_password">Repository password</string>
+    <string name="label_rest_username">REST username</string>
+    <string name="label_rest_password">REST password</string>
+    <string name="label_s3_access_key_id">S3 access key ID</string>
+    <string name="label_s3_secret_access_key">S3 secret access key</string>
     <string name="error_password_cannot_be_empty">Password cannot be empty</string>
+    <string name="error_username_cannot_be_empty">Username cannot be empty</string>
     <string name="save_password">Save password</string>
+    <string name="save_credentials">Save credentials</string>
     <string name="action_ok">OK</string>
     <string name="action_cancel">Cancel</string>
+    <string name="action_stop">Stop</string>
     <string name="action_done">Done</string>
     <string name="action_add">Add</string>
     <string name="action_delete">Delete</string>
@@ -105,8 +122,10 @@
     <string name="action_update">Update</string>
     <string name="action_forget">Forget</string>
     <string name="action_try_again">Try Again</string>
+    <string name="action_disable">Disable</string>
 
     <string name="progress_initializing">Initializing…</string>
+    <string name="progress_stopping">Stopping…</string>
     <string name="progress_operation_complete">%1$s Complete</string>
     <string name="progress_operation_failed">%1$s Failed</string>
     <string name="progress_overall">Overall Progress</string>
@@ -118,6 +137,25 @@
     <string name="progress_placeholder">...</string>
 
     <string name="dialog_add_local_repository_title">Add Local Repository</string>
+    <string name="dialog_add_repository_title">Add Repository</string>
+    <string name="label_repository_type">Repository type</string>
+    <string name="label_repository_specification">Repository specification</string>
+    <string name="label_environment_variables">Environment variables</string>
+    <string name="placeholder_environment_variables">KEY=value (one per line)</string>
+    <string name="label_sftp_password">SFTP password</string>
+    <string name="dialog_sftp_trust_title">Trust SFTP server</string>
+    <string name="dialog_sftp_trust_message">The server %1$s presented these host key fingerprints:</string>
+    <string name="dialog_sftp_trust_fingerprints">Fingerprints</string>
+
+    <string name="repo_backend_local">Local directory</string>
+    <string name="repo_backend_sftp">SFTP (SSH)</string>
+    <string name="repo_backend_rest">HTTP REST server</string>
+    <string name="repo_backend_s3">Amazon S3 / MinIO</string>
+
+    <string name="repo_hint_sftp">user@host:/srv/restic-repo</string>
+    <string name="repo_hint_rest">http://host:8000/</string>
+    <string name="repo_hint_s3">s3.us-east-1.amazonaws.com/bucket_name</string>
+
     <string name="label_path">Path</string>
     <string name="placeholder_select_directory">Select a directory…</string>
     <string name="cd_select_folder">Select Folder</string>
@@ -142,13 +180,24 @@
     <string name="notifications_enabled">Notifications enabled</string>
     <string name="notifications_disabled">Notifications disabled</string>
     <string name="notification_permission">Notification permission</string>
+    <string name="battery_optimization_enabled">Battery optimization enabled</string>
+    <string name="battery_optimization_disabled">Battery optimization disabled</string>
+    <string name="battery_optimization_description">Disable this to improve reliability of long background operations.</string>
     <string name="require_app_unlock_on_start">Require app unlock on start</string>
+    <string name="options_title">Options</string>
     <string name="app_unlock_prompt_title">Unlock Restoid</string>
     <string name="app_unlock_prompt_subtitle">Use fingerprint or screen lock to continue</string>
     <string name="repository_id_short">ID: %1$s…</string>
     <string name="cd_more_options">More options</string>
     <string name="action_forget_password">Forget Password</string>
+    <string name="action_forget_sftp_password">Forget SFTP Password</string>
+    <string name="action_save_sftp_password">Save SFTP Password</string>
+    <string name="action_forget_rest_credentials">Forget REST Credentials</string>
+    <string name="action_save_rest_credentials">Save REST Credentials</string>
+    <string name="action_forget_s3_credentials">Forget S3 Credentials</string>
+    <string name="action_save_s3_credentials">Save S3 Credentials</string>
     <string name="action_save_password">Save Password</string>
+    <string name="action_save_passwords">Save Passwords</string>
     <string name="action_change_password">Change password</string>
     <string name="cd_more_download_options">More download options</string>
 
@@ -172,6 +221,11 @@
     <string name="cd_show">Show</string>
     <string name="error_passwords_do_not_match">Passwords do not match.</string>
     <string name="dialog_save_password">Save Password</string>
+    <string name="dialog_save_sftp_password">Save SFTP Password</string>
+    <string name="dialog_save_rest_credentials">Save REST Credentials</string>
+    <string name="dialog_save_s3_credentials">Save S3 Credentials</string>
+    <string name="rest_credentials_hint">Stored credentials are encrypted on this device.</string>
+    <string name="s3_credentials_hint">Stored credentials are encrypted on this device.</string>
 
     <string name="backup_item_permissions">Permissions</string>
     <string name="backup_item_unknown">Unknown items</string>
@@ -201,6 +255,14 @@
     <string name="summary_no_backup_repository_selected">No backup repository is selected.</string>
     <string name="error_password_not_found_for_repository">Password for repository not found.</string>
     <string name="summary_password_not_found">Could not find the password.</string>
+    <string name="error_sftp_password_not_found_for_repository">SFTP password for repository not found.</string>
+    <string name="summary_sftp_password_not_found">Could not find the SFTP password.</string>
+    <string name="error_rest_credentials_not_found_for_repository">REST credentials for repository not found.</string>
+    <string name="summary_rest_credentials_not_found">Could not find REST credentials.</string>
+    <string name="error_s3_credentials_not_found_for_repository">S3 credentials for repository not found.</string>
+    <string name="summary_s3_credentials_not_found">Could not find S3 credentials.</string>
+    <string name="error_operation_already_running">Another operation is already running.</string>
+    <string name="summary_operation_already_running">Another operation is running. Wait for it to finish.</string>
 
     <string name="error_snapshot_not_found">Snapshot not found.</string>
     <string name="error_repository_password_or_id_not_found">Repository, password, or repo ID not found</string>
@@ -244,7 +306,26 @@
     <string name="maintenance_summary_no_tasks">No maintenance tasks were selected.</string>
 
     <string name="home_error_repository_id_not_found">Repository ID not found</string>
+    <string name="home_error_repository_password_incorrect">Repository password is incorrect.</string>
+    <string name="home_error_sftp_password_incorrect">SFTP password is incorrect.</string>
+    <string name="home_error_rest_credentials_incorrect">REST credentials are incorrect.</string>
+    <string name="home_error_s3_credentials_incorrect">S3 credentials are incorrect.</string>
+    <string name="home_open_needed_message">Repository is closed. Open it to load snapshots.</string>
+    <string name="action_enter_password_again">Enter password again</string>
+    <string name="action_enter_sftp_password_again">Enter SFTP password again</string>
+    <string name="action_enter_rest_credentials_again">Enter REST credentials again</string>
+    <string name="action_enter_s3_credentials_again">Enter S3 credentials again</string>
+    <string name="action_open_repository">Open repository</string>
+    <string name="action_open_sftp">Open SFTP</string>
+    <string name="action_open_rest">Open REST</string>
+    <string name="action_open_s3">Open S3</string>
     <string name="settings_error_path_password_empty">Path and password cannot be empty.</string>
+    <string name="settings_error_rest_credentials_incomplete">Enter both REST username and password, or leave both empty.</string>
+    <string name="settings_error_s3_credentials_incomplete">Enter both S3 access key and secret key, or leave both empty.</string>
+    <string name="settings_error_invalid_environment_variables">Invalid environment variables.</string>
+    <string name="settings_error_invalid_environment_line">Invalid environment variable format at line %1$d. Use KEY=value.</string>
+    <string name="settings_error_invalid_environment_name">Invalid environment variable name: %1$s</string>
+    <string name="settings_error_invalid_restic_options">Invalid restic options.</string>
     <string name="error_unknown">Unknown error</string>
 
     <string name="channel_ongoing_operations">Ongoing Operations</string>
@@ -258,6 +339,10 @@
     <string name="notification_scanning_files">Scanning files…</string>
     <string name="notification_operation_finished_success">%1$s finished successfully</string>
     <string name="notification_operation_finished_failure">%1$s failed</string>
+    <string name="operation_progress_no_active_operation">No active operation right now.</string>
+    <string name="operation_interrupted">Operation was interrupted.</string>
+    <string name="dialog_stop_operation_title">Stop operation?</string>
+    <string name="dialog_stop_operation_message">Do you want to stop the current operation? Any unfinished work will be canceled.</string>
 
     <string name="repo_error_exists">Repository already exists.</string>
     <string name="repo_error_binary_not_ready">Restic binary not ready.</string>
@@ -266,6 +351,12 @@
     <string name="repo_error_failed_create_directory">Failed to create directory.</string>
     <string name="repo_error_failed_initialize">Failed to initialize repository.</string>
     <string name="repo_error_failed_get_id">Repo valid, but failed to get ID.</string>
+    <string name="repo_error_sftp_password_setup_failed">Failed to configure SFTP password authentication.</string>
+    <string name="repo_error_sftp_ssh_binary_not_found">SSH binary was not found on this device.</string>
+    <string name="repo_error_sftp_askpass_create_failed">Failed to create SSH askpass helper script.</string>
+    <string name="repo_error_sftp_known_hosts_setup_failed">Failed to prepare SSH known hosts storage.</string>
+    <string name="repo_error_sftp_fingerprint_probe_failed">Failed to fetch SFTP server fingerprint.</string>
+    <string name="action_trust">Trust</string>
 
     <string name="restic_unknown_version">Unknown version</string>
     <string name="restic_unknown">unknown</string>
@@ -305,6 +396,8 @@
 
     <string name="restic_executor_failure_command">Restic command failed</string>
     <string name="restic_executor_failure_not_ready">Restic is not installed or ready.</string>
+    <string name="restic_executor_failure_invalid_env_name">One or more environment variable names are invalid.</string>
+    <string name="restic_executor_failure_invalid_option_name">One or more restic option names are invalid.</string>
 
     <string name="maintenance_summary_prune_completed">Prune operation completed.</string>
     <plurals name="maintenance_summary_removed_snapshots">

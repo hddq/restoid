@@ -1,27 +1,35 @@
 package io.github.hddq.restoid.ui.restore
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.github.hddq.restoid.data.*
 import io.github.hddq.restoid.R
+import io.github.hddq.restoid.data.AppInfoRepository
+import io.github.hddq.restoid.data.MetadataRepository
+import io.github.hddq.restoid.data.OperationType
+import io.github.hddq.restoid.data.RepositoriesRepository
+import io.github.hddq.restoid.data.RepositoryBackendType
+import io.github.hddq.restoid.data.ResticBinaryManager
+import io.github.hddq.restoid.data.ResticRepository
+import io.github.hddq.restoid.data.ResticState
+import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.BackupDetail
 import io.github.hddq.restoid.model.RestoidMetadata
 import io.github.hddq.restoid.ui.shared.OperationProgress
-import io.github.hddq.restoid.util.ResticOutputParser
-import com.topjohnwu.superuser.CallbackList
-import com.topjohnwu.superuser.Shell
+import io.github.hddq.restoid.work.OperationWorkRepository
+import io.github.hddq.restoid.work.RestoreAppSelection
+import io.github.hddq.restoid.work.RestoreTypeSelection
+import io.github.hddq.restoid.work.RestoreWorkRequest
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.io.File
-import java.util.Locale
 
 data class RestoreTypes(
     val apk: Boolean = true,
@@ -32,15 +40,19 @@ data class RestoreTypes(
     val media: Boolean = false
 )
 
+sealed interface RestoreUiEvent {
+    data object NavigateToOperationProgress : RestoreUiEvent
+}
+
 class RestoreViewModel(
     private val application: Application,
     private val repositoriesRepository: RepositoriesRepository,
-    private val resticBinaryManager: ResticBinaryManager, // Inject Manager
+    private val resticBinaryManager: ResticBinaryManager,
     private val resticRepository: ResticRepository,
     private val appInfoRepository: AppInfoRepository,
-    private val notificationRepository: NotificationRepository,
     private val metadataRepository: MetadataRepository,
-    private val preferencesRepository: PreferencesRepository,
+    private val preferencesRepository: io.github.hddq.restoid.data.PreferencesRepository,
+    private val operationWorkRepository: OperationWorkRepository,
     val snapshotId: String
 ) : ViewModel() {
 
@@ -70,13 +82,31 @@ class RestoreViewModel(
     private val _restoreProgress = MutableStateFlow(OperationProgress())
     val restoreProgress = _restoreProgress.asStateFlow()
 
-    private var restoreJob: Job? = null
+    private val _operationBlocked = MutableStateFlow(false)
+    val operationBlocked = _operationBlocked.asStateFlow()
+    private val _uiEvents = MutableSharedFlow<RestoreUiEvent>(extraBufferCapacity = 1)
+    val uiEvents: SharedFlow<RestoreUiEvent> = _uiEvents.asSharedFlow()
 
     init {
         _restoreTypes.value = preferencesRepository.loadRestoreTypes()
         _allowDowngrade.value = preferencesRepository.loadAllowDowngrade()
+        observeOperationState()
         if (snapshotId.isNotBlank()) {
             loadSnapshotDetails(snapshotId)
+        }
+    }
+
+    private fun observeOperationState() {
+        viewModelScope.launch {
+            operationWorkRepository.operationState.collect { state ->
+                if (state.operationType == OperationType.RESTORE) {
+                    _isRestoring.value = state.isRunning
+                    _restoreProgress.value = state.progress
+                } else {
+                    _isRestoring.value = false
+                    _restoreProgress.value = OperationProgress()
+                }
+            }
         }
     }
 
@@ -86,18 +116,25 @@ class RestoreViewModel(
             _error.value = null
             _backupDetails.value = emptyList()
             try {
-                val repoPath = repositoriesRepository.selectedRepository.first()
-                val password = repoPath?.let { repositoriesRepository.getRepositoryPassword(it) }
-                val repo = repositoriesRepository.repositories.value.find { it.path == repoPath }
+                val selectedRepoKey = repositoriesRepository.selectedRepository.first()
+                val repo = selectedRepoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
+                val repoPath = repo?.path
+                val password = selectedRepoKey?.let { repositoriesRepository.getRepositoryPassword(it) }
+                val repoId = repo?.id
 
-                if (repoPath != null && password != null && repo?.id != null) {
-                    val result = resticRepository.getSnapshots(repoPath, password)
+                if (repoPath != null && password != null && repoId != null) {
+                    val result = resticRepository.getSnapshots(
+                        repoPath,
+                        password,
+                        repositoriesRepository.getExecutionEnvironmentVariables(selectedRepoKey),
+                        repositoriesRepository.getExecutionResticOptions(selectedRepoKey)
+                    )
                     result.fold(
                         onSuccess = { snapshots ->
                             val foundSnapshot = snapshots.find { it.id.startsWith(snapshotId) }
                             _snapshot.value = foundSnapshot
                             if (foundSnapshot != null) {
-                                val metadata = metadataRepository.getMetadataForSnapshot(repo.id, foundSnapshot.id)
+                                val metadata = metadataRepository.getMetadataForSnapshot(repoId, foundSnapshot.id)
                                 snapshotMetadata = metadata
                                 processSnapshot(foundSnapshot, metadata)
                             } else {
@@ -177,370 +214,148 @@ class RestoreViewModel(
         return if (items.isNotEmpty()) items else listOf(application.getString(R.string.backup_item_unknown))
     }
 
-    private fun restoreGrantedRuntimePermissions(packageName: String, permissions: List<String>): List<String> {
-        if (permissions.isEmpty()) return emptyList()
-
-        val failures = mutableListOf<String>()
-        permissions.forEach { permission ->
-            val result = Shell.cmd("pm grant '$packageName' '$permission'").exec()
-            if (!result.isSuccess) {
-                val output = (result.err + result.out).joinToString(" ").trim()
-                failures.add(if (output.isBlank()) permission else "$permission ($output)")
-            }
-        }
-        return failures
-    }
-
-    private fun isPackageInstalled(packageName: String): Boolean {
-        return try {
-            application.packageManager.getPackageInfo(
-                packageName,
-                android.content.pm.PackageManager.PackageInfoFlags.of(0)
-            )
-            true
-        } catch (_: Exception) {
-            false
-        }
-    }
-
-    private fun generatePathsToRestore(selectedApps: List<BackupDetail>, snapshot: SnapshotInfo): List<String> {
-        val paths = mutableListOf<String>()
-        val types = restoreTypes.value
-
-        selectedApps.forEach { detail ->
-            val pkg = detail.appInfo.packageName
-            fun addPathIfExists(path: String) {
-                if (snapshot.paths.contains(path)) paths.add(path)
-            }
-            fun addApkPathIfExists() {
-                snapshot.paths.find { it.startsWith("/data/app/") && it.contains("/$pkg-") }?.let { paths.add(it) }
-            }
-
-            if (types.apk) addApkPathIfExists()
-            if (types.data) addPathIfExists("/data/data/$pkg")
-            if (types.deviceProtectedData) addPathIfExists("/data/user_de/0/$pkg")
-            if (types.externalData) addPathIfExists("/storage/emulated/0/Android/data/$pkg")
-            if (types.obb) addPathIfExists("/storage/emulated/0/Android/obb/$pkg")
-            if (types.media) addPathIfExists("/storage/emulated/0/Android/media/$pkg")
-        }
-        return paths.distinct()
-    }
-
-    private fun moveRestoredDataAndFixPerms(detail: BackupDetail, tempRestoreDir: File, types: RestoreTypes): Boolean {
-        val pkg = detail.appInfo.packageName
-        var allSucceeded = true
-
-        val ownerResult = Shell.cmd("stat -c '%U:%G' /data/data/$pkg").exec()
-        if (!ownerResult.isSuccess || ownerResult.out.isEmpty()) return false
-        val owner = ownerResult.out.first().trim()
-
-        val dataMappings = mutableListOf<Pair<File, String>>()
-        if (types.data) dataMappings.add(File(tempRestoreDir, "data/data/$pkg") to "/data/data/$pkg")
-        if (types.deviceProtectedData) dataMappings.add(File(tempRestoreDir, "data/user_de/0/$pkg") to "/data/user_de/0/$pkg")
-        if (types.externalData) dataMappings.add(File(tempRestoreDir, "storage/emulated/0/Android/data/$pkg") to "/storage/emulated/0/Android/data/$pkg")
-        if (types.obb) dataMappings.add(File(tempRestoreDir, "storage/emulated/0/Android/obb/$pkg") to "/storage/emulated/0/Android/obb/$pkg")
-        if (types.media) dataMappings.add(File(tempRestoreDir, "storage/emulated/0/Android/media/$pkg") to "/storage/emulated/0/Android/media/$pkg")
-
-        Shell.cmd("am force-stop $pkg").exec()
-
-        for ((source, destination) in dataMappings) {
-            if (Shell.cmd("[ -e '${source.absolutePath}' ]").exec().isSuccess) {
-                Shell.cmd("mkdir -p '$destination'").exec()
-                val copyResult = Shell.cmd("cp -a '${source.absolutePath}/.' '$destination/'").exec()
-                if (!copyResult.isSuccess) {
-                    allSucceeded = false
-                    continue
-                }
-                val chownResult = Shell.cmd("chown -R $owner '$destination'").exec()
-                if (!chownResult.isSuccess) {
-                    allSucceeded = false
-                }
-
-                // Relabel restored files so app-private SELinux categories are restored (including symlinks).
-                val relabelCommand = if (destination.startsWith("/data/data/")) {
-                    "restorecon -RFD '$destination'"
-                } else {
-                    "restorecon -RF '$destination'"
-                }
-                val relabelResult = Shell.cmd(relabelCommand).exec()
-                if (!relabelResult.isSuccess) {
-                    allSucceeded = false
-                    Log.w("RestoreViewModel", "Failed to relabel restored path $destination")
-                }
-            }
-        }
-        return allSucceeded
-    }
-
     fun startRestore() {
         if (_isRestoring.value) return
         preferencesRepository.saveRestoreTypes(_restoreTypes.value)
         preferencesRepository.saveAllowDowngrade(_allowDowngrade.value)
 
-        restoreJob = viewModelScope.launch(Dispatchers.IO) {
-            val startTime = System.currentTimeMillis()
-            _isRestoring.value = true
-            _restoreProgress.value = OperationProgress()
+        val resticState = resticBinaryManager.resticState.value
+        val selectedRepoKey = repositoriesRepository.selectedRepository.value
+        val selectedRepository = selectedRepoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
+        val selectedRepoPath = selectedRepository?.path
+        val currentSnapshot = _snapshot.value
+        val selectedApps = _backupDetails.value.filter { it.appInfo.isSelected && (_allowDowngrade.value || !it.isDowngrade) }
 
-            var tempRestoreDir: File? = null
-            var passwordFile: File? = null
-            var successes = 0
-            var failures = 0
-            val failureDetails = mutableListOf<String>()
+        if (resticState !is ResticState.Installed || selectedRepoPath == null || currentSnapshot == null) {
+            _restoreProgress.value = OperationProgress(
+                isFinished = true,
+                error = application.getString(R.string.restore_error_preflight_failed),
+                finalSummary = application.getString(R.string.restore_error_preflight_failed)
+            )
+            return
+        }
 
-            val apkRestoreSelected = restoreTypes.value.apk
-            val anyDataRestoreSelected = with(restoreTypes.value) { data || deviceProtectedData || externalData || obb || media }
+        if (selectedApps.isEmpty()) {
+            _restoreProgress.value = OperationProgress(
+                isFinished = true,
+                error = application.getString(R.string.restore_error_no_apps_selected),
+                finalSummary = application.getString(R.string.restore_error_no_apps_selected)
+            )
+            return
+        }
 
-            val stageList = mutableListOf(application.getString(R.string.restore_stage_restore_files))
-            if (apkRestoreSelected || anyDataRestoreSelected) stageList.add(application.getString(R.string.restore_stage_processing_apps))
-            stageList.add(application.getString(R.string.restore_stage_cleanup))
-            val totalStages = stageList.size
-            var currentStageNum = 1
+        if (selectedRepository.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpPassword(selectedRepoKey)) {
+            _restoreProgress.value = OperationProgress(
+                isFinished = true,
+                error = application.getString(R.string.error_sftp_password_not_found_for_repository),
+                finalSummary = application.getString(R.string.summary_sftp_password_not_found)
+            )
+            return
+        }
 
-            try {
-                // Use Manager for state check
-                val resticState = resticBinaryManager.resticState.value
-                val selectedRepoPath = repositoriesRepository.selectedRepository.value
-                val currentSnapshot = _snapshot.value
-                val selectedApps = _backupDetails.value.filter { it.appInfo.isSelected && (_allowDowngrade.value || !it.isDowngrade) }
+        if (
+            selectedRepository.backendType == RepositoryBackendType.REST &&
+            selectedRepository.restAuthRequired &&
+            !repositoriesRepository.hasRestCredentials(selectedRepoKey)
+        ) {
+            _restoreProgress.value = OperationProgress(
+                isFinished = true,
+                error = application.getString(R.string.error_rest_credentials_not_found_for_repository),
+                finalSummary = application.getString(R.string.summary_rest_credentials_not_found)
+            )
+            return
+        }
 
-                if (resticState !is ResticState.Installed || selectedRepoPath == null || currentSnapshot == null) {
-                    throw IllegalStateException(application.getString(R.string.restore_error_preflight_failed))
-                }
-                if (selectedApps.isEmpty()) throw IllegalStateException(application.getString(R.string.restore_error_no_apps_selected))
+        if (
+            selectedRepository.backendType == RepositoryBackendType.S3 &&
+            selectedRepository.s3AuthRequired &&
+            !repositoriesRepository.hasS3Credentials(selectedRepoKey)
+        ) {
+            _restoreProgress.value = OperationProgress(
+                isFinished = true,
+                error = application.getString(R.string.error_s3_credentials_not_found_for_repository),
+                finalSummary = application.getString(R.string.summary_s3_credentials_not_found)
+            )
+            return
+        }
 
-                val password = repositoriesRepository.getRepositoryPassword(selectedRepoPath)
-                    ?: throw IllegalStateException(application.getString(R.string.restore_error_password_not_found))
+        val password = repositoriesRepository.getRepositoryPassword(selectedRepoKey)
+        if (password == null) {
+            _restoreProgress.value = OperationProgress(
+                isFinished = true,
+                error = application.getString(R.string.restore_error_password_not_found),
+                finalSummary = application.getString(R.string.summary_password_not_found)
+            )
+            return
+        }
 
-                passwordFile = File.createTempFile("restic-pass", ".tmp", application.cacheDir)
-                passwordFile.writeText(password)
+        val request = RestoreWorkRequest(
+            repositoryKey = selectedRepoKey,
+            snapshotId = currentSnapshot.id,
+            restoreTypes = RestoreTypeSelection(
+                apk = _restoreTypes.value.apk,
+                data = _restoreTypes.value.data,
+                deviceProtectedData = _restoreTypes.value.deviceProtectedData,
+                externalData = _restoreTypes.value.externalData,
+                obb = _restoreTypes.value.obb,
+                media = _restoreTypes.value.media
+            ),
+            allowDowngrade = _allowDowngrade.value,
+            selectedApps = selectedApps.map {
+                RestoreAppSelection(
+                    packageName = it.appInfo.packageName,
+                    appName = it.appInfo.name
+                )
+            }
+        )
 
-                tempRestoreDir = File(application.cacheDir, "restic-restore-${System.currentTimeMillis()}").also { it.mkdirs() }
-
-                val pathsToRestore = generatePathsToRestore(selectedApps, currentSnapshot)
-                if (pathsToRestore.isEmpty()) throw IllegalStateException(application.getString(R.string.restore_error_no_files_found))
-
-                val operationRestore = application.getString(R.string.operation_restore)
-
-                // --- Stage 1: Execute restic restore ---
-                val restoreStageTitle = "[${currentStageNum}/${totalStages}] ${stageList[0]}"
-                val includes = pathsToRestore.joinToString(" ") { "--include '$it'" }
-                // TODO: This should also move to ResticExecutor ideally, but it uses restore output streaming.
-                // We continue manual command construction here for now.
-                val env = "HOME='${application.filesDir.absolutePath}' TMPDIR='${application.cacheDir.absolutePath}'"
-                val command = "$env RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' ${resticState.path} -r '$selectedRepoPath' restore ${currentSnapshot.id} --target '${tempRestoreDir.absolutePath}' --exclude-xattr 'security.selinux' $includes --json"
-
-                val stdoutCallback = object : CallbackList<String>() {
-                    override fun onAddElement(line: String) {
-                        ResticOutputParser.parse(line, application)?.let { progressUpdate ->
-                            val elapsedTime = (System.currentTimeMillis() - startTime) / 1000
-                            val newProgress = if (progressUpdate.isFinished) {
-                                _restoreProgress.value.copy(
-                                    isFinished = false,
-                                    stageTitle = restoreStageTitle,
-                                    stagePercentage = 1.0f,
-                                    overallPercentage = currentStageNum.toFloat() / totalStages.toFloat(),
-                                    elapsedTime = elapsedTime,
-                                    finalSummary = ""
-                                )
-                            } else {
-                                progressUpdate.copy(
-                                    stageTitle = restoreStageTitle,
-                                    overallPercentage = ((currentStageNum - 1) + progressUpdate.stagePercentage) / totalStages.toFloat(),
-                                    elapsedTime = elapsedTime
-                                )
-                            }
-                            _restoreProgress.value = newProgress
-                            notificationRepository.showOperationProgressNotification(operationRestore, newProgress)
-                        }
-                    }
-                }
-                val stderr = mutableListOf<String>()
-                val restoreResult = Shell.cmd(command).to(stdoutCallback, stderr).exec()
-
-                if (!restoreResult.isSuccess) {
-                    val errorOutput = stderr.joinToString("\n")
-                    throw IllegalStateException(if (errorOutput.isEmpty()) application.getString(R.string.restore_error_command_failed) else errorOutput)
-                }
-
-                // --- Stage 2: Processing Apps ---
-                val processingAppsStageIndex = stageList.indexOf(application.getString(R.string.restore_stage_processing_apps))
-                if (processingAppsStageIndex != -1) {
-                    currentStageNum = processingAppsStageIndex + 1
-                    val processingStageTitle = application.getString(R.string.restore_stage_processing_template, currentStageNum, totalStages)
-
-                    for ((index, detail) in selectedApps.withIndex()) {
-                        val appName = detail.appInfo.name
-                        var appProcessSuccess = true
-                        val processProgress = (index + 1).toFloat() / selectedApps.size.toFloat()
-
-                        _restoreProgress.update {
-                            it.copy(
-                                stageTitle = processingStageTitle,
-                                stagePercentage = processProgress,
-                                overallPercentage = (processingAppsStageIndex + processProgress) / totalStages.toFloat(),
-                                currentFile = appName,
-                                filesProcessed = index + 1,
-                                totalFiles = selectedApps.size
-                            )
-                        }
-                        notificationRepository.showOperationProgressNotification(operationRestore, _restoreProgress.value)
-
-                        if (apkRestoreSelected) {
-                            val originalApkPath = pathsToRestore.find { it.startsWith("/data/app/") && it.contains("/${detail.appInfo.packageName}-") }
-                            val restoredContentDir = originalApkPath?.let { File(tempRestoreDir, it.drop(1)) }
-                            val apkFiles = restoredContentDir?.walk()?.filter { it.isFile && it.extension == "apk" }?.toList() ?: emptyList()
-
-                            if (apkFiles.isNotEmpty()) {
-                                val installFlags = if (_allowDowngrade.value) "-r -d" else "-r"
-                                val createResult = Shell.cmd("pm install-create $installFlags").exec()
-                                val sessionId = createResult.out.firstOrNull()?.substringAfterLast('[')?.substringBefore(']')
-
-                                if (createResult.isSuccess && sessionId != null) {
-                                    var allWritesSucceeded = true
-                                    apkFiles.forEachIndexed { splitIndex, apkFile ->
-                                        val writeCmd = "pm install-write -S ${apkFile.length()} $sessionId '${splitIndex}_${apkFile.name}' '${apkFile.absolutePath}'"
-                                        if (!Shell.cmd(writeCmd).exec().isSuccess) {
-                                            allWritesSucceeded = false
-                                            return@forEachIndexed
-                                        }
-                                    }
-                                    if (allWritesSucceeded) {
-                                        val commitResult = Shell.cmd("pm install-commit $sessionId").exec()
-                                        if (!commitResult.isSuccess || !commitResult.out.any { it.contains("Success") }) {
-                                            appProcessSuccess = false
-                                            failureDetails.add(application.getString(R.string.restore_failure_install_commit, appName, commitResult.err.joinToString(" ")))
-                                        }
-                                    } else {
-                                        appProcessSuccess = false
-                                        failureDetails.add(application.getString(R.string.restore_failure_write_apk_splits, appName))
-                                        Shell.cmd("pm install-abandon $sessionId").exec()
-                                    }
-                                } else {
-                                    appProcessSuccess = false
-                                    failureDetails.add(application.getString(R.string.restore_failure_create_install_session, appName))
-                                }
-                            } else {
-                                appProcessSuccess = false
-                                failureDetails.add(application.getString(R.string.restore_failure_no_apk_files, appName))
-                            }
-                        }
-
-                        if (appProcessSuccess && anyDataRestoreSelected) {
-                            if (!moveRestoredDataAndFixPerms(detail, tempRestoreDir, restoreTypes.value)) {
-                                appProcessSuccess = false
-                                failureDetails.add(application.getString(R.string.restore_failure_data_restore, appName))
-                            }
-                        }
-
-                        val permissionsToRestore = snapshotMetadata
-                            ?.apps
-                            ?.get(detail.appInfo.packageName)
-                            ?.grantedRuntimePermissions
-                            .orEmpty()
-                        if (permissionsToRestore.isNotEmpty()) {
-                            if (!isPackageInstalled(detail.appInfo.packageName)) {
-                                appProcessSuccess = false
-                                failureDetails.add(application.getString(R.string.restore_failure_permissions_app_not_installed, appName))
-                            } else {
-                                val permissionFailures = restoreGrantedRuntimePermissions(detail.appInfo.packageName, permissionsToRestore)
-                                if (permissionFailures.isNotEmpty()) {
-                                    appProcessSuccess = false
-                                    failureDetails.add(application.getString(R.string.restore_failure_permissions_partial, appName, permissionFailures.joinToString(", ")))
-                                }
-                            }
-                        }
-
-                        if (appProcessSuccess) successes++ else failures++
-                    }
-                } else {
-                    successes = selectedApps.size
-                }
-
-                // --- Final Stage: Cleanup ---
-                currentStageNum = totalStages
-                val cleanupStageTitle = "[${currentStageNum}/${totalStages}] ${application.getString(R.string.restore_stage_cleanup)}"
-                _restoreProgress.update { it.copy(stageTitle = cleanupStageTitle, stagePercentage = 0f, overallPercentage = (totalStages - 1).toFloat() / totalStages.toFloat()) }
-
-                tempRestoreDir.let { dir -> Shell.cmd("rm -rf '${dir.absolutePath}'").exec() }
-                _restoreProgress.update { it.copy(stagePercentage = 1f, overallPercentage = 1f) }
-
-                val finalElapsedTime = (System.currentTimeMillis() - startTime) / 1000
-                val summary = buildString {
-                    append(application.getString(R.string.restore_summary_finished_in, formatElapsedTime(finalElapsedTime)))
-                    append(
-                        application.resources.getQuantityString(
-                            R.plurals.restore_summary_processed,
-                            successes,
-                            successes
-                        )
-                    )
-                    if (failures > 0) {
-                        append(
-                            application.resources.getQuantityString(
-                                R.plurals.restore_summary_failed,
-                                failures,
-                                failures
-                            )
-                        )
-                    }
-                    if (failureDetails.isNotEmpty()) append(application.getString(R.string.restore_summary_details, failureDetails.joinToString("\n- ")))
-                }
-
+        viewModelScope.launch(Dispatchers.IO) {
+            val enqueued = operationWorkRepository.enqueueRestore(request)
+            if (enqueued) {
+                _uiEvents.tryEmit(RestoreUiEvent.NavigateToOperationProgress)
+            } else {
+                _operationBlocked.value = true
                 _restoreProgress.value = OperationProgress(
                     isFinished = true,
-                    finalSummary = summary,
-                    error = if (failures > 0) failureDetails.joinToString(", ") else null,
-                    elapsedTime = finalElapsedTime,
-                    filesProcessed = successes,
-                    totalFiles = selectedApps.size
+                    error = application.getString(R.string.error_operation_already_running),
+                    finalSummary = application.getString(R.string.summary_operation_already_running)
                 )
-                notificationRepository.showOperationFinishedNotification(operationRestore, failures == 0, summary)
-
-            } catch (e: Exception) {
-                _restoreProgress.value = _restoreProgress.value.copy(
-                    isFinished = true,
-                    error = application.getString(R.string.error_fatal_with_message, e.message ?: ""),
-                    finalSummary = application.getString(R.string.error_fatal_with_message, e.message ?: ""),
-                    elapsedTime = (System.currentTimeMillis() - startTime) / 1000
-                )
-                notificationRepository.showOperationFinishedNotification(application.getString(R.string.operation_restore), false, _restoreProgress.value.finalSummary)
-            } finally {
-                passwordFile?.delete()
-                tempRestoreDir?.let { dir -> Shell.cmd("rm -rf '${dir.absolutePath}'").exec() }
-                _isRestoring.value = false
             }
         }
     }
 
-    private fun formatElapsedTime(seconds: Long): String {
-        val hours = java.util.concurrent.TimeUnit.SECONDS.toHours(seconds)
-        val minutes = java.util.concurrent.TimeUnit.SECONDS.toMinutes(seconds) % 60
-        val secs = seconds % 60
-        return if (hours > 0) {
-            String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, secs)
-        } else {
-            String.format(Locale.US, "%02d:%02d", minutes, secs)
-        }
+    fun onDone() {
+        operationWorkRepository.clearFinished(OperationType.RESTORE)
+        _restoreProgress.value = OperationProgress()
     }
 
-    fun onDone() { _restoreProgress.value = OperationProgress() }
+    fun consumeOperationBlocked() {
+        _operationBlocked.value = false
+    }
+
     fun toggleRestoreAppSelection(packageName: String) {
         _backupDetails.update { currentDetails ->
             currentDetails.map { detail ->
                 if (detail.appInfo.packageName == packageName) {
-                    if (_allowDowngrade.value || !detail.isDowngrade) detail.copy(appInfo = detail.appInfo.copy(isSelected = !detail.appInfo.isSelected)) else detail
-                } else detail
+                    if (_allowDowngrade.value || !detail.isDowngrade) {
+                        detail.copy(appInfo = detail.appInfo.copy(isSelected = !detail.appInfo.isSelected))
+                    } else {
+                        detail
+                    }
+                } else {
+                    detail
+                }
             }
         }
     }
 
     fun toggleAllRestoreSelection() {
         _backupDetails.update { currentDetails ->
-            val shouldSelectAll = currentDetails.any { !it.appInfo.isSelected }
+            val selectableDetails = currentDetails.filter { _allowDowngrade.value || !it.isDowngrade }
+            val shouldSelectAll = selectableDetails.any { !it.appInfo.isSelected }
             currentDetails.map { detail ->
                 val canBeSelected = _allowDowngrade.value || !detail.isDowngrade
-                detail.copy(appInfo = detail.appInfo.copy(isSelected = if (shouldSelectAll) canBeSelected else false))
+                detail.copy(appInfo = detail.appInfo.copy(isSelected = shouldSelectAll && canBeSelected))
             }
         }
     }

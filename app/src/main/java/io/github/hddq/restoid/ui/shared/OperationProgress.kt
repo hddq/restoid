@@ -49,11 +49,13 @@ import androidx.compose.ui.unit.dp
 import io.github.hddq.restoid.R
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.delay
+import kotlinx.serialization.Serializable
 
 /**
  * Shared data class for representing the progress of a long-running operation
  * like backup or restore. It now supports multi-stage operations.
  */
+@Serializable
 data class OperationProgress(
     val stageTitle: String = "", // e.g., "Stage 1/2: Restoring Files"
     val stagePercentage: Float = 0f, // progress of the current stage (0.0 to 1.0)

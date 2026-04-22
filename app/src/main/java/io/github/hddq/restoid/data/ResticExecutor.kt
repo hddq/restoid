@@ -4,6 +4,11 @@ import android.content.Context
 import com.topjohnwu.superuser.CallbackList
 import com.topjohnwu.superuser.Shell
 import io.github.hddq.restoid.R
+import io.github.hddq.restoid.util.buildResticOptionFlags
+import io.github.hddq.restoid.util.buildShellEnvironmentPrefix
+import io.github.hddq.restoid.util.isValidEnvironmentVariableName
+import io.github.hddq.restoid.util.isValidResticOptionName
+import io.github.hddq.restoid.util.shellQuote
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -27,7 +32,8 @@ class ResticExecutor(
      * @param password Repository password.
      * @param command The restic command arguments (e.g. "snapshots --json").
      * @param failureMessage Default message if the command fails with empty stderr.
-     * @param env Optional environment variables to prepend.
+     * @param environmentVariables Optional environment variables to prepend.
+     * @param resticOptions Optional restic backend options passed via -o.
      * @param stdoutCallback Optional callback for streaming stdout (e.g., for progress).
      */
     suspend fun execute(
@@ -35,13 +41,22 @@ class ResticExecutor(
         password: String,
         command: String,
         failureMessage: String = context.getString(R.string.restic_executor_failure_command),
-        env: String = "",
+        environmentVariables: Map<String, String> = emptyMap(),
+        resticOptions: Map<String, String> = emptyMap(),
         stdoutCallback: CallbackList<String>? = null
     ): Result<String> {
         return withContext(Dispatchers.IO) {
             val state = binaryManager.resticState.value
             if (state !is ResticState.Installed) {
                 return@withContext Result.failure(Exception(context.getString(R.string.restic_executor_failure_not_ready)))
+            }
+
+            if (environmentVariables.keys.any { !isValidEnvironmentVariableName(it) }) {
+                return@withContext Result.failure(Exception(context.getString(R.string.restic_executor_failure_invalid_env_name)))
+            }
+
+            if (resticOptions.keys.any { !isValidResticOptionName(it) }) {
+                return@withContext Result.failure(Exception(context.getString(R.string.restic_executor_failure_invalid_option_name)))
             }
 
             val resticPath = state.path
@@ -51,12 +66,18 @@ class ResticExecutor(
             try {
                 passwordFile.writeText(password)
 
+                val envPrefix = buildShellEnvironmentPrefix(environmentVariables)
+                val optionFlags = buildResticOptionFlags(resticOptions)
+
                 // Construct the full command
                 // We use RESTIC_PASSWORD_FILE env var to avoid leaking password in process list
                 val fullCommand = buildString {
-                    if (env.isNotEmpty()) append("$env ")
-                    append("RESTIC_PASSWORD_FILE='${passwordFile.absolutePath}' ")
-                    append("$resticPath -r '$repoPath' $command")
+                    if (envPrefix.isNotEmpty()) append(envPrefix).append(' ')
+                    append("RESTIC_PASSWORD_FILE=").append(shellQuote(passwordFile.absolutePath)).append(' ')
+                    append(shellQuote(resticPath)).append(' ')
+                    if (optionFlags.isNotEmpty()) append(optionFlags).append(' ')
+                    append("-r ").append(shellQuote(repoPath)).append(' ')
+                    append(command)
                 }
 
                 val shellTask = Shell.cmd(fullCommand)

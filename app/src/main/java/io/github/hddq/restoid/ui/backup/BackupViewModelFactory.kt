@@ -4,15 +4,15 @@ import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import io.github.hddq.restoid.data.*
+import io.github.hddq.restoid.work.OperationWorkRepository
 
 class BackupViewModelFactory(
     private val application: Application,
     private val repositoriesRepository: RepositoriesRepository,
-    private val resticBinaryManager: ResticBinaryManager, // Injected
-    private val resticRepository: ResticRepository,
-    private val notificationRepository: NotificationRepository,
+    private val resticBinaryManager: ResticBinaryManager,
     private val appInfoRepository: AppInfoRepository,
-    private val preferencesRepository: PreferencesRepository
+    private val preferencesRepository: PreferencesRepository,
+    private val operationWorkRepository: OperationWorkRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(BackupViewModel::class.java)) {
@@ -21,10 +21,9 @@ class BackupViewModelFactory(
                 application,
                 repositoriesRepository,
                 resticBinaryManager,
-                resticRepository,
-                notificationRepository,
                 appInfoRepository,
-                preferencesRepository
+                preferencesRepository,
+                operationWorkRepository
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

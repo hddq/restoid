@@ -27,8 +27,15 @@ import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.ui.components.PasswordDialog
+import io.github.hddq.restoid.ui.components.UsernamePasswordDialog
+import io.github.hddq.restoid.ui.home.HomeAuthFailure
+import io.github.hddq.restoid.ui.home.HomeCredentialPrompt
 import io.github.hddq.restoid.ui.home.HomeUiState
 import io.github.hddq.restoid.ui.home.SnapshotWithMetadata
+
+private fun homeCredentialsSaveLabel(prompt: HomeCredentialPrompt): Int {
+    return if (prompt == HomeCredentialPrompt.S3_CREDENTIALS) R.string.action_save_passwords else R.string.save_credentials
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,7 +45,17 @@ fun HomeScreen(
     uiState: HomeUiState,
     onRefresh: () -> Unit,
     onPasswordEntered: (String, Boolean) -> Unit,
+    onSftpPasswordEntered: (String, Boolean) -> Unit,
+    onRestCredentialsEntered: (String, String, Boolean) -> Unit,
+    onS3CredentialsEntered: (String, String, Boolean) -> Unit,
+    onRetryRepositoryPasswordEntry: () -> Unit,
+    onRetrySftpPasswordEntry: () -> Unit,
+    onRetryRestCredentialsEntry: () -> Unit,
+    onRetryS3CredentialsEntry: () -> Unit,
     onDismissPasswordDialog: () -> Unit,
+    onDismissSftpPasswordDialog: () -> Unit,
+    onDismissRestCredentialsDialog: () -> Unit,
+    onDismissS3CredentialsDialog: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -58,7 +75,7 @@ fun HomeScreen(
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold,
             )
-            val isMaintenanceEnabled = uiState.selectedRepo != null && uiState.hasPasswordForSelectedRepo
+            val isMaintenanceEnabled = uiState.isRepoReady
             OutlinedButton(
                 onClick = onMaintenanceClick,
                 enabled = isMaintenanceEnabled,
@@ -102,12 +119,80 @@ fun HomeScreen(
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                     }
                     uiState.error != null -> {
+                        val errorMessage = uiState.error
                         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                             Text(
-                                text = stringResource(R.string.error_with_message, uiState.error ?: ""),
+                                text = stringResource(R.string.error_with_message, errorMessage),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.error
                             )
+
+                            when (uiState.authFailure) {
+                                HomeAuthFailure.REPOSITORY_PASSWORD -> {
+                                    Spacer(Modifier.height(12.dp))
+                                    Button(onClick = onRetryRepositoryPasswordEntry) {
+                                        Text(stringResource(R.string.action_enter_password_again))
+                                    }
+                                }
+
+                                HomeAuthFailure.SFTP_PASSWORD -> {
+                                    Spacer(Modifier.height(12.dp))
+                                    Button(onClick = onRetrySftpPasswordEntry) {
+                                        Text(stringResource(R.string.action_enter_sftp_password_again))
+                                    }
+                                }
+
+                                HomeAuthFailure.REST_CREDENTIALS -> {
+                                    Spacer(Modifier.height(12.dp))
+                                    Button(onClick = onRetryRestCredentialsEntry) {
+                                        Text(stringResource(R.string.action_enter_rest_credentials_again))
+                                    }
+                                }
+
+                                HomeAuthFailure.S3_CREDENTIALS -> {
+                                    Spacer(Modifier.height(12.dp))
+                                    Button(onClick = onRetryS3CredentialsEntry) {
+                                        Text(stringResource(R.string.action_enter_s3_credentials_again))
+                                    }
+                                }
+
+                                null -> Unit
+                            }
+                        }
+                    }
+                    uiState.openPrompt != null -> {
+                        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                            Text(
+                                text = stringResource(R.string.home_open_needed_message),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            when (uiState.openPrompt) {
+                                HomeCredentialPrompt.REPOSITORY_PASSWORD -> {
+                                    Button(onClick = onRetryRepositoryPasswordEntry) {
+                                        Text(stringResource(R.string.action_open_repository))
+                                    }
+                                }
+
+                                HomeCredentialPrompt.SFTP_PASSWORD -> {
+                                    Button(onClick = onRetrySftpPasswordEntry) {
+                                        Text(stringResource(R.string.action_open_sftp))
+                                    }
+                                }
+
+                                HomeCredentialPrompt.REST_CREDENTIALS -> {
+                                    Button(onClick = onRetryRestCredentialsEntry) {
+                                        Text(stringResource(R.string.action_open_rest))
+                                    }
+                                }
+
+                                HomeCredentialPrompt.S3_CREDENTIALS -> {
+                                    Button(onClick = onRetryS3CredentialsEntry) {
+                                        Text(stringResource(R.string.action_open_s3))
+                                    }
+                                }
+                            }
                         }
                     }
                     uiState.snapshotsWithMetadata.isEmpty() -> {
@@ -127,8 +212,8 @@ fun HomeScreen(
                                     uiState.snapshotsWithMetadata.size,
                                     uiState.snapshotsWithMetadata.size
                                 ),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.padding(bottom = 8.dp)
                             )
                             Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
@@ -148,11 +233,48 @@ fun HomeScreen(
     }
 
     if (uiState.showPasswordDialogFor != null) {
+        val repositoryKey = uiState.showPasswordDialogFor
         PasswordDialog(
             title = stringResource(R.string.repository_password_required),
-            message = stringResource(R.string.enter_password_for_repository, uiState.showPasswordDialogFor ?: ""),
+            message = stringResource(R.string.enter_password_for_repository, repositoryKey),
             onPasswordEntered = onPasswordEntered,
             onDismiss = onDismissPasswordDialog
+        )
+    }
+
+    if (uiState.showSftpPasswordDialogFor != null) {
+        val repositoryKey = uiState.showSftpPasswordDialogFor
+        PasswordDialog(
+            title = stringResource(R.string.sftp_password_required),
+            message = stringResource(R.string.enter_sftp_password_for_repository, repositoryKey),
+            onPasswordEntered = onSftpPasswordEntered,
+            onDismiss = onDismissSftpPasswordDialog
+        )
+    }
+
+    if (uiState.showRestCredentialsDialogFor != null) {
+        val repositoryKey = uiState.showRestCredentialsDialogFor
+        UsernamePasswordDialog(
+            title = stringResource(R.string.rest_credentials_required),
+            message = stringResource(R.string.enter_rest_credentials_for_repository, repositoryKey),
+            usernameLabel = stringResource(R.string.label_rest_username),
+            passwordLabel = stringResource(R.string.label_rest_password),
+            onCredentialsEntered = onRestCredentialsEntered,
+            onDismiss = onDismissRestCredentialsDialog,
+            saveCredentialsLabel = stringResource(homeCredentialsSaveLabel(HomeCredentialPrompt.REST_CREDENTIALS))
+        )
+    }
+
+    if (uiState.showS3CredentialsDialogFor != null) {
+        val repositoryKey = uiState.showS3CredentialsDialogFor
+        UsernamePasswordDialog(
+            title = stringResource(R.string.s3_credentials_required),
+            message = stringResource(R.string.enter_s3_credentials_for_repository, repositoryKey),
+            usernameLabel = stringResource(R.string.label_s3_access_key_id),
+            passwordLabel = stringResource(R.string.label_s3_secret_access_key),
+            onCredentialsEntered = onS3CredentialsEntered,
+            onDismiss = onDismissS3CredentialsDialog,
+            saveCredentialsLabel = stringResource(homeCredentialsSaveLabel(HomeCredentialPrompt.S3_CREDENTIALS))
         )
     }
 }

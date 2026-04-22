@@ -99,10 +99,10 @@ fun SnapshotDetailsScreen(
                                     backupDetails.size,
                                     backupDetails.size
                                 ),
-                                style = MaterialTheme.typography.titleMedium
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(bottom = 8.dp)
                             )
-                        }
-                        item {
                             Card(
                                 colors = CardDefaults.cardColors(
                                     containerColor = MaterialTheme.colorScheme.surfaceContainer

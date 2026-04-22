@@ -137,6 +137,11 @@ class ResticBinaryManager(private val context: Context) {
     }
 
     suspend fun fetchLatestResticVersion() {
+        if (BuildConfig.IS_BUNDLED) {
+            _latestResticVersion.value = null
+            return
+        }
+
         withContext(Dispatchers.IO) {
             try {
                 _latestResticVersion.value = getLatestResticVersionFromGitHub()

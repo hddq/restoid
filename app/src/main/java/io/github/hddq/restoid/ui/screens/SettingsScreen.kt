@@ -36,6 +36,7 @@ fun SettingsScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 viewModel.checkNotificationPermission()
+                viewModel.refreshBatteryOptimizationStatus()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -70,10 +71,26 @@ fun SettingsScreen(
         AddRepositoryDialog(
             uiState = addRepoUiState,
             onDismiss = { viewModel.onNewRepoDialogDismiss() },
+            onBackendTypeChange = { viewModel.onNewRepoBackendTypeChanged(it) },
+            onPathChange = { viewModel.onNewRepoPathChanged(it) },
             onPasswordChange = { viewModel.onNewRepoPasswordChanged(it) },
+            onSftpPasswordChange = { viewModel.onNewRepoSftpPasswordChanged(it) },
+            onS3AccessKeyIdChange = { viewModel.onNewRepoS3AccessKeyIdChanged(it) },
+            onS3SecretAccessKeyChange = { viewModel.onNewRepoS3SecretAccessKeyChanged(it) },
+            onRestUsernameChange = { viewModel.onNewRepoRestUsernameChanged(it) },
+            onRestPasswordChange = { viewModel.onNewRepoRestPasswordChanged(it) },
+            onEnvironmentVariablesChange = { viewModel.onNewRepoEnvironmentVariablesChanged(it) },
             onSavePasswordChange = { viewModel.onSavePasswordChanged(it) },
             onConfirm = { viewModel.addRepository() },
             onSelectPath = { directoryPickerLauncher.launch(null) }
+        )
+    }
+
+    addRepoUiState.sftpServerTrustInfo?.let { trustInfo ->
+        SftpServerTrustDialog(
+            trustInfo = trustInfo,
+            onConfirm = { viewModel.onSftpTrustDialogConfirm() },
+            onDismiss = { viewModel.onSftpTrustDialogDismiss() }
         )
     }
 
@@ -97,6 +114,7 @@ fun SettingsScreen(
         }
         item { DependencySettings(viewModel = viewModel) }
         item { RepositorySettings(viewModel = viewModel) }
+        item { OptionsSettings(viewModel = viewModel) }
         item { AboutSettings(onNavigateToLicenses = onNavigateToLicenses) }
     }
 }
