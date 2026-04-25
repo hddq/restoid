@@ -50,7 +50,7 @@ class RepositoriesRepository(
     private companion object {
         private const val MISSING_S3_BUCKET_ERROR = "The specified bucket does not exist"
         // Timeout for S3 repo existence check — restic retries indefinitely when bucket is missing
-        private const val S3_CHECK_TIMEOUT_SECONDS = 10
+        private const val S3_CHECK_TIMEOUT_SECONDS = 5
     }
 
     private val prefs = context.getSharedPreferences("repositories", Context.MODE_PRIVATE)
@@ -637,14 +637,11 @@ class RepositoriesRepository(
                         )
                     } else {
                         // exit code 124 = killed by timeout, or stderr explicitly says bucket missing
+                        var isMissingS3Bucket = false
                         if (backendType == RepositoryBackendType.S3) {
                             val timedOut = checkResult.code == 124
                             val bucketMissing = checkErrorOutput.contains(MISSING_S3_BUCKET_ERROR, ignoreCase = true)
-                            if (timedOut || bucketMissing) {
-                                return@withContext AddRepositoryState.Error(
-                                    context.getString(R.string.repo_error_s3_bucket_not_found)
-                                )
-                            }
+                            isMissingS3Bucket = timedOut || bucketMissing
                         }
 
                         val initResult = Shell.cmd(buildString {
@@ -670,7 +667,11 @@ class RepositoriesRepository(
                                 restPassword
                             )
                         } else {
-                            AddRepositoryState.Error(context.getString(R.string.repo_error_failed_initialize))
+                            if (isMissingS3Bucket) {
+                                AddRepositoryState.Error(context.getString(R.string.repo_error_s3_bucket_not_found))
+                            } else {
+                                AddRepositoryState.Error(context.getString(R.string.repo_error_failed_initialize))
+                            }
                         }
                     }
                 }
