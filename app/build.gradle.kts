@@ -1,16 +1,16 @@
 import java.io.File
 
 // This task builds the restic binary from the submodule for each required Android architecture.
-tasks.register<Exec>("buildResticForBundledFlavor") {
+tasks.register<Exec>("buildBundledRestic") {
     group = "restic"
     description = "Builds restic binary from submodule using bash script"
 
     inputs.dir(rootProject.file("restic"))
-    outputs.dir(file("src/bundled/jniLibs"))
+    outputs.dir(file("src/main/jniLibs"))
 
     onlyIf("binaries not yet built") {
-        !file("src/bundled/jniLibs/arm64-v8a/librestic.so").exists() ||
-                !file("src/bundled/jniLibs/x86_64/librestic.so").exists()
+        !file("src/main/jniLibs/arm64-v8a/librestic.so").exists() ||
+                !file("src/main/jniLibs/x86_64/librestic.so").exists()
     }
 
     workingDir = rootProject.projectDir
@@ -51,9 +51,6 @@ android {
     namespace = "io.github.hddq.restoid"
     compileSdk = 36
     buildToolsVersion = "36.0.0"
-
-    flavorDimensions += "distribution"
-
     defaultConfig {
         applicationId = "io.github.hddq.restoid"
         minSdk = 33
@@ -66,19 +63,6 @@ android {
         ndk {
             abiFilters.add("arm64-v8a")
             abiFilters.add("x86_64")
-        }
-    }
-
-    productFlavors {
-        create("vanilla") {
-            dimension = "distribution"
-            // Removed versionNameSuffix
-            buildConfigField("boolean", "IS_BUNDLED", "false")
-        }
-        create("bundled") {
-            dimension = "distribution"
-            // Removed versionNameSuffix
-            buildConfigField("boolean", "IS_BUNDLED", "true")
         }
     }
 
@@ -176,7 +160,6 @@ dependencies {
     implementation(libs.libsu.core)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
-    implementation(libs.apache.commons.compress)
     implementation(libs.androidx.security.crypto)
     implementation(libs.coil.compose)
     implementation(libs.kotlinx.serialization.json)
@@ -194,10 +177,6 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
 
-// Hooks our new task into the build process for the 'bundled' flavor.
-// This ensures restic is built before the app is assembled.
-android.applicationVariants.all {
-    if (flavorName == "bundled") {
-        preBuildProvider.get().dependsOn(tasks.named("buildResticForBundledFlavor"))
-    }
+tasks.named("preBuild").configure {
+    dependsOn(tasks.named("buildBundledRestic"))
 }

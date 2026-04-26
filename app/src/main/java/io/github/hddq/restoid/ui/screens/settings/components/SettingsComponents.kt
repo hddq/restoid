@@ -5,36 +5,25 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.shape.CornerSize
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -53,10 +42,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import io.github.hddq.restoid.BuildConfig
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.LocalRepository
 import io.github.hddq.restoid.data.NotificationPermissionState
@@ -361,188 +348,53 @@ fun SelectableRepositoryRow(
 }
 
 @Composable
-fun SplitButton(
-    onClick: () -> Unit,
-    onSecondaryClick: () -> Unit,
-    text: String
-) {
-    val shape = RoundedCornerShape(percent = 50)
-    Row(Modifier.height(IntrinsicSize.Min)) {
-        Button(
-            onClick = onClick,
-            shape = shape.copy(topEnd = CornerSize(0.dp), bottomEnd = CornerSize(0.dp)),
-            contentPadding = ButtonDefaults.ContentPadding
-        ) {
-            Text(text)
-        }
-        Divider(
-            modifier = Modifier
-                .fillMaxHeight()
-                .width(1.dp),
-            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f)
-        )
-        Button(
-            onClick = onSecondaryClick,
-            shape = shape.copy(topStart = CornerSize(0.dp), bottomStart = CornerSize(0.dp))
-        ) {
-            Icon(Icons.Default.ArrowDropDown, contentDescription = stringResource(R.string.cd_more_download_options))
-        }
-    }
-}
-
-
-@Composable
-fun ResticDependencyRow(
-    state: ResticState,
-    stableResticVersion: String,
-    latestResticVersion: String?,
-    onDownloadClick: () -> Unit,
-    onDownloadLatestClick: () -> Unit
-) {
+fun ResticDependencyRow(state: ResticState) {
     AnimatedContent(targetState = state, label = "ResticStatusAnimation") { targetState ->
-        Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier.weight(1f)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    val isUpdateAvailable = (targetState as? ResticState.Installed)?.version?.let {
-                        // A simple string comparison is often sufficient for semantic versions like this
-                        it.isNotEmpty() && it != "unknown" && it < stableResticVersion
-                    } == true
-
-                    val icon: ImageVector
-                    val iconColor: Color
-
-                    when {
-                        isUpdateAvailable -> {
-                            icon = Icons.Default.CloudDownload
-                            iconColor = MaterialTheme.colorScheme.primary
-                        }
-                        targetState is ResticState.Installed -> {
-                            icon = Icons.Default.CheckCircle
-                            iconColor = MaterialTheme.colorScheme.primary
-                        }
-                        targetState is ResticState.Error -> {
-                            icon = Icons.Default.Error
-                            iconColor = MaterialTheme.colorScheme.error
-                        }
-                        else -> {
-                            icon = Icons.Default.CloudDownload
-                            iconColor = LocalContentColor.current
-                        }
-                    }
-
-                    Icon(imageVector = icon, contentDescription = null, modifier = Modifier.padding(end = 16.dp), tint = iconColor)
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.restic_binary), style = MaterialTheme.typography.bodyLarge)
-                        val supportingText = when (targetState) {
-                            ResticState.Idle -> stringResource(R.string.restic_checking_status)
-                            ResticState.NotInstalled -> if (BuildConfig.IS_BUNDLED) stringResource(R.string.restic_bundled_will_extract) else stringResource(R.string.restic_required_for_backups)
-                            is ResticState.Downloading -> stringResource(R.string.restic_downloading)
-                            ResticState.Extracting -> stringResource(R.string.restic_extracting_binary)
-                            is ResticState.Installed -> targetState.fullVersionOutput
-                            is ResticState.Error -> stringResource(R.string.restic_error_with_message, targetState.message)
-                        }
-                        Text(
-                            text = supportingText,
-                            style = MaterialTheme.typography.bodySmall,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        if (isUpdateAvailable) {
-                            Text(
-                                text = stringResource(R.string.restic_update_available, stableResticVersion),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
+                val icon: ImageVector
+                val iconColor: Color
 
                 when (targetState) {
-                    ResticState.NotInstalled, is ResticState.Error -> {
-                        if (!BuildConfig.IS_BUNDLED) {
-                            val isStableLatest = latestResticVersion != null && latestResticVersion == stableResticVersion
-                            val showSplitButton = latestResticVersion != null && !isStableLatest
-
-                            if (showSplitButton) {
-                                var showMenu by remember { mutableStateOf(false) }
-                                Box {
-                                    SplitButton(
-                                        onClick = onDownloadClick,
-                                        onSecondaryClick = { showMenu = true },
-                                        text = if (targetState is ResticState.Error) {
-                                            stringResource(R.string.action_retry)
-                                        } else {
-                                            stringResource(R.string.restic_download_version, stableResticVersion)
-                                        }
-                                    )
-                                    DropdownMenu(
-                                        expanded = showMenu,
-                                        onDismissRequest = { showMenu = false }
-                                    ) {
-                                        DropdownMenuItem(
-                                            text = { Text(stringResource(R.string.restic_download_latest, latestResticVersion ?: "")) },
-                                            onClick = {
-                                                onDownloadLatestClick()
-                                                showMenu = false
-                                            }
-                                        )
-                                    }
-                                }
-                            } else {
-                                val buttonText = when {
-                                    targetState is ResticState.Error -> stringResource(R.string.action_retry)
-                                    latestResticVersion != null -> stringResource(R.string.restic_download_latest, latestResticVersion)
-                                    else -> stringResource(R.string.restic_download_version, stableResticVersion)
-                                }
-                                val clickAction = when {
-                                    targetState is ResticState.Error -> onDownloadClick
-                                    latestResticVersion != null -> onDownloadLatestClick
-                                    else -> onDownloadClick
-                                }
-                                Button(onClick = clickAction) {
-                                    Text(buttonText)
-                                }
-                            }
-                        }
-                    }
                     is ResticState.Installed -> {
-                        val isUpdateAvailable = targetState.version.let {
-                            it.isNotEmpty() && it != "unknown" && it < stableResticVersion
-                        }
-                        if (isUpdateAvailable && !BuildConfig.IS_BUNDLED) {
-                            Button(onClick = onDownloadClick) {
-                                Text(stringResource(R.string.action_update))
-                            }
-                        }
+                        icon = Icons.Default.CheckCircle
+                        iconColor = MaterialTheme.colorScheme.primary
                     }
-                    ResticState.Extracting -> CircularProgressIndicator()
-                    is ResticState.Downloading -> {
-                        Text(
-                            text = "${(targetState.progress * 100).toInt()}%",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                    is ResticState.Error -> {
+                        icon = Icons.Default.Error
+                        iconColor = MaterialTheme.colorScheme.error
                     }
-                    ResticState.Idle -> {}
+                    ResticState.Idle -> {
+                        icon = Icons.Default.CheckCircle
+                        iconColor = LocalContentColor.current
+                    }
                 }
-            }
 
-            if (targetState is ResticState.Downloading) {
-                LinearProgressIndicator(
-                    progress = { targetState.progress },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Icon(imageVector = icon, contentDescription = null, modifier = Modifier.padding(end = 16.dp), tint = iconColor)
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.restic_binary), style = MaterialTheme.typography.bodyLarge)
+                    val supportingText = when (targetState) {
+                        ResticState.Idle -> stringResource(R.string.restic_checking_status)
+                        is ResticState.Installed -> targetState.fullVersionOutput
+                        is ResticState.Error -> stringResource(R.string.restic_error_with_message, targetState.message)
+                    }
+                    Text(
+                        text = supportingText,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
     }

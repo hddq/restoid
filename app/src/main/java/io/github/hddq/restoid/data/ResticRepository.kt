@@ -269,9 +269,7 @@ class ResticRepository(
         if (environmentVariables.keys.any { !isValidEnvironmentVariableName(it) }) return
         if (resticOptions.keys.any { !isValidResticOptionName(it) }) return
 
-        val resticFile = File(context.filesDir, "restic")
-        // Simple check if binary exists (we assume it is executable if it exists at this point)
-        if (!resticFile.exists()) return
+        val resticPath = executor.binaryPath() ?: return
 
         var passwordFile: File? = null
         try {
@@ -293,7 +291,7 @@ class ResticRepository(
                 append("cd ").append(shellQuote(metadataDir.absolutePath)).append(" && ")
                 if (envPrefix.isNotEmpty()) append(envPrefix).append(' ')
                 append("RESTIC_PASSWORD_FILE=").append(shellQuote(passwordFile.absolutePath)).append(' ')
-                append(shellQuote(resticFile.absolutePath)).append(' ')
+                append(shellQuote(resticPath)).append(' ')
                 if (optionFlags.isNotEmpty()) append(optionFlags).append(' ')
                 append("-r ").append(shellQuote(repoPath)).append(' ')
                 append("backup ").append(shellQuote(repositoryId)).append(" --json ").append(tagFlags)

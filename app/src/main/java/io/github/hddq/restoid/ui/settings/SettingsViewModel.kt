@@ -59,10 +59,7 @@ class SettingsViewModel(
 ) : ViewModel() {
 
     val rootState = rootRepository.rootState
-    // Use Manager for binary state
     val resticState = resticBinaryManager.resticState
-    val latestResticVersion = resticBinaryManager.latestResticVersion
-    val stableResticVersion: String get() = resticBinaryManager.stableResticVersion
 
     val repositories = repositoriesRepository.repositories
     val selectedRepository = repositoriesRepository.selectedRepository
@@ -84,7 +81,7 @@ class SettingsViewModel(
 
     init {
         viewModelScope.launch {
-            resticBinaryManager.fetchLatestResticVersion()
+            resticBinaryManager.checkResticStatus()
             refreshBatteryOptimizationStatus()
         }
     }
@@ -158,14 +155,6 @@ class SettingsViewModel(
     fun refreshBatteryOptimizationStatus() {
         val powerManager = context.getSystemService(android.content.Context.POWER_SERVICE) as PowerManager
         _isIgnoringBatteryOptimizations.value = powerManager.isIgnoringBatteryOptimizations(context.packageName)
-    }
-
-    fun downloadRestic() {
-        viewModelScope.launch { resticBinaryManager.downloadAndInstallRestic() }
-    }
-
-    fun downloadLatestRestic() {
-        viewModelScope.launch { resticBinaryManager.downloadAndInstallLatestRestic() }
     }
 
     fun selectRepository(key: String) = repositoriesRepository.selectRepository(key)

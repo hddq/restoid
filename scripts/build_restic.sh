@@ -7,7 +7,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 RESTIC_DIR="$REPO_ROOT/restic"
-OUTPUT_BASE="$REPO_ROOT/app/src/bundled/jniLibs"
+OUTPUT_BASE="$REPO_ROOT/app/src/main/jniLibs"
 GO_BIN="${1:-go}"
 
 declare -A ABI_TO_GOARCH=(

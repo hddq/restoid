@@ -72,7 +72,7 @@ jobs:
           ANDROID_SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          ./gradlew --no-daemon clean assembleVanillaRelease assembleBundledRelease
+          ./gradlew --no-daemon clean assembleRelease
 
       - name: Collect release APKs
         id: collect_apks

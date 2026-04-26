@@ -26,6 +26,8 @@ class ResticExecutor(
     private val binaryManager: ResticBinaryManager
 ) {
 
+    fun binaryPath(): String? = binaryManager.getBinaryPath()
+
     /**
      * Executes a restic command.
      * @param repoPath Path to the repository.
@@ -60,7 +62,6 @@ class ResticExecutor(
             }
 
             val resticPath = state.path
-            // Create a secure temp file for the password
             val passwordFile = File.createTempFile("restic-pass", ".tmp", context.cacheDir)
 
             try {

@@ -24,7 +24,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import io.github.hddq.restoid.BuildConfig
 import io.github.hddq.restoid.R
 
 @Composable
@@ -34,11 +33,8 @@ fun AboutSettings(onNavigateToLicenses: () -> Unit) {
         try {
             val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
             val versionName = packageInfo.versionName ?: context.getString(R.string.not_available)
-            val versionCode =
-                packageInfo.longVersionCode
-            // Added flavor here, capitalizing it for better looks
-            val flavor = BuildConfig.FLAVOR.replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale.ROOT) else it.toString() }
-            "$versionName ($versionCode) - $flavor"
+            val versionCode = packageInfo.longVersionCode
+            "$versionName ($versionCode)"
         } catch (e: Exception) {
             context.getString(R.string.not_available)
         }

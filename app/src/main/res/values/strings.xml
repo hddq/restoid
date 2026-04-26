@@ -199,18 +199,9 @@
     <string name="action_save_password">Save Password</string>
     <string name="action_save_passwords">Save Passwords</string>
     <string name="action_change_password">Change password</string>
-    <string name="cd_more_download_options">More download options</string>
-
     <string name="restic_binary">Restic Binary</string>
     <string name="restic_checking_status">Checking status…</string>
-    <string name="restic_bundled_will_extract">Bundled, will be extracted</string>
-    <string name="restic_required_for_backups">Required for backups</string>
-    <string name="restic_downloading">Downloading…</string>
-    <string name="restic_extracting_binary">Extracting binary…</string>
     <string name="restic_error_with_message">Error: %1$s</string>
-    <string name="restic_update_available">Update to v%1$s available</string>
-    <string name="restic_download_version">Download v%1$s</string>
-    <string name="restic_download_latest">Download latest (v%1$s)</string>
 
     <string name="error_failed_change_password">Failed to change password.</string>
     <string name="dialog_change_password">Change Password</string>
@@ -363,13 +354,6 @@
     <string name="restic_unknown">unknown</string>
     <string name="restic_error_binary_corrupted">Binary corrupted or invalid</string>
     <string name="restic_error_bundled_not_found">Bundled binary not found or not executable.</string>
-    <string name="restic_error_prepare_bundled">Failed to prepare bundled binary: %1$s</string>
-    <string name="restic_error_bundled_native_lib_not_found">Bundled restic binary not found in native library directory</string>
-    <string name="restic_error_tag_name_missing">tag_name not found in GitHub API response</string>
-    <string name="restic_error_fetch_latest">Could not fetch latest version: %1$s</string>
-    <string name="restic_error_download_not_supported_bundled">Download is not supported in the bundled flavor.</string>
-    <string name="restic_error_unsupported_architecture">Unsupported device architecture</string>
-    <string name="restic_error_unknown">An unknown error occurred</string>
 
     <string name="restic_failure_load_snapshots">Failed to load snapshots</string>
     <string name="restic_failure_check_repository">Failed to check repository</string>
