@@ -48,6 +48,13 @@ class OperationWorkRepository(
         )
     }
 
+    suspend fun enqueueRunTasks(request: RunTasksWorkRequest): Boolean {
+        return enqueueOperation(
+            operationType = OperationType.RUN_TASKS,
+            requestIdProvider = { requestStore.saveRunTasksRequest(request) }
+        )
+    }
+
     suspend fun enqueueMaintenance(request: MaintenanceWorkRequest): Boolean {
         return enqueueOperation(
             operationType = OperationType.MAINTENANCE,
@@ -120,6 +127,7 @@ class OperationWorkRepository(
     private fun operationLabel(operationType: OperationType): String {
         return when (operationType) {
             OperationType.BACKUP -> appContext.getString(R.string.operation_backup)
+            OperationType.RUN_TASKS -> appContext.getString(R.string.operation_run_tasks)
             OperationType.RESTORE -> appContext.getString(R.string.operation_restore)
             OperationType.MAINTENANCE -> appContext.getString(R.string.operation_maintenance)
         }

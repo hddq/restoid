@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 enum class OperationType {
     BACKUP,
+    RUN_TASKS,
     RESTORE,
     MAINTENANCE
 }

@@ -30,6 +30,10 @@ class OperationRequestStore(context: Context) {
         return saveRequest(OperationRequestType.MAINTENANCE, json.encodeToString(request))
     }
 
+    fun saveRunTasksRequest(request: RunTasksWorkRequest): String {
+        return saveRequest(OperationRequestType.RUN_TASKS, json.encodeToString(request))
+    }
+
     fun loadBackupRequest(requestId: String): BackupWorkRequest {
         val content = loadRequestContent(requestId, OperationRequestType.BACKUP)
         return json.decodeFromString(content)
@@ -42,6 +46,11 @@ class OperationRequestStore(context: Context) {
 
     fun loadMaintenanceRequest(requestId: String): MaintenanceWorkRequest {
         val content = loadRequestContent(requestId, OperationRequestType.MAINTENANCE)
+        return json.decodeFromString(content)
+    }
+
+    fun loadRunTasksRequest(requestId: String): RunTasksWorkRequest {
+        val content = loadRequestContent(requestId, OperationRequestType.RUN_TASKS)
         return json.decodeFromString(content)
     }
 
@@ -76,5 +85,6 @@ class OperationRequestStore(context: Context) {
 enum class OperationRequestType(val fileSuffix: String) {
     BACKUP("backup"),
     RESTORE("restore"),
-    MAINTENANCE("maintenance")
+    MAINTENANCE("maintenance"),
+    RUN_TASKS("run_tasks")
 }

@@ -9,7 +9,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Build
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -41,7 +40,6 @@ private fun homeCredentialsSaveLabel(prompt: HomeCredentialPrompt): Int {
 @Composable
 fun HomeScreen(
     onSnapshotClick: (String) -> Unit,
-    onMaintenanceClick: () -> Unit,
     uiState: HomeUiState,
     onRefresh: () -> Unit,
     onPasswordEntered: (String, Boolean) -> Unit,
@@ -75,16 +73,6 @@ fun HomeScreen(
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold,
             )
-            val isMaintenanceEnabled = uiState.isRepoReady
-            FilledTonalButton(
-                onClick = onMaintenanceClick,
-                enabled = isMaintenanceEnabled,
-                colors = ButtonDefaults.filledTonalButtonColors(contentColor = MaterialTheme.colorScheme.primary)
-            ) {
-                Icon(Icons.Default.Build, contentDescription = stringResource(R.string.maintenance_button))
-                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                Text(stringResource(R.string.maintenance_button))
-            }
         }
         Spacer(Modifier.height(24.dp))
 

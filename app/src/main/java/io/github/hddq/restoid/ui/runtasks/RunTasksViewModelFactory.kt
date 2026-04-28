@@ -1,29 +1,32 @@
-package io.github.hddq.restoid.ui.maintenance
+package io.github.hddq.restoid.ui.runtasks
 
-import android.content.Context
+import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import io.github.hddq.restoid.data.AppInfoRepository
 import io.github.hddq.restoid.data.PreferencesRepository
 import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.ResticBinaryManager
 import io.github.hddq.restoid.work.OperationWorkRepository
 
-class MaintenanceViewModelFactory(
-    private val context: Context,
+class RunTasksViewModelFactory(
+    private val application: Application,
     private val repositoriesRepository: RepositoriesRepository,
     private val resticBinaryManager: ResticBinaryManager,
+    private val appInfoRepository: AppInfoRepository,
     private val preferencesRepository: PreferencesRepository,
     private val operationWorkRepository: OperationWorkRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(MaintenanceViewModel::class.java)) {
+        if (modelClass.isAssignableFrom(RunTasksViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return MaintenanceViewModel(
-                context,
-                repositoriesRepository,
-                resticBinaryManager,
-                preferencesRepository,
-                operationWorkRepository
+            return RunTasksViewModel(
+                application = application,
+                repositoriesRepository = repositoriesRepository,
+                resticBinaryManager = resticBinaryManager,
+                appInfoRepository = appInfoRepository,
+                preferencesRepository = preferencesRepository,
+                operationWorkRepository = operationWorkRepository
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

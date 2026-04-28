@@ -49,6 +49,7 @@ fun OperationProgressScreen(
 
     val operationTypeLabel = when (state.operationType) {
         OperationType.BACKUP -> stringResource(R.string.operation_backup)
+        OperationType.RUN_TASKS -> stringResource(R.string.operation_run_tasks)
         OperationType.RESTORE -> stringResource(R.string.operation_restore)
         OperationType.MAINTENANCE -> stringResource(R.string.operation_maintenance)
         null -> ""

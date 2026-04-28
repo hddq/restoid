@@ -2,7 +2,7 @@ package io.github.hddq.restoid.data
 
 import android.content.Context
 import io.github.hddq.restoid.ui.backup.BackupTypes
-import io.github.hddq.restoid.ui.maintenance.MaintenanceUiState
+import io.github.hddq.restoid.ui.runtasks.RunTasksMaintenanceConfig
 import io.github.hddq.restoid.ui.restore.RestoreTypes
 
 class PreferencesRepository(context: Context) {
@@ -13,7 +13,7 @@ class PreferencesRepository(context: Context) {
     }
 
     // Maintenance Preferences
-    fun saveMaintenanceState(state: MaintenanceUiState) {
+    fun saveMaintenanceState(state: RunTasksMaintenanceConfig) {
         with(prefs.edit()) {
             putBoolean("maintenance_checkRepo", state.checkRepo)
             putBoolean("maintenance_pruneRepo", state.pruneRepo)
@@ -28,8 +28,8 @@ class PreferencesRepository(context: Context) {
         }
     }
 
-    fun loadMaintenanceState(): MaintenanceUiState {
-        return MaintenanceUiState(
+    fun loadMaintenanceState(): RunTasksMaintenanceConfig {
+        return RunTasksMaintenanceConfig(
             checkRepo = prefs.getBoolean("maintenance_checkRepo", true),
             pruneRepo = prefs.getBoolean("maintenance_pruneRepo", false),
             unlockRepo = prefs.getBoolean("maintenance_unlockRepo", false),

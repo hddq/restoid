@@ -54,6 +54,19 @@ class HeavyOperationWorker(
                     runner.run(request, notifier::onProgress, shouldStop)
                 }
 
+                OperationType.RUN_TASKS -> {
+                    val request = app.operationRequestStore.loadRunTasksRequest(requestId)
+                    val runner = RunTasksOperationRunner(
+                        context = applicationContext,
+                        repositoriesRepository = app.repositoriesRepository,
+                        resticBinaryManager = app.resticBinaryManager,
+                        resticRepository = app.resticRepository,
+                        appInfoRepository = app.appInfoRepository,
+                        operationLockManager = app.operationLockManager
+                    )
+                    runner.run(request, notifier::onProgress, shouldStop)
+                }
+
                 OperationType.RESTORE -> {
                     val request = app.operationRequestStore.loadRestoreRequest(requestId)
                     val runner = RestoreOperationRunner(
@@ -136,6 +149,7 @@ class HeavyOperationWorker(
     private fun operationName(operationType: OperationType): String {
         return when (operationType) {
             OperationType.BACKUP -> applicationContext.getString(R.string.operation_backup)
+            OperationType.RUN_TASKS -> applicationContext.getString(R.string.operation_run_tasks)
             OperationType.RESTORE -> applicationContext.getString(R.string.operation_restore)
             OperationType.MAINTENANCE -> applicationContext.getString(R.string.operation_maintenance)
         }

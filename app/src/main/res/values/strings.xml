@@ -4,6 +4,7 @@
     <string name="screen_home">Home</string>
     <string name="screen_settings">Settings</string>
     <string name="screen_backup">Backup</string>
+    <string name="screen_run_tasks">Run Tasks</string>
     <string name="screen_snapshot_details">Snapshot Details</string>
     <string name="screen_restore">Restore</string>
     <string name="screen_licenses">Licenses</string>
@@ -12,6 +13,10 @@
 
     <string name="topbar_new_backup">New Backup</string>
     <string name="topbar_maintenance">Maintenance</string>
+    <string name="topbar_run_tasks">Run Tasks</string>
+    <string name="topbar_backup_config">Backup Configuration</string>
+    <string name="topbar_forget_config">Forget Policy</string>
+    <string name="topbar_check_config">Check Integrity</string>
     <string name="topbar_operation_progress">Operation Progress</string>
     <string name="topbar_open_source_licenses">Open Source Licenses</string>
     <string name="topbar_snapshot_details">Snapshot Details</string>
@@ -26,8 +31,10 @@
     <string name="fab_start_restore">Start Restore</string>
 
     <string name="operation_backup">Backup</string>
+    <string name="operation_run_tasks">Run Tasks</string>
     <string name="operation_restore">Restore</string>
     <string name="operation_maintenance">Maintenance</string>
+    <string name="run_tasks_phase_summary">%1$s:\n%2$s</string>
 
     <string name="backup_types_title">Backup Types</string>
     <string name="backup_type_apk">APK</string>
@@ -48,6 +55,13 @@
 
     <string name="home_title">Restoid</string>
     <string name="maintenance_button">Maintenance</string>
+    <string name="run_tasks_applications">Applications</string>
+    <string name="run_tasks_backup_subtitle">%1$d apps selected - %2$s</string>
+    <string name="run_tasks_forget_snapshots">Forget Snapshots</string>
+    <string name="run_tasks_forget_subtitle">Keep last %1$d, daily %2$d, weekly %3$d, monthly %4$d</string>
+    <string name="run_tasks_check_integrity">Check Integrity</string>
+    <string name="run_tasks_check_metadata_only">Metadata only</string>
+    <string name="run_tasks_check_read_all_data_description">Verify repository data packs in addition to metadata.</string>
     <string name="no_repository_selected">No repository selected. Go to settings to add one.</string>
     <string name="restic_not_available_check_settings">Restic not available. Check settings.</string>
     <string name="error_with_message">Error: %1$s</string>
@@ -293,6 +307,7 @@
     <string name="maintenance_task_successful">%1$s successful:\n%2$s\n\n</string>
     <string name="maintenance_task_failed">%1$s failed:\n%2$s\n\n</string>
     <string name="maintenance_error_one_or_more_failed">One or more tasks failed.</string>
+    <string name="run_tasks_error_one_or_more_failed">One or more run tasks failed.</string>
     <string name="maintenance_error_no_tasks">No tasks selected.</string>
     <string name="maintenance_summary_no_tasks">No maintenance tasks were selected.</string>
 
