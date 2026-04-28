@@ -1,9 +1,12 @@
 package io.github.hddq.restoid
 
 import android.os.Bundle
+import android.os.SystemClock
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import android.content.BroadcastReceiver
 import android.content.Intent
+import android.content.IntentFilter
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.layout.padding
@@ -50,11 +53,22 @@ import io.github.hddq.restoid.data.NotificationRepository
 class MainActivity : FragmentActivity() {
     private companion object {
         const val STATE_APP_UNLOCKED = "state_app_unlocked"
+        const val APP_UNLOCK_BACKGROUND_TIMEOUT_MS = 60_000L
     }
 
     private var isAppUnlocked = false
     private var isContentInitialized = false
+    private var backgroundedAtElapsedRealtimeMs: Long? = null
+    private var isAuthenticationInProgress = false
     private var openOperationProgressOnLaunch by mutableStateOf(false)
+
+    private val screenOffReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: android.content.Context?, intent: Intent?) {
+            if (intent?.action == Intent.ACTION_SCREEN_OFF) {
+                isAppUnlocked = false
+            }
+        }
+    }
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,6 +76,7 @@ class MainActivity : FragmentActivity() {
         val app = applicationContext as RestoidApplication
         isAppUnlocked = savedInstanceState?.getBoolean(STATE_APP_UNLOCKED) ?: false
         openOperationProgressOnLaunch = consumeOpenOperationProgressFlag(intent)
+        registerReceiver(screenOffReceiver, IntentFilter(Intent.ACTION_SCREEN_OFF))
         enableEdgeToEdge()
 
         if (app.preferencesRepository.loadRequireAppUnlock() && !isAppUnlocked) {
@@ -75,6 +90,45 @@ class MainActivity : FragmentActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putBoolean(STATE_APP_UNLOCKED, isAppUnlocked)
         super.onSaveInstanceState(outState)
+    }
+
+    override fun onStart() {
+        super.onStart()
+
+        val app = applicationContext as RestoidApplication
+        if (!app.preferencesRepository.loadRequireAppUnlock()) {
+            backgroundedAtElapsedRealtimeMs = null
+            return
+        }
+
+        if (!isAppUnlocked) {
+            authenticateAndLaunch(app)
+            return
+        }
+
+        val backgroundedAt = backgroundedAtElapsedRealtimeMs
+        backgroundedAtElapsedRealtimeMs = null
+        if (backgroundedAt == null) {
+            return
+        }
+
+        val timeInBackgroundMs = SystemClock.elapsedRealtime() - backgroundedAt
+        if (timeInBackgroundMs >= APP_UNLOCK_BACKGROUND_TIMEOUT_MS) {
+            isAppUnlocked = false
+            authenticateAndLaunch(app)
+        }
+    }
+
+    override fun onDestroy() {
+        unregisterReceiver(screenOffReceiver)
+        super.onDestroy()
+    }
+
+    override fun onStop() {
+        if (!isChangingConfigurations) {
+            backgroundedAtElapsedRealtimeMs = SystemClock.elapsedRealtime()
+        }
+        super.onStop()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -95,10 +149,15 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun authenticateAndLaunch(app: RestoidApplication) {
+        if (isAuthenticationInProgress) {
+            return
+        }
+
         val authenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
         val canAuthenticate = BiometricManager.from(this).canAuthenticate(authenticators)
 
         if (canAuthenticate != BiometricManager.BIOMETRIC_SUCCESS) {
+            isAppUnlocked = true
             launchAppContent(app)
             return
         }
@@ -115,12 +174,14 @@ class MainActivity : FragmentActivity() {
             object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                     super.onAuthenticationSucceeded(result)
+                    isAuthenticationInProgress = false
                     isAppUnlocked = true
                     launchAppContent(app)
                 }
 
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                     super.onAuthenticationError(errorCode, errString)
+                    isAuthenticationInProgress = false
                     if (!isFinishing && !isDestroyed) {
                         finish()
                     }
@@ -128,6 +189,7 @@ class MainActivity : FragmentActivity() {
             }
         )
 
+        isAuthenticationInProgress = true
         biometricPrompt.authenticate(promptInfo)
     }
 
