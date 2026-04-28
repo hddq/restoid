@@ -19,6 +19,7 @@ class RootRepository {
     suspend fun checkRootAccess() {
         _rootState.value = RootState.Checking
         val hasRoot = withContext(Dispatchers.IO) {
+            runCatching { Shell.getCachedShell()?.close() }
             Shell.getShell().isRoot
         }
         _rootState.value = if (hasRoot) RootState.Granted else RootState.Denied

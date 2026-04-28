@@ -7,10 +7,12 @@ import io.github.hddq.restoid.data.*
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.util.isValidEnvironmentVariableName
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class AddRepoUiState(
     val backendType: RepositoryBackendType = RepositoryBackendType.LOCAL,
@@ -81,13 +83,30 @@ class SettingsViewModel(
 
     init {
         viewModelScope.launch {
-            resticBinaryManager.checkResticStatus()
-            refreshBatteryOptimizationStatus()
+            refreshSystemState()
         }
     }
 
     fun requestRootAccess() {
-        viewModelScope.launch { rootRepository.checkRootAccess() }
+        viewModelScope.launch {
+            refreshRootDependentState()
+        }
+    }
+
+    fun refreshSystemState() {
+        viewModelScope.launch {
+            refreshRootDependentState()
+            refreshBatteryOptimizationStatus()
+            checkNotificationPermission()
+        }
+    }
+
+    private suspend fun refreshRootDependentState() {
+        rootRepository.checkRootAccess()
+        withContext(Dispatchers.IO) {
+            resticBinaryManager.checkResticStatus()
+            repositoriesRepository.loadRepositories()
+        }
     }
 
     fun repositoryKey(repository: LocalRepository): String = repositoriesRepository.repositoryKey(repository)
