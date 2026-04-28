@@ -34,7 +34,11 @@ class BackupOperationRunner(
     suspend fun run(
         request: BackupWorkRequest,
         onProgress: (OperationProgress) -> Unit,
-        shouldStop: () -> Boolean = { false }
+        shouldStop: () -> Boolean = { false },
+        stageContext: OperationStageContext = OperationStageContext(
+            completedStagesBefore = 0,
+            totalStages = 3
+        )
     ): OperationRunResult {
         fun throwIfCancelled() {
             if (shouldStop()) {
@@ -100,7 +104,15 @@ class BackupOperationRunner(
                 onProgress(progressState)
             }
 
-            emitStageProgress(context.getString(R.string.backup_stage_preparing, currentStage, totalStages), 0f, 0f)
+            emitStageProgress(
+                context.getString(
+                    R.string.backup_stage_preparing,
+                    stageContext.absoluteStage(currentStage),
+                    stageContext.totalStages
+                ),
+                0f,
+                0f
+            )
             throwIfCancelled()
 
             val (pathsToBackup, excludePatterns, metadata) = prepareBackupData(
@@ -116,7 +128,11 @@ class BackupOperationRunner(
             if (pathsToBackup.size <= 1) throw IllegalStateException(context.getString(R.string.backup_error_no_files_selected))
 
             currentStage = 2
-            val stage2Title = context.getString(R.string.backup_stage_running, currentStage, totalStages)
+            val stage2Title = context.getString(
+                R.string.backup_stage_running,
+                stageContext.absoluteStage(currentStage),
+                stageContext.totalStages
+            )
             emitStageProgress(stage2Title, 0f, (currentStage - 1f) / totalStages)
             throwIfCancelled()
 
@@ -180,7 +196,11 @@ class BackupOperationRunner(
             }
 
             currentStage = 3
-            val stage3Title = context.getString(R.string.backup_stage_finalizing, currentStage, totalStages)
+            val stage3Title = context.getString(
+                R.string.backup_stage_finalizing,
+                stageContext.absoluteStage(currentStage),
+                stageContext.totalStages
+            )
             emitStageProgress(stage3Title, 0f, (currentStage - 1f) / totalStages)
             throwIfCancelled()
 

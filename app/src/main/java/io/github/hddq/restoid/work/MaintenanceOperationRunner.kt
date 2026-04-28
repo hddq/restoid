@@ -22,7 +22,11 @@ class MaintenanceOperationRunner(
     suspend fun run(
         request: MaintenanceWorkRequest,
         onProgress: (OperationProgress) -> Unit,
-        shouldStop: () -> Boolean = { false }
+        shouldStop: () -> Boolean = { false },
+        stageContext: OperationStageContext = OperationStageContext(
+            completedStagesBefore = 0,
+            totalStages = countEnabledStages(request)
+        )
     ): OperationRunResult {
         fun throwIfCancelled() {
             if (shouldStop()) {
@@ -108,7 +112,12 @@ class MaintenanceOperationRunner(
 
             tasksToRun.forEachIndexed { index, (taskName, taskAction) ->
                 throwIfCancelled()
-                val stageTitle = context.getString(R.string.maintenance_stage_running_task, index + 1, tasksToRun.size, taskName)
+                val stageTitle = context.getString(
+                    R.string.maintenance_stage_running_task,
+                    stageContext.absoluteStage(index + 1),
+                    stageContext.totalStages,
+                    taskName
+                )
                 progressState = progressState.copy(
                     stageTitle = stageTitle,
                     overallPercentage = index.toFloat() / tasksToRun.size,
@@ -244,5 +253,16 @@ class MaintenanceOperationRunner(
         }
 
         return null
+    }
+
+    private companion object {
+        fun countEnabledStages(request: MaintenanceWorkRequest): Int {
+            return listOf(
+                request.unlockRepo,
+                request.forgetSnapshots,
+                request.pruneRepo,
+                request.checkRepo
+            ).count { it }
+        }
     }
 }

@@ -50,13 +50,14 @@ class RunTasksOperationRunner(
             }
         }
 
-        val totalEnabledTasks = listOf(
-            request.backupEnabled,
+        val backupStageCount = if (request.backupEnabled) 3 else 0
+        val maintenanceTaskCount = listOf(
             request.unlockRepo,
             request.forgetSnapshots,
             request.pruneRepo,
             request.checkRepo
         ).count { it }
+        val totalEnabledTasks = backupStageCount + maintenanceTaskCount
 
         if (totalEnabledTasks == 0) {
             return OperationRunResult(
@@ -103,13 +104,17 @@ class RunTasksOperationRunner(
                 val result = backupRunner.run(
                     request = backupRequest,
                     onProgress = { childProgress ->
-                        progressState = mapChildProgress(childProgress, 1)
+                        progressState = mapChildProgress(childProgress, backupStageCount)
                         onProgress(progressState)
                     },
-                    shouldStop = shouldStop
+                    shouldStop = shouldStop,
+                    stageContext = OperationStageContext(
+                        completedStagesBefore = completedTaskUnits,
+                        totalStages = totalEnabledTasks
+                    )
                 )
 
-                completedTaskUnits += 1
+                completedTaskUnits += backupStageCount
                 summaries += context.getString(
                     R.string.run_tasks_phase_summary,
                     context.getString(R.string.operation_backup),
@@ -118,13 +123,6 @@ class RunTasksOperationRunner(
                 overallSuccess = overallSuccess && result.success
                 throwIfCancelled()
             }
-
-            val maintenanceTaskCount = listOf(
-                request.unlockRepo,
-                request.forgetSnapshots,
-                request.pruneRepo,
-                request.checkRepo
-            ).count { it }
 
             if (maintenanceTaskCount > 0) {
                 val maintenanceRequest = MaintenanceWorkRequest(
@@ -146,7 +144,11 @@ class RunTasksOperationRunner(
                         progressState = mapChildProgress(childProgress, maintenanceTaskCount)
                         onProgress(progressState)
                     },
-                    shouldStop = shouldStop
+                    shouldStop = shouldStop,
+                    stageContext = OperationStageContext(
+                        completedStagesBefore = completedTaskUnits,
+                        totalStages = totalEnabledTasks
+                    )
                 )
 
                 completedTaskUnits += maintenanceTaskCount
