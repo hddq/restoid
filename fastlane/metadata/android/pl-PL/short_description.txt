@@ -1,0 +1,1 @@
+Nowoczesne narzędzie backupu aplikacji Android — root + restic pod maską
