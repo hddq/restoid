@@ -1,20 +1,23 @@
 # Restoid
-
 A modern, root-based Android backup tool powered by [`restic`](https://github.com/restic/restic/).
 
 Restoid gives you control over your app backups through a clean and simple user interface. It's built for users who want robust, encrypted, and deduplicated backups.
 
+## 📥 Download
+
+<p align="center">
+  <a href="https://f-droid.org/packages/io.github.hddq.restoid"><img src="assets/badges/get-it-on-fdroid.png" alt="Get it on F-Droid" height="40"></a>&nbsp;
+  <a href="https://github.com/hddq/restoid/releases"><img src="assets/badges/get-it-on-github.svg" alt="Get it on GitHub" height="40"></a>&nbsp;
+  <a href="http://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/hddq/restoid"><img src="assets/badges/get-it-on-obtainium.png" alt="Get it on Obtainium" height="40"></a>
+</p>
+
 ## 📸 Screenshots
 
 <p align="center">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.png" alt="Restoid app screenshot 1" width="30%" />&nbsp;&nbsp;
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.png" alt="Restoid app screenshot 2" width="30%" />&nbsp;&nbsp;
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.png" alt="Restoid app screenshot 3" width="30%" />
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.png" alt="Restoid app screenshot 1" width="32%" />
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.png" alt="Restoid app screenshot 2" width="32%" />
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.png" alt="Restoid app screenshot 3" width="32%" />
 </p>
-
-## 🚧 Project Status
-
-**This is an early beta release.** The application is functional, but you may encounter bugs. The codebase is a work-in-progress and is undergoing active development and refactoring. Feedback, bug reports, and contributions are highly encouraged!
 
 ## ✨ Features
 
@@ -29,27 +32,8 @@ Restoid gives you control over your app backups through a clean and simple user 
 
 ## ⚠️ Requirements
 
-* **Root Access**: This is non-negotiable. Restoid requires elevated privileges to access app data directories. It uses `libsu` for robust root command execution.
+* **Root Access**: Restoid requires elevated privileges to access app data directories. It uses `libsu` for robust root command execution.
 * **Android Version**: Minimum SDK 33 (Android 13).
-
-## 📲 Download & Installation
-
-You have two options to get the app:
-
-### Choose Your Flavor
-
-Restoid comes in two flavors:
-
-*   **Bundled**: Includes the pre-compiled `restic` binary. The APK file is larger, but you don't need to download anything else after installation. It works out of the box.
-*   **Vanilla**: Does not include the `restic` binary. The APK is smaller, but you will need to download `restic` from within the app (**Settings** -> **Download**) before you can use it.
-
-1.  **Obtainium**
-
-    <a href="http://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/hddq/restoid"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" width="250"></a>
-
-2.  **GitHub Releases**
-    You can also just grab the latest APK file directly from the [**GitHub Releases page**](https://github.com/hddq/restoid/releases).
-    > **Note:** You'll need to manually check for updates and install new APKs when using this method.
 
 ## 🚀 Getting Started
 
@@ -72,7 +56,7 @@ Restoid comes in two flavors:
 
 ## 🤝 How to Contribute
 
-This is a new project and there's a lot to do! If you find a bug, have a feature request, or want to help clean up the code, please:
+If you find a bug, have a feature request, or want to help clean up the code, please:
 
 1.  **Open an issue** to discuss the change.
 2.  Fork the repository and submit a pull request.
@@ -81,11 +65,11 @@ All contributions are welcome!
 
 ## 🌐 Translations
 
-Translations for Restoid are managed via Weblate. If you'd like to help translate the app, please visit the project page:
+Translations for Restoid are managed via Weblate. If you'd like to help translate the app, [please visit the project page](https://hosted.weblate.org/projects/restoid/)
 
-https://hosted.weblate.org/projects/restoid/
+<a href="https://hosted.weblate.org/engage/restoid/"><img src="https://hosted.weblate.org/widget/restoid/multi-auto.svg?threshold=0" alt="Translation status"></a>
 
-How to contribute translations:
+### 🌍 How to contribute translations:
 
 - Create an account on Weblate (if you don't already have one).
 - Pick a language and translate strings using Weblate's web interface.
