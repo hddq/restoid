@@ -61,6 +61,7 @@ class RunTasksViewModel(
 
     private val _uiState = MutableStateFlow(
         RunTasksUiState(
+            backupEnabled = preferencesRepository.loadRunTasksBackupEnabled(),
             backupTypes = preferencesRepository.loadBackupTypes(),
             maintenance = preferencesRepository.loadMaintenanceState()
         )
@@ -85,9 +86,17 @@ class RunTasksViewModel(
     private fun loadInstalledApps() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingApps = true) }
+            val selectAll = preferencesRepository.loadRunTasksSelectAllApps()
+            val selectedPackages = preferencesRepository.loadRunTasksSelectedPackages()
             val currentSelection = _uiState.value.apps.associate { it.packageName to it.isSelected }
             val apps = appInfoRepository.getInstalledUserApps().map { app ->
-                val selected = currentSelection[app.packageName] ?: app.isSelected
+                val selected = if (_uiState.value.apps.isEmpty()) {
+                    // Initial load: restore from preferences
+                    if (selectAll) true else selectedPackages.contains(app.packageName)
+                } else {
+                    // Refresh: keep current selection, fallback to default (true)
+                    currentSelection[app.packageName] ?: app.isSelected
+                }
                 app.copy(isSelected = selected)
             }
             _uiState.update { it.copy(apps = apps, isLoadingApps = false) }
@@ -111,6 +120,11 @@ class RunTasksViewModel(
 
         preferencesRepository.saveBackupTypes(_uiState.value.backupTypes)
         preferencesRepository.saveMaintenanceState(_uiState.value.maintenance)
+        preferencesRepository.saveRunTasksBackupEnabled(_uiState.value.backupEnabled)
+        
+        val allAppsSelected = _uiState.value.apps.isNotEmpty() && _uiState.value.apps.all { it.isSelected }
+        val selectedPackages = _uiState.value.apps.filter { it.isSelected }.map { it.packageName }.toSet()
+        preferencesRepository.saveRunTasksSelectedApps(allAppsSelected, selectedPackages)
 
         val errorState = preflightChecks()
         if (errorState != null) {

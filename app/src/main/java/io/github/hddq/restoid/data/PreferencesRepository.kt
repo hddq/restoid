@@ -42,6 +42,31 @@ class PreferencesRepository(context: Context) {
         )
     }
 
+    // Run Tasks Backup Preferences
+    fun saveRunTasksBackupEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("runtasks_backup_enabled", enabled).apply()
+    }
+
+    fun loadRunTasksBackupEnabled(): Boolean {
+        return prefs.getBoolean("runtasks_backup_enabled", true)
+    }
+
+    fun saveRunTasksSelectedApps(selectAll: Boolean, packageNames: Set<String>) {
+        with(prefs.edit()) {
+            putBoolean("runtasks_select_all_apps", selectAll)
+            putStringSet("runtasks_selected_packages", packageNames)
+            apply()
+        }
+    }
+
+    fun loadRunTasksSelectAllApps(): Boolean {
+        return prefs.getBoolean("runtasks_select_all_apps", true)
+    }
+
+    fun loadRunTasksSelectedPackages(): Set<String> {
+        return prefs.getStringSet("runtasks_selected_packages", emptySet()) ?: emptySet()
+    }
+
     // Backup Preferences
     fun saveBackupTypes(types: BackupTypes) {
         with(prefs.edit()) {
