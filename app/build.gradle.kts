@@ -51,6 +51,7 @@ android {
     namespace = "io.github.hddq.restoid"
     compileSdk = 36
     buildToolsVersion = "36.0.0"
+    ndkVersion = "29.0.14206865"
     defaultConfig {
         applicationId = "io.github.hddq.restoid"
         minSdk = 33

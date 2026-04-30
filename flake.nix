@@ -16,6 +16,9 @@
         };
       };
       goVersion = pkgs.lib.strings.trim (builtins.readFile ./.go-version);
+      buildGradleKts = builtins.readFile ./app/build.gradle.kts;
+      ndkVersionMatch = builtins.match ".*ndkVersion = \"([^\"]+)\".*" buildGradleKts;
+      ndkVersion = if ndkVersionMatch != null then builtins.head ndkVersionMatch else "29.0.14206865";
       goArchive = pkgs.fetchurl {
         url = "https://go.dev/dl/go${goVersion}.linux-amd64.tar.gz";
         # renovate: datasource=custom.go-official depName=go versioning=semver currentValue=1.26.2
@@ -45,7 +48,8 @@
         abiVersions = [ "arm64-v8a" "x86_64" ];
         includeEmulator = false;
         includeSystemImages = false;
-        includeNDK = false;
+        includeNDK = true;
+        ndkVersions = [ ndkVersion ];
         includeCmake = false;
       };
       androidSdk = androidComposition.androidsdk;

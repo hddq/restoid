@@ -38,6 +38,18 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
 
+      - name: Install Android NDK
+        run: |
+          set -euo pipefail
+          NDK_VER=$(sed -n -E 's/.*ndkVersion = "(.*)".*/\1/p' app/build.gradle.kts | tr -d ' ')
+          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;$NDK_VER"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/$NDK_VER" >> "$GITHUB_ENV"
+
+      - name: Verify Android NDK toolchain
+        run: |
+          set -euo pipefail
+          "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/clang" --version
+
       - name: Set up Gradle cache
         uses: gradle/actions/setup-gradle@v6
 
@@ -65,7 +77,7 @@ jobs:
           chmod 600 "$KEYSTORE_PATH"
           echo "ANDROID_SIGNING_KEYSTORE_FILE=$KEYSTORE_PATH" >> "$GITHUB_ENV"
 
-      - name: Build signed release APKs (both flavors)
+      - name: Build signed release APKs
         env:
           ANDROID_SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_SIGNING_STORE_PASSWORD }}
           ANDROID_SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_SIGNING_KEY_ALIAS }}
