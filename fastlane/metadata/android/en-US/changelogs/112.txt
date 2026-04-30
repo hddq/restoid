@@ -1,0 +1,5 @@
+- Adding S3 repo should now create a new bucket if it doesn't exist'
+- Removed vanilla flavor
+- There is now one "Run Tasks" screen from which you can run both maintenance and backup tasks
+- Fixed try again button on root access check at settings
+- If “Require app unlock on start” is enabled, the app will lock after 1 minute in the background or immediately after the screen is turned off and on.
