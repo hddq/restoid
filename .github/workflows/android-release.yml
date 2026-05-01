@@ -50,6 +50,11 @@ jobs:
           set -euo pipefail
           "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/clang" --version
 
+      - name: Build restic binaries
+        run: |
+          set -euo pipefail
+          ./scripts/build_restic.sh
+
       - name: Set up Gradle cache
         uses: gradle/actions/setup-gradle@v6
 
