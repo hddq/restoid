@@ -11,6 +11,12 @@ OUTPUT_BASE="$REPO_ROOT/app/src/main/jniLibs"
 GO_BIN="${1:-go}"
 
 NDK_VER=$(sed -n -E 's/.*ndkVersion = "(.*)".*/\1/p' "$REPO_ROOT/app/build.gradle.kts" | tr -d ' ')
+MIN_SDK=$(sed -n -E 's/.*minSdk = ([0-9]+).*/\1/p' "$REPO_ROOT/app/build.gradle.kts" | tr -d ' ')
+
+if [ -z "$MIN_SDK" ]; then
+    echo "Error: minSdk not found in app/build.gradle.kts"
+    exit 1
+fi
 
 if [ -n "${ANDROID_HOME:-}" ]; then
     EXPECTED_NDK_HOME="$ANDROID_HOME/ndk/$NDK_VER"
@@ -54,7 +60,7 @@ else
 fi
 
 TOOLCHAIN="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/$HOST_TAG"
-API=33
+API="$MIN_SDK"
 
 declare -A ABI_TO_GOARCH=(
     ["arm64-v8a"]="arm64"
