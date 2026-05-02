@@ -386,4 +386,6 @@
     <string name="action_forget_rest_credentials"></string>
     <string name="error_s3_credentials_not_found_for_repository"></string>
     <string name="snapshot_version_size"></string>
+    <string name="backup_stage_preparing"></string>
+    <string name="progress_placeholder"></string>
 </resources>
