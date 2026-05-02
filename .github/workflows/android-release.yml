@@ -118,6 +118,30 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Generate SHA256 checksums
+        run: |
+          set -euo pipefail
+          (cd release-assets && sha256sum *.apk > SHA256SUMS.txt)
+
+      - name: Grab latest Fastlane changelog
+        id: changelog
+        run: |
+          set -euo pipefail
+          CHANGELOG_FILE=$(find fastlane/metadata/android/en-US/changelogs -type f -name '*.txt' | sort -V | tail -n 1)
+          echo "Found changelog: $CHANGELOG_FILE"
+          echo "path=$CHANGELOG_FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          name: Restoid ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: false
+          body_path: ${{ steps.changelog.outputs.path }}
+          files: |
+            ${{ steps.collect_apks.outputs.files }}
+            release-assets/SHA256SUMS.txt
+
       - name: Build F-Droid repo index
         env:
           FDROID_REPO_KEYSTORE_BASE64: ${{ secrets.FDROID_REPO_KEYSTORE_BASE64 }}
@@ -179,30 +203,6 @@ jobs:
           docker run --rm -v "${PWD}/fdroid:/fdroid" -w /fdroid debian:testing bash -c "apt-get update && apt-get install -y fdroidserver aapt && fdroid update --create-metadata"
           sudo chown -R $USER:$USER fdroid
           rm -f fdroid/keystore.jks fdroid/config.yml
-
-      - name: Generate SHA256 checksums
-        run: |
-          set -euo pipefail
-          (cd release-assets && sha256sum *.apk > SHA256SUMS.txt)
-
-      - name: Grab latest Fastlane changelog
-        id: changelog
-        run: |
-          set -euo pipefail
-          CHANGELOG_FILE=$(find fastlane/metadata/android/en-US/changelogs -type f -name '*.txt' | sort -V | tail -n 1)
-          echo "Found changelog: $CHANGELOG_FILE"
-          echo "path=$CHANGELOG_FILE" >> "$GITHUB_OUTPUT"
-
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v3
-        with:
-          name: Restoid ${{ github.ref_name }}
-          tag_name: ${{ github.ref_name }}
-          generate_release_notes: false
-          body_path: ${{ steps.changelog.outputs.path }}
-          files: |
-            ${{ steps.collect_apks.outputs.files }}
-            release-assets/SHA256SUMS.txt
 
       - name: Publish F-Droid repo to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
