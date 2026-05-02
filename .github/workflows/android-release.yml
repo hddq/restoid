@@ -198,7 +198,29 @@ jobs:
           Translation: https://hosted.weblate.org/projects/restoid
           EOF
 
-          cp release-assets/*.apk fdroid/repo/
+          for apk in release-assets/*.apk; do
+            filename=$(basename "$apk")
+            new_filename="${filename%.*}-${{ github.ref_name }}.apk"
+            cp "$apk" "fdroid/repo/$new_filename"
+          done
+
+          export GH_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          # Grab up to 3 tags to ensure we get 2 older ones after filtering out the current one
+          old_tags=$(gh release list --limit 3 --json tagName --jq '.[].tagName' | grep -v "^${{ github.ref_name }}$" || true)
+
+          for tag in $old_tags; do
+            echo "Processing older release: $tag"
+            mkdir -p "temp_dl_$tag"
+            gh release download "$tag" --pattern "*.apk" --dir "temp_dl_$tag" || continue
+
+            for apk in "temp_dl_$tag"/*.apk; do
+              [ -e "$apk" ] || continue
+              filename=$(basename "$apk")
+              new_filename="${filename%.*}-${tag}.apk"
+              mv "$apk" "fdroid/repo/$new_filename"
+            done
+            rm -rf "temp_dl_$tag"
+          done
 
           docker run --rm -v "${PWD}/fdroid:/fdroid" -w /fdroid debian:testing bash -c "apt-get update && apt-get install -y fdroidserver aapt && fdroid update --create-metadata"
           sudo chown -R $USER:$USER fdroid
@@ -210,7 +232,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: fdroid/repo
           destination_dir: fdroid/repo
-          keep_files: true
+          keep_files: false
 
       - name: Remove signing keystore
         if: always()
