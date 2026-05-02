@@ -118,6 +118,40 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Build F-Droid repo index
+        env:
+          FDROID_REPO_KEYSTORE_BASE64: ${{ secrets.FDROID_REPO_KEYSTORE_BASE64 }}
+          FDROID_REPO_KEY_ALIAS: ${{ secrets.FDROID_REPO_KEY_ALIAS }}
+          FDROID_REPO_KEYSTORE_PASSWORD: ${{ secrets.FDROID_REPO_KEYSTORE_PASSWORD }}
+          FDROID_REPO_KEY_PASSWORD: ${{ secrets.FDROID_REPO_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$FDROID_REPO_KEYSTORE_BASE64"
+          test -n "$FDROID_REPO_KEY_ALIAS"
+          test -n "$FDROID_REPO_KEYSTORE_PASSWORD"
+          test -n "$FDROID_REPO_KEY_PASSWORD"
+
+          mkdir -p fdroid/repo
+          printf '%s' "$FDROID_REPO_KEYSTORE_BASE64" | base64 --decode > fdroid/keystore.jks
+          chmod 600 fdroid/keystore.jks
+
+          cat > fdroid/config.yml <<EOF
+          repo_url: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/fdroid/repo
+          repo_name: ${{ github.event.repository.name }}
+          repo_description: Releases published from GitHub tags for ${{ github.event.repository.name }}.
+          keystore: keystore.jks
+          keystorepass: ${FDROID_REPO_KEYSTORE_PASSWORD}
+          keypass: ${FDROID_REPO_KEY_PASSWORD}
+          repo_keyalias: ${FDROID_REPO_KEY_ALIAS}
+          EOF
+          chmod 600 fdroid/config.yml
+
+          cp release-assets/*.apk fdroid/repo/
+
+          docker run --rm -v "${PWD}/fdroid:/fdroid" -w /fdroid debian:testing bash -c "apt-get update && apt-get install -y fdroidserver aapt && fdroid update --create-metadata"
+          sudo chown -R $USER:$USER fdroid
+          rm -f fdroid/keystore.jks fdroid/config.yml
+
       - name: Generate SHA256 checksums
         run: |
           set -euo pipefail
@@ -141,6 +175,14 @@ jobs:
           files: |
             ${{ steps.collect_apks.outputs.files }}
             release-assets/SHA256SUMS.txt
+
+      - name: Publish F-Droid repo to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: fdroid/repo
+          destination_dir: fdroid/repo
+          keep_files: true
 
       - name: Remove signing keystore
         if: always()
