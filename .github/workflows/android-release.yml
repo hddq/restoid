@@ -233,6 +233,7 @@ jobs:
           publish_dir: fdroid/repo
           destination_dir: fdroid/repo
           keep_files: false
+          force_orphan: true
 
       - name: Remove signing keystore
         if: always()
