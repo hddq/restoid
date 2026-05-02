@@ -1,6 +1,7 @@
 package io.github.hddq.restoid.work
 
 import android.content.Context
+import android.os.UserHandle
 import android.util.Log
 import com.topjohnwu.superuser.CallbackList
 import com.topjohnwu.superuser.Shell
@@ -214,7 +215,11 @@ class RestoreOperationRunner(
                         val apkFiles = restoredContentDir?.walk()?.filter { it.isFile && it.extension == "apk" }?.toList() ?: emptyList()
 
                         if (apkFiles.isNotEmpty()) {
-                            val installFlags = if (request.allowDowngrade) "-r -d" else "-r"
+                            val targetUserId = getCurrentUserId()
+                            val installFlags = buildString {
+                                append("--user $targetUserId ")
+                                if (request.allowDowngrade) append("-r -d") else append("-r")
+                            }
                             val createResult = Shell.cmd("pm install-create $installFlags").exec()
                             val sessionId = createResult.out.firstOrNull()?.substringAfterLast('[')?.substringBefore(']')
 
@@ -377,7 +382,13 @@ class RestoreOperationRunner(
         val snapshots = snapshotsResult.getOrNull() ?: return null
         return snapshots.find { it.id == request.snapshotId } ?: snapshots.find { it.id.startsWith(request.snapshotId) }
     }
-
+    private fun getCurrentUserId(): Int {
+        return try {
+            UserHandle::class.java.getMethod("myUserId").invoke(null) as Int
+        } catch (_: Exception) {
+            android.os.Process.myUid() / 100000
+        }
+    }
     private fun generatePathsToRestore(
         selectedPackageNames: List<String>,
         snapshot: SnapshotInfo,
