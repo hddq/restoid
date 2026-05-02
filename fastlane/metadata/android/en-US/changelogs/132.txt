@@ -1,0 +1,2 @@
+* Fix APK restore installing to unintended user profiles
+* Added support for SSH key authentication for SFTP repositories
