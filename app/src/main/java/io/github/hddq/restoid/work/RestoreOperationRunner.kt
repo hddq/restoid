@@ -85,7 +85,7 @@ class RestoreOperationRunner(
             operationLockManager.acquire(selectedRepository.backendType)
             operationLockAcquired = true
 
-            if (selectedRepository.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpPassword(request.repositoryKey)) {
+            if (selectedRepository.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpCredentials(request.repositoryKey)) {
                 throw IllegalStateException(context.getString(R.string.error_sftp_password_not_found_for_repository))
             }
 

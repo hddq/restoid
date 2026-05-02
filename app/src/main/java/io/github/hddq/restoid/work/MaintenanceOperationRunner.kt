@@ -220,7 +220,7 @@ class MaintenanceOperationRunner(
             )
         }
 
-        if (repository.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpPassword(request.repositoryKey)) {
+        if (repository.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpCredentials(request.repositoryKey)) {
             return OperationProgress(
                 isFinished = true,
                 error = context.getString(R.string.error_sftp_password_not_found_for_repository),
