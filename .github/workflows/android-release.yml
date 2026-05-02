@@ -146,6 +146,34 @@ jobs:
           EOF
           chmod 600 fdroid/config.yml
 
+          APP_ID="io.github.hddq.restoid"
+          mkdir -p "fdroid/metadata/$APP_ID"
+          cp -r fastlane/metadata/android/* "fdroid/metadata/$APP_ID/"
+          for lang_dir in "fdroid/metadata/$APP_ID"/*; do
+            if [ -d "$lang_dir" ]; then
+              (
+                cd "$lang_dir"
+                [ -f full_description.txt ] && mv full_description.txt description.txt
+                [ -f short_description.txt ] && mv short_description.txt summary.txt
+                [ -f title.txt ] && mv title.txt name.txt
+                if [ -d "images" ]; then
+                  mv images/* .
+                  rm -rf images
+                fi
+              )
+            fi
+          done
+
+          cat > "fdroid/metadata/${APP_ID}.yml" <<EOF
+          Categories:
+            - System
+          License: GPL-3.0-only
+          AuthorName: hddq
+          SourceCode: https://github.com/hddq/restoid
+          IssueTracker: https://github.com/hddq/restoid/issues
+          Translation: https://hosted.weblate.org/projects/restoid
+          EOF
+
           cp release-assets/*.apk fdroid/repo/
 
           docker run --rm -v "${PWD}/fdroid:/fdroid" -w /fdroid debian:testing bash -c "apt-get update && apt-get install -y fdroidserver aapt && fdroid update --create-metadata"
