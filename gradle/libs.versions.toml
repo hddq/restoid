@@ -18,7 +18,7 @@ apacheCommonsCompress = "1.28.0"
 securityCrypto = "1.1.0"
 coilCompose = "2.7.0"
 kotlinxSerializationJson = "1.11.0"
-aboutLibraries = "14.0.1"
+aboutLibraries = "14.1.0"
 biometric = "1.1.0"
 work = "2.11.2"
 
