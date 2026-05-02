@@ -1,0 +1,12 @@
+Restoid daje ci pełną kontrolę nad backupami aplikacji przez przejrzysty, nowoczesny i prosty interfejs. Napędzany przez silnik open-source „restic", stworzony dla użytkowników którzy wymagają solidnych, szyfrowanych i deduplikowanych backupów.
+
+Do odczytu i zapisu prywatnych katalogów danych aplikacji wymagany jest dostęp root.
+
+Funkcje:
+* Oparty na restic: Wykorzystuje szybkość, bezpieczeństwo i wydajność restic do lokalnych, deduplikowanych i szyfrowanych backupów.
+* Selektywny backup: Wybierz dokładnie, które zainstalowane aplikacje chcesz zapisać.
+* Szczegółowa kontrola: Precyzyjnie określ, co uwzględnić dla każdej aplikacji — pliki APK, dane użytkownika, dane chronione urządzenia, pliki zewnętrzne/OBB lub media.
+* Elastyczne przechowywanie: Twórz repozytoria backupów lokalnie (pamięć urządzenia, karta SD, dyski zewnętrzne) lub zdalnie (SFTP, REST, Amazon S3/MinIO).
+* Zarządzanie migawkami: Przeglądaj historyczne migawki, sprawdzaj szczegóły backupów i usuwaj stare dane, żeby zwolnić miejsce.
+* Precyzyjne przywracanie: Przywróć całą aplikację lub tylko wybrane elementy — np. same dane bez nadpisywania APK.
+* Ochrona przed downgrade'em: Zapobiega przypadkowemu przywróceniu starszej wersji aplikacji nad nowszą.

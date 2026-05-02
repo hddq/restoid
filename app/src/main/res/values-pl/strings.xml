@@ -1,3 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="screen_settings">Ustawienia</string>
+    <string name="screen_run_tasks">Uruchom Zadania</string>
+    <string name="topbar_new_backup">Nowa Kopia</string>
+    <string name="screen_home">Start</string>
+    <string name="screen_licenses">Licencje</string>
+    <string name="topbar_backup_config">Konfiguracja Kopii Zapasowej</string>
+    <string name="topbar_maintenance">Konserwacja</string>
+    <string name="topbar_open_source_licenses">Licencje Open Source</string>
+    <string name="screen_restore">Przywróć</string>
+    <string name="screen_backup">Kopia Zapasowa</string>
+    <string name="screen_maintenance">Konserwacja</string>
+    <string name="topbar_snapshot_details">Szczegóły Migawki</string>
+    <string name="screen_snapshot_details">Szczegóły Migawki</string>
+    <string name="topbar_run_tasks">Uruchom Zadania</string>
 </resources>
