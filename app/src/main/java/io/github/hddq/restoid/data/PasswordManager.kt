@@ -64,6 +64,14 @@ class PasswordManager(private val context: Context) {
         return "sftp_ssh_password::$repositoryKey"
     }
 
+    private fun sftpKeyKey(repositoryKey: String): String {
+        return "sftp_ssh_key::$repositoryKey"
+    }
+
+    private fun sftpKeyPassphraseKey(repositoryKey: String): String {
+        return "sftp_ssh_key_passphrase::$repositoryKey"
+    }
+
     private fun restUsernameKey(repositoryKey: String): String {
         return "rest_http_username::$repositoryKey"
     }
@@ -106,6 +114,62 @@ class PasswordManager(private val context: Context) {
 
     fun removeStoredSftpPassword(repositoryKey: String) {
         removeStoredPassword(sftpPasswordKey(repositoryKey))
+    }
+
+    fun saveSftpKey(repositoryKey: String, key: String) {
+        savePassword(sftpKeyKey(repositoryKey), key)
+    }
+
+    fun saveSftpKeyTemporary(repositoryKey: String, key: String) {
+        savePasswordTemporary(sftpKeyKey(repositoryKey), key)
+    }
+
+    fun getSftpKey(repositoryKey: String): String? {
+        return getPassword(sftpKeyKey(repositoryKey))
+    }
+
+    fun hasSftpKey(repositoryKey: String): Boolean {
+        return hasPassword(sftpKeyKey(repositoryKey))
+    }
+
+    fun hasStoredSftpKey(repositoryKey: String): Boolean {
+        return hasStoredPassword(sftpKeyKey(repositoryKey))
+    }
+
+    fun removeSftpKey(repositoryKey: String) {
+        removePassword(sftpKeyKey(repositoryKey))
+    }
+
+    fun removeStoredSftpKey(repositoryKey: String) {
+        removeStoredPassword(sftpKeyKey(repositoryKey))
+    }
+
+    fun saveSftpKeyPassphrase(repositoryKey: String, passphrase: String) {
+        savePassword(sftpKeyPassphraseKey(repositoryKey), passphrase)
+    }
+
+    fun saveSftpKeyPassphraseTemporary(repositoryKey: String, passphrase: String) {
+        savePasswordTemporary(sftpKeyPassphraseKey(repositoryKey), passphrase)
+    }
+
+    fun getSftpKeyPassphrase(repositoryKey: String): String? {
+        return getPassword(sftpKeyPassphraseKey(repositoryKey))
+    }
+
+    fun hasSftpKeyPassphrase(repositoryKey: String): Boolean {
+        return hasPassword(sftpKeyPassphraseKey(repositoryKey))
+    }
+
+    fun hasStoredSftpKeyPassphrase(repositoryKey: String): Boolean {
+        return hasStoredPassword(sftpKeyPassphraseKey(repositoryKey))
+    }
+
+    fun removeSftpKeyPassphrase(repositoryKey: String) {
+        removePassword(sftpKeyPassphraseKey(repositoryKey))
+    }
+
+    fun removeStoredSftpKeyPassphrase(repositoryKey: String) {
+        removeStoredPassword(sftpKeyPassphraseKey(repositoryKey))
     }
 
     fun saveRestUsername(repositoryKey: String, username: String) {

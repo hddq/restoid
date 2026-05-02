@@ -42,6 +42,8 @@ data class HomeUiState(
     val resticState: ResticState = ResticState.Idle,
     val showPasswordDialogFor: String? = null,
     val showSftpPasswordDialogFor: String? = null,
+    val isSftpKeyAuthRequired: Boolean = false,
+    val isSftpKeyPassphraseRequired: Boolean = false,
     val showRestCredentialsDialogFor: String? = null,
     val showS3CredentialsDialogFor: String? = null,
     val isRepoReady: Boolean = false
@@ -82,8 +84,8 @@ class HomeViewModel(
             val isRepoSwitch = repoKey != lastObservedRepoKey
 
             val hasRepositoryPassword = repoKey?.let { repositoriesRepository.hasRepositoryPassword(it) } ?: false
-            val hasSftpPassword = if (selectedRepository?.backendType == RepositoryBackendType.SFTP) {
-                repositoriesRepository.hasSftpPassword(repositoriesRepository.repositoryKey(selectedRepository))
+            val hasSftpCredentials = if (selectedRepository?.backendType == RepositoryBackendType.SFTP) {
+                repositoriesRepository.hasSftpCredentials(repositoriesRepository.repositoryKey(selectedRepository))
             } else {
                 true
             }
@@ -108,7 +110,7 @@ class HomeViewModel(
                 repoKey != null &&
                     restic is ResticState.Installed &&
                     hasRepositoryPassword &&
-                    hasSftpPassword &&
+                    hasSftpCredentials &&
                     hasRestCredentials &&
                     hasS3Credentials
 
@@ -255,7 +257,7 @@ class HomeViewModel(
             }
 
         viewModelScope.launch {
-            if (repository.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpPassword(repoKey)) {
+            if (repository.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpCredentials(repoKey)) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -264,6 +266,8 @@ class HomeViewModel(
                         openPrompt = null,
                         showPasswordDialogFor = null,
                         showSftpPasswordDialogFor = repoKey,
+                        isSftpKeyAuthRequired = repository.sftpKeyAuthRequired,
+                        isSftpKeyPassphraseRequired = repository.sftpKeyPassphraseRequired,
                         showRestCredentialsDialogFor = null,
                         showS3CredentialsDialogFor = null
                     )
@@ -364,7 +368,7 @@ class HomeViewModel(
         val environmentVariables = repositoriesRepository.getExecutionEnvironmentVariables(repoKey)
         val resticOptions = repositoriesRepository.getExecutionResticOptions(repoKey)
 
-        if (repository.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpPassword(repoKey)) {
+        if (repository.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpCredentials(repoKey)) {
             _uiState.update {
                 it.copy(
                     isRefreshing = false,
@@ -373,6 +377,8 @@ class HomeViewModel(
                     openPrompt = null,
                     showPasswordDialogFor = null,
                     showSftpPasswordDialogFor = repoKey,
+                    isSftpKeyAuthRequired = repository.sftpKeyAuthRequired,
+                    isSftpKeyPassphraseRequired = repository.sftpKeyPassphraseRequired,
                     showRestCredentialsDialogFor = null,
                     showS3CredentialsDialogFor = null
                 )
@@ -598,7 +604,7 @@ class HomeViewModel(
         }
     }
 
-    fun onSftpPasswordEntered(password: String, save: Boolean) {
+    fun onSftpPasswordEntered(credentials: String, passphrase: String, save: Boolean) {
         val repoKey = _uiState.value.showSftpPasswordDialogFor ?: return
         val repository = repositoriesRepository.getRepositoryByKey(repoKey) ?: return
         _uiState.update {
@@ -614,8 +620,17 @@ class HomeViewModel(
             )
         }
 
-        if (save) repositoriesRepository.saveSftpPassword(repoKey, password)
-        else repositoriesRepository.saveSftpPasswordTemporary(repoKey, password)
+        if (repository.sftpKeyAuthRequired) {
+            if (save) repositoriesRepository.saveSftpKey(repoKey, credentials)
+            else repositoriesRepository.saveSftpKeyTemporary(repoKey, credentials)
+            if (repository.sftpKeyPassphraseRequired) {
+                if (save) repositoriesRepository.saveSftpKeyPassphrase(repoKey, passphrase)
+                else repositoriesRepository.saveSftpKeyPassphraseTemporary(repoKey, passphrase)
+            }
+        } else {
+            if (save) repositoriesRepository.saveSftpPassword(repoKey, credentials)
+            else repositoriesRepository.saveSftpPasswordTemporary(repoKey, credentials)
+        }
 
         loadSnapshots(
             repository.path,
@@ -757,6 +772,8 @@ class HomeViewModel(
         _uiState.update {
             it.copy(
                 showSftpPasswordDialogFor = repoKey,
+                isSftpKeyAuthRequired = repository.sftpKeyAuthRequired,
+                isSftpKeyPassphraseRequired = repository.sftpKeyPassphraseRequired,
                 showPasswordDialogFor = null,
                 showRestCredentialsDialogFor = null,
                 showS3CredentialsDialogFor = null,

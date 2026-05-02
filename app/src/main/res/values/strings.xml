@@ -74,6 +74,8 @@
     <string name="enter_password_for_repository">Please enter the password for repository: %1$s</string>
     <string name="sftp_password_required">SFTP Password Required</string>
     <string name="enter_sftp_password_for_repository">Please enter the SFTP password for repository: %1$s</string>
+    <string name="sftp_key_required">SFTP SSH Key Required</string>
+    <string name="enter_sftp_credentials_for_repository">Please enter the SFTP credentials for repository: %1$s</string>
     <string name="rest_credentials_required">REST Credentials Required</string>
     <string name="enter_rest_credentials_for_repository">Please enter the REST username and password for repository: %1$s</string>
     <string name="s3_credentials_required">S3 Credentials Required</string>
@@ -156,7 +158,13 @@
     <string name="label_repository_specification">Repository specification</string>
     <string name="label_environment_variables">Environment variables</string>
     <string name="placeholder_environment_variables">KEY=value (one per line)</string>
+    <string name="label_sftp_authentication_method">Authentication method</string>
     <string name="label_sftp_password">SFTP password</string>
+    <string name="label_sftp_ssh_key">SSH key</string>
+    <string name="label_sftp_private_key">SFTP SSH private key</string>
+    <string name="placeholder_sftp_private_key">-----BEGIN OPENSSH PRIVATE KEY-----\n...</string>
+    <string name="label_sftp_key_passphrase">SSH key passphrase</string>
+    <string name="label_sftp_key_passphrase_optional">SSH key passphrase (optional)</string>
     <string name="dialog_sftp_trust_title">Trust SFTP server</string>
     <string name="dialog_sftp_trust_message">The server %1$s presented these host key fingerprints:</string>
     <string name="dialog_sftp_trust_fingerprints">Fingerprints</string>
@@ -173,6 +181,7 @@
     <string name="label_path">Path</string>
     <string name="placeholder_select_directory">Select a directory…</string>
     <string name="cd_select_folder">Select Folder</string>
+    <string name="cd_select_private_key_file">Select Private Key File</string>
     <string name="cd_hide_password">Hide password</string>
     <string name="cd_show_password">Show password</string>
 
@@ -206,6 +215,8 @@
     <string name="action_forget_password">Forget Password</string>
     <string name="action_forget_sftp_password">Forget SFTP Password</string>
     <string name="action_save_sftp_password">Save SFTP Password</string>
+    <string name="action_forget_sftp_key_credentials">Forget SSH Key Credentials</string>
+    <string name="action_save_sftp_key_credentials">Save SSH Key Credentials</string>
     <string name="action_forget_rest_credentials">Forget REST Credentials</string>
     <string name="action_save_rest_credentials">Save REST Credentials</string>
     <string name="action_forget_s3_credentials">Forget S3 Credentials</string>
@@ -227,6 +238,7 @@
     <string name="error_passwords_do_not_match">Passwords do not match.</string>
     <string name="dialog_save_password">Save Password</string>
     <string name="dialog_save_sftp_password">Save SFTP Password</string>
+    <string name="dialog_save_sftp_key_credentials">Save SSH Key Credentials</string>
     <string name="dialog_save_rest_credentials">Save REST Credentials</string>
     <string name="dialog_save_s3_credentials">Save S3 Credentials</string>
     <string name="rest_credentials_hint">Stored credentials are encrypted on this device.</string>
@@ -260,8 +272,8 @@
     <string name="summary_no_backup_repository_selected">No backup repository is selected.</string>
     <string name="error_password_not_found_for_repository">Password for repository not found.</string>
     <string name="summary_password_not_found">Could not find the password.</string>
-    <string name="error_sftp_password_not_found_for_repository">SFTP password for repository not found.</string>
-    <string name="summary_sftp_password_not_found">Could not find the SFTP password.</string>
+    <string name="error_sftp_password_not_found_for_repository">SFTP credentials for repository not found.</string>
+    <string name="summary_sftp_password_not_found">Could not find the SFTP credentials.</string>
     <string name="error_rest_credentials_not_found_for_repository">REST credentials for repository not found.</string>
     <string name="summary_rest_credentials_not_found">Could not find REST credentials.</string>
     <string name="error_s3_credentials_not_found_for_repository">S3 credentials for repository not found.</string>
@@ -313,12 +325,12 @@
 
     <string name="home_error_repository_id_not_found">Repository ID not found</string>
     <string name="home_error_repository_password_incorrect">Repository password is incorrect.</string>
-    <string name="home_error_sftp_password_incorrect">SFTP password is incorrect.</string>
+    <string name="home_error_sftp_password_incorrect">SFTP credentials are incorrect.</string>
     <string name="home_error_rest_credentials_incorrect">REST credentials are incorrect.</string>
     <string name="home_error_s3_credentials_incorrect">S3 credentials are incorrect.</string>
     <string name="home_open_needed_message">Repository is closed. Open it to load snapshots.</string>
     <string name="action_enter_password_again">Enter password again</string>
-    <string name="action_enter_sftp_password_again">Enter SFTP password again</string>
+    <string name="action_enter_sftp_password_again">Enter SFTP credentials again</string>
     <string name="action_enter_rest_credentials_again">Enter REST credentials again</string>
     <string name="action_enter_s3_credentials_again">Enter S3 credentials again</string>
     <string name="action_open_repository">Open repository</string>
@@ -332,6 +344,9 @@
     <string name="settings_error_invalid_environment_line">Invalid environment variable format at line %1$d. Use KEY=value.</string>
     <string name="settings_error_invalid_environment_name">Invalid environment variable name: %1$s</string>
     <string name="settings_error_invalid_restic_options">Invalid restic options.</string>
+    <string name="error_sftp_key_import_failed">Failed to read the selected private key file.</string>
+    <string name="error_sftp_key_file_empty">The selected private key file is empty.</string>
+    <string name="error_sftp_key_cannot_be_empty">SFTP SSH private key cannot be empty.</string>
     <string name="error_unknown">Unknown error</string>
 
     <string name="channel_ongoing_operations">Ongoing Operations</string>
@@ -357,10 +372,11 @@
     <string name="repo_error_failed_create_directory">Failed to create directory.</string>
     <string name="repo_error_failed_initialize">Failed to initialize repository.</string>
     <string name="repo_error_failed_get_id">Repo valid, but failed to get ID.</string>
-    <string name="repo_error_sftp_password_setup_failed">Failed to configure SFTP password authentication.</string>
+    <string name="repo_error_sftp_password_setup_failed">Failed to configure SFTP authentication.</string>
     <string name="repo_error_sftp_ssh_binary_not_found">SSH binary was not found on this device.</string>
     <string name="repo_error_sftp_askpass_create_failed">Failed to create SSH askpass helper script.</string>
     <string name="repo_error_sftp_known_hosts_setup_failed">Failed to prepare SSH known hosts storage.</string>
+    <string name="repo_error_sftp_key_storage_failed">Failed to prepare SSH private key storage.</string>
     <string name="repo_error_sftp_fingerprint_probe_failed">Failed to fetch SFTP server fingerprint.</string>
     <string name="repo_error_s3_bucket_not_found">S3 Bucket not found</string>
     <string name="action_trust">Trust</string>

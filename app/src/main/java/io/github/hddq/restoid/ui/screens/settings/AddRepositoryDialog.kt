@@ -18,7 +18,9 @@ import androidx.compose.ui.unit.dp
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.AddRepositoryState
 import io.github.hddq.restoid.data.RepositoryBackendType
+import io.github.hddq.restoid.ui.components.SshPrivateKeyField
 import io.github.hddq.restoid.ui.settings.AddRepoUiState
+import io.github.hddq.restoid.ui.settings.SftpAuthMethod
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,6 +31,10 @@ fun AddRepositoryDialog(
     onPathChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onSftpPasswordChange: (String) -> Unit,
+    onSftpKeyChange: (String) -> Unit,
+    onSftpKeyImportError: (String) -> Unit,
+    onSftpKeyPassphraseChange: (String) -> Unit,
+    onSftpAuthMethodChange: (SftpAuthMethod) -> Unit,
     onS3AccessKeyIdChange: (String) -> Unit,
     onS3SecretAccessKeyChange: (String) -> Unit,
     onRestUsernameChange: (String) -> Unit,
@@ -50,11 +56,16 @@ fun AddRepositoryDialog(
     val hasIncompleteS3Credentials =
         uiState.backendType == RepositoryBackendType.S3 &&
             (uiState.s3AccessKeyId.isBlank() != uiState.s3SecretAccessKey.isBlank())
+    val hasIncompleteSftpCredentials =
+        uiState.backendType == RepositoryBackendType.SFTP &&
+            uiState.sftpAuthMethod == SftpAuthMethod.KEY && uiState.sftpKey.isBlank()
+            
     val canConfirm = !isBusy &&
         uiState.path.isNotBlank() &&
         uiState.password.isNotBlank() &&
         !hasIncompleteRestCredentials &&
-        !hasIncompleteS3Credentials
+        !hasIncompleteS3Credentials &&
+        !hasIncompleteSftpCredentials
 
     val backendOptions = listOf(
         RepositoryBackendType.LOCAL,
@@ -174,23 +185,78 @@ fun AddRepositoryDialog(
                 )
 
                 if (uiState.backendType == RepositoryBackendType.SFTP) {
-                    OutlinedTextField(
-                        value = uiState.sftpPassword,
-                        onValueChange = onSftpPasswordChange,
-                        label = { Text(stringResource(R.string.label_sftp_password)) },
-                        singleLine = true,
-                        visualTransformation = if (sftpPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            val image = if (sftpPasswordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
-                            val description = if (sftpPasswordVisible) stringResource(R.string.cd_hide_password) else stringResource(R.string.cd_show_password)
-                            IconButton(onClick = { sftpPasswordVisible = !sftpPasswordVisible }, enabled = !isBusy) {
-                                Icon(imageVector = image, contentDescription = description)
-                            }
-                        },
-                        isError = uiState.state is AddRepositoryState.Error,
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !isBusy
+                    Text(
+                        text = stringResource(R.string.label_sftp_authentication_method),
+                        style = MaterialTheme.typography.bodySmall, 
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { if (!isBusy) onSftpAuthMethodChange(SftpAuthMethod.PASSWORD) }) {
+                            RadioButton(
+                                selected = uiState.sftpAuthMethod == SftpAuthMethod.PASSWORD,
+                                onClick = { onSftpAuthMethodChange(SftpAuthMethod.PASSWORD) },
+                                enabled = !isBusy
+                            )
+                            Text(stringResource(R.string.label_password))
+                        }
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { if (!isBusy) onSftpAuthMethodChange(SftpAuthMethod.KEY) }) {
+                            RadioButton(
+                                selected = uiState.sftpAuthMethod == SftpAuthMethod.KEY,
+                                onClick = { onSftpAuthMethodChange(SftpAuthMethod.KEY) },
+                                enabled = !isBusy
+                            )
+                            Text(stringResource(R.string.label_sftp_ssh_key))
+                        }
+                    }
+
+                    if (uiState.sftpAuthMethod == SftpAuthMethod.PASSWORD) {
+                        OutlinedTextField(
+                            value = uiState.sftpPassword,
+                            onValueChange = onSftpPasswordChange,
+                            label = { Text(stringResource(R.string.label_sftp_password)) },
+                            singleLine = true,
+                            visualTransformation = if (sftpPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            trailingIcon = {
+                                val image = if (sftpPasswordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
+                                val description = if (sftpPasswordVisible) stringResource(R.string.cd_hide_password) else stringResource(R.string.cd_show_password)
+                                IconButton(onClick = { sftpPasswordVisible = !sftpPasswordVisible }, enabled = !isBusy) {
+                                    Icon(imageVector = image, contentDescription = description)
+                                }
+                            },
+                            isError = uiState.state is AddRepositoryState.Error,
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !isBusy
+                        )
+                    } else {
+                        SshPrivateKeyField(
+                            value = uiState.sftpKey,
+                            onValueChange = onSftpKeyChange,
+                            onImportError = onSftpKeyImportError,
+                            label = stringResource(R.string.label_sftp_private_key),
+                            placeholder = stringResource(R.string.placeholder_sftp_private_key),
+                            isError = uiState.state is AddRepositoryState.Error && uiState.sftpKey.isBlank(),
+                            supportingText = if (uiState.state is AddRepositoryState.Error && uiState.sftpKey.isBlank()) {
+                                { Text((uiState.state as AddRepositoryState.Error).message) }
+                            } else {
+                                null
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !isBusy
+                        )
+                        OutlinedTextField(
+                            value = uiState.sftpKeyPassphrase,
+                            onValueChange = onSftpKeyPassphraseChange,
+                            label = { Text(stringResource(R.string.label_sftp_key_passphrase_optional)) },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !isBusy
+                        )
+                    }
                 }
 
                 if (uiState.backendType == RepositoryBackendType.REST) {

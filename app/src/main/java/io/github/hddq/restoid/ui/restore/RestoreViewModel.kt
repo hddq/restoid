@@ -244,7 +244,7 @@ class RestoreViewModel(
             return
         }
 
-        if (selectedRepository.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpPassword(selectedRepoKey)) {
+        if (selectedRepository.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpCredentials(selectedRepoKey)) {
             _restoreProgress.value = OperationProgress(
                 isFinished = true,
                 error = application.getString(R.string.error_sftp_password_not_found_for_repository),

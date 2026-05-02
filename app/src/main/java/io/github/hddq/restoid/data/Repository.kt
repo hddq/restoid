@@ -25,6 +25,8 @@ data class LocalRepository(
     val id: String? = null,
     val restAuthRequired: Boolean = false,
     val s3AuthRequired: Boolean = false,
+    val sftpKeyAuthRequired: Boolean = false,
+    val sftpKeyPassphraseRequired: Boolean = false,
     val environmentVariables: Map<String, String> = emptyMap(),
     val resticOptions: Map<String, String> = emptyMap()
 )

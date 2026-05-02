@@ -51,6 +51,7 @@ class RepositoriesRepository(
         private const val MISSING_S3_BUCKET_ERROR = "The specified bucket does not exist"
         // Timeout for S3 repo existence check — restic retries indefinitely when bucket is missing
         private const val S3_CHECK_TIMEOUT_SECONDS = 5
+        private const val SSH_KEY_PASSPHRASE_ENV = "RESTOID_SSH_KEY_PASSPHRASE"
     }
 
     private val prefs = context.getSharedPreferences("repositories", Context.MODE_PRIVATE)
@@ -135,6 +136,39 @@ class RepositoriesRepository(
     fun saveSftpPassword(key: String, password: String) = passwordManager.saveSftpPassword(key, password)
     fun forgetSftpPassword(key: String) = passwordManager.removeStoredSftpPassword(key)
 
+    fun getSftpKey(key: String): String? = passwordManager.getSftpKey(key)
+    fun hasSftpKey(key: String): Boolean = passwordManager.hasSftpKey(key)
+    fun hasStoredSftpKey(key: String): Boolean = passwordManager.hasStoredSftpKey(key)
+    fun saveSftpKeyTemporary(key: String, keyContent: String) = passwordManager.saveSftpKeyTemporary(key, keyContent)
+    fun saveSftpKey(key: String, keyContent: String) = passwordManager.saveSftpKey(key, keyContent)
+    fun getSftpKeyPassphrase(key: String): String? = passwordManager.getSftpKeyPassphrase(key)
+    fun hasSftpKeyPassphrase(key: String): Boolean = passwordManager.hasSftpKeyPassphrase(key)
+    fun hasStoredSftpKeyPassphrase(key: String): Boolean = passwordManager.hasStoredSftpKeyPassphrase(key)
+    fun saveSftpKeyPassphraseTemporary(key: String, passphrase: String) = passwordManager.saveSftpKeyPassphraseTemporary(key, passphrase)
+    fun saveSftpKeyPassphrase(key: String, passphrase: String) = passwordManager.saveSftpKeyPassphrase(key, passphrase)
+    fun forgetSftpKey(key: String) {
+        passwordManager.removeStoredSftpKey(key)
+        passwordManager.removeStoredSftpKeyPassphrase(key)
+    }
+
+    fun hasSftpCredentials(key: String): Boolean {
+        val repo = getRepositoryByKey(key) ?: return false
+        return if (repo.sftpKeyAuthRequired) {
+            hasSftpKey(key) && (!repo.sftpKeyPassphraseRequired || hasSftpKeyPassphrase(key))
+        } else {
+            hasSftpPassword(key)
+        }
+    }
+
+    fun hasStoredSftpCredentials(key: String): Boolean {
+        val repo = getRepositoryByKey(key) ?: return false
+        return if (repo.sftpKeyAuthRequired) {
+            hasStoredSftpKey(key) && (!repo.sftpKeyPassphraseRequired || hasStoredSftpKeyPassphrase(key))
+        } else {
+            hasStoredSftpPassword(key)
+        }
+    }
+
     fun getRestUsername(key: String): String? = passwordManager.getRestUsername(key)
     fun getRestPassword(key: String): String? = passwordManager.getRestPassword(key)
 
@@ -214,9 +248,30 @@ class RepositoriesRepository(
         var executionEnvironment = environmentWithDefaults
 
         if (repository.backendType == RepositoryBackendType.SFTP) {
-            val sftpPassword = getSftpPassword(key)
-            if (!sftpPassword.isNullOrBlank()) {
-                executionEnvironment = executionEnvironment + mapOf("SSHPASS" to sftpPassword)
+            executionEnvironment = when {
+                !repository.sftpKeyAuthRequired -> {
+                    val sftpPassword = getSftpPassword(key)
+                    if (sftpPassword.isNullOrBlank()) {
+                        executionEnvironment
+                    } else {
+                        prepareSshAuthenticationEnvironment(
+                            baseEnvironmentVariables = executionEnvironment,
+                            sshPassword = sftpPassword
+                        ).getOrDefault(executionEnvironment + mapOf("SSHPASS" to sftpPassword))
+                    }
+                }
+                repository.sftpKeyPassphraseRequired -> {
+                    val sftpKeyPassphrase = getSftpKeyPassphrase(key)
+                    if (sftpKeyPassphrase.isNullOrBlank()) {
+                        executionEnvironment
+                    } else {
+                        prepareSshAuthenticationEnvironment(
+                            baseEnvironmentVariables = executionEnvironment,
+                            sftpKeyPassphrase = sftpKeyPassphrase
+                        ).getOrDefault(executionEnvironment + mapOf(SSH_KEY_PASSPHRASE_ENV to sftpKeyPassphrase))
+                    }
+                }
+                else -> executionEnvironment
             }
         }
 
@@ -250,12 +305,25 @@ class RepositoriesRepository(
         } else {
             null
         }
+        
+        val sftpKeyFilePath = if (repository.backendType == RepositoryBackendType.SFTP && repository.sftpKeyAuthRequired) {
+            val sftpKey = getSftpKey(key)
+            if (sftpKey.isNullOrBlank()) {
+                null
+            } else {
+                ensureSftpKeyFile(key, sftpKey)
+                sftpKeyFileForRepository(key).absolutePath
+            }
+        } else {
+            null
+        }
 
         return applySftpResticOptionDefaults(
             backendType = repository.backendType,
             options = repository.resticOptions,
             knownHostsFile = knownHostsFile,
-            strictHostKeyCheckingValue = "yes"
+            strictHostKeyCheckingValue = "yes",
+            sftpKeyFilePath = sftpKeyFilePath
         )
     }
 
@@ -282,10 +350,13 @@ class RepositoriesRepository(
             prefs.edit().putStringSet(REPOS_KEY, currentJsonSet).apply()
             passwordManager.removePassword(key)
             passwordManager.removeSftpPassword(key)
+            passwordManager.removeSftpKey(key)
+            passwordManager.removeSftpKeyPassphrase(key)
             passwordManager.removeRestUsername(key)
             passwordManager.removeRestPassword(key)
             passwordManager.removeS3AccessKeyId(key)
             passwordManager.removeS3SecretAccessKey(key)
+            deleteSftpKeyFile(key)
 
             if (_selectedRepository.value == key) {
                 prefs.edit().remove(SELECTED_REPO_KEY).apply()
@@ -300,7 +371,10 @@ class RepositoriesRepository(
         password: String,
         environmentVariables: Map<String, String>,
         resticOptions: Map<String, String>,
-        sftpPassword: String
+        sftpPassword: String,
+        sftpKey: String,
+        sftpKeyAuthRequired: Boolean,
+        sftpKeyPassphrase: String
     ): Result<SftpServerTrustInfo> {
         return withContext(Dispatchers.IO) {
             val normalizedPath = normalizeRepositoryPath(path, RepositoryBackendType.SFTP)
@@ -311,13 +385,43 @@ class RepositoriesRepository(
 
             val tempKnownHostsFile = File.createTempFile("sftp-known-hosts", ".tmp", context.cacheDir)
             val passwordFile = File.createTempFile("restic-pass", ".tmp", context.cacheDir)
+            val tempSftpKeyFile = if (sftpKeyAuthRequired && sftpKey.isNotBlank()) {
+                val keyFile = File.createTempFile("sftp-key", ".tmp", context.cacheDir)
+                keyFile.writeText(sftpKey)
+                keyFile.setReadable(false, false)
+                keyFile.setWritable(false, false)
+                keyFile.setExecutable(false, false)
+                keyFile.setReadable(true, true)
+                keyFile.setWritable(true, true)
+                keyFile
+            } else {
+                null
+            }
 
             try {
                 passwordFile.writeText(password)
 
                 val persistedEnvironmentVariables = when {
-                    sftpPassword.isNotBlank() -> {
-                        val envResult = prepareSftpPasswordEnvironment(environmentVariables)
+                    !sftpKeyAuthRequired && sftpPassword.isNotBlank() -> {
+                        val envResult = prepareSshAuthenticationEnvironment(
+                            baseEnvironmentVariables = environmentVariables,
+                            sshPassword = sftpPassword
+                        )
+                        if (envResult.isFailure) {
+                            return@withContext Result.failure(
+                                IllegalStateException(
+                                    envResult.exceptionOrNull()?.message
+                                        ?: context.getString(R.string.repo_error_sftp_password_setup_failed)
+                                )
+                            )
+                        }
+                        envResult.getOrThrow()
+                    }
+                    sftpKeyAuthRequired && sftpKeyPassphrase.isNotBlank() -> {
+                        val envResult = prepareSshAuthenticationEnvironment(
+                            baseEnvironmentVariables = environmentVariables,
+                            sftpKeyPassphrase = sftpKeyPassphrase
+                        )
                         if (envResult.isFailure) {
                             return@withContext Result.failure(
                                 IllegalStateException(
@@ -331,24 +435,19 @@ class RepositoriesRepository(
                     else -> applySftpClientEnvironmentDefaults(environmentVariables)
                 }
 
-                val executionEnvironmentVariables = if (sftpPassword.isNotBlank()) {
-                    persistedEnvironmentVariables + mapOf("SSHPASS" to sftpPassword)
-                } else {
-                    persistedEnvironmentVariables
-                }
-
                 val probeResticOptions = applySftpResticOptionDefaults(
                     backendType = RepositoryBackendType.SFTP,
                     options = resticOptions,
                     knownHostsFile = tempKnownHostsFile,
-                    strictHostKeyCheckingValue = "accept-new"
+                    strictHostKeyCheckingValue = "accept-new",
+                    sftpKeyFilePath = tempSftpKeyFile?.absolutePath
                 )
 
                 if (probeResticOptions.keys.any { !isValidResticOptionName(it) }) {
                     return@withContext Result.failure(IllegalStateException(context.getString(R.string.settings_error_invalid_restic_options)))
                 }
 
-                val envPrefix = buildShellEnvironmentPrefix(executionEnvironmentVariables)
+                val envPrefix = buildShellEnvironmentPrefix(persistedEnvironmentVariables)
                 val resticOptionFlags = buildResticOptionFlags(probeResticOptions)
 
                 val probeResult = Shell.cmd(buildString {
@@ -388,6 +487,7 @@ class RepositoriesRepository(
             } finally {
                 passwordFile.delete()
                 tempKnownHostsFile.delete()
+                tempSftpKeyFile?.delete()
             }
         }
     }
@@ -431,6 +531,9 @@ class RepositoriesRepository(
         environmentVariables: Map<String, String>,
         resticOptions: Map<String, String>,
         sftpPassword: String,
+        sftpKey: String,
+        sftpKeyAuthRequired: Boolean,
+        sftpKeyPassphrase: String,
         s3AccessKeyId: String,
         s3SecretAccessKey: String,
         restUsername: String,
@@ -459,6 +562,26 @@ class RepositoriesRepository(
                 null
             }
 
+            val newRepositoryKey = resolvedPath
+            val persistedSftpKeyFilePath = if (backendType == RepositoryBackendType.SFTP && sftpKeyAuthRequired) {
+                sftpKeyFileForRepository(newRepositoryKey).absolutePath
+            } else {
+                null
+            }
+
+            val tempSftpKeyFile = if (backendType == RepositoryBackendType.SFTP && sftpKeyAuthRequired && sftpKey.isNotBlank()) {
+                val keyFile = File.createTempFile("sftp-key", ".tmp", context.cacheDir)
+                keyFile.writeText(sftpKey)
+                keyFile.setReadable(false, false)
+                keyFile.setWritable(false, false)
+                keyFile.setExecutable(false, false)
+                keyFile.setReadable(true, true)
+                keyFile.setWritable(true, true)
+                keyFile
+            } else {
+                null
+            }
+
             val hasRestAuthCredentials = backendType == RepositoryBackendType.REST &&
                     restUsername.isNotBlank() &&
                     restPassword.isNotBlank()
@@ -470,13 +593,40 @@ class RepositoriesRepository(
                 backendType = backendType,
                 options = resticOptions,
                 knownHostsFile = knownHostsFile,
-                strictHostKeyCheckingValue = "yes"
+                strictHostKeyCheckingValue = "yes",
+                sftpKeyFilePath = persistedSftpKeyFilePath
+            )
+
+            val executionResticOptions = applySftpResticOptionDefaults(
+                backendType = backendType,
+                options = resticOptions,
+                knownHostsFile = knownHostsFile,
+                strictHostKeyCheckingValue = "yes",
+                sftpKeyFilePath = tempSftpKeyFile?.absolutePath
             )
 
             val persistedEnvironmentVariables = when {
-                backendType == RepositoryBackendType.SFTP && sftpPassword.isNotBlank() -> {
-                    val envResult = prepareSftpPasswordEnvironment(environmentVariables)
+                backendType == RepositoryBackendType.SFTP && !sftpKeyAuthRequired && sftpPassword.isNotBlank() -> {
+                    val envResult = prepareSshAuthenticationEnvironment(
+                        baseEnvironmentVariables = environmentVariables,
+                        sshPassword = sftpPassword
+                    )
                     if (envResult.isFailure) {
+                        tempSftpKeyFile?.delete()
+                        return@withContext AddRepositoryState.Error(
+                            envResult.exceptionOrNull()?.message
+                                ?: context.getString(R.string.repo_error_sftp_password_setup_failed)
+                        )
+                    }
+                    envResult.getOrThrow()
+                }
+                backendType == RepositoryBackendType.SFTP && sftpKeyAuthRequired && sftpKeyPassphrase.isNotBlank() -> {
+                    val envResult = prepareSshAuthenticationEnvironment(
+                        baseEnvironmentVariables = environmentVariables,
+                        sftpKeyPassphrase = sftpKeyPassphrase
+                    )
+                    if (envResult.isFailure) {
+                        tempSftpKeyFile?.delete()
                         return@withContext AddRepositoryState.Error(
                             envResult.exceptionOrNull()?.message
                                 ?: context.getString(R.string.repo_error_sftp_password_setup_failed)
@@ -488,9 +638,7 @@ class RepositoriesRepository(
                 else -> environmentVariables
             }
 
-            val executionEnvironmentVariables = if (backendType == RepositoryBackendType.SFTP && sftpPassword.isNotBlank()) {
-                persistedEnvironmentVariables + mapOf("SSHPASS" to sftpPassword)
-            } else if (hasRestAuthCredentials) {
+            val executionEnvironmentVariables = if (hasRestAuthCredentials) {
                 persistedEnvironmentVariables + mapOf(
                     "RESTIC_REST_USERNAME" to restUsername,
                     "RESTIC_REST_PASSWORD" to restPassword
@@ -509,21 +657,26 @@ class RepositoriesRepository(
                 backendType = backendType,
                 restAuthRequired = hasRestAuthCredentials,
                 s3AuthRequired = hasS3AuthCredentials,
+                sftpKeyAuthRequired = sftpKeyAuthRequired,
+                sftpKeyPassphraseRequired = sftpKeyPassphrase.isNotBlank(),
                 environmentVariables = persistedEnvironmentVariables,
                 resticOptions = persistedResticOptions
             )
-            val newRepositoryKey = repositoryKey(draftRepository)
+            val persistedRepositoryKey = repositoryKey(draftRepository)
 
             if (persistedResticOptions.keys.any { !isValidResticOptionName(it) }) {
+                tempSftpKeyFile?.delete()
                 return@withContext AddRepositoryState.Error(context.getString(R.string.settings_error_invalid_restic_options))
             }
 
-            if (repositories.value.any { repositoryKey(it) == newRepositoryKey }) {
+            if (repositories.value.any { repositoryKey(it) == persistedRepositoryKey }) {
+                tempSftpKeyFile?.delete()
                 return@withContext AddRepositoryState.Error(context.getString(R.string.repo_error_exists))
             }
 
             val binaryState = binaryManager.resticState.value
             if (binaryState !is ResticState.Installed) {
+                tempSftpKeyFile?.delete()
                 return@withContext AddRepositoryState.Error(context.getString(R.string.repo_error_binary_not_ready))
             }
 
@@ -531,7 +684,7 @@ class RepositoriesRepository(
             val wasEmpty = repositories.value.isEmpty()
             val passwordFile = File.createTempFile("restic-pass", ".tmp", context.cacheDir)
             val envPrefix = buildShellEnvironmentPrefix(executionEnvironmentVariables)
-            val resticOptionFlags = buildResticOptionFlags(persistedResticOptions)
+            val resticOptionFlags = buildResticOptionFlags(executionResticOptions)
 
             try {
                 passwordFile.writeText(password)
@@ -557,6 +710,8 @@ class RepositoriesRepository(
                                 savePassword,
                                 wasEmpty,
                                 sftpPassword,
+                                sftpKey,
+                                sftpKeyPassphrase,
                                 s3AccessKeyId,
                                 s3SecretAccessKey,
                                 restUsername,
@@ -594,6 +749,8 @@ class RepositoriesRepository(
                                 savePassword,
                                 wasEmpty,
                                 sftpPassword,
+                                sftpKey,
+                                sftpKeyPassphrase,
                                 s3AccessKeyId,
                                 s3SecretAccessKey,
                                 restUsername,
@@ -630,6 +787,8 @@ class RepositoriesRepository(
                             savePassword,
                             wasEmpty,
                             sftpPassword,
+                            sftpKey,
+                            sftpKeyPassphrase,
                             s3AccessKeyId,
                             s3SecretAccessKey,
                             restUsername,
@@ -661,6 +820,8 @@ class RepositoriesRepository(
                                 savePassword,
                                 wasEmpty,
                                 sftpPassword,
+                                sftpKey,
+                                sftpKeyPassphrase,
                                 s3AccessKeyId,
                                 s3SecretAccessKey,
                                 restUsername,
@@ -677,6 +838,7 @@ class RepositoriesRepository(
                 }
             } finally {
                 passwordFile.delete()
+                tempSftpKeyFile?.delete()
             }
         }
     }
@@ -689,6 +851,8 @@ class RepositoriesRepository(
         savePassword: Boolean,
         wasEmpty: Boolean,
         sftpPassword: String,
+        sftpKey: String,
+        sftpKeyPassphrase: String,
         s3AccessKeyId: String,
         s3SecretAccessKey: String,
         restUsername: String,
@@ -717,6 +881,8 @@ class RepositoriesRepository(
                 repo = repo.copy(id = repoId),
                 password = password,
                 sftpPassword = sftpPassword,
+                sftpKey = sftpKey,
+                sftpKeyPassphrase = sftpKeyPassphrase,
                 s3AccessKeyId = s3AccessKeyId,
                 s3SecretAccessKey = s3SecretAccessKey,
                 restUsername = restUsername,
@@ -779,6 +945,8 @@ class RepositoriesRepository(
         repo: LocalRepository,
         password: String,
         sftpPassword: String,
+        sftpKey: String,
+        sftpKeyPassphrase: String,
         s3AccessKeyId: String,
         s3SecretAccessKey: String,
         restUsername: String,
@@ -791,9 +959,18 @@ class RepositoriesRepository(
         if (save) passwordManager.savePassword(key, password)
         else passwordManager.savePasswordTemporary(key, password)
 
-        if (repo.backendType == RepositoryBackendType.SFTP && sftpPassword.isNotBlank()) {
-            if (save) passwordManager.saveSftpPassword(key, sftpPassword)
-            else passwordManager.saveSftpPasswordTemporary(key, sftpPassword)
+        if (repo.backendType == RepositoryBackendType.SFTP) {
+            if (repo.sftpKeyAuthRequired && sftpKey.isNotBlank()) {
+                if (save) passwordManager.saveSftpKey(key, sftpKey)
+                else passwordManager.saveSftpKeyTemporary(key, sftpKey)
+                if (repo.sftpKeyPassphraseRequired && sftpKeyPassphrase.isNotBlank()) {
+                    if (save) passwordManager.saveSftpKeyPassphrase(key, sftpKeyPassphrase)
+                    else passwordManager.saveSftpKeyPassphraseTemporary(key, sftpKeyPassphrase)
+                }
+            } else if (!repo.sftpKeyAuthRequired && sftpPassword.isNotBlank()) {
+                if (save) passwordManager.saveSftpPassword(key, sftpPassword)
+                else passwordManager.saveSftpPasswordTemporary(key, sftpPassword)
+            }
         }
 
         if (repo.backendType == RepositoryBackendType.S3 && s3AccessKeyId.isNotBlank() && s3SecretAccessKey.isNotBlank()) {
@@ -851,7 +1028,11 @@ class RepositoriesRepository(
         }
     }
 
-    private fun prepareSftpPasswordEnvironment(baseEnvironmentVariables: Map<String, String>): Result<Map<String, String>> {
+    private fun prepareSshAuthenticationEnvironment(
+        baseEnvironmentVariables: Map<String, String>,
+        sshPassword: String? = null,
+        sftpKeyPassphrase: String? = null
+    ): Result<Map<String, String>> {
         val sshPathResult = Shell.cmd("command -v ssh").exec()
         val sshPath = sshPathResult.out.firstOrNull()?.trim().orEmpty()
         if (!sshPathResult.isSuccess || sshPath.isBlank()) {
@@ -867,6 +1048,10 @@ class RepositoriesRepository(
         runCatching {
             askpassScript.writeText(
                 "#!/system/bin/sh\n" +
+                        "if [ -n \"\$${SSH_KEY_PASSPHRASE_ENV}\" ]; then\n" +
+                        "  printf '%s\\n' \"\$${SSH_KEY_PASSPHRASE_ENV}\"\n" +
+                        "  exit 0\n" +
+                        "fi\n" +
                         "if [ -n \"\$SSHPASS\" ]; then\n" +
                         "  printf '%s\\n' \"\$SSHPASS\"\n" +
                         "  exit 0\n" +
@@ -881,9 +1066,16 @@ class RepositoriesRepository(
 
         val environmentWithDefaults = applySftpClientEnvironmentDefaults(baseEnvironmentVariables)
         val displayValue = environmentWithDefaults["DISPLAY"] ?: "restoid:0"
+        val authEnvironment = mutableMapOf<String, String>()
+        if (!sshPassword.isNullOrBlank()) {
+            authEnvironment["SSHPASS"] = sshPassword
+        }
+        if (!sftpKeyPassphrase.isNullOrBlank()) {
+            authEnvironment[SSH_KEY_PASSPHRASE_ENV] = sftpKeyPassphrase
+        }
 
         return Result.success(
-            environmentWithDefaults + mapOf(
+            environmentWithDefaults + authEnvironment + mapOf(
                 "SSH_ASKPASS" to askpassScript.absolutePath,
                 "SSH_ASKPASS_REQUIRE" to "force",
                 "DISPLAY" to displayValue
@@ -927,20 +1119,74 @@ class RepositoriesRepository(
         }
     }
 
+    private fun ensureSftpKeyFile(repositoryKey: String, sftpKey: String?): Result<File?> {
+        if (sftpKey.isNullOrBlank()) return Result.success(null)
+
+        val keysDir = File(context.filesDir, "sftp-keys")
+        val keyFile = sftpKeyFileForRepository(repositoryKey)
+
+        return runCatching {
+            if (!keysDir.exists() && !keysDir.mkdirs()) {
+                throw IllegalStateException(context.getString(R.string.repo_error_sftp_key_storage_failed))
+            }
+            if (!keyFile.exists() && !keyFile.createNewFile()) {
+                throw IllegalStateException(context.getString(R.string.repo_error_sftp_key_storage_failed))
+            }
+
+            keyFile.writeText(sftpKey)
+
+            keysDir.setExecutable(true, true)
+            keysDir.setReadable(true, true)
+            keysDir.setWritable(true, true)
+            
+            // Owner read/write only
+            keyFile.setReadable(false, false)
+            keyFile.setWritable(false, false)
+            keyFile.setExecutable(false, false)
+            keyFile.setReadable(true, true)
+            keyFile.setWritable(true, true)
+
+            keyFile
+        }
+    }
+
+    private fun deleteSftpKeyFile(repositoryKey: String) {
+        val keyFile = sftpKeyFileForRepository(repositoryKey)
+        if (keyFile.exists()) {
+            keyFile.delete()
+        }
+    }
+
+    private fun sftpKeyFileForRepository(repositoryKey: String): File {
+        val hash = MessageDigest.getInstance("SHA-256")
+            .digest(repositoryKey.toByteArray())
+            .joinToString("") { byte -> "%02x".format(byte.toInt() and 0xff) }
+        return File(File(context.filesDir, "sftp-keys"), "${hash.take(32)}_id")
+    }
+
     private fun buildDefaultSftpSshArgs(
         knownHostsFile: File,
-        strictHostKeyCheckingValue: String
+        strictHostKeyCheckingValue: String,
+        sftpKeyFilePath: String?
     ): String {
-        return "-o BatchMode=no " +
+        val baseArgs = "-o BatchMode=no " +
                 "-o StrictHostKeyChecking=$strictHostKeyCheckingValue " +
                 "-o UserKnownHostsFile=${knownHostsFile.absolutePath} " +
                 "-o GlobalKnownHostsFile=/dev/null " +
-                "-o ConnectTimeout=15 " +
-                "-o PubkeyAuthentication=no " +
-                "-o KbdInteractiveAuthentication=no " +
-                "-o PasswordAuthentication=yes " +
-                "-o PreferredAuthentications=password " +
-                "-o NumberOfPasswordPrompts=1"
+                "-o ConnectTimeout=15 "
+
+        return if (sftpKeyFilePath != null) {
+            baseArgs + "-o PubkeyAuthentication=yes " +
+                    "-o PasswordAuthentication=no " +
+                    "-o IdentitiesOnly=yes " +
+                    "-i $sftpKeyFilePath"
+        } else {
+            baseArgs + "-o PubkeyAuthentication=no " +
+                    "-o KbdInteractiveAuthentication=no " +
+                    "-o PasswordAuthentication=yes " +
+                    "-o PreferredAuthentications=password " +
+                    "-o NumberOfPasswordPrompts=1"
+        }
     }
 
     private fun readKnownHostEntries(file: File): List<String> {
@@ -989,7 +1235,8 @@ class RepositoriesRepository(
         backendType: RepositoryBackendType,
         options: Map<String, String>,
         knownHostsFile: File?,
-        strictHostKeyCheckingValue: String
+        strictHostKeyCheckingValue: String,
+        sftpKeyFilePath: String? = null
     ): Map<String, String> {
         if (backendType != RepositoryBackendType.SFTP) {
             return options
@@ -1006,7 +1253,8 @@ class RepositoriesRepository(
         return options + mapOf(
             "sftp.args" to buildDefaultSftpSshArgs(
                 knownHostsFile = knownHostsFile,
-                strictHostKeyCheckingValue = strictHostKeyCheckingValue
+                strictHostKeyCheckingValue = strictHostKeyCheckingValue,
+                sftpKeyFilePath = sftpKeyFilePath
             )
         )
     }

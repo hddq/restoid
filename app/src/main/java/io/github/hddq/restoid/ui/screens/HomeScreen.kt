@@ -9,9 +9,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -19,6 +21,8 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
@@ -26,6 +30,7 @@ import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.ui.components.PasswordDialog
+import io.github.hddq.restoid.ui.components.SshPrivateKeyField
 import io.github.hddq.restoid.ui.components.UsernamePasswordDialog
 import io.github.hddq.restoid.ui.home.HomeAuthFailure
 import io.github.hddq.restoid.ui.home.HomeCredentialPrompt
@@ -43,7 +48,7 @@ fun HomeScreen(
     uiState: HomeUiState,
     onRefresh: () -> Unit,
     onPasswordEntered: (String, Boolean) -> Unit,
-    onSftpPasswordEntered: (String, Boolean) -> Unit,
+    onSftpPasswordEntered: (String, String, Boolean) -> Unit,
     onRestCredentialsEntered: (String, String, Boolean) -> Unit,
     onS3CredentialsEntered: (String, String, Boolean) -> Unit,
     onRetryRepositoryPasswordEntry: () -> Unit,
@@ -231,12 +236,94 @@ fun HomeScreen(
 
     if (uiState.showSftpPasswordDialogFor != null) {
         val repositoryKey = uiState.showSftpPasswordDialogFor
-        PasswordDialog(
-            title = stringResource(R.string.sftp_password_required),
-            message = stringResource(R.string.enter_sftp_password_for_repository, repositoryKey),
-            onPasswordEntered = onSftpPasswordEntered,
-            onDismiss = onDismissSftpPasswordDialog
-        )
+        val isKeyAuth = uiState.isSftpKeyAuthRequired
+
+        if (isKeyAuth) {
+            var credentials by remember { mutableStateOf("") }
+            var passphrase by remember { mutableStateOf("") }
+            var passphraseVisible by remember { mutableStateOf(false) }
+            var saveCredentials by remember { mutableStateOf(false) }
+            var importErrorMessage by remember { mutableStateOf<String?>(null) }
+
+            AlertDialog(
+                onDismissRequest = onDismissSftpPasswordDialog,
+                title = { Text(stringResource(R.string.sftp_key_required)) },
+                text = {
+                    Column {
+                        Text(stringResource(R.string.enter_sftp_credentials_for_repository, repositoryKey))
+                        Spacer(modifier = Modifier.height(16.dp))
+                        SshPrivateKeyField(
+                            value = credentials,
+                            onValueChange = {
+                                credentials = it
+                                importErrorMessage = null
+                            },
+                            onImportError = { importErrorMessage = it },
+                            label = stringResource(R.string.label_sftp_private_key),
+                            placeholder = stringResource(R.string.placeholder_sftp_private_key),
+                            isError = importErrorMessage != null,
+                            supportingText = importErrorMessage?.let { message -> { Text(message) } },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        if (uiState.isSftpKeyPassphraseRequired) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            OutlinedTextField(
+                                value = passphrase,
+                                onValueChange = { passphrase = it },
+                                label = { Text(stringResource(R.string.label_sftp_key_passphrase)) },
+                                singleLine = true,
+                                visualTransformation = if (passphraseVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                                trailingIcon = {
+                                    val image = if (passphraseVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
+                                    val description = if (passphraseVisible) stringResource(R.string.cd_hide_password) else stringResource(R.string.cd_show_password)
+                                    IconButton(onClick = { passphraseVisible = !passphraseVisible }) {
+                                        Icon(imageVector = image, contentDescription = description)
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = saveCredentials,
+                                onCheckedChange = { saveCredentials = it }
+                            )
+                            Text(stringResource(R.string.save_credentials))
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            if (credentials.isNotBlank() && (!uiState.isSftpKeyPassphraseRequired || passphrase.isNotBlank())) {
+                                onSftpPasswordEntered(credentials, passphrase, saveCredentials)
+                            }
+                        },
+                        enabled = credentials.isNotBlank() && (!uiState.isSftpKeyPassphraseRequired || passphrase.isNotBlank())
+                    ) {
+                        Text(stringResource(R.string.action_save))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = onDismissSftpPasswordDialog) {
+                        Text(stringResource(R.string.action_cancel))
+                    }
+                }
+            )
+        } else {
+            PasswordDialog(
+                title = stringResource(R.string.sftp_password_required),
+                message = stringResource(R.string.enter_sftp_password_for_repository, repositoryKey),
+                onPasswordEntered = { password, save -> onSftpPasswordEntered(password, "", save) },
+                onDismiss = onDismissSftpPasswordDialog
+            )
+        }
     }
 
     if (uiState.showRestCredentialsDialogFor != null) {

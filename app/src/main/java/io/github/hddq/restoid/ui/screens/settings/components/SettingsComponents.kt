@@ -53,7 +53,7 @@ import io.github.hddq.restoid.ui.screens.settings.dialogs.ChangePasswordDialog
 import io.github.hddq.restoid.ui.screens.settings.dialogs.SavePasswordDialog
 import io.github.hddq.restoid.ui.screens.settings.dialogs.SaveRestCredentialsDialog
 import io.github.hddq.restoid.ui.screens.settings.dialogs.SaveS3CredentialsDialog
-import io.github.hddq.restoid.ui.screens.settings.dialogs.SaveSftpPasswordDialog
+import io.github.hddq.restoid.ui.screens.settings.dialogs.SaveSftpCredentialsDialog
 import io.github.hddq.restoid.ui.settings.SettingsViewModel
 
 @Composable
@@ -202,7 +202,7 @@ fun SelectableRepositoryRow(
         }
         var showChangePasswordDialog by remember { mutableStateOf(false) }
         var showSavePasswordDialog by remember { mutableStateOf(false) }
-        var showSaveSftpPasswordDialog by remember { mutableStateOf(false) }
+        var showSaveSftpCredentialsDialog by remember { mutableStateOf(false) }
         var showSaveRestCredentialsDialog by remember { mutableStateOf(false) }
         var showSaveS3CredentialsDialog by remember { mutableStateOf(false) }
 
@@ -222,11 +222,11 @@ fun SelectableRepositoryRow(
             )
         }
 
-        if (showSaveSftpPasswordDialog) {
-            SaveSftpPasswordDialog(
+        if (showSaveSftpCredentialsDialog) {
+            SaveSftpCredentialsDialog(
                 viewModel = viewModel,
                 repositoryKey = repoKey,
-                onDismiss = { showSaveSftpPasswordDialog = false }
+                onDismiss = { showSaveSftpCredentialsDialog = false }
             )
         }
 
@@ -262,19 +262,36 @@ fun SelectableRepositoryRow(
                     }
                 )
                 if (repo.backendType == RepositoryBackendType.SFTP) {
-                    if (viewModel.hasStoredSftpPassword(repoKey)) {
+                    val hasCredentials = viewModel.hasStoredSftpCredentials(repoKey)
+                    if (hasCredentials) {
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_forget_sftp_password)) },
+                            text = {
+                                Text(
+                                    if (repo.sftpKeyAuthRequired) {
+                                        stringResource(R.string.action_forget_sftp_key_credentials)
+                                    } else {
+                                        stringResource(R.string.action_forget_sftp_password)
+                                    }
+                                )
+                            },
                             onClick = {
-                                viewModel.forgetSftpPassword(repoKey)
+                                if (repo.sftpKeyAuthRequired) viewModel.forgetSftpKey(repoKey) else viewModel.forgetSftpPassword(repoKey)
                                 showMenu = false
                             }
                         )
                     } else {
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_save_sftp_password)) },
+                            text = {
+                                Text(
+                                    if (repo.sftpKeyAuthRequired) {
+                                        stringResource(R.string.action_save_sftp_key_credentials)
+                                    } else {
+                                        stringResource(R.string.action_save_sftp_password)
+                                    }
+                                )
+                            },
                             onClick = {
-                                showSaveSftpPasswordDialog = true
+                                showSaveSftpCredentialsDialog = true
                                 showMenu = false
                             }
                         )

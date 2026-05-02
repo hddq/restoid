@@ -198,7 +198,7 @@ class BackupViewModel(
         }
 
         val repository = repositoriesRepository.getRepositoryByKey(selectedRepoKey)
-        if (repository?.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpPassword(selectedRepoKey)) {
+        if (repository?.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpCredentials(selectedRepoKey)) {
             return OperationProgress(
                 isFinished = true,
                 error = application.getString(R.string.error_sftp_password_not_found_for_repository),

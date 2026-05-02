@@ -370,7 +370,9 @@ class MainActivity : FragmentActivity() {
                                 uiState = homeUiState,
                                 onRefresh = { homeViewModel.refreshSnapshots() },
                                 onPasswordEntered = { p, s -> homeViewModel.onPasswordEntered(p, s) },
-                                onSftpPasswordEntered = { p, s -> homeViewModel.onSftpPasswordEntered(p, s) },
+                                onSftpPasswordEntered = { keyOrPassword, passphrase, save ->
+                                    homeViewModel.onSftpPasswordEntered(keyOrPassword, passphrase, save)
+                                },
                                 onRestCredentialsEntered = { u, p, s -> homeViewModel.onRestCredentialsEntered(u, p, s) },
                                 onS3CredentialsEntered = { u, p, s -> homeViewModel.onS3CredentialsEntered(u, p, s) },
                                 onRetryRepositoryPasswordEntry = { homeViewModel.onRetryRepositoryPasswordEntry() },

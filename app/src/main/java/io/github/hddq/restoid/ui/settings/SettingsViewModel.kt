@@ -14,11 +14,16 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+enum class SftpAuthMethod { PASSWORD, KEY }
+
 data class AddRepoUiState(
     val backendType: RepositoryBackendType = RepositoryBackendType.LOCAL,
     val path: String = "",
     val password: String = "",
     val sftpPassword: String = "",
+    val sftpKey: String = "",
+    val sftpKeyPassphrase: String = "",
+    val sftpAuthMethod: SftpAuthMethod = SftpAuthMethod.PASSWORD,
     val s3AccessKeyId: String = "",
     val s3SecretAccessKey: String = "",
     val restUsername: String = "",
@@ -37,6 +42,9 @@ private data class AddRepositoryInput(
     val backendType: RepositoryBackendType,
     val password: String,
     val sftpPassword: String,
+    val sftpKey: String,
+    val sftpKeyPassphrase: String,
+    val sftpAuthMethod: SftpAuthMethod,
     val s3AccessKeyId: String,
     val s3SecretAccessKey: String,
     val restUsername: String,
@@ -119,6 +127,15 @@ class SettingsViewModel(
     fun hasStoredSftpPassword(key: String) = repositoriesRepository.hasStoredSftpPassword(key)
     fun forgetSftpPassword(key: String) = repositoriesRepository.forgetSftpPassword(key)
     fun saveSftpPassword(key: String, password: String) = repositoriesRepository.saveSftpPassword(key, password)
+    fun hasSftpKey(key: String) = repositoriesRepository.hasSftpKey(key)
+    fun hasStoredSftpKey(key: String) = repositoriesRepository.hasStoredSftpKey(key)
+    fun hasStoredSftpCredentials(key: String) = repositoriesRepository.hasStoredSftpCredentials(key)
+    fun forgetSftpKey(key: String) = repositoriesRepository.forgetSftpKey(key)
+    fun saveSftpKey(key: String, sftpKey: String) = repositoriesRepository.saveSftpKey(key, sftpKey)
+    fun hasSftpKeyPassphrase(key: String) = repositoriesRepository.hasSftpKeyPassphrase(key)
+    fun hasStoredSftpKeyPassphrase(key: String) = repositoriesRepository.hasStoredSftpKeyPassphrase(key)
+    fun saveSftpKeyPassphrase(key: String, passphrase: String) = repositoriesRepository.saveSftpKeyPassphrase(key, passphrase)
+    fun hasSftpCredentials(key: String) = repositoriesRepository.hasSftpCredentials(key)
     fun hasRestCredentials(key: String) = repositoriesRepository.hasRestCredentials(key)
     fun hasStoredRestCredentials(key: String) = repositoriesRepository.hasStoredRestCredentials(key)
     fun forgetRestCredentials(key: String) = repositoriesRepository.forgetRestCredentials(key)
@@ -186,6 +203,9 @@ class SettingsViewModel(
                 backendType = backendType,
                 path = "",
                 sftpPassword = "",
+                sftpKey = "",
+                sftpKeyPassphrase = "",
+                sftpAuthMethod = SftpAuthMethod.PASSWORD,
                 s3AccessKeyId = "",
                 s3SecretAccessKey = "",
                 restUsername = "",
@@ -210,6 +230,26 @@ class SettingsViewModel(
     fun onNewRepoSftpPasswordChanged(password: String) {
         pendingSftpTrustRequest = null
         _addRepoUiState.update { it.copy(sftpPassword = password, sftpServerTrustInfo = null) }
+    }
+
+    fun onNewRepoSftpKeyChanged(key: String) {
+        pendingSftpTrustRequest = null
+        _addRepoUiState.update { it.copy(sftpKey = key, sftpServerTrustInfo = null, state = AddRepositoryState.Idle) }
+    }
+
+    fun onNewRepoSftpKeyImportError(message: String) {
+        pendingSftpTrustRequest = null
+        _addRepoUiState.update { it.copy(state = AddRepositoryState.Error(message), sftpServerTrustInfo = null) }
+    }
+
+    fun onNewRepoSftpKeyPassphraseChanged(passphrase: String) {
+        pendingSftpTrustRequest = null
+        _addRepoUiState.update { it.copy(sftpKeyPassphrase = passphrase, sftpServerTrustInfo = null, state = AddRepositoryState.Idle) }
+    }
+
+    fun onNewRepoSftpAuthMethodChanged(method: SftpAuthMethod) {
+        pendingSftpTrustRequest = null
+        _addRepoUiState.update { it.copy(sftpAuthMethod = method, sftpServerTrustInfo = null, state = AddRepositoryState.Idle) }
     }
 
     fun onNewRepoS3AccessKeyIdChanged(accessKeyId: String) {
@@ -292,6 +332,9 @@ class SettingsViewModel(
         val path = addRepoUiState.value.path.trim()
         val password = addRepoUiState.value.password
         val sftpPassword = addRepoUiState.value.sftpPassword
+        val sftpKey = addRepoUiState.value.sftpKey
+        val sftpKeyPassphrase = addRepoUiState.value.sftpKeyPassphrase
+        val sftpAuthMethod = addRepoUiState.value.sftpAuthMethod
         val s3AccessKeyId = addRepoUiState.value.s3AccessKeyId
         val s3SecretAccessKey = addRepoUiState.value.s3SecretAccessKey
         val restUsername = addRepoUiState.value.restUsername
@@ -303,6 +346,13 @@ class SettingsViewModel(
         if (path.isBlank() || password.isBlank()) {
             _addRepoUiState.update { it.copy(state = AddRepositoryState.Error(context.getString(R.string.settings_error_path_password_empty))) }
             return
+        }
+
+        if (backendType == RepositoryBackendType.SFTP) {
+            if (sftpAuthMethod == SftpAuthMethod.KEY && sftpKey.isBlank()) {
+                _addRepoUiState.update { it.copy(state = AddRepositoryState.Error(context.getString(R.string.error_sftp_key_cannot_be_empty))) }
+                return
+            }
         }
 
         if (backendType == RepositoryBackendType.REST) {
@@ -345,6 +395,9 @@ class SettingsViewModel(
             backendType = backendType,
             password = password,
             sftpPassword = sftpPassword,
+            sftpKey = sftpKey,
+            sftpKeyPassphrase = sftpKeyPassphrase,
+            sftpAuthMethod = sftpAuthMethod,
             s3AccessKeyId = s3AccessKeyId,
             s3SecretAccessKey = s3SecretAccessKey,
             restUsername = restUsername,
@@ -362,7 +415,10 @@ class SettingsViewModel(
                     password = input.password,
                     environmentVariables = input.environmentVariables,
                     resticOptions = emptyMap(),
-                    sftpPassword = input.sftpPassword
+                    sftpPassword = input.sftpPassword,
+                    sftpKey = input.sftpKey,
+                    sftpKeyAuthRequired = input.sftpAuthMethod == SftpAuthMethod.KEY,
+                    sftpKeyPassphrase = input.sftpKeyPassphrase
                 )
 
                 if (trustInfoResult.isFailure) {
@@ -406,6 +462,9 @@ class SettingsViewModel(
             environmentVariables = input.environmentVariables,
             resticOptions = emptyMap(),
             sftpPassword = input.sftpPassword,
+            sftpKey = input.sftpKey,
+            sftpKeyPassphrase = input.sftpKeyPassphrase,
+            sftpKeyAuthRequired = input.sftpAuthMethod == SftpAuthMethod.KEY,
             s3AccessKeyId = input.s3AccessKeyId,
             s3SecretAccessKey = input.s3SecretAccessKey,
             restUsername = input.restUsername,
