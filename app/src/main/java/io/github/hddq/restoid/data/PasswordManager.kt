@@ -16,6 +16,8 @@ class PasswordManager(private val context: Context) {
     }
 
     fun savePassword(repositoryPath: String, password: String) {
+        // Ensure temporary cache is in sync when saving permanently
+        temporaryPasswords[repositoryPath] = password
         val encrypted = CryptoHelper.encrypt(password)
         prefs.edit()
             .putString(repositoryPath, encrypted)
@@ -51,6 +53,8 @@ class PasswordManager(private val context: Context) {
     }
 
     fun removeStoredPassword(repositoryPath: String) {
+        // Also remove from temporary cache if it exists there
+        temporaryPasswords.remove(repositoryPath)
         prefs.edit()
             .remove(repositoryPath)
             .apply()
