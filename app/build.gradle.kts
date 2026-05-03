@@ -160,12 +160,10 @@ dependencies {
     implementation(libs.libsu.core)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
-    implementation(libs.androidx.security.crypto)
     implementation(libs.coil.compose)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.work.runtime.ktx)
-    // Add AboutLibraries UI
     implementation(libs.aboutlibraries.compose)
 
     testImplementation(libs.junit)

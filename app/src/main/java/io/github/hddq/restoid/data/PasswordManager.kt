@@ -1,28 +1,24 @@
 package io.github.hddq.restoid.data
 
 import android.content.Context
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
+import android.content.SharedPreferences
+import io.github.hddq.restoid.util.CryptoHelper
 
 class PasswordManager(private val context: Context) {
 
     private val temporaryPasswords = mutableMapOf<String, String>()
 
-    private val masterKey = MasterKey.Builder(context)
-        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-        .build()
+    private val prefs: SharedPreferences = context.getSharedPreferences("repository_passwords_native", Context.MODE_PRIVATE)
 
-    private val encryptedPrefs = EncryptedSharedPreferences.create(
-        context,
-        "repository_passwords",
-        masterKey,
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
+    init {
+        // Clean up the old EncryptedSharedPreferences file if it exists.
+        context.deleteSharedPreferences("repository_passwords")
+    }
 
     fun savePassword(repositoryPath: String, password: String) {
-        encryptedPrefs.edit()
-            .putString(repositoryPath, password)
+        val encrypted = CryptoHelper.encrypt(password)
+        prefs.edit()
+            .putString(repositoryPath, encrypted)
             .apply()
     }
 
@@ -31,27 +27,31 @@ class PasswordManager(private val context: Context) {
     }
 
     fun getPassword(repositoryPath: String): String? {
-        return temporaryPasswords[repositoryPath] ?: encryptedPrefs.getString(repositoryPath, null)
+        val temp = temporaryPasswords[repositoryPath]
+        if (temp != null) return temp
+        
+        val encrypted = prefs.getString(repositoryPath, null) ?: return null
+        return CryptoHelper.decrypt(encrypted)
     }
 
     fun removePassword(repositoryPath: String) {
         // Also remove from temporary cache if it exists there
         temporaryPasswords.remove(repositoryPath)
-        encryptedPrefs.edit()
+        prefs.edit()
             .remove(repositoryPath)
             .apply()
     }
 
     fun hasPassword(repositoryPath: String): Boolean {
-        return temporaryPasswords.containsKey(repositoryPath) || encryptedPrefs.contains(repositoryPath)
+        return temporaryPasswords.containsKey(repositoryPath) || prefs.contains(repositoryPath)
     }
 
     fun hasStoredPassword(repositoryPath: String): Boolean {
-        return encryptedPrefs.contains(repositoryPath)
+        return prefs.contains(repositoryPath)
     }
 
     fun removeStoredPassword(repositoryPath: String) {
-        encryptedPrefs.edit()
+        prefs.edit()
             .remove(repositoryPath)
             .apply()
     }

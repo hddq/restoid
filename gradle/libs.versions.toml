@@ -14,8 +14,6 @@ materialIconsExtended = "1.7.8"
 navigationCompose = "2.9.8"
 libsu = "6.0.0"
 lifecycle = "2.10.0"
-apacheCommonsCompress = "1.28.0"
-securityCrypto = "1.1.0"
 coilCompose = "2.7.0"
 kotlinxSerializationJson = "1.11.0"
 aboutLibraries = "14.1.0"
@@ -26,7 +24,6 @@ work = "2.11.2"
 androidx-compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "materialIconsExtended" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
-androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
@@ -45,7 +42,6 @@ androidx-compose-material3 = { group = "androidx.compose.material3", name = "mat
 libsu-core = { module = "com.github.topjohnwu.libsu:core", version.ref = "libsu" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
-apache-commons-compress = { group = "org.apache.commons", name = "commons-compress", version.ref = "apacheCommonsCompress" }
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coilCompose" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 aboutlibraries-compose = { module = "com.mikepenz:aboutlibraries-compose", version.ref = "aboutLibraries" }
