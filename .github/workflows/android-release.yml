@@ -200,6 +200,10 @@ jobs:
 
           for apk in release-assets/*.apk; do
             filename=$(basename "$apk")
+            if [[ "$filename" == *"universal"* ]]; then
+              echo "Skipping universal APK for F-Droid: $filename"
+              continue
+            fi
             new_filename="${filename%.*}-${{ github.ref_name }}.apk"
             cp "$apk" "fdroid/repo/$new_filename"
           done
@@ -216,6 +220,10 @@ jobs:
             for apk in "temp_dl_$tag"/*.apk; do
               [ -e "$apk" ] || continue
               filename=$(basename "$apk")
+              if [[ "$filename" == *"universal"* ]]; then
+                echo "Skipping universal APK for F-Droid from previous release ($tag): $filename"
+                continue
+              fi
               new_filename="${filename%.*}-${tag}.apk"
               mv "$apk" "fdroid/repo/$new_filename"
             done
