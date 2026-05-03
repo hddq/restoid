@@ -24,7 +24,7 @@ class OperationLockManager(context: Context) {
         }
 
         if (backendType != null && isRemoteBackend(backendType) && isOnWifiTransport()) {
-            wifiLock = wifiManager.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "$LOCK_TAG_PREFIX:wifi").apply {
+            wifiLock = wifiManager.createWifiLock(WifiManager.WIFI_MODE_FULL_LOW_LATENCY, "$LOCK_TAG_PREFIX:wifi").apply {
                 setReferenceCounted(false)
                 acquire()
             }
