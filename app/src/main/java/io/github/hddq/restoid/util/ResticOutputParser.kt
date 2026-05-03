@@ -56,7 +56,7 @@ object ResticOutputParser {
         val filesChanged = json.optInt("files_changed", 0)
         val dataAdded = json.optLong("data_added", 0)
         val totalDuration = json.optDouble("total_duration", 0.0)
-        val snapshotId = json.optString("snapshot_id", null)
+        val snapshotId = if (json.has("snapshot_id")) json.getString("snapshot_id") else null
 
         return OperationProgress(
             stagePercentage = 1.0f,

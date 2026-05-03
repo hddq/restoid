@@ -112,7 +112,7 @@ fun SnapshotDetailsScreen(
                                     backupDetails.forEachIndexed { index, detail ->
                                         BackedUpAppItem(detail = detail)
                                         if (index < backupDetails.size - 1) {
-                                            Divider(color = MaterialTheme.colorScheme.background)
+                                            HorizontalDivider(color = MaterialTheme.colorScheme.background)
                                         }
                                     }
                                 }

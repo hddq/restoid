@@ -99,7 +99,7 @@ class AppInfoRepository(private val context: Context) {
      */
     private suspend fun getAppInfo(packageName: String): AppInfo? {
         val pm = context.packageManager
-        val currentPackageInfo: PackageInfo? = try {
+        val currentPackageInfo: PackageInfo = try {
             pm.getPackageInfo(packageName, PackageManager.GET_META_DATA)
         } catch (e: PackageManager.NameNotFoundException) {
             // App isn't installed. Clean up cache if it exists.
@@ -113,7 +113,7 @@ class AppInfoRepository(private val context: Context) {
         }
 
         val currentVersionCode =
-            currentPackageInfo!!.longVersionCode
+            currentPackageInfo.longVersionCode
 
         val currentSourceDir = currentPackageInfo.applicationInfo?.sourceDir
 
@@ -142,7 +142,7 @@ class AppInfoRepository(private val context: Context) {
         // 3. Not in any cache or cache is stale, so fetch fresh info.
         // We can use the PackageInfo we already retrieved. This is faster and doesn't need root.
         return try {
-            currentPackageInfo!!.applicationInfo?.let { app ->
+            currentPackageInfo.applicationInfo?.let { app ->
                 val apkPaths = mutableListOf<String>()
                 apkPaths.add(app.sourceDir)
                 app.splitSourceDirs?.let { apkPaths.addAll(it) }

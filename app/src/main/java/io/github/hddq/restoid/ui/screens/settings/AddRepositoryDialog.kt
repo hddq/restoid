@@ -240,9 +240,8 @@ fun AddRepositoryDialog(
                             placeholder = stringResource(R.string.placeholder_sftp_private_key),
                             isError = uiState.state is AddRepositoryState.Error && uiState.sftpKey.isBlank(),
                             supportingText = if (uiState.state is AddRepositoryState.Error && uiState.sftpKey.isBlank()) {
-                                { Text((uiState.state as AddRepositoryState.Error).message) }
-                            } else {
-                                null
+                                { Text(uiState.state.message) }
+                            } else {                                null
                             },
                             modifier = Modifier.fillMaxWidth(),
                             enabled = !isBusy

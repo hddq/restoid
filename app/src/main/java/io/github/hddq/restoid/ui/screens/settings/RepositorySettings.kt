@@ -11,7 +11,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
@@ -69,7 +69,7 @@ fun RepositorySettings(viewModel: SettingsViewModel) {
                                 viewModel = viewModel
                             )
                             if (index < repositories.size - 1) {
-                                Divider(color = MaterialTheme.colorScheme.background)
+                                HorizontalDivider(color = MaterialTheme.colorScheme.background)
                             }
                         }
                     }

@@ -13,7 +13,7 @@ import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -71,7 +71,7 @@ fun AboutSettings(onNavigateToLicenses: () -> Unit) {
                     Text(stringResource(R.string.open_source_licenses), style = MaterialTheme.typography.bodyLarge)
                 }
 
-                Divider(color = MaterialTheme.colorScheme.background)
+                HorizontalDivider(color = MaterialTheme.colorScheme.background)
 
                 Row(
                     modifier = Modifier
