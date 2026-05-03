@@ -151,6 +151,7 @@ class BackupOperationRunner(
             val command = buildString {
                 if (envPrefix.isNotEmpty()) append(envPrefix).append(' ')
                 append("RESTIC_PASSWORD_FILE=").append(shellQuote(passwordFile.absolutePath)).append(' ')
+                append("RESTIC_CACHE_DIR=").append(shellQuote(File(context.cacheDir, "restic").absolutePath)).append(' ')
                 append(shellQuote(resticState.path)).append(' ')
                 append("--retry-lock 5s ")
                 if (resticOptionFlags.isNotEmpty()) append(resticOptionFlags).append(' ')
