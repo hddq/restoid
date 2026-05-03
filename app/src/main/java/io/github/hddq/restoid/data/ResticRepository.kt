@@ -292,6 +292,7 @@ class ResticRepository(
                 if (envPrefix.isNotEmpty()) append(envPrefix).append(' ')
                 append("RESTIC_PASSWORD_FILE=").append(shellQuote(passwordFile.absolutePath)).append(' ')
                 append(shellQuote(resticPath)).append(' ')
+                append("--retry-lock 5s ")
                 if (optionFlags.isNotEmpty()) append(optionFlags).append(' ')
                 append("-r ").append(shellQuote(repoPath)).append(' ')
                 append("backup ").append(shellQuote(repositoryId)).append(" --json ").append(tagFlags)

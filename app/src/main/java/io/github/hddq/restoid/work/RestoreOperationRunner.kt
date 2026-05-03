@@ -140,6 +140,7 @@ class RestoreOperationRunner(
                 if (envPrefix.isNotEmpty()) append(envPrefix).append(' ')
                 append("RESTIC_PASSWORD_FILE=").append(shellQuote(passwordFile.absolutePath)).append(' ')
                 append(shellQuote(resticState.path)).append(' ')
+                append("--retry-lock 5s ")
                 if (resticOptionFlags.isNotEmpty()) append(resticOptionFlags).append(' ')
                 append("-r ")
                 append(shellQuote(selectedRepoPath)).append(' ')
