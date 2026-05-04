@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Restore
@@ -49,6 +50,9 @@ import io.github.hddq.restoid.ui.snapshot.SnapshotDetailsViewModel
 import io.github.hddq.restoid.ui.snapshot.SnapshotDetailsViewModelFactory
 import io.github.hddq.restoid.ui.theme.RestoidTheme
 import io.github.hddq.restoid.data.NotificationRepository
+
+import io.github.hddq.restoid.ui.schedules.*
+import androidx.compose.material.icons.filled.Schedule
 
 class MainActivity : FragmentActivity() {
     private companion object {
@@ -205,7 +209,7 @@ class MainActivity : FragmentActivity() {
                 val navController = rememberNavController()
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentDestination = navBackStackEntry?.destination
-                val showBottomBar = currentDestination?.route in listOf(Screen.Home.route, Screen.Settings.route)
+                val showBottomBar = currentDestination?.route in listOf(Screen.Home.route, Screen.Schedules.route, Screen.Settings.route)
                 val homeViewModel: HomeViewModel = viewModel(
                     factory = HomeViewModelFactory(app, app.repositoriesRepository, app.resticBinaryManager, app.resticRepository, app.appInfoRepository, app.metadataRepository)
                 )
@@ -230,6 +234,17 @@ class MainActivity : FragmentActivity() {
                                         currentDestination?.route == RunTasksRoutes.BackupConfig -> R.string.topbar_backup_config
                                         currentDestination?.route == RunTasksRoutes.ForgetConfig -> R.string.topbar_forget_config
                                         currentDestination?.route == RunTasksRoutes.CheckConfig -> R.string.topbar_check_config
+                                        currentDestination?.route == SchedulesRoutes.Main -> R.string.topbar_schedules
+                                        currentDestination?.route == SchedulesRoutes.AddEdit -> {
+                                            val entry = navBackStackEntry ?: return@TopAppBar
+                                            val parentEntry = try { navController.getBackStackEntry(Screen.Schedules.route) } catch (e: Exception) { entry }
+                                            val vm: SchedulesViewModel = viewModel(viewModelStoreOwner = parentEntry, factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository))
+                                            val state by vm.addEditState.collectAsState()
+                                            if (state.id == null) R.string.topbar_add_schedule else R.string.topbar_edit_schedule
+                                        }
+                                        currentDestination?.route == SchedulesRoutes.BackupConfig -> R.string.topbar_backup_config
+                                        currentDestination?.route == SchedulesRoutes.ForgetConfig -> R.string.topbar_forget_config
+                                        currentDestination?.route == SchedulesRoutes.CheckConfig -> R.string.topbar_check_config
                                         currentDestination?.route == Screen.OperationProgress.route -> R.string.topbar_operation_progress
                                         currentDestination?.route == Screen.Licenses.route -> R.string.topbar_open_source_licenses
                                         currentDestination?.route?.startsWith(Screen.SnapshotDetails.route) == true -> R.string.topbar_snapshot_details
@@ -269,7 +284,11 @@ class MainActivity : FragmentActivity() {
                     },
                     bottomBar = {
                         if (showBottomBar) {
-                            val items = listOf(Screen.Home to Icons.Default.Home, Screen.Settings to Icons.Default.Settings)
+                            val items = listOf(
+                                Screen.Home to Icons.Default.Home,
+                                Screen.Schedules to Icons.Default.Schedule,
+                                Screen.Settings to Icons.Default.Settings
+                            )
                             NavigationBar {
                                 items.forEach { (screen, icon) ->
                                     NavigationBarItem(
@@ -356,6 +375,24 @@ class MainActivity : FragmentActivity() {
                                     )
                                 }
                             }
+                            SchedulesRoutes.AddEdit -> {
+                                val currentEntry = navBackStackEntry ?: return@Scaffold
+                                val parentEntry = remember(currentEntry) {
+                                    navController.getBackStackEntry(Screen.Schedules.route)
+                                }
+                                val viewModel: SchedulesViewModel = viewModel(
+                                    viewModelStoreOwner = parentEntry,
+                                    factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository)
+                                )
+                                val state by viewModel.addEditState.collectAsState()
+                                if (!state.isSaving) {
+                                    ExtendedFloatingActionButton(
+                                        onClick = { viewModel.saveSchedule() },
+                                        icon = { Icon(Icons.Default.Check, contentDescription = stringResource(R.string.action_save)) },
+                                        text = { Text(stringResource(R.string.action_save)) }
+                                    )
+                                }
+                            }
                         }
                     }
                 ) { innerPadding ->
@@ -390,6 +427,70 @@ class MainActivity : FragmentActivity() {
                                 factory = SettingsViewModelFactory(app, app.rootRepository, app.resticBinaryManager, app.resticRepository, app.repositoriesRepository, app.notificationRepository, app.preferencesRepository)
                             )
                             SettingsScreen(viewModel = vm, onNavigateToLicenses = { navController.navigate(Screen.Licenses.route) })
+                        }
+                        navigation(
+                            startDestination = SchedulesRoutes.Main,
+                            route = Screen.Schedules.route
+                        ) {
+                            composable(SchedulesRoutes.Main) { backStackEntry ->
+                                val parentEntry = remember(backStackEntry) {
+                                    navController.getBackStackEntry(Screen.Schedules.route)
+                                }
+                                val vm: SchedulesViewModel = viewModel(
+                                    viewModelStoreOwner = parentEntry,
+                                    factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository)
+                                )
+                                SchedulesScreen(
+                                    viewModel = vm,
+                                    onNavigateToAddEditSchedule = { navController.navigate(SchedulesRoutes.AddEdit) }
+                                )
+                            }
+                            composable(SchedulesRoutes.AddEdit) { backStackEntry ->
+                                val parentEntry = remember(backStackEntry) {
+                                    navController.getBackStackEntry(Screen.Schedules.route)
+                                }
+                                val vm: SchedulesViewModel = viewModel(
+                                    viewModelStoreOwner = parentEntry,
+                                    factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository)
+                                )
+                                AddEditScheduleScreen(
+                                    viewModel = vm,
+                                    onNavigateBack = { navController.navigateUp() },
+                                    onNavigateToBackupConfig = { navController.navigate(SchedulesRoutes.BackupConfig) },
+                                    onNavigateToForgetConfig = { navController.navigate(SchedulesRoutes.ForgetConfig) },
+                                    onNavigateToCheckConfig = { navController.navigate(SchedulesRoutes.CheckConfig) }
+                                )
+                            }
+                            composable(SchedulesRoutes.BackupConfig) { backStackEntry ->
+                                val parentEntry = remember(backStackEntry) {
+                                    navController.getBackStackEntry(Screen.Schedules.route)
+                                }
+                                val vm: SchedulesViewModel = viewModel(
+                                    viewModelStoreOwner = parentEntry,
+                                    factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository)
+                                )
+                                ScheduleBackupConfigScreen(viewModel = vm)
+                            }
+                            composable(SchedulesRoutes.ForgetConfig) { backStackEntry ->
+                                val parentEntry = remember(backStackEntry) {
+                                    navController.getBackStackEntry(Screen.Schedules.route)
+                                }
+                                val vm: SchedulesViewModel = viewModel(
+                                    viewModelStoreOwner = parentEntry,
+                                    factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository)
+                                )
+                                ScheduleForgetConfigScreen(viewModel = vm)
+                            }
+                            composable(SchedulesRoutes.CheckConfig) { backStackEntry ->
+                                val parentEntry = remember(backStackEntry) {
+                                    navController.getBackStackEntry(Screen.Schedules.route)
+                                }
+                                val vm: SchedulesViewModel = viewModel(
+                                    viewModelStoreOwner = parentEntry,
+                                    factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository)
+                                )
+                                ScheduleCheckConfigScreen(viewModel = vm)
+                            }
                         }
                         navigation(
                             startDestination = RunTasksRoutes.Main,

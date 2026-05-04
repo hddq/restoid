@@ -1,0 +1,95 @@
+package io.github.hddq.restoid.data
+
+import android.content.Context
+import androidx.work.*
+import io.github.hddq.restoid.model.Schedule
+import io.github.hddq.restoid.work.ScheduleWorker
+import java.util.concurrent.TimeUnit
+
+class ScheduleRepository(
+    private val context: Context,
+    private val metadataRepository: MetadataRepository,
+    private val repositoriesRepository: RepositoriesRepository
+) {
+    private val workManager = WorkManager.getInstance(context)
+
+    suspend fun getSchedules(repoId: String): List<Schedule> {
+        return metadataRepository.getSchedules(repoId)
+    }
+
+    suspend fun saveSchedule(repoKey: String, repoId: String, schedule: Schedule) {
+        val schedules = getSchedules(repoId).toMutableList()
+        val index = schedules.indexOfFirst { it.id == schedule.id }
+        if (index != -1) {
+            schedules[index] = schedule
+        } else {
+            schedules.add(schedule)
+        }
+        metadataRepository.saveSchedules(repoId, schedules)
+        updateWorkManager(repoKey, schedule)
+    }
+
+    suspend fun deleteSchedule(repoKey: String, repoId: String, scheduleId: String) {
+        val schedules = getSchedules(repoId).filter { it.id != scheduleId }
+        metadataRepository.saveSchedules(repoId, schedules)
+        cancelWork(scheduleId)
+    }
+
+    private fun updateWorkManager(repoKey: String, schedule: Schedule) {
+        if (schedule.isEnabled) {
+            val constraints = Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+
+            val workRequest = PeriodicWorkRequestBuilder<ScheduleWorker>(
+                schedule.intervalHours.toLong(), TimeUnit.HOURS
+            )
+                .setConstraints(constraints)
+                .setInputData(
+                    workDataOf(
+                        ScheduleWorker.KEY_REPO_KEY to repoKey,
+                        ScheduleWorker.KEY_SCHEDULE_ID to schedule.id
+                    )
+                )
+                .build()
+
+            workManager.enqueueUniquePeriodicWork(
+                getWorkName(schedule.id),
+                ExistingPeriodicWorkPolicy.UPDATE,
+                workRequest
+            )
+        } else {
+            cancelWork(schedule.id)
+        }
+    }
+
+    private fun cancelWork(scheduleId: String) {
+        workManager.cancelUniqueWork(getWorkName(scheduleId))
+    }
+
+    private fun getWorkName(scheduleId: String): String = "schedule_$scheduleId"
+
+    fun runNow(repoKey: String, schedule: Schedule) {
+        val workRequest = OneTimeWorkRequestBuilder<ScheduleWorker>()
+            .setInputData(
+                workDataOf(
+                    ScheduleWorker.KEY_REPO_KEY to repoKey,
+                    ScheduleWorker.KEY_SCHEDULE_ID to schedule.id
+                )
+            )
+            .build()
+        workManager.enqueue(workRequest)
+    }
+
+    suspend fun reconcileAllSchedules() {
+        val reposList = repositoriesRepository.repositories.value
+        for (repository in reposList) {
+            val repoKey = repositoriesRepository.repositoryKey(repository)
+            val repoId = repository.id ?: continue
+            val schedules = getSchedules(repoId)
+            for (schedule in schedules) {
+                updateWorkManager(repoKey, schedule)
+            }
+        }
+    }
+}

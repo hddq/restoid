@@ -2,6 +2,7 @@ package io.github.hddq.restoid
 
 sealed class Screen(val route: String, val titleRes: Int) {
     object Home : Screen("home", R.string.screen_home)
+    object Schedules : Screen("schedules", R.string.screen_schedules)
     object Settings : Screen("settings", R.string.screen_settings)
     object RunTasks : Screen("run_tasks", R.string.screen_run_tasks)
     object SnapshotDetails : Screen("snapshot_details", R.string.screen_snapshot_details)

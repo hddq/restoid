@@ -10,7 +10,7 @@ import io.github.hddq.restoid.data.RepositoryBackendType
 import io.github.hddq.restoid.data.ResticBinaryManager
 import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.model.AppInfo
-import io.github.hddq.restoid.ui.backup.BackupTypes
+import io.github.hddq.restoid.ui.shared.BackupTypes
 import io.github.hddq.restoid.ui.shared.OperationProgress
 import io.github.hddq.restoid.work.BackupTypeSelection
 import io.github.hddq.restoid.work.OperationWorkRepository
@@ -311,19 +311,4 @@ class RunTasksViewModel(
     fun setBackupExternalData(value: Boolean) = _uiState.update { it.copy(backupTypes = it.backupTypes.copy(externalData = value)) }
     fun setBackupObb(value: Boolean) = _uiState.update { it.copy(backupTypes = it.backupTypes.copy(obb = value)) }
     fun setBackupMedia(value: Boolean) = _uiState.update { it.copy(backupTypes = it.backupTypes.copy(media = value)) }
-}
-
-private fun BackupTypes.toSelection(): BackupTypeSelection {
-    return BackupTypeSelection(
-        apk = apk,
-        data = data,
-        deviceProtectedData = deviceProtectedData,
-        externalData = externalData,
-        obb = obb,
-        media = media
-    )
-}
-
-private fun BackupTypes.anyEnabled(): Boolean {
-    return apk || data || deviceProtectedData || externalData || obb || media
 }
