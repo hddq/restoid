@@ -1,0 +1,1 @@
+Moderan alat temeljen na root pristupu za sigurnosno kopiranje Android aplikacija pokrenut restic-om
