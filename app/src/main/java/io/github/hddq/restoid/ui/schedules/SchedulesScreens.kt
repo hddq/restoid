@@ -1,5 +1,7 @@
 package io.github.hddq.restoid.ui.schedules
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PlayArrow
@@ -29,6 +32,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -76,22 +80,34 @@ fun SchedulesScreen(
                 )
             }
         } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp)
             ) {
-                items(uiState.schedules) { schedule ->
-                    ScheduleItem(
-                        schedule = schedule,
-                        onEdit = {
-                            viewModel.startEditSchedule(schedule)
-                            onNavigateToAddEditSchedule()
-                        },
-                        onDelete = { scheduleToDelete = schedule },
-                        onToggleEnabled = { viewModel.toggleScheduleEnabled(schedule) },
-                        onRunNow = { viewModel.runNow(schedule) }
-                    )
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+                ) {
+                    Column {
+                        val schedules = uiState.schedules
+                        schedules.forEachIndexed { index, schedule ->
+                            ScheduleItem(
+                                schedule = schedule,
+                                onEdit = {
+                                    viewModel.startEditSchedule(schedule)
+                                    onNavigateToAddEditSchedule()
+                                },
+                                onDelete = { scheduleToDelete = schedule },
+                                onToggleEnabled = { viewModel.toggleScheduleEnabled(schedule) },
+                                onRunNow = { viewModel.runNow(schedule) }
+                            )
+                            if (index < schedules.size - 1) {
+                                HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -400,53 +416,62 @@ private fun ScheduleItem(
 ) {
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = schedule.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Switch(checked = schedule.isEnabled, onCheckedChange = { onToggleEnabled() })
-            }
-
+    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
             Text(
-                text = stringResource(R.string.schedule_interval_label) + ": ${schedule.intervalHours}h",
-                style = MaterialTheme.typography.bodyMedium
+                text = schedule.name,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
             )
+            Switch(
+                checked = schedule.isEnabled,
+                onCheckedChange = { onToggleEnabled() },
+                thumbContent = if (schedule.isEnabled) {
+                    {
+                        Icon(
+                            imageVector = Icons.Filled.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(SwitchDefaults.IconSize)
+                        )
+                    }
+                } else {
+                    null
+                }
+            )
+        }
 
-            val lastRunText = if (schedule.lastRunTimestamp != null) {
-                stringResource(R.string.schedule_last_run, dateFormat.format(Date(schedule.lastRunTimestamp)))
-            } else {
-                stringResource(R.string.schedule_never_run)
+        Text(
+            text = stringResource(R.string.schedule_interval_label) + ": ${schedule.intervalHours}h",
+            style = MaterialTheme.typography.bodyMedium
+        )
+
+        val lastRunText = if (schedule.lastRunTimestamp != null) {
+            stringResource(R.string.schedule_last_run, dateFormat.format(Date(schedule.lastRunTimestamp)))
+        } else {
+            stringResource(R.string.schedule_never_run)
+        }
+        Text(
+            text = lastRunText,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            horizontalArrangement = Arrangement.End
+        ) {
+            IconButton(onClick = onRunNow) {
+                Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.schedule_run_now))
             }
-            Text(
-                text = lastRunText,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                horizontalArrangement = Arrangement.End
-            ) {
-                IconButton(onClick = onRunNow) {
-                    Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.schedule_run_now))
-                }
-                IconButton(onClick = onEdit) {
-                    Icon(Icons.Default.Edit, contentDescription = null)
-                }
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
-                }
+            IconButton(onClick = onEdit) {
+                Icon(Icons.Default.Edit, contentDescription = null)
+            }
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
             }
         }
     }
