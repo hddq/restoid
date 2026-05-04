@@ -209,7 +209,7 @@ class MainActivity : FragmentActivity() {
                 val navController = rememberNavController()
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentDestination = navBackStackEntry?.destination
-                val showBottomBar = currentDestination?.route in listOf(Screen.Home.route, Screen.Schedules.route, Screen.Settings.route)
+                val showBottomBar = currentDestination?.route in listOf(Screen.Home.route, SchedulesRoutes.Main, Screen.Settings.route)
                 val homeViewModel: HomeViewModel = viewModel(
                     factory = HomeViewModelFactory(app, app.repositoriesRepository, app.resticBinaryManager, app.resticRepository, app.appInfoRepository, app.metadataRepository)
                 )
