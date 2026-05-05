@@ -1,5 +1,12 @@
 package io.github.hddq.restoid.ui.schedules
 
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.background
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
@@ -14,13 +21,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -28,7 +31,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
@@ -416,64 +418,66 @@ private fun ScheduleItem(
 ) {
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
 
-    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min)
+            .clickable(onClick = onEdit)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = schedule.name,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.bodyLarge
             )
-            Switch(
-                checked = schedule.isEnabled,
-                onCheckedChange = { onToggleEnabled() },
-                thumbContent = if (schedule.isEnabled) {
-                    {
-                        Icon(
-                            imageVector = Icons.Filled.Check,
-                            contentDescription = null,
-                            modifier = Modifier.size(SwitchDefaults.IconSize)
-                        )
-                    }
-                } else {
-                    null
+            
+            val lastRunText = if (schedule.lastRunTimestamp != null) {
+                stringResource(R.string.schedule_last_run, dateFormat.format(Date(schedule.lastRunTimestamp)))
+            } else {
+                stringResource(R.string.schedule_never_run)
+            }
+            
+            Text(
+                text = stringResource(R.string.schedule_interval_label) + ": ${schedule.intervalHours}h\n" + lastRunText,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        Spacer(Modifier.width(12.dp))
+        Icon(
+            imageVector = Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(Modifier.width(12.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxHeight(0.5f)
+                .width(1.dp)
+                .background(MaterialTheme.colorScheme.outlineVariant)
+        )
+        Spacer(Modifier.width(16.dp))
+
+        Switch(
+            checked = schedule.isEnabled,
+            onCheckedChange = { onToggleEnabled() },
+            thumbContent = if (schedule.isEnabled) {
+                {
+                    Icon(
+                        imageVector = Icons.Filled.Check,
+                        contentDescription = null,
+                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                    )
                 }
-            )
-        }
-
-        Text(
-            text = stringResource(R.string.schedule_interval_label) + ": ${schedule.intervalHours}h",
-            style = MaterialTheme.typography.bodyMedium
+            } else {
+                null
+            }
         )
-
-        val lastRunText = if (schedule.lastRunTimestamp != null) {
-            stringResource(R.string.schedule_last_run, dateFormat.format(Date(schedule.lastRunTimestamp)))
-        } else {
-            stringResource(R.string.schedule_never_run)
-        }
-        Text(
-            text = lastRunText,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            horizontalArrangement = Arrangement.End
-        ) {
-            IconButton(onClick = onRunNow) {
-                Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.schedule_run_now))
-            }
-            IconButton(onClick = onEdit) {
-                Icon(Icons.Default.Edit, contentDescription = null)
-            }
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
-            }
-        }
     }
 }
 
