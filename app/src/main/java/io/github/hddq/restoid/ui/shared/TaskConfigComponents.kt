@@ -115,19 +115,26 @@ fun PolicySlider(
     range: IntRange,
     onValueChange: (Int) -> Unit
 ) {
+    val isDiscrete = (range.last - range.first) <= 30
+
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(label, style = MaterialTheme.typography.bodyLarge)
-            Text(value.toString(), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+            Text(
+                text = value.toString(),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
         }
         Slider(
             value = value.toFloat(),
             onValueChange = { onValueChange(it.roundToInt()) },
             valueRange = range.first.toFloat()..range.last.toFloat(),
-            steps = (range.last - range.first - 1).coerceAtLeast(0)
+            steps = if (isDiscrete) (range.last - range.first - 1).coerceAtLeast(0) else 0
         )
     }
 }
