@@ -277,6 +277,20 @@ class MainActivity : FragmentActivity() {
                                                 tint = MaterialTheme.colorScheme.error
                                             )
                                         }
+                                    } else if (currentDestination?.route == SchedulesRoutes.AddEdit) {
+                                        val entry = navBackStackEntry ?: return@TopAppBar
+                                        val parentEntry = try { navController.getBackStackEntry(Screen.Schedules.route) } catch (e: Exception) { entry }
+                                        val vm: SchedulesViewModel = viewModel(viewModelStoreOwner = parentEntry, factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository))
+                                        val state by vm.addEditState.collectAsState()
+                                        if (state.id != null) {
+                                            IconButton(onClick = { vm.onDeleteScheduleClick() }) {
+                                                Icon(
+                                                    Icons.Default.Delete,
+                                                    contentDescription = stringResource(R.string.action_delete),
+                                                    tint = MaterialTheme.colorScheme.error
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             )

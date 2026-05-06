@@ -37,7 +37,8 @@ data class AddEditScheduleUiState(
     val apps: List<AppInfo> = emptyList(),
     val maintenance: RunTasksMaintenanceConfig = RunTasksMaintenanceConfig(),
     val isLoadingApps: Boolean = false,
-    val isSaving: Boolean = false
+    val isSaving: Boolean = false,
+    val showConfirmDeleteDialog: Boolean = false
 )
 
 sealed interface SchedulesUiEvent {
@@ -223,5 +224,18 @@ class SchedulesViewModel(
 
     fun refreshAppsList() {
         loadAppsForAddEdit(_addEditState.value.apps.filter { it.isSelected }.map { it.packageName })
+    }
+
+    fun onDeleteScheduleClick() = _addEditState.update { it.copy(showConfirmDeleteDialog = true) }
+
+    fun onCancelDeleteSchedule() = _addEditState.update { it.copy(showConfirmDeleteDialog = false) }
+
+    fun confirmDeleteSchedule() {
+        val scheduleId = _addEditState.value.id ?: return
+        _addEditState.update { it.copy(showConfirmDeleteDialog = false) }
+        deleteSchedule(scheduleId)
+        viewModelScope.launch {
+            _uiEvents.emit(SchedulesUiEvent.NavigateBack)
+        }
     }
 }

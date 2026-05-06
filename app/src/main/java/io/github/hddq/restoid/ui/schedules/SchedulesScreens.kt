@@ -342,6 +342,24 @@ fun AddEditScheduleScreen(
             }
         }
     }
+
+    if (state.showConfirmDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.onCancelDeleteSchedule() },
+            title = { Text(stringResource(R.string.dialog_delete_schedule_title)) },
+            text = { Text(stringResource(R.string.dialog_delete_schedule_message)) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.confirmDeleteSchedule() }) {
+                    Text(stringResource(R.string.action_delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.onCancelDeleteSchedule() }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
 }
 
 @Composable
