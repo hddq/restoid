@@ -442,6 +442,10 @@
     <string name="not_available">N/A</string>
 
     <string name="section_general">General</string>
+    <string name="section_conditions">Conditions</string>
+    <string name="condition_battery_not_low">Battery is not low</string>
+    <string name="condition_charging">Device is charging</string>
+    <string name="condition_unmetered_network">Network is unmetered</string>
     <string name="value_none">None</string>
     <string name="unit_hours">h</string>
     <string name="schedule_interval_range_hint">1–720 h</string>

@@ -296,6 +296,41 @@ fun AddEditScheduleScreen(
         item {
             Column {
                 Text(
+                    text = stringResource(R.string.section_conditions),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+                ) {
+                    Column {
+                        TaskRow(
+                            title = stringResource(R.string.condition_battery_not_low),
+                            checked = state.triggerConditions.requireBatteryNotLow,
+                            onCheckedChange = viewModel::setRequireBatteryNotLow
+                        )
+                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                        TaskRow(
+                            title = stringResource(R.string.condition_charging),
+                            checked = state.triggerConditions.requireCharging,
+                            onCheckedChange = viewModel::setRequireCharging
+                        )
+                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                        TaskRow(
+                            title = stringResource(R.string.condition_unmetered_network),
+                            checked = state.triggerConditions.requireUnmeteredNetwork,
+                            onCheckedChange = viewModel::setRequireUnmeteredNetwork
+                        )
+                    }
+                }
+            }
+        }
+
+        item {
+            Column {
+                Text(
                     text = stringResource(R.string.operation_backup),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.primary,

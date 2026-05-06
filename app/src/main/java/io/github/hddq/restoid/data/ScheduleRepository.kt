@@ -55,8 +55,12 @@ class ScheduleRepository(
 
     private fun updateWorkManager(repoKey: String, schedule: Schedule) {
         if (schedule.isEnabled) {
+            val networkType = if (schedule.triggerConditions.requireUnmeteredNetwork)
+                NetworkType.UNMETERED else NetworkType.CONNECTED
             val constraints = Constraints.Builder()
-                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .setRequiredNetworkType(networkType)
+                .setRequiresBatteryNotLow(schedule.triggerConditions.requireBatteryNotLow)
+                .setRequiresCharging(schedule.triggerConditions.requireCharging)
                 .build()
 
             var initialDelay = 0L

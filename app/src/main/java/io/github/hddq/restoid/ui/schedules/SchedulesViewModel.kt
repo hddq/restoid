@@ -8,6 +8,7 @@ import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.ScheduleRepository
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.Schedule
+import io.github.hddq.restoid.model.TriggerConditions
 import io.github.hddq.restoid.ui.runtasks.RunTasksMaintenanceConfig
 import io.github.hddq.restoid.ui.shared.BackupTypes
 import io.github.hddq.restoid.ui.shared.toUiModel
@@ -36,6 +37,7 @@ data class AddEditScheduleUiState(
     val backupTypes: BackupTypes = BackupTypes(),
     val apps: List<AppInfo> = emptyList(),
     val maintenance: RunTasksMaintenanceConfig = RunTasksMaintenanceConfig(),
+    val triggerConditions: TriggerConditions = TriggerConditions(),
     val isLoadingApps: Boolean = false,
     val isSaving: Boolean = false,
     val showConfirmDeleteDialog: Boolean = false
@@ -133,7 +135,8 @@ class SchedulesViewModel(
                 keepDaily = schedule.config.keepDaily,
                 keepWeekly = schedule.config.keepWeekly,
                 keepMonthly = schedule.config.keepMonthly
-            )
+            ),
+            triggerConditions = schedule.triggerConditions
         )
         loadAppsForAddEdit(schedule.config.selectedPackageNames)
     }
@@ -175,7 +178,8 @@ class SchedulesViewModel(
                 keepDaily = state.maintenance.keepDaily,
                 keepWeekly = state.maintenance.keepWeekly,
                 keepMonthly = state.maintenance.keepMonthly
-            )
+            ),
+            triggerConditions = state.triggerConditions
         )
 
         viewModelScope.launch {
@@ -221,6 +225,10 @@ class SchedulesViewModel(
     fun setKeepDaily(value: Int) = _addEditState.update { it.copy(maintenance = it.maintenance.copy(keepDaily = value)) }
     fun setKeepWeekly(value: Int) = _addEditState.update { it.copy(maintenance = it.maintenance.copy(keepWeekly = value)) }
     fun setKeepMonthly(value: Int) = _addEditState.update { it.copy(maintenance = it.maintenance.copy(keepMonthly = value)) }
+
+    fun setRequireBatteryNotLow(value: Boolean) = _addEditState.update { it.copy(triggerConditions = it.triggerConditions.copy(requireBatteryNotLow = value)) }
+    fun setRequireCharging(value: Boolean) = _addEditState.update { it.copy(triggerConditions = it.triggerConditions.copy(requireCharging = value)) }
+    fun setRequireUnmeteredNetwork(value: Boolean) = _addEditState.update { it.copy(triggerConditions = it.triggerConditions.copy(requireUnmeteredNetwork = value)) }
 
     fun refreshAppsList() {
         loadAppsForAddEdit(_addEditState.value.apps.filter { it.isSelected }.map { it.packageName })
