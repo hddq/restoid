@@ -37,6 +37,7 @@
 
     <string name="operation_backup">Backup</string>
     <string name="operation_run_tasks">Run Tasks</string>
+    <string name="operation_schedule_name">Schedule %1$s</string>
     <string name="operation_restore">Restore</string>
     <string name="operation_maintenance">Maintenance</string>
     <string name="run_tasks_phase_summary">%1$s:\n%2$s</string>

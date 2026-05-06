@@ -88,5 +88,6 @@ data class RunTasksWorkRequest(
     val keepLast: Int,
     val keepDaily: Int,
     val keepWeekly: Int,
-    val keepMonthly: Int
+    val keepMonthly: Int,
+    val scheduleName: String? = null
 )

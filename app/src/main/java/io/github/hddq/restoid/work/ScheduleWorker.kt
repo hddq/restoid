@@ -48,7 +48,8 @@ class ScheduleWorker(
             keepLast = schedule.config.keepLast,
             keepDaily = schedule.config.keepDaily,
             keepWeekly = schedule.config.keepWeekly,
-            keepMonthly = schedule.config.keepMonthly
+            keepMonthly = schedule.config.keepMonthly,
+            scheduleName = schedule.name
         )
         val enqueued = app.operationWorkRepository.enqueueRunTasks(workRequest)
 

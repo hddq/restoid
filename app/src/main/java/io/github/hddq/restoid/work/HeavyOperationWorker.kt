@@ -36,6 +36,7 @@ class HeavyOperationWorker(
         app.operationRuntimeRepository.markEnqueued(operationType, initialProgress)
         setProgress(OperationWorkContract.progressToData(operationType, initialProgress))
 
+        var scheduleName: String? = null
         val notifier = WorkerProgressNotifier(operationType)
         val shouldStop = { isStopped || app.operationRuntimeRepository.state.value.stopRequested }
 
@@ -56,6 +57,7 @@ class HeavyOperationWorker(
 
                 OperationType.RUN_TASKS -> {
                     val request = app.operationRequestStore.loadRunTasksRequest(requestId)
+                    scheduleName = request.scheduleName
                     val runner = RunTasksOperationRunner(
                         context = applicationContext,
                         repositoriesRepository = app.repositoriesRepository,
@@ -120,8 +122,13 @@ class HeavyOperationWorker(
         app.operationRuntimeRepository.markFinished(operationType, finalResult.success, finalResult.progress)
         setProgress(OperationWorkContract.progressToData(operationType, finalResult.progress))
 
+        val displayName = if (scheduleName != null) {
+            applicationContext.getString(R.string.operation_schedule_name, scheduleName)
+        } else {
+            operationName(operationType)
+        }
         notificationRepository.showOperationFinishedNotification(
-            operationName(operationType),
+            displayName,
             finalResult.success,
             finalResult.progress.finalSummary
         )
