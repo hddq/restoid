@@ -41,10 +41,21 @@ class ScheduleRepository(
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
 
+            var initialDelay = 0L
+            if (schedule.lastRunTimestamp != null) {
+                val elapsedMillis = System.currentTimeMillis() - schedule.lastRunTimestamp
+                val intervalMillis = TimeUnit.HOURS.toMillis(schedule.intervalHours.toLong())
+                val remainingMillis = intervalMillis - elapsedMillis
+                if (remainingMillis > 0) {
+                    initialDelay = remainingMillis
+                }
+            }
+
             val workRequest = PeriodicWorkRequestBuilder<ScheduleWorker>(
                 schedule.intervalHours.toLong(), TimeUnit.HOURS
             )
                 .setConstraints(constraints)
+                .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
                 .setInputData(
                     workDataOf(
                         ScheduleWorker.KEY_REPO_KEY to repoKey,
