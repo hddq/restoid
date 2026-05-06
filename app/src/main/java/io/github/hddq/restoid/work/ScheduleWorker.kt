@@ -35,7 +35,22 @@ class ScheduleWorker(
         if (!schedule.isEnabled) return Result.success()
 
         // Trigger the run tasks operation
-        val enqueued = app.operationWorkRepository.enqueueRunTasks(schedule.config)
+        val workRequest = RunTasksWorkRequest(
+            repositoryKey = repoKey,
+            backupEnabled = schedule.config.backupEnabled,
+            backupTypes = schedule.config.backupTypes,
+            selectedPackageNames = schedule.config.selectedPackageNames,
+            unlockRepo = schedule.config.unlockRepo,
+            forgetSnapshots = schedule.config.forgetSnapshots,
+            pruneRepo = schedule.config.pruneRepo,
+            checkRepo = schedule.config.checkRepo,
+            readData = schedule.config.readData,
+            keepLast = schedule.config.keepLast,
+            keepDaily = schedule.config.keepDaily,
+            keepWeekly = schedule.config.keepWeekly,
+            keepMonthly = schedule.config.keepMonthly
+        )
+        val enqueued = app.operationWorkRepository.enqueueRunTasks(workRequest)
 
         if (enqueued) {
             // Update last run timestamp

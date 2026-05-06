@@ -59,6 +59,22 @@ data class MaintenanceWorkRequest(
 )
 
 @Serializable
+data class RunTasksConfig(
+    val backupEnabled: Boolean,
+    val backupTypes: BackupTypeSelection,
+    val selectedPackageNames: List<String>,
+    val unlockRepo: Boolean,
+    val forgetSnapshots: Boolean,
+    val pruneRepo: Boolean,
+    val checkRepo: Boolean,
+    val readData: Boolean,
+    val keepLast: Int,
+    val keepDaily: Int,
+    val keepWeekly: Int,
+    val keepMonthly: Int
+)
+
+@Serializable
 data class RunTasksWorkRequest(
     val repositoryKey: String,
     val backupEnabled: Boolean,

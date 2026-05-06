@@ -11,8 +11,7 @@ import io.github.hddq.restoid.model.Schedule
 import io.github.hddq.restoid.ui.runtasks.RunTasksMaintenanceConfig
 import io.github.hddq.restoid.ui.shared.BackupTypes
 import io.github.hddq.restoid.ui.shared.toUiModel
-import io.github.hddq.restoid.work.BackupTypeSelection
-import io.github.hddq.restoid.work.RunTasksWorkRequest
+import io.github.hddq.restoid.work.RunTasksConfig
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -162,8 +161,7 @@ class SchedulesViewModel(
             name = state.name.ifBlank { "Schedule" },
             intervalHours = state.intervalHours,
             isEnabled = state.isEnabled,
-            config = RunTasksWorkRequest(
-                repositoryKey = repoKey,
+            config = RunTasksConfig(
                 backupEnabled = state.backupEnabled,
                 backupTypes = state.backupTypes.toSelection(),
                 selectedPackageNames = state.apps.filter { it.isSelected }.map { it.packageName },
