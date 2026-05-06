@@ -233,8 +233,14 @@ class SchedulesViewModel(
     fun confirmDeleteSchedule() {
         val scheduleId = _addEditState.value.id ?: return
         _addEditState.update { it.copy(showConfirmDeleteDialog = false) }
-        deleteSchedule(scheduleId)
+
+        val repoKey = _uiState.value.selectedRepoKey ?: return
+        val repository = repositoriesRepository.getRepositoryByKey(repoKey) ?: return
+        val repoId = repository.id ?: return
+
         viewModelScope.launch {
+            scheduleRepository.deleteSchedule(repoKey, repoId, scheduleId)
+            loadSchedules()
             _uiEvents.emit(SchedulesUiEvent.NavigateBack)
         }
     }

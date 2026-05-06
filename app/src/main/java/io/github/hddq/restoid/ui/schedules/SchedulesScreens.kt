@@ -25,6 +25,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Delete
+import io.github.hddq.restoid.LocalAppBarActions
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -183,6 +186,22 @@ fun AddEditScheduleScreen(
     val state by viewModel.addEditState.collectAsState()
     val context = LocalContext.current
     var intervalText by remember(state.intervalHours) { mutableStateOf(state.intervalHours.toString()) }
+    val appBarActions = LocalAppBarActions.current
+
+    DisposableEffect(state.id) {
+        if (state.id != null) {
+            appBarActions.value = {
+                IconButton(onClick = { viewModel.onDeleteScheduleClick() }) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = stringResource(R.string.action_delete),
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        }
+        onDispose { appBarActions.value = null }
+    }
 
     LaunchedEffect(viewModel) {
         viewModel.uiEvents.collect { event ->
