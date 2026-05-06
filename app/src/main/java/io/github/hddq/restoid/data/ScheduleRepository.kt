@@ -20,13 +20,31 @@ class ScheduleRepository(
     suspend fun saveSchedule(repoKey: String, repoId: String, schedule: Schedule) {
         val schedules = getSchedules(repoId).toMutableList()
         val index = schedules.indexOfFirst { it.id == schedule.id }
-        if (index != -1) {
-            schedules[index] = schedule
+        
+        val scheduleToSave = if (index != -1) {
+            schedule.copy(lastRunTimestamp = schedules[index].lastRunTimestamp)
         } else {
-            schedules.add(schedule)
+            schedule
+        }
+
+        if (index != -1) {
+            schedules[index] = scheduleToSave
+        } else {
+            schedules.add(scheduleToSave)
         }
         metadataRepository.saveSchedules(repoId, schedules)
-        updateWorkManager(repoKey, schedule)
+        updateWorkManager(repoKey, scheduleToSave)
+    }
+
+    suspend fun toggleSchedule(repoKey: String, repoId: String, scheduleId: String, isEnabled: Boolean) {
+        val schedules = getSchedules(repoId).toMutableList()
+        val index = schedules.indexOfFirst { it.id == scheduleId }
+        if (index != -1) {
+            val updatedSchedule = schedules[index].copy(isEnabled = isEnabled)
+            schedules[index] = updatedSchedule
+            metadataRepository.saveSchedules(repoId, schedules)
+            updateWorkManager(repoKey, updatedSchedule)
+        }
     }
 
     suspend fun deleteSchedule(repoKey: String, repoId: String, scheduleId: String) {

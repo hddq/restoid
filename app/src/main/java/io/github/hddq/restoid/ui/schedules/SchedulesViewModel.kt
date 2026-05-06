@@ -98,7 +98,7 @@ class SchedulesViewModel(
         val repoId = repository.id ?: return
 
         viewModelScope.launch {
-            scheduleRepository.saveSchedule(repoKey, repoId, schedule.copy(isEnabled = !schedule.isEnabled))
+            scheduleRepository.toggleSchedule(repoKey, repoId, schedule.id, !schedule.isEnabled)
             loadSchedules()
         }
     }
