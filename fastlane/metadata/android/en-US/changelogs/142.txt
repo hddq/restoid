@@ -1,0 +1,11 @@
+BREAKING CHANGE: You will need to re-enter all your passwords for repositories
+
+* Added automated schedules
+* Reduced APK size from ~68MB to ~18MB
+* Snapshot metadata is now automatically fetched if not available
+* Improved password storage
+* Fixed issue with maintenance tasks failing when running app in the background
+* Fixed restic cache warnings
+* Added full Polish translation
+* Added partial Croatian translation (thanks @marin-19!)
+* Added Weblate link in the About section
