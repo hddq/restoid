@@ -68,6 +68,21 @@ class MetadataRepository(private val context: Context) {
         }
     }
 
+    suspend fun saveMetadataForSnapshot(repoId: String, snapshotId: String, metadata: RestoidMetadata): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                val repoDir = File(metadataRoot, repoId)
+                if (!repoDir.exists()) repoDir.mkdirs()
+                val metadataFile = File(repoDir, "$snapshotId.json")
+                metadataFile.writeText(json.encodeToString(metadata))
+                true
+            } catch (e: Exception) {
+                e.printStackTrace()
+                false
+            }
+        }
+    }
+
     suspend fun getAllMetadata(repoId: String): Map<String, RestoidMetadata> {
         return withContext(Dispatchers.IO) {
             val repoDir = File(metadataRoot, repoId)

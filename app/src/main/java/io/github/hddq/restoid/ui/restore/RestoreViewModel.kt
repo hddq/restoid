@@ -123,18 +123,49 @@ class RestoreViewModel(
                 val repoId = repo?.id
 
                 if (repoPath != null && password != null && repoId != null) {
+                    val executionEnvironment = repositoriesRepository.getExecutionEnvironmentVariables(selectedRepoKey)
+                    val resticOptions = repositoriesRepository.getExecutionResticOptions(selectedRepoKey)
+
                     val result = resticRepository.getSnapshots(
                         repoPath,
                         password,
-                        repositoriesRepository.getExecutionEnvironmentVariables(selectedRepoKey),
-                        repositoriesRepository.getExecutionResticOptions(selectedRepoKey)
+                        executionEnvironment,
+                        resticOptions
                     )
                     result.fold(
                         onSuccess = { snapshots ->
                             val foundSnapshot = snapshots.find { it.id.startsWith(snapshotId) }
                             _snapshot.value = foundSnapshot
                             if (foundSnapshot != null) {
-                                val metadata = metadataRepository.getMetadataForSnapshot(repoId, foundSnapshot.id)
+                                var metadata = metadataRepository.getMetadataForSnapshot(repoId, foundSnapshot.id)
+                                
+                                if (metadata == null) {
+                                    // Attempt to recover metadata from the repository
+                                    val lsResult = resticRepository.ls(repoPath, password, foundSnapshot.id, executionEnvironment, resticOptions)
+                                    lsResult.fold(
+                                        onSuccess = { paths ->
+                                            val metadataPath = paths.find { it.endsWith("/restoid.json") }
+                                            if (metadataPath != null) {
+                                                val dumpResult = resticRepository.dump(repoPath, password, foundSnapshot.id, metadataPath, executionEnvironment, resticOptions)
+                                                dumpResult.fold(
+                                                    onSuccess = { content ->
+                                                        try {
+                                                            val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+                                                            val recoveredMetadata = json.decodeFromString<RestoidMetadata>(content)
+                                                            metadataRepository.saveMetadataForSnapshot(repoId, foundSnapshot.id, recoveredMetadata)
+                                                            metadata = recoveredMetadata
+                                                        } catch (e: Exception) {
+                                                            android.util.Log.e("RestoreViewModel", "Failed to parse recovered metadata", e)
+                                                        }
+                                                    },
+                                                    onFailure = { android.util.Log.e("RestoreViewModel", "Failed to dump metadata: ${it.message}") }
+                                                )
+                                            }
+                                        },
+                                        onFailure = { android.util.Log.e("RestoreViewModel", "Failed to ls snapshot: ${it.message}") }
+                                    )
+                                }
+
                                 snapshotMetadata = metadata
                                 processSnapshot(foundSnapshot, metadata)
                             } else {

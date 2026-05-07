@@ -84,11 +84,39 @@ class SnapshotDetailsViewModel(
 
 
                 if (repoPath != null && password != null && repoId != null) {
-                    val loadedMetadata = metadataRepository.getMetadataForSnapshot(repoId, snapshotId)
-                    _metadata.value = loadedMetadata
-
+                    var loadedMetadata = metadataRepository.getMetadataForSnapshot(repoId, snapshotId)
+                    
                     val executionEnvironment = repositoriesRepository.getExecutionEnvironmentVariables(selectedRepoKey)
                     val resticOptions = repositoriesRepository.getExecutionResticOptions(selectedRepoKey)
+
+                    if (loadedMetadata == null) {
+                        // Attempt to recover metadata from the repository
+                        val lsResult = resticRepository.ls(repoPath, password, snapshotId, executionEnvironment, resticOptions)
+                        lsResult.fold(
+                            onSuccess = { paths ->
+                                val metadataPath = paths.find { it.endsWith("/restoid.json") }
+                                if (metadataPath != null) {
+                                    val dumpResult = resticRepository.dump(repoPath, password, snapshotId, metadataPath, executionEnvironment, resticOptions)
+                                    dumpResult.fold(
+                                        onSuccess = { content ->
+                                            try {
+                                                val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+                                                val recoveredMetadata = json.decodeFromString<RestoidMetadata>(content)
+                                                metadataRepository.saveMetadataForSnapshot(repoId, snapshotId, recoveredMetadata)
+                                                loadedMetadata = recoveredMetadata
+                                            } catch (e: Exception) {
+                                                android.util.Log.e("SnapshotDetailsVM", "Failed to parse recovered metadata", e)
+                                            }
+                                        },
+                                        onFailure = { android.util.Log.e("SnapshotDetailsVM", "Failed to dump metadata: ${it.message}") }
+                                    )
+                                }
+                            },
+                            onFailure = { android.util.Log.e("SnapshotDetailsVM", "Failed to ls snapshot: ${it.message}") }
+                        )
+                    }
+
+                    _metadata.value = loadedMetadata
 
                     val result = resticRepository.getSnapshots(repoPath, password, executionEnvironment, resticOptions)
                     result.fold(
