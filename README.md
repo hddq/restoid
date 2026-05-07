@@ -31,6 +31,7 @@ Restoid gives you control over your app backups through a clean and simple user 
 * **Flexible Repository Management**: Create and manage repositories across native restic backends: Local directory, SFTP, REST server, and Amazon S3/MinIO.
 * **Snapshot Management**: Easily browse backup snapshots, view details of what was backed up, and forget old snapshots.
 * **Flexible Restore**: Restore entire apps or just specific parts (like only app data).
+* **Automated Schedules**: Set up recurring backups with customizable intervals and trigger conditions (battery, charging, and network status).
 * **Downgrade Protection**: Prevents you from accidentally restoring an older app version over a newer one (can be overridden).
 * **Zero-Hassle Dependencies**: Automatically downloads and manages the `restic` binary for your device's architecture.
 
