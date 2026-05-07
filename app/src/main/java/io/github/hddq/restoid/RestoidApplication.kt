@@ -32,6 +32,8 @@ class RestoidApplication : Application() {
         private set
     lateinit var metadataRepository: MetadataRepository
         private set
+    lateinit var scheduleRepository: ScheduleRepository
+        private set
     lateinit var preferencesRepository: PreferencesRepository
         private set
     lateinit var operationCoordinator: OperationCoordinator
@@ -67,6 +69,7 @@ class RestoidApplication : Application() {
         notificationRepository = NotificationRepository(applicationContext)
         appInfoRepository = AppInfoRepository(applicationContext)
         metadataRepository = MetadataRepository(applicationContext)
+        scheduleRepository = ScheduleRepository(applicationContext, metadataRepository, repositoriesRepository)
         preferencesRepository = PreferencesRepository(applicationContext)
         operationCoordinator = OperationCoordinator()
         operationLockManager = OperationLockManager(applicationContext)
@@ -85,6 +88,7 @@ class RestoidApplication : Application() {
             rootRepository.checkRootAccess()
             resticBinaryManager.checkResticStatus() // New manager handles checks
             repositoriesRepository.loadRepositories()
+            scheduleRepository.reconcileAllSchedules()
             notificationRepository.checkPermissionStatus()
         }
 

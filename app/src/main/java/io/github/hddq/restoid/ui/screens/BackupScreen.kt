@@ -29,7 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.RestoidApplication
 import io.github.hddq.restoid.model.AppInfo
-import io.github.hddq.restoid.ui.backup.BackupTypes
+import io.github.hddq.restoid.ui.shared.BackupTypes
 import io.github.hddq.restoid.ui.backup.BackupUiEvent
 import io.github.hddq.restoid.ui.backup.BackupViewModel
 import io.github.hddq.restoid.ui.backup.BackupViewModelFactory

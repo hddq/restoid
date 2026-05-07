@@ -9,4 +9,5 @@ Features:
 * Flexible Repository Management: Create and manage repositories across native restic backends: Local directory, SFTP, REST server, and Amazon S3/MinIO.
 * Snapshot Management: Easily browse historical backup snapshots, view details of what was backed up, and forget old data to save space.
 * Surgical Restore: Restore entire apps completely, or just specific parts (like restoring only app data without overwriting the APK).
+* Automated Schedules: Set up recurring backups with customizable intervals and trigger conditions (battery, charging, and network status).
 * Downgrade Protection: Prevents you from accidentally restoring an older app version over a newer one.

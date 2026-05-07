@@ -1,7 +1,7 @@
 package io.github.hddq.restoid.data
 
 import android.content.Context
-import io.github.hddq.restoid.ui.backup.BackupTypes
+import io.github.hddq.restoid.ui.shared.BackupTypes
 import io.github.hddq.restoid.ui.runtasks.RunTasksMaintenanceConfig
 import io.github.hddq.restoid.ui.restore.RestoreTypes
 

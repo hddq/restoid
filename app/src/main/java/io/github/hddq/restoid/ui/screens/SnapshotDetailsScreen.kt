@@ -28,6 +28,8 @@ import io.github.hddq.restoid.ui.snapshot.ForgetResult
 import io.github.hddq.restoid.ui.snapshot.SnapshotDetailsViewModel
 import io.github.hddq.restoid.ui.snapshot.SnapshotDetailsViewModelFactory
 
+import io.github.hddq.restoid.LocalAppBarActions
+
 @Composable
 fun SnapshotDetailsScreen(
     navController: NavController,
@@ -52,6 +54,20 @@ fun SnapshotDetailsScreen(
     val showConfirmDialog by viewModel.showConfirmForgetDialog.collectAsState()
     val isForgetting by viewModel.isForgetting.collectAsState()
     val forgetResult by viewModel.forgetResult.collectAsState()
+
+    val appBarActions = LocalAppBarActions.current
+    DisposableEffect(snapshotId) {
+        appBarActions.value = {
+            IconButton(onClick = { viewModel.onForgetSnapshot() }) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = stringResource(R.string.cd_forget_snapshot),
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+        onDispose { appBarActions.value = null }
+    }
 
     LaunchedEffect(forgetResult) {
         if (forgetResult is ForgetResult.Success) {

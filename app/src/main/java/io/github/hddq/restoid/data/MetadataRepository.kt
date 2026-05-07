@@ -2,8 +2,10 @@ package io.github.hddq.restoid.data
 
 import android.content.Context
 import io.github.hddq.restoid.model.RestoidMetadata
+import io.github.hddq.restoid.model.Schedule
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
 
@@ -11,6 +13,38 @@ class MetadataRepository(private val context: Context) {
 
     private val metadataRoot = File(context.filesDir, "metadata")
     private val json = Json { ignoreUnknownKeys = true }
+
+    suspend fun getSchedules(repoId: String): List<Schedule> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val repoDir = File(metadataRoot, repoId)
+                val schedulesFile = File(repoDir, "schedules.json")
+                if (schedulesFile.exists()) {
+                    json.decodeFromString<List<Schedule>>(schedulesFile.readText())
+                } else {
+                    emptyList()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                emptyList()
+            }
+        }
+    }
+
+    suspend fun saveSchedules(repoId: String, schedules: List<Schedule>): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                val repoDir = File(metadataRoot, repoId)
+                if (!repoDir.exists()) repoDir.mkdirs()
+                val schedulesFile = File(repoDir, "schedules.json")
+                schedulesFile.writeText(json.encodeToString(schedules))
+                true
+            } catch (e: Exception) {
+                e.printStackTrace()
+                false
+            }
+        }
+    }
 
     suspend fun getMetadataForSnapshot(repoId: String, snapshotId: String): RestoidMetadata? {
         return withContext(Dispatchers.IO) {

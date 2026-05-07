@@ -12,6 +12,7 @@ import io.github.hddq.restoid.data.ResticBinaryManager
 import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.ui.shared.OperationProgress
+import io.github.hddq.restoid.ui.shared.BackupTypes
 import io.github.hddq.restoid.work.BackupTypeSelection
 import io.github.hddq.restoid.work.BackupWorkRequest
 import io.github.hddq.restoid.work.OperationWorkRepository
@@ -23,15 +24,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
-data class BackupTypes(
-    val apk: Boolean = true,
-    val data: Boolean = true,
-    val deviceProtectedData: Boolean = true,
-    val externalData: Boolean = false,
-    val obb: Boolean = false,
-    val media: Boolean = false
-)
 
 sealed interface BackupUiEvent {
     data object NavigateToOperationProgress : BackupUiEvent
