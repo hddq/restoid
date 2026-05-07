@@ -48,6 +48,7 @@ fun SnapshotDetailsScreen(
     )
 
     val snapshot by viewModel.snapshot.collectAsState()
+    val metadata by viewModel.metadata.collectAsState()
     val backupDetails by viewModel.backupDetails.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
@@ -136,10 +137,19 @@ fun SnapshotDetailsScreen(
                         }
                     } else if (!isLoading) {
                         item {
-                            Text(stringResource(R.string.snapshot_backed_up_paths), style = MaterialTheme.typography.titleMedium)
-                        }
-                        items(snapshot!!.paths) { path ->
-                            Text(path, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
+                            if (metadata == null) {
+                                Text(
+                                    stringResource(R.string.metadata_missing_or_corrupted),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            } else {
+                                Text(
+                                    stringResource(R.string.no_app_info_for_snapshot),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }

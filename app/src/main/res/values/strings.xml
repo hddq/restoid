@@ -102,6 +102,7 @@
     </plurals>
     <string name="paths_preview">Paths: %1$s…</string>
     <string name="no_app_info_for_snapshot">No app information available for this snapshot.</string>
+    <string name="metadata_missing_or_corrupted">Metadata is missing or corrupted.</string>
 
     <string name="maintenance_tasks_title">Tasks</string>
     <string name="maintenance_task_unlock_repository">Unlock repository</string>

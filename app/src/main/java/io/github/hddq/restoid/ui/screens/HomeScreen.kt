@@ -423,11 +423,11 @@ private fun SnapshotItem(snapshotWithMetadata: SnapshotWithMetadata, apps: List<
                     }
                 }
             }
-        } else if (snapshot.paths.isNotEmpty()) {
+        } else if (snapshotWithMetadata.metadata == null) {
             Text(
-                text = stringResource(R.string.paths_preview, snapshot.paths.firstOrNull() ?: ""),
+                text = stringResource(R.string.metadata_missing_or_corrupted),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.error
             )
         } else {
             Text(
