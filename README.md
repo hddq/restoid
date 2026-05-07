@@ -1,5 +1,5 @@
 # Restoid
-A modern, root-based Android backup tool powered by [`restic`](https://github.com/restic/restic/).
+Root-based Android backup tool powered by [`restic`](https://github.com/restic/restic/).
 
 Restoid gives you control over your app backups through a clean and simple user interface. It's built for users who want robust, encrypted, and deduplicated backups.
 
