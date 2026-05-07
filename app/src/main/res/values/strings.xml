@@ -216,6 +216,7 @@
     <string name="about_title">About</string>
     <string name="version_label">Version</string>
     <string name="open_source_licenses">Open Source Licenses</string>
+    <string name="translate">Translate</string>
 
     <string name="notifications_enabled">Notifications enabled</string>
     <string name="notifications_disabled">Notifications disabled</string>

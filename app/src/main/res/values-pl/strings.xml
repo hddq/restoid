@@ -223,6 +223,7 @@
     <string name="about_title">O aplikacji</string>
     <string name="version_label">Wersja</string>
     <string name="open_source_licenses">Licencje Open Source</string>
+    <string name="translate">Tłumaczenie</string>
 
     <string name="notifications_enabled">Powiadomienia włączone</string>
     <string name="notifications_disabled">Powiadomienia wyłączone</string>
