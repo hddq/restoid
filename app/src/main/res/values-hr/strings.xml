@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="screen_settings">Postavke</string>
+    <string name="screen_backup">Sigurnosna kopija</string>
+    <string name="screen_restore">Vrati</string>
+    <string name="screen_licenses">Licence</string>
+    <string name="screen_maintenance">Održavanje</string>
+    <string name="screen_operation_progress">Napredak Operacije</string>
+    <string name="topbar_new_backup">Nova Sigurnosna Kopija</string>
+    <string name="topbar_maintenance">Održavanje</string>
+    <string name="topbar_run_tasks">Pokreni zadatke</string>
+    <string name="topbar_backup_config">Konfiguracija Sigurnosne Kopije</string>
+    <string name="topbar_check_config">Provjeri Integritet</string>
+    <string name="cd_back">Natrag</string>
+    <string name="fab_backup">Sigurnosna Kopija</string>
+    <string name="fab_start_backup">Započni Sigurnosnu Kopiju</string>
+</resources>
