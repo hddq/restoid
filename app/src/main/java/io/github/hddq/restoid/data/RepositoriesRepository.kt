@@ -937,7 +937,7 @@ class RepositoriesRepository(
         } catch (e: Exception) {
             Log.e("RepoRepo", "Error during metadata restore", e)
         } finally {
-            Shell.cmd("rm -rf ${shellQuote(tempRestoreDir.absolutePath)}").exec()
+            tempRestoreDir.deleteRecursively()
         }
     }
 
