@@ -1,0 +1,13 @@
+Restoid ti daje potpunu kontrolu nad backupima aplikacija kroz čisto, moderno i jednostavno korisničko sučelje. Pokretan open-source "restic" pogonom, napravljen je za korisnike koji zahtijevaju robusne, kriptirane i deduplicirane backupe.
+
+Root pristup strogo je potreban za čitanje i pisanje po privatnim podatkovnim mapama aplikacija.
+
+Značajke:
+* Pokretan Resticom: Koristi brzinu, sigurnost i učinkovitost restica za lokalne, deduplicirane i kriptirane backupe.
+* Selektivni backup: Odaberi točno one instalirane aplikacije koje želiš spremiti.
+* Granularna kontrola: Precizno odaberi što želiš uključiti za svaku aplikaciju: APK datoteke, korisničke podatke, podatke zaštićene uređajem, vanjske/OBB ili medijske datoteke.
+* Fleksibilno upravljanje repozitorijima: Stvaraj i upravljaj repozitorijima preko izvornih restic backendova: Lokalni direktorij, SFTP, REST server i Amazon S3/MinIO.
+* Upravljanje snapshotovima: Jednostavno pregledavaj povijest snapshotova, gledaj detalje o tome što je backupirano i ukloni stare podatke da uštediš prostor.
+* Kirurški restore: Vrati cijele aplikacije u potpunosti, ili samo specifične dijelove (poput vraćanja samo podataka aplikacije bez prepisivanja APK datoteke).
+* Automatizirani rasporedi: Postavi ponavljajuće backupe s prilagodljivim intervalima i uvjetima pokretanja (baterija, punjenje i status mreže).
+* Downgrade zaštita: Sprječava te da slučajno vratiš staru verziju aplikacije preko novije.

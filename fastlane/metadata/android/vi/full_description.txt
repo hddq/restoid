@@ -1,0 +1,13 @@
+Restoid cung cấp cho bạn toàn quyền kiểm soát các bản sao lưu ứng dụng thông qua một giao diện gọn gàng, hiện đại và đơn giản. Được phát triển dựa trên engine mã nguồn mở "restic", ứng dụng dành cho những người dùng cần các bản sao lưu mạnh mẽ, được mã hóa và loại bỏ dữ liệu trùng lặp.
+
+Quyền Root là bắt buộc để đọc và ghi vào các thư mục dữ liệu riêng tư của ứng dụng.
+
+Tính năng:
+* Nền tảng Restic: Tận dụng tốc độ, tính bảo mật và hiệu quả của restic để sao lưu cục bộ, chống trùng lặp và mã hóa.
+* Sao lưu có chọn lọc: Chọn chính xác những ứng dụng nào bạn muốn sao lưu.
+* Kiểm soát chi tiết: Lựa chọn chi tiết những thành phần cần sao lưu cho mỗi ứng dụng: tệp APK, dữ liệu người dùng, dữ liệu được bảo vệ của thiết bị, dữ liệu ngoài/OBB hoặc tệp phương tiện.
+* Quản lý kho lưu trữ linh hoạt: Tạo và quản lý kho lưu trữ thông qua các backend gốc của restic: Thư mục cục bộ, SFTP, Máy chủ REST và Amazon S3/MinIO.
+* Quản lý Snapshot: Dễ dàng duyệt qua lịch sử các snapshot sao lưu, xem chi tiết những gì đã được sao lưu và xóa dữ liệu cũ để giải phóng không gian.
+* Khôi phục chính xác: Khôi phục toàn bộ ứng dụng hoặc chỉ các phần cụ thể (chẳng hạn như chỉ khôi phục dữ liệu ứng dụng mà không ghi đè lên tệp APK).
+* Lịch trình tự động: Thiết lập sao lưu định kỳ với khoảng thời gian và điều kiện kích hoạt tùy chỉnh (pin, trạng thái sạc và mạng).
+* Bảo vệ chống hạ cấp: Ngăn bạn vô tình khôi phục phiên bản ứng dụng cũ đè lên phiên bản mới hơn.
