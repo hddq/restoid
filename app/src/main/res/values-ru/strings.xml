@@ -5,7 +5,7 @@
     <string name="screen_backup">Бэкап</string>
     <string name="screen_run_tasks">Запуск задач</string>
     <string name="screen_snapshot_details">Детали снапшота</string>
-    <string name="screen_restore">Восстановление</string>
+    <string name="screen_restore">Восстановить</string>
     <string name="screen_licenses">Лицензии</string>
     <string name="screen_maintenance">Обслуживание</string>
     <string name="screen_schedules">Расписания</string>
@@ -14,7 +14,7 @@
     <string name="topbar_maintenance">Обслуживание</string>
     <string name="topbar_run_tasks">Запуск задач</string>
     <string name="topbar_backup_config">Настройка бэкапа</string>
-    <string name="topbar_forget_config">Политика удаления</string>
+    <string name="topbar_forget_config">Правила забывания</string>
     <string name="topbar_check_config">Проверка целостности</string>
     <string name="topbar_schedules">Расписания</string>
     <string name="topbar_add_schedule">Добавить расписание</string>
@@ -27,8 +27,8 @@
     <string name="cd_forget_snapshot">Забыть снапшот</string>
     <string name="fab_backup">Бэкап</string>
     <string name="fab_start_backup">Начать бэкап</string>
-    <string name="fab_run_tasks">Запустить</string>
-    <string name="fab_add_schedule">Добавить</string>
+    <string name="fab_run_tasks">Запустить задачи</string>
+    <string name="fab_add_schedule">Добавить расписание</string>
     <string name="fab_restore">Восстановить</string>
     <string name="fab_start_restore">Начать восстановление</string>
     <string name="operation_backup">Бэкап</string>
@@ -65,7 +65,7 @@
     <string name="restic_not_available_check_settings">Restic недоступен. Проверь настройки.</string>
     <string name="no_schedules_configured">Нет расписаний для этого репозитория.</string>
     <string name="schedule_interval_label">Интервал (в часах)</string>
-    <string name="schedule_name_label">Имя</string>
+    <string name="schedule_name_label">Название</string>
     <string name="schedule_last_run">Последний запуск: %1$s</string>
     <string name="schedule_never_run">Никогда</string>
     <string name="schedule_run_now">Запустить сейчас</string>
@@ -77,11 +77,11 @@
     <string name="no_snapshots_found_for_repository">Снапшоты не найдены.</string>
     <plurals name="snapshots_count">
         <item quantity="one">Снапшот (%1$d)</item>
-        <item quantity="few">Снапшота (%1$d)</item>
-        <item quantity="many">Снапшотов (%1$d)</item>
-        <item quantity="other">Снапшотов (%1$d)</item>
+        <item quantity="few">Снапшоты (%1$d)</item>
+        <item quantity="many">Снапшоты (%1$d)</item>
+        <item quantity="other">Снапшоты (%1$d)</item>
     </plurals>
-    <string name="repository_password_required">Нужен пароль от репо</string>
+    <string name="repository_password_required">Нужен пароль от репозитория</string>
     <string name="enter_password_for_repository">Введи пароль от репозитория: %1$s</string>
     <string name="sftp_password_required">Нужен пароль SFTP</string>
     <string name="enter_sftp_password_for_repository">Введи пароль SFTP для: %1$s</string>
@@ -94,18 +94,18 @@
     <plurals name="apps_count">
         <item quantity="one">Приложение (%1$d):</item>
         <item quantity="few">Приложения (%1$d):</item>
-        <item quantity="many">Приложений (%1$d):</item>
-        <item quantity="other">Приложений (%1$d):</item>
+        <item quantity="many">Приложения (%1$d):</item>
+        <item quantity="other">Приложения (%1$d):</item>
     </plurals>
     <string name="paths_preview">Пути: %1$s…</string>
-    <string name="no_app_info_for_snapshot">Нет инфы о приложениях для этого снапшота.</string>
+    <string name="no_app_info_for_snapshot">Нет информации о приложениях для этого снапшота.</string>
     <string name="metadata_missing_or_corrupted">Метаданные отсутствуют или повреждены.</string>
     <string name="maintenance_tasks_title">Задачи</string>
-    <string name="maintenance_task_unlock_repository">Разблокировать репо</string>
+    <string name="maintenance_task_unlock_repository">Разблокировать репозиторий</string>
     <string name="maintenance_task_forget_old_snapshots">Забыть старые снапшоты</string>
-    <string name="maintenance_task_prune_repository">Очистить (Prune)</string>
+    <string name="maintenance_task_prune_repository">Очистить репозиторий</string>
     <string name="maintenance_task_check_repository_integrity">Проверить целостность</string>
-    <string name="maintenance_forget_policy_options">Политика удаления</string>
+    <string name="maintenance_forget_policy_options">Правила забывания</string>
     <string name="maintenance_keep_last">Оставить последние</string>
     <string name="maintenance_keep_daily">Оставить дневные</string>
     <string name="maintenance_keep_weekly">Оставить недельные</string>
@@ -113,10 +113,10 @@
     <string name="maintenance_check_options">Опции проверки</string>
     <string name="maintenance_read_all_data">Читать все данные</string>
     <plurals name="snapshot_backed_up_apps_count">
-        <item quantity="one">Сохранено %1$d приложение</item>
-        <item quantity="few">Сохранено %1$d приложения</item>
-        <item quantity="many">Сохранено %1$d приложений</item>
-        <item quantity="other">Сохранено %1$d приложений</item>
+        <item quantity="one">Защищённое приложение (%1$d)</item>
+        <item quantity="few">Защищённые приложения (%1$d)</item>
+        <item quantity="many">Защищённых приложений (%1$d)</item>
+        <item quantity="other">Защищённых приложений (%1$d)</item>
     </plurals>
     <string name="snapshot_backed_up_paths">Сохраненные пути:</string>
     <string name="snapshot_not_found">Снапшот не найден.</string>
