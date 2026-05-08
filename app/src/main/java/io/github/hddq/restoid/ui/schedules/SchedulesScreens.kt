@@ -141,16 +141,22 @@ fun SchedulesScreen(
             }
         }
 
+        val isRepoSelected = uiState.selectedRepoKey != null
+
         ExtendedFloatingActionButton(
             onClick = {
-                viewModel.startAddSchedule()
-                onNavigateToAddEditSchedule()
+                if (isRepoSelected) {
+                    viewModel.startAddSchedule()
+                    onNavigateToAddEditSchedule()
+                }
             },
             icon = { Icon(Icons.Default.Add, contentDescription = null) },
             text = { Text(stringResource(R.string.fab_add_schedule)) },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(16.dp)
+                .padding(16.dp),
+            containerColor = if (isRepoSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = if (isRepoSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
         )
     }
 
