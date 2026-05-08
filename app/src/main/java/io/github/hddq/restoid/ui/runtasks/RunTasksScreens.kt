@@ -63,7 +63,7 @@ fun RunTasksScreen(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp, top = 8.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 88.dp, top = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {

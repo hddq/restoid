@@ -135,6 +135,7 @@ fun SchedulesScreen(
                         }
                     }
                 }
+                Spacer(Modifier.height(88.dp))
             }
         }
 
@@ -213,7 +214,7 @@ fun AddEditScheduleScreen(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 88.dp, top = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
 

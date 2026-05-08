@@ -102,7 +102,7 @@ fun SnapshotDetailsScreen(
             snapshot != null -> {
                 LazyColumn(
                     modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(bottom = 80.dp, top = 8.dp),
+                    contentPadding = PaddingValues(bottom = 88.dp, top = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     item {

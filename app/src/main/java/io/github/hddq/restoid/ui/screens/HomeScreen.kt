@@ -243,6 +243,8 @@ fun HomeScreen(
                                     }
                                 }
                             }
+
+                            Spacer(Modifier.height(88.dp))
                         }
                     }
                 }
