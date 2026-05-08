@@ -1,0 +1,13 @@
+O Restoid te dá controle total sobre os backups dos seus apps através de uma interface limpa, moderna e simples. Rodando com o motor open-source "restic", foi feito para usuários que exigem backups robustos, criptografados e deduplicados.
+
+O acesso root é estritamente obrigatório para ler e gravar nos diretórios privados de dados dos aplicativos.
+
+Recursos:
+* Motor Restic: Aproveita a velocidade, segurança e eficiência do restic para backups locais, deduplicados e criptografados.
+* Backup Seletivo: Escolha exatamente quais aplicativos instalados pelo usuário você quer salvar.
+* Controle Granular: Selecione detalhadamente o que incluir para cada app: arquivos APK, dados de usuário, dados protegidos pelo dispositivo, dados externos/OBB ou arquivos de mídia.
+* Gerenciamento Flexível de Repositórios: Crie e gerencie repositórios através dos backends nativos do restic: Diretório local, SFTP, servidor REST e Amazon S3/MinIO.
+* Gerenciamento de Snapshots: Navegue facilmente pelo histórico de snapshots, veja detalhes do que foi salvo e remova dados antigos para liberar espaço.
+* Restore Cirúrgico: Restaure apps inteiros ou apenas partes específicas (como restaurar apenas os dados do app sem sobrescrever o APK).
+* Agendamentos Automatizados: Configure backups recorrentes com intervalos personalizáveis e condições de execução (bateria, carregamento e status da rede).
+* Proteção contra Downgrade: Evita que você restaure acidentalmente uma versão mais antiga de um app por cima de uma mais nova.

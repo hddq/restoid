@@ -1,0 +1,1 @@
+Công cụ sao lưu ứng dụng Android yêu cầu root, chạy trên nền restic
