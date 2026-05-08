@@ -3,17 +3,13 @@
 
     <string name="screen_home">Home</string>
     <string name="screen_settings">Settings</string>
-    <string name="screen_backup">Backup</string>
     <string name="screen_run_tasks">Run Tasks</string>
     <string name="screen_snapshot_details">Snapshot Details</string>
     <string name="screen_restore">Restore</string>
     <string name="screen_licenses">Licenses</string>
-    <string name="screen_maintenance">Maintenance</string>
     <string name="screen_schedules">Schedules</string>
     <string name="screen_operation_progress">Operation Progress</string>
 
-    <string name="topbar_new_backup">New Backup</string>
-    <string name="topbar_maintenance">Maintenance</string>
     <string name="topbar_run_tasks">Run Tasks</string>
     <string name="topbar_backup_config">Backup Configuration</string>
     <string name="topbar_forget_config">Forget Policy</string>
@@ -28,8 +24,6 @@
     <string name="cd_back">Back</string>
     <string name="cd_forget_snapshot">Forget Snapshot</string>
 
-    <string name="fab_backup">Backup</string>
-    <string name="fab_start_backup">Start Backup</string>
     <string name="fab_run_tasks">Run Tasks</string>
     <string name="fab_add_schedule">Add Schedule</string>
     <string name="fab_restore">Restore</string>
@@ -60,7 +54,6 @@
     <string name="restore_backup_version_only">Backup: %1$s</string>
 
     <string name="home_title">Restoid</string>
-    <string name="maintenance_button">Maintenance</string>
     <string name="run_tasks_applications">Applications</string>
     <string name="run_tasks_backup_subtitle">%1$d apps selected - %2$s</string>
     <string name="run_tasks_forget_snapshots">Forget Snapshots</string>
@@ -75,9 +68,6 @@
     <string name="schedule_name_label">Name</string>
     <string name="schedule_last_run">Last run: %1$s</string>
     <string name="schedule_never_run">Never run</string>
-    <string name="schedule_run_now">Run Now</string>
-    <string name="schedule_enabled">Enabled</string>
-    <string name="schedule_disabled">Disabled</string>
     <string name="dialog_delete_schedule_title">Delete Schedule?</string>
     <string name="dialog_delete_schedule_message">Are you sure you want to delete this schedule?</string>
     <string name="dialog_discard_changes_title">Discard changes?</string>
@@ -103,28 +93,21 @@
         <item quantity="one">App (%1$d):</item>
         <item quantity="other">Apps (%1$d):</item>
     </plurals>
-    <string name="paths_preview">Paths: %1$s…</string>
     <string name="no_app_info_for_snapshot">No app information available for this snapshot.</string>
     <string name="metadata_missing_or_corrupted">Metadata is missing or corrupted.</string>
 
-    <string name="maintenance_tasks_title">Tasks</string>
     <string name="maintenance_task_unlock_repository">Unlock repository</string>
-    <string name="maintenance_task_forget_old_snapshots">Forget old snapshots</string>
     <string name="maintenance_task_prune_repository">Prune repository</string>
-    <string name="maintenance_task_check_repository_integrity">Check repository integrity</string>
-    <string name="maintenance_forget_policy_options">Forget Policy Options</string>
     <string name="maintenance_keep_last">Keep Last</string>
     <string name="maintenance_keep_daily">Keep Daily</string>
     <string name="maintenance_keep_weekly">Keep Weekly</string>
     <string name="maintenance_keep_monthly">Keep Monthly</string>
-    <string name="maintenance_check_options">Check Options</string>
     <string name="maintenance_read_all_data">Read all data</string>
 
     <plurals name="snapshot_backed_up_apps_count">
         <item quantity="one">Backed up App (%1$d)</item>
         <item quantity="other">Backed up Apps (%1$d)</item>
     </plurals>
-    <string name="snapshot_backed_up_paths">Backed up paths:</string>
     <string name="snapshot_not_found">No snapshot found.</string>
     <string name="snapshot_forgetting">Forgetting snapshot…</string>
     <string name="snapshot_id">ID: %1$s</string>
@@ -134,7 +117,6 @@
     <string name="dialog_forget_snapshot_message">This will remove the snapshot entry. The actual data will only be deleted after running a prune. Are you sure?</string>
 
     <string name="label_password">Password</string>
-    <string name="label_username">Username</string>
     <string name="label_repository_password">Repository password</string>
     <string name="label_rest_username">REST username</string>
     <string name="label_rest_password">REST password</string>
@@ -154,8 +136,6 @@
     <string name="action_save">Save</string>
     <string name="action_grant">Grant</string>
     <string name="action_settings">Settings</string>
-    <string name="action_retry">Retry</string>
-    <string name="action_update">Update</string>
     <string name="action_forget">Forget</string>
     <string name="action_try_again">Try Again</string>
     <string name="action_disable">Disable</string>
@@ -172,7 +152,6 @@
     <string name="progress_processing">Processing: </string>
     <string name="progress_placeholder">...</string>
 
-    <string name="dialog_add_local_repository_title">Add Local Repository</string>
     <string name="dialog_add_repository_title">Add Repository</string>
     <string name="label_repository_type">Repository type</string>
     <string name="label_repository_specification">Repository specification</string>
@@ -452,11 +431,8 @@
     <string name="condition_battery_not_low">Battery is not low</string>
     <string name="condition_charging">Device is charging</string>
     <string name="condition_unmetered_network">Network is unmetered</string>
-    <string name="value_none">None</string>
     <string name="unit_hours">h</string>
     <string name="schedule_interval_range_hint">1–720 h</string>
-    <string name="schedule_name_dialog_title">Schedule name</string>
-    <string name="schedule_name_placeholder">e.g. Daily backup</string>
     <string name="preset_hours">%dh</string>
     <string name="preset_1_week">1w</string>
     <string name="preset_1_month">1mo</string>

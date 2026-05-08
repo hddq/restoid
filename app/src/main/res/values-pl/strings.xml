@@ -4,17 +4,13 @@
 
     <string name="screen_home">Strona główna</string>
     <string name="screen_settings">Ustawienia</string>
-    <string name="screen_backup">Backup</string>
     <string name="screen_run_tasks">Uruchom zadania</string>
     <string name="screen_snapshot_details">Szczegóły migawki</string>
     <string name="screen_restore">Przywróć</string>
     <string name="screen_licenses">Licencje</string>
-    <string name="screen_maintenance">Konserwacja</string>
     <string name="screen_schedules">Harmonogramy</string>
     <string name="screen_operation_progress">Postęp operacji</string>
 
-    <string name="topbar_new_backup">Nowy backup</string>
-    <string name="topbar_maintenance">Konserwacja</string>
     <string name="topbar_run_tasks">Uruchom zadania</string>
     <string name="topbar_backup_config">Konfiguracja backupu</string>
     <string name="topbar_forget_config">Zasady zapominania</string>
@@ -29,8 +25,6 @@
     <string name="cd_back">Wstecz</string>
     <string name="cd_forget_snapshot">Zapomnij migawkę</string>
 
-    <string name="fab_backup">Backup</string>
-    <string name="fab_start_backup">Rozpocznij backup</string>
     <string name="fab_run_tasks">Uruchom zadania</string>
     <string name="fab_add_schedule">Dodaj harmonogram</string>
     <string name="fab_restore">Przywróć</string>
@@ -61,7 +55,6 @@
     <string name="restore_backup_version_only">Backup: %1$s</string>
 
     <string name="home_title">Restoid</string>
-    <string name="maintenance_button">Konserwacja</string>
     <string name="run_tasks_applications">Aplikacje</string>
     <string name="run_tasks_backup_subtitle">Wybrano %1$d aplikacji - %2$s</string>
     <string name="run_tasks_forget_snapshots">Zapomnij migawki</string>
@@ -76,9 +69,6 @@
     <string name="schedule_name_label">Nazwa</string>
     <string name="schedule_last_run">Ostatnio uruchomiono: %1$s</string>
     <string name="schedule_never_run">Nigdy nie uruchamiano</string>
-    <string name="schedule_run_now">Uruchom teraz</string>
-    <string name="schedule_enabled">Włączony</string>
-    <string name="schedule_disabled">Wyłączony</string>
     <string name="dialog_delete_schedule_title">Usunąć harmonogram?</string>
     <string name="dialog_delete_schedule_message">Na pewno chcesz usunąć ten harmonogram?</string>
     <string name="dialog_discard_changes_title">Odrzucić zmiany?</string>
@@ -108,21 +98,15 @@
         <item quantity="many">Aplikacji (%1$d):</item>
         <item quantity="other">Aplikacji (%1$d):</item>
     </plurals>
-    <string name="paths_preview">Ścieżki: %1$s…</string>
     <string name="no_app_info_for_snapshot">Brak informacji o aplikacjach w tej migawce.</string>
     <string name="metadata_missing_or_corrupted">Metadane są niedostępne lub uszkodzone.</string>
 
-    <string name="maintenance_tasks_title">Zadania</string>
     <string name="maintenance_task_unlock_repository">Odblokuj repozytorium</string>
-    <string name="maintenance_task_forget_old_snapshots">Zapomnij stare migawki</string>
     <string name="maintenance_task_prune_repository">Oczyść repozytorium</string>
-    <string name="maintenance_task_check_repository_integrity">Sprawdź integralność repozytorium</string>
-    <string name="maintenance_forget_policy_options">Opcje zasad zapominania</string>
     <string name="maintenance_keep_last">Zachowaj ostatnie</string>
     <string name="maintenance_keep_daily">Zachowaj dzienne</string>
     <string name="maintenance_keep_weekly">Zachowaj tygodniowe</string>
     <string name="maintenance_keep_monthly">Zachowaj miesięczne</string>
-    <string name="maintenance_check_options">Opcje sprawdzania</string>
     <string name="maintenance_read_all_data">Odczytaj wszystkie dane</string>
 
     <plurals name="snapshot_backed_up_apps_count">
@@ -131,7 +115,6 @@
         <item quantity="many">Zabezpieczonych aplikacji (%1$d)</item>
         <item quantity="other">Zabezpieczonych aplikacji (%1$d)</item>
     </plurals>
-    <string name="snapshot_backed_up_paths">Zabezpieczone ścieżki:</string>
     <string name="snapshot_not_found">Nie znaleziono migawki.</string>
     <string name="snapshot_forgetting">Zapominanie migawki…</string>
     <string name="snapshot_id">ID: %1$s</string>
@@ -141,7 +124,6 @@
     <string name="dialog_forget_snapshot_message">To usunie wpis migawki. Faktyczne dane zostaną usunięte dopiero po uruchomieniu oczyszczania (prune). Jesteś pewien?</string>
 
     <string name="label_password">Hasło</string>
-    <string name="label_username">Nazwa użytkownika</string>
     <string name="label_repository_password">Hasło do repozytorium</string>
     <string name="label_rest_username">Nazwa użytkownika REST</string>
     <string name="label_rest_password">Hasło REST</string>
@@ -161,8 +143,6 @@
     <string name="action_save">Zapisz</string>
     <string name="action_grant">Przyznaj</string>
     <string name="action_settings">Ustawienia</string>
-    <string name="action_retry">Ponów</string>
-    <string name="action_update">Aktualizuj</string>
     <string name="action_forget">Zapomnij</string>
     <string name="action_try_again">Spróbuj ponownie</string>
     <string name="action_disable">Wyłącz</string>
@@ -179,7 +159,6 @@
     <string name="progress_processing">Przetwarzanie: </string>
     <string name="progress_placeholder">...</string>
 
-    <string name="dialog_add_local_repository_title">Dodaj lokalne repozytorium</string>
     <string name="dialog_add_repository_title">Dodaj repozytorium</string>
     <string name="label_repository_type">Typ repozytorium</string>
     <string name="label_repository_specification">Specyfikacja repozytorium</string>
@@ -473,11 +452,8 @@
     <string name="condition_battery_not_low">Bateria nie jest słaba</string>
     <string name="condition_charging">Urządzenie się ładuje</string>
     <string name="condition_unmetered_network">Nielimitowana sieć</string>
-    <string name="value_none">Brak</string>
     <string name="unit_hours">h</string>
     <string name="schedule_interval_range_hint">1–720 h</string>
-    <string name="schedule_name_dialog_title">Nazwa harmonogramu</string>
-    <string name="schedule_name_placeholder">np. Codzienny backup</string>
     <string name="preset_hours">%dh</string>
     <string name="preset_1_week">1t</string>
     <string name="preset_1_month">1m</string>
