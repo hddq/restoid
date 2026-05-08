@@ -2,16 +2,12 @@
 <resources>
     <string name="screen_home">Главная</string>
     <string name="screen_settings">Настройки</string>
-    <string name="screen_backup">Бэкап</string>
     <string name="screen_run_tasks">Запуск задач</string>
     <string name="screen_snapshot_details">Детали снапшота</string>
     <string name="screen_restore">Восстановить</string>
     <string name="screen_licenses">Лицензии</string>
-    <string name="screen_maintenance">Обслуживание</string>
     <string name="screen_schedules">Расписания</string>
     <string name="screen_operation_progress">Прогресс</string>
-    <string name="topbar_new_backup">Новый бэкап</string>
-    <string name="topbar_maintenance">Обслуживание</string>
     <string name="topbar_run_tasks">Запуск задач</string>
     <string name="topbar_backup_config">Настройка бэкапа</string>
     <string name="topbar_forget_config">Правила забывания</string>
@@ -25,8 +21,6 @@
     <string name="topbar_restore_snapshot">Восстановить снапшот</string>
     <string name="cd_back">Назад</string>
     <string name="cd_forget_snapshot">Забыть снапшот</string>
-    <string name="fab_backup">Бэкап</string>
-    <string name="fab_start_backup">Начать бэкап</string>
     <string name="fab_run_tasks">Запустить задачи</string>
     <string name="fab_add_schedule">Добавить расписание</string>
     <string name="fab_restore">Восстановить</string>
@@ -53,7 +47,6 @@
     <string name="restore_backup_version_with_installed">Бэкап: %1$s -&gt; Установлено: %2$s</string>
     <string name="restore_backup_version_only">Бэкап: %1$s</string>
     <string name="home_title">Restoid</string>
-    <string name="maintenance_button">Обслуживание</string>
     <string name="run_tasks_applications">Приложения</string>
     <string name="run_tasks_backup_subtitle">Выбрано: %1$d - %2$s</string>
     <string name="run_tasks_forget_snapshots">Забыть снапшоты</string>
@@ -68,9 +61,6 @@
     <string name="schedule_name_label">Название</string>
     <string name="schedule_last_run">Последний запуск: %1$s</string>
     <string name="schedule_never_run">Никогда</string>
-    <string name="schedule_run_now">Запустить сейчас</string>
-    <string name="schedule_enabled">Включено</string>
-    <string name="schedule_disabled">Выключено</string>
     <string name="dialog_delete_schedule_title">Удалить расписание?</string>
     <string name="dialog_delete_schedule_message">Точно удалить?</string>
     <string name="error_with_message">Ошибка: %1$s</string>
@@ -97,20 +87,14 @@
         <item quantity="many">Приложения (%1$d):</item>
         <item quantity="other">Приложения (%1$d):</item>
     </plurals>
-    <string name="paths_preview">Пути: %1$s…</string>
     <string name="no_app_info_for_snapshot">Нет информации о приложениях для этого снапшота.</string>
     <string name="metadata_missing_or_corrupted">Метаданные отсутствуют или повреждены.</string>
-    <string name="maintenance_tasks_title">Задачи</string>
     <string name="maintenance_task_unlock_repository">Разблокировать репозиторий</string>
-    <string name="maintenance_task_forget_old_snapshots">Забыть старые снапшоты</string>
     <string name="maintenance_task_prune_repository">Очистить репозиторий</string>
-    <string name="maintenance_task_check_repository_integrity">Проверить целостность</string>
-    <string name="maintenance_forget_policy_options">Правила забывания</string>
     <string name="maintenance_keep_last">Оставить последние</string>
     <string name="maintenance_keep_daily">Оставить дневные</string>
     <string name="maintenance_keep_weekly">Оставить недельные</string>
     <string name="maintenance_keep_monthly">Оставить месячные</string>
-    <string name="maintenance_check_options">Опции проверки</string>
     <string name="maintenance_read_all_data">Читать все данные</string>
     <plurals name="snapshot_backed_up_apps_count">
         <item quantity="one">Защищённое приложение (%1$d)</item>
@@ -118,7 +102,6 @@
         <item quantity="many">Защищённых приложений (%1$d)</item>
         <item quantity="other">Защищённых приложений (%1$d)</item>
     </plurals>
-    <string name="snapshot_backed_up_paths">Сохраненные пути:</string>
     <string name="snapshot_not_found">Снапшот не найден.</string>
     <string name="snapshot_forgetting">Удаление снапшота…</string>
     <string name="snapshot_id">ID: %1$s</string>
@@ -127,7 +110,6 @@
     <string name="dialog_forget_snapshot_title">Забыть снапшот?</string>
     <string name="dialog_forget_snapshot_message">Запись о снапшоте удалится. Физически данные сотрутся только после Prune. Уверен?</string>
     <string name="label_password">Пароль</string>
-    <string name="label_username">Логин</string>
     <string name="label_repository_password">Пароль репозитория</string>
     <string name="label_rest_username">Логин REST</string>
     <string name="label_rest_password">Пароль REST</string>
@@ -147,8 +129,6 @@
     <string name="action_save">Сохранить</string>
     <string name="action_grant">Разрешить</string>
     <string name="action_settings">Настройки</string>
-    <string name="action_retry">Повторить</string>
-    <string name="action_update">Обновить</string>
     <string name="action_forget">Забыть</string>
     <string name="action_try_again">Попробовать снова</string>
     <string name="action_disable">Отключить</string>
@@ -163,7 +143,6 @@
     <string name="progress_size">Размер</string>
     <string name="progress_processing">Обработка:</string>
     <string name="progress_placeholder">...</string>
-    <string name="dialog_add_local_repository_title">Локальный репозиторий</string>
     <string name="dialog_add_repository_title">Добавить репозиторий</string>
     <string name="label_repository_type">Тип репозитория</string>
     <string name="label_repository_specification">Путь/URL</string>
@@ -434,11 +413,8 @@
     <string name="condition_battery_not_low">Батарея в норме</string>
     <string name="condition_charging">На зарядке</string>
     <string name="condition_unmetered_network">Безлимитный инет (Wi-Fi)</string>
-    <string name="value_none">Нет</string>
     <string name="unit_hours">ч</string>
     <string name="schedule_interval_range_hint">1–720 ч</string>
-    <string name="schedule_name_dialog_title">Имя расписания</string>
-    <string name="schedule_name_placeholder">например, Дневной бэкап</string>
     <string name="preset_hours">%dч</string>
     <string name="preset_1_week">1н</string>
     <string name="preset_1_month">1м</string>
