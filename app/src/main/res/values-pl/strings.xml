@@ -95,8 +95,8 @@
     <plurals name="apps_count">
         <item quantity="one">Aplikacja (%1$d):</item>
         <item quantity="few">Aplikacje (%1$d):</item>
-        <item quantity="many">Aplikacji (%1$d):</item>
-        <item quantity="other">Aplikacji (%1$d):</item>
+        <item quantity="many">Aplikacjе (%1$d):</item>
+        <item quantity="other">Aplikacjе (%1$d):</item>
     </plurals>
     <string name="no_app_info_for_snapshot">Brak informacji o aplikacjach w tej migawce.</string>
     <string name="metadata_missing_or_corrupted">Metadane są niedostępne lub uszkodzone.</string>
@@ -112,8 +112,8 @@
     <plurals name="snapshot_backed_up_apps_count">
         <item quantity="one">Zabezpieczona aplikacja (%1$d)</item>
         <item quantity="few">Zabezpieczone aplikacje (%1$d)</item>
-        <item quantity="many">Zabezpieczonych aplikacji (%1$d)</item>
-        <item quantity="other">Zabezpieczonych aplikacji (%1$d)</item>
+        <item quantity="many">Zabezpieczonе aplikacjе (%1$d)</item>
+        <item quantity="other">Zabezpieczonе aplikacjе (%1$d)</item>
     </plurals>
     <string name="snapshot_not_found">Nie znaleziono migawki.</string>
     <string name="snapshot_forgetting">Zapominanie migawki…</string>
