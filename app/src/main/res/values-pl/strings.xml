@@ -81,6 +81,9 @@
     <string name="schedule_disabled">Wyłączony</string>
     <string name="dialog_delete_schedule_title">Usunąć harmonogram?</string>
     <string name="dialog_delete_schedule_message">Na pewno chcesz usunąć ten harmonogram?</string>
+    <string name="dialog_discard_changes_title">Odrzucić zmiany?</string>
+    <string name="dialog_discard_changes_message">Masz niezapisane zmiany. Czy na pewno chcesz je odrzucić?</string>
+    <string name="action_discard">Odrzuć</string>
     <string name="error_with_message">Błąd: %1$s</string>
     <string name="no_snapshots_found_for_repository">Nie znaleziono migawek dla wybranego repozytorium.</string>
     <plurals name="snapshots_count">

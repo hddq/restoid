@@ -40,7 +40,8 @@ data class AddEditScheduleUiState(
     val triggerConditions: TriggerConditions = TriggerConditions(),
     val isLoadingApps: Boolean = false,
     val isSaving: Boolean = false,
-    val showConfirmDeleteDialog: Boolean = false
+    val showConfirmDeleteDialog: Boolean = false,
+    val showDiscardChangesDialog: Boolean = false
 )
 
 sealed interface SchedulesUiEvent {
@@ -59,6 +60,8 @@ class SchedulesViewModel(
 
     private val _addEditState = MutableStateFlow(AddEditScheduleUiState())
     val addEditState = _addEditState.asStateFlow()
+
+    private var initialState: AddEditScheduleUiState? = null
 
     private val _uiEvents = MutableSharedFlow<SchedulesUiEvent>(extraBufferCapacity = 1)
     val uiEvents: SharedFlow<SchedulesUiEvent> = _uiEvents.asSharedFlow()
@@ -113,12 +116,14 @@ class SchedulesViewModel(
 
     // Add/Edit Screen methods
     fun startAddSchedule() {
-        _addEditState.value = AddEditScheduleUiState()
+        val newState = AddEditScheduleUiState()
+        _addEditState.value = newState
+        initialState = newState
         loadAppsForAddEdit()
     }
 
     fun startEditSchedule(schedule: Schedule) {
-        _addEditState.value = AddEditScheduleUiState(
+        val newState = AddEditScheduleUiState(
             id = schedule.id,
             name = schedule.name,
             intervalHours = schedule.intervalHours,
@@ -138,6 +143,8 @@ class SchedulesViewModel(
             ),
             triggerConditions = schedule.triggerConditions
         )
+        _addEditState.value = newState
+        initialState = newState
         loadAppsForAddEdit(schedule.config.selectedPackageNames)
     }
 
@@ -150,8 +157,46 @@ class SchedulesViewModel(
             } else {
                 allApps // Default selection from AppInfo might be true, we might want to default to true for new schedules too
             }
-            _addEditState.update { it.copy(apps = apps, isLoadingApps = false) }
+            _addEditState.update { 
+                val updated = it.copy(apps = apps, isLoadingApps = false)
+                // Update initialState if it was just set (apps are loaded asynchronously)
+                if (initialState?.apps?.isEmpty() == true && apps.isNotEmpty()) {
+                    initialState = updated
+                }
+                updated
+            }
         }
+    }
+
+    fun hasChanges(): Boolean {
+        val current = _addEditState.value
+        val initial = initialState ?: return false
+
+        return current.name != initial.name ||
+                current.intervalHours != initial.intervalHours ||
+                current.isEnabled != initial.isEnabled ||
+                current.backupEnabled != initial.backupEnabled ||
+                current.backupTypes != initial.backupTypes ||
+                current.apps.map { it.packageName to it.isSelected } != initial.apps.map { it.packageName to it.isSelected } ||
+                current.maintenance != initial.maintenance ||
+                current.triggerConditions != initial.triggerConditions
+    }
+
+    fun onBackPress() {
+        if (hasChanges()) {
+            _addEditState.update { it.copy(showDiscardChangesDialog = true) }
+        } else {
+            _uiEvents.tryEmit(SchedulesUiEvent.NavigateBack)
+        }
+    }
+
+    fun onConfirmDiscard() {
+        _addEditState.update { it.copy(showDiscardChangesDialog = false) }
+        _uiEvents.tryEmit(SchedulesUiEvent.NavigateBack)
+    }
+
+    fun onDismissDiscard() {
+        _addEditState.update { it.copy(showDiscardChangesDialog = false) }
     }
 
     fun saveSchedule() {

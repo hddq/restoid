@@ -289,11 +289,7 @@ class MainActivity : FragmentActivity() {
                                 },
                                 navigationIcon = {
                                     IconButton(onClick = {
-                                        if (currentDestination?.route == Screen.OperationProgress.route) {
-                                            this@MainActivity.onBackPressedDispatcher.onBackPressed()
-                                        } else {
-                                            navController.navigateUp()
-                                        }
+                                        this@MainActivity.onBackPressedDispatcher.onBackPressed()
                                     }) {
                                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                                     }

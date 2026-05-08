@@ -1,5 +1,6 @@
 package io.github.hddq.restoid.ui.schedules
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -29,6 +30,7 @@ import androidx.compose.material.icons.filled.Delete
 import io.github.hddq.restoid.LocalAppBarActions
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -188,6 +190,10 @@ fun AddEditScheduleScreen(
     val context = LocalContext.current
     var intervalText by remember(state.intervalHours) { mutableStateOf(state.intervalHours.toString()) }
     val appBarActions = LocalAppBarActions.current
+
+    BackHandler {
+        viewModel.onBackPress()
+    }
 
     DisposableEffect(state.id) {
         if (state.id != null) {
@@ -410,6 +416,27 @@ fun AddEditScheduleScreen(
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.onCancelDeleteSchedule() }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
+
+    if (state.showDiscardChangesDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.onDismissDiscard() },
+            title = { Text(stringResource(R.string.dialog_discard_changes_title)) },
+            text = { Text(stringResource(R.string.dialog_discard_changes_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = { viewModel.onConfirmDiscard() },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(stringResource(R.string.action_discard))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.onDismissDiscard() }) {
                     Text(stringResource(R.string.action_cancel))
                 }
             }
