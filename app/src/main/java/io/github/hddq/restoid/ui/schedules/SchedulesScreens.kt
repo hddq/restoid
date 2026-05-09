@@ -619,7 +619,13 @@ private fun ScheduleItem(
             )
             
             val lastRunText = if (schedule.lastRunTimestamp != null) {
-                stringResource(R.string.schedule_last_run, dateFormat.format(Date(schedule.lastRunTimestamp)))
+                val relativeTime = android.text.format.DateUtils.getRelativeTimeSpanString(
+                    schedule.lastRunTimestamp,
+                    System.currentTimeMillis(),
+                    android.text.format.DateUtils.MINUTE_IN_MILLIS
+                ).toString()
+                val exactTime = dateFormat.format(Date(schedule.lastRunTimestamp))
+                stringResource(R.string.schedule_last_run, relativeTime, exactTime)
             } else {
                 stringResource(R.string.schedule_never_run)
             }

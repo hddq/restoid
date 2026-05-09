@@ -59,7 +59,7 @@
     <string name="no_schedules_configured">Tidak ada jadwal yang dikonfigurasi untuk repositori ini.</string>
     <string name="schedule_interval_label">Interval (Jam)</string>
     <string name="schedule_name_label">Nama</string>
-    <string name="schedule_last_run">Terakhir jalan: %1$s</string>
+    <string name="schedule_last_run">Terakhir jalan: %1$s (%2$s)</string>
     <string name="schedule_never_run">Belum pernah jalan</string>
     <string name="dialog_delete_schedule_title">Hapus Jadwal?</string>
     <string name="dialog_delete_schedule_message">Yakin ingin menghapus jadwal ini?</string>

@@ -66,7 +66,7 @@
     <string name="no_schedules_configured">No schedules configured for this repository.</string>
     <string name="schedule_interval_label">Interval (Hours)</string>
     <string name="schedule_name_label">Name</string>
-    <string name="schedule_last_run">Last run: %1$s</string>
+    <string name="schedule_last_run">Last run: %1$s (%2$s)</string>
     <string name="schedule_never_run">Never run</string>
     <string name="dialog_delete_schedule_title">Delete Schedule?</string>
     <string name="dialog_delete_schedule_message">Are you sure you want to delete this schedule?</string>

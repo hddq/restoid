@@ -59,7 +59,7 @@
     <string name="no_schedules_configured">Нет расписаний для этого репозитория.</string>
     <string name="schedule_interval_label">Интервал (в часах)</string>
     <string name="schedule_name_label">Название</string>
-    <string name="schedule_last_run">Последний запуск: %1$s</string>
+    <string name="schedule_last_run">Последний запуск: %1$s (%2$s)</string>
     <string name="schedule_never_run">Никогда</string>
     <string name="dialog_delete_schedule_title">Удалить расписание?</string>
     <string name="dialog_delete_schedule_message">Точно удалить?</string>

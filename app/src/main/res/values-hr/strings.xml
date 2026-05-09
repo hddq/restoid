@@ -59,7 +59,7 @@
     <string name="no_schedules_configured">Nema konfiguriranih rasporeda za ovaj repozitorij.</string>
     <string name="schedule_interval_label">Interval (Sati)</string>
     <string name="schedule_name_label">Ime</string>
-    <string name="schedule_last_run">Zadnje pokretanje: %1$s</string>
+    <string name="schedule_last_run">Zadnje pokretanje: %1$s (%2$s)</string>
     <string name="schedule_never_run">Nikad pokrenuto</string>
     <string name="dialog_delete_schedule_title">Obriši raspored?</string>
     <string name="dialog_delete_schedule_message">Jesi li siguran da želiš obrisati ovaj raspored?</string>

@@ -59,7 +59,7 @@
     <string name="no_schedules_configured">Nessuna pianificazione configurata per questo repository.</string>
     <string name="schedule_interval_label">Intervallo (Ore)</string>
     <string name="schedule_name_label">Nome</string>
-    <string name="schedule_last_run">Ultima esecuzione: %1$s</string>
+    <string name="schedule_last_run">Ultima esecuzione: %1$s (%2$s)</string>
     <string name="schedule_never_run">Mai eseguito</string>
     <string name="dialog_delete_schedule_title">Eliminare Pianificazione?</string>
     <string name="dialog_delete_schedule_message">Sei sicuro di voler eliminare questa pianificazione?</string>

@@ -59,7 +59,7 @@
     <string name="no_schedules_configured">Nenhum agendamento configurado para este repositório.</string>
     <string name="schedule_interval_label">Intervalo (Horas)</string>
     <string name="schedule_name_label">Nome</string>
-    <string name="schedule_last_run">Última execução: %1$s</string>
+    <string name="schedule_last_run">Última ejecución: %1$s (%2$s)</string>
     <string name="schedule_never_run">Nunca executado</string>
     <string name="dialog_delete_schedule_title">Excluir Agendamento?</string>
     <string name="dialog_delete_schedule_message">Tem certeza de que deseja excluir este agendamento?</string>

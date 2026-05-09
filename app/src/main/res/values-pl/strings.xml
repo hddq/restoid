@@ -67,7 +67,7 @@
     <string name="no_schedules_configured">Brak skonfigurowanych harmonogramów dla tego repozytorium.</string>
     <string name="schedule_interval_label">Interwał (godziny)</string>
     <string name="schedule_name_label">Nazwa</string>
-    <string name="schedule_last_run">Ostatnio uruchomiono: %1$s</string>
+    <string name="schedule_last_run">Ostatnio uruchomiono: %1$s (%2$s)</string>
     <string name="schedule_never_run">Nigdy nie uruchamiano</string>
     <string name="dialog_delete_schedule_title">Usunąć harmonogram?</string>
     <string name="dialog_delete_schedule_message">Na pewno chcesz usunąć ten harmonogram?</string>

@@ -59,7 +59,7 @@
     <string name="no_schedules_configured">此存储库未配置定时任务。</string>
     <string name="schedule_interval_label">间隔 (小时)</string>
     <string name="schedule_name_label">名称</string>
-    <string name="schedule_last_run">上次运行: %1$s</string>
+    <string name="schedule_last_run">上次运行: %1$s (%2$s)</string>
     <string name="schedule_never_run">从未运行</string>
     <string name="dialog_delete_schedule_title">删除定时任务？</string>
     <string name="dialog_delete_schedule_message">确定要删除此定时任务吗？</string>

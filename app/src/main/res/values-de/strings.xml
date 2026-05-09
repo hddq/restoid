@@ -59,7 +59,7 @@
     <string name="no_schedules_configured">Keine Zeitpläne für dieses Repository konfiguriert.</string>
     <string name="schedule_interval_label">Intervall (Stunden)</string>
     <string name="schedule_name_label">Name</string>
-    <string name="schedule_last_run">Letzter Lauf: %1$s</string>
+    <string name="schedule_last_run">Letzter Lauf: %1$s (%2$s)</string>
     <string name="schedule_never_run">Nie gelaufen</string>
     <string name="dialog_delete_schedule_title">Zeitplan löschen?</string>
     <string name="dialog_delete_schedule_message">Bist du sicher, dass du diesen Zeitplan löschen willst?</string>

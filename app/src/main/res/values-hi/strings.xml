@@ -59,7 +59,7 @@
     <string name="no_schedules_configured">इस रिपॉजिटरी के लिए कोई शेड्यूल कॉन्फ़िगर नहीं किया गया है।</string>
     <string name="schedule_interval_label">अंतराल (घंटे)</string>
     <string name="schedule_name_label">नाम</string>
-    <string name="schedule_last_run">पिछला रन: %1$s</string>
+    <string name="schedule_last_run">पिछला रन: %1$s (%2$s)</string>
     <string name="schedule_never_run">कभी नहीं चला</string>
     <string name="dialog_delete_schedule_title">शेड्यूल हटाएं?</string>
     <string name="dialog_delete_schedule_message">क्या आप वाकई इस शेड्यूल को हटाना चाहते हैं?</string>

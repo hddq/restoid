@@ -59,7 +59,7 @@
     <string name="no_schedules_configured">이 저장소에 구성된 예약이 없습니다.</string>
     <string name="schedule_interval_label">주기 (시간)</string>
     <string name="schedule_name_label">이름</string>
-    <string name="schedule_last_run">마지막 실행: %1$s</string>
+    <string name="schedule_last_run">마지막 실행: %1$s (%2$s)</string>
     <string name="schedule_never_run">실행된 적 없음</string>
     <string name="dialog_delete_schedule_title">예약 삭제?</string>
     <string name="dialog_delete_schedule_message">정말로 이 예약을 삭제하시겠습니까?</string>

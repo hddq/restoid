@@ -59,7 +59,7 @@
     <string name="no_schedules_configured">Aucune planification configurée pour ce dépôt.</string>
     <string name="schedule_interval_label">Intervalle (Heures)</string>
     <string name="schedule_name_label">Nom</string>
-    <string name="schedule_last_run">Dernière exécution : %1$s</string>
+    <string name="schedule_last_run">Dernière exécution : %1$s (%2$s)</string>
     <string name="schedule_never_run">Jamais exécuté</string>
     <string name="dialog_delete_schedule_title">Supprimer la planification ?</string>
     <string name="dialog_delete_schedule_message">Êtes-vous sûr de vouloir supprimer cette planification ?</string>

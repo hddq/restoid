@@ -59,7 +59,7 @@
     <string name="no_schedules_configured">Chưa có lịch trình nào cho kho lưu trữ này.</string>
     <string name="schedule_interval_label">Khoảng thời gian (Giờ)</string>
     <string name="schedule_name_label">Tên</string>
-    <string name="schedule_last_run">Chạy lần cuối: %1$s</string>
+    <string name="schedule_last_run">Chạy lần cuối: %1$s (%2$s)</string>
     <string name="schedule_never_run">Chưa từng chạy</string>
     <string name="dialog_delete_schedule_title">Xóa lịch trình?</string>
     <string name="dialog_delete_schedule_message">Bạn có chắc muốn xóa lịch trình này?</string>

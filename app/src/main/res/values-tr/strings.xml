@@ -59,7 +59,7 @@
     <string name="no_schedules_configured">Bu depo için yapılandırılmış bir zamanlama yok.</string>
     <string name="schedule_interval_label">Aralık (Saat)</string>
     <string name="schedule_name_label">İsim</string>
-    <string name="schedule_last_run">Son çalışma: %1$s</string>
+    <string name="schedule_last_run">Son çalışma: %1$s (%2$s)</string>
     <string name="schedule_never_run">Hiç çalıştırılmadı</string>
     <string name="dialog_delete_schedule_title">Zamanlama Silinsin mi?</string>
     <string name="dialog_delete_schedule_message">Bu zamanlamayı silmek istediğinizden emin misiniz?</string>
