@@ -38,6 +38,7 @@ data class AddEditScheduleUiState(
     val apps: List<AppInfo> = emptyList(),
     val maintenance: RunTasksMaintenanceConfig = RunTasksMaintenanceConfig(),
     val triggerConditions: TriggerConditions = TriggerConditions(),
+    val lastRunTimestamp: Long? = null,
     val isLoadingApps: Boolean = false,
     val isSaving: Boolean = false,
     val showConfirmDeleteDialog: Boolean = false,
@@ -121,28 +122,28 @@ class SchedulesViewModel(
         initialState = newState
         loadAppsForAddEdit()
     }
-
-    fun startEditSchedule(schedule: Schedule) {
-        val newState = AddEditScheduleUiState(
-            id = schedule.id,
-            name = schedule.name,
-            intervalHours = schedule.intervalHours,
-            isEnabled = schedule.isEnabled,
-            backupEnabled = schedule.config.backupEnabled,
-            backupTypes = schedule.config.backupTypes.toUiModel(),
-            maintenance = RunTasksMaintenanceConfig(
-                unlockRepo = schedule.config.unlockRepo,
-                forgetSnapshots = schedule.config.forgetSnapshots,
-                pruneRepo = schedule.config.pruneRepo,
-                checkRepo = schedule.config.checkRepo,
-                readData = schedule.config.readData,
-                keepLast = schedule.config.keepLast,
-                keepDaily = schedule.config.keepDaily,
-                keepWeekly = schedule.config.keepWeekly,
-                keepMonthly = schedule.config.keepMonthly
-            ),
-            triggerConditions = schedule.triggerConditions
-        )
+fun startEditSchedule(schedule: Schedule) {
+    val newState = AddEditScheduleUiState(
+        id = schedule.id,
+        name = schedule.name,
+        intervalHours = schedule.intervalHours,
+        isEnabled = schedule.isEnabled,
+        backupEnabled = schedule.config.backupEnabled,
+        backupTypes = schedule.config.backupTypes.toUiModel(),
+        maintenance = RunTasksMaintenanceConfig(
+            unlockRepo = schedule.config.unlockRepo,
+            forgetSnapshots = schedule.config.forgetSnapshots,
+            pruneRepo = schedule.config.pruneRepo,
+            checkRepo = schedule.config.checkRepo,
+            readData = schedule.config.readData,
+            keepLast = schedule.config.keepLast,
+            keepDaily = schedule.config.keepDaily,
+            keepWeekly = schedule.config.keepWeekly,
+            keepMonthly = schedule.config.keepMonthly
+        ),
+        triggerConditions = schedule.triggerConditions,
+        lastRunTimestamp = schedule.lastRunTimestamp
+    )
         _addEditState.value = newState
         initialState = newState
         loadAppsForAddEdit(schedule.config.selectedPackageNames)

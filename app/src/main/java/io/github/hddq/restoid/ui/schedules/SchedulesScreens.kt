@@ -300,6 +300,28 @@ fun AddEditScheduleScreen(
                                     )
                                 }
                             }
+                            
+                            if (state.id != null) {
+                                Spacer(Modifier.height(16.dp))
+                                val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
+                                val currentLastRun = state.lastRunTimestamp
+                                val lastRunText = if (currentLastRun != null) {
+                                    val relativeTime = android.text.format.DateUtils.getRelativeTimeSpanString(
+                                        currentLastRun,
+                                        System.currentTimeMillis(),
+                                        android.text.format.DateUtils.MINUTE_IN_MILLIS
+                                    ).toString()
+                                    val exactTime = dateFormat.format(Date(currentLastRun))
+                                    stringResource(R.string.schedule_last_run, relativeTime, exactTime)
+                                } else {
+                                    stringResource(R.string.schedule_never_run)
+                                }
+                                Text(
+                                    text = lastRunText,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }
