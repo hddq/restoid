@@ -129,6 +129,9 @@ android {
             useLegacyPackaging = true
         }
     }
+    androidResources {
+        generateLocaleConfig = true
+    }
 }
 
 androidComponents {
