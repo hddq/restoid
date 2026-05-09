@@ -96,6 +96,28 @@
     <string name="no_app_info_for_snapshot">No app information available for this snapshot.</string>
     <string name="metadata_missing_or_corrupted">Metadata is missing or corrupted.</string>
 
+    <string name="time_just_now">just now</string>
+    <plurals name="time_mins_ago">
+        <item quantity="one">%d min ago</item>
+        <item quantity="other">%d mins ago</item>
+    </plurals>
+    <plurals name="time_hours_ago">
+        <item quantity="one">%d hour ago</item>
+        <item quantity="other">%d hours ago</item>
+    </plurals>
+    <plurals name="time_days_ago">
+        <item quantity="one">%d day ago</item>
+        <item quantity="other">%d days ago</item>
+    </plurals>
+    <plurals name="time_months_ago">
+        <item quantity="one">%d month ago</item>
+        <item quantity="other">%d months ago</item>
+    </plurals>
+    <plurals name="time_years_ago">
+        <item quantity="one">%d year ago</item>
+        <item quantity="other">%d years ago</item>
+    </plurals>
+
     <string name="maintenance_task_unlock_repository">Unlock repository</string>
     <string name="maintenance_task_prune_repository">Prune repository</string>
     <string name="maintenance_keep_last">Keep Last</string>

@@ -384,13 +384,50 @@ fun HomeScreen(
 @Composable
 private fun SnapshotItem(snapshotWithMetadata: SnapshotWithMetadata, apps: List<AppInfo>?, onClick: () -> Unit) {
     val snapshot = snapshotWithMetadata.snapshotInfo
+    val context = androidx.compose.ui.platform.LocalContext.current
+    
+    val timeText = remember(snapshot.time, context) {
+        try {
+            val instant = java.time.Instant.parse(snapshot.time)
+            val now = java.time.Instant.now()
+            val duration = java.time.Duration.between(instant, now)
+            
+            val relativeTime = when {
+                duration.toMinutes() < 1 -> context.getString(R.string.time_just_now)
+                duration.toHours() < 1 -> {
+                    val mins = duration.toMinutes().toInt()
+                    context.resources.getQuantityString(R.plurals.time_mins_ago, mins, mins)
+                }
+                duration.toDays() < 1 -> {
+                    val hours = duration.toHours().toInt()
+                    context.resources.getQuantityString(R.plurals.time_hours_ago, hours, hours)
+                }
+                duration.toDays() < 30 -> {
+                    val days = duration.toDays().toInt()
+                    context.resources.getQuantityString(R.plurals.time_days_ago, days, days)
+                }
+                duration.toDays() < 365 -> {
+                    val months = (duration.toDays() / 30).toInt()
+                    context.resources.getQuantityString(R.plurals.time_months_ago, months, months)
+                }
+                else -> {
+                    val years = (duration.toDays() / 365).toInt()
+                    context.resources.getQuantityString(R.plurals.time_years_ago, years, years)
+                }
+            }
+            "$relativeTime (${snapshot.time.take(10)})"
+        } catch (e: Exception) {
+            snapshot.time.take(10)
+        }
+    }
+
     Column(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text(text = snapshot.id.take(8), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
-            Text(text = snapshot.time.take(10), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(text = timeText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
         val appCount = snapshotWithMetadata.metadata?.apps?.size ?: 0
