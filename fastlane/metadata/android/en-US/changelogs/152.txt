@@ -1,0 +1,10 @@
+* Added padding to the bottom of the screen, so FAB doesn't overlap with the content
+* Added a text label to the Add Schedule FAB
+* Removed unused strings
+* Add Schedule FAB is now disabled when no repository is selected
+* Added multiple translations. These are AI-generated, you can review and improve them on weblate
+* Improved Polish translation (thanks @DawidNet7!)
+* Improved Russian translation (thanks @DawidNet7!)
+* Schedules now show last run time (relative and absolute)
+* Going back from schedule details now asks for confirmation if there are unsaved changes
+* Snapshots on home screen now show creation relative time
