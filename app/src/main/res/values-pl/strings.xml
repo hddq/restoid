@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name" translatable="false">Restoid</string>
-
     <string name="screen_home">Strona główna</string>
     <string name="screen_settings">Ustawienia</string>
     <string name="screen_run_tasks">Uruchom zadania</string>
@@ -10,7 +9,6 @@
     <string name="screen_licenses">Licencje</string>
     <string name="screen_schedules">Harmonogramy</string>
     <string name="screen_operation_progress">Postęp operacji</string>
-
     <string name="topbar_run_tasks">Uruchom zadania</string>
     <string name="topbar_backup_config">Konfiguracja backupu</string>
     <string name="topbar_forget_config">Zasady zapominania</string>
@@ -24,19 +22,16 @@
     <string name="topbar_restore_snapshot">Przywróć migawkę</string>
     <string name="cd_back">Wstecz</string>
     <string name="cd_forget_snapshot">Zapomnij migawkę</string>
-
     <string name="fab_run_tasks">Uruchom zadania</string>
     <string name="fab_add_schedule">Dodaj harmonogram</string>
     <string name="fab_restore">Przywróć</string>
     <string name="fab_start_restore">Rozpocznij przywracanie</string>
-
     <string name="operation_backup">Backup</string>
     <string name="operation_run_tasks">Uruchom zadania</string>
     <string name="operation_schedule_name">Harmonogram %1$s</string>
     <string name="operation_restore">Przywracanie</string>
     <string name="operation_maintenance">Konserwacja</string>
     <string name="run_tasks_phase_summary">%1$s:\n%2$s</string>
-
     <string name="backup_types_title">Typy backupu</string>
     <string name="backup_type_apk">APK</string>
     <string name="backup_type_data">Dane</string>
@@ -46,14 +41,12 @@
     <string name="backup_type_media_data">Dane multimedialne</string>
     <string name="apps_title">Aplikacje</string>
     <string name="toggle_all">Zaznacz/Odznacz wszystko</string>
-
     <string name="restore_options_title">Opcje przywracania</string>
     <string name="allow_downgrade">Zezwól na starszą wersję (downgrade)</string>
     <string name="apps_to_restore_title">Aplikacje do przywrócenia</string>
     <string name="no_app_data_found_in_snapshot">Nie znaleziono danych aplikacji w tej migawce.</string>
     <string name="restore_backup_version_with_installed">Backup: %1$s -&gt; Zainstalowano: %2$s</string>
     <string name="restore_backup_version_only">Backup: %1$s</string>
-
     <string name="home_title">Restoid</string>
     <string name="run_tasks_applications">Aplikacje</string>
     <string name="run_tasks_backup_subtitle">Wybrano %1$d aplikacji - %2$s</string>
@@ -100,7 +93,6 @@
     </plurals>
     <string name="no_app_info_for_snapshot">Brak informacji o aplikacjach w tej migawce.</string>
     <string name="metadata_missing_or_corrupted">Metadane są niedostępne lub uszkodzone.</string>
-
     <string name="maintenance_task_unlock_repository">Odblokuj repozytorium</string>
     <string name="maintenance_task_prune_repository">Oczyść repozytorium</string>
     <string name="maintenance_keep_last">Zachowaj ostatnie</string>
@@ -108,7 +100,6 @@
     <string name="maintenance_keep_weekly">Zachowaj tygodniowe</string>
     <string name="maintenance_keep_monthly">Zachowaj miesięczne</string>
     <string name="maintenance_read_all_data">Odczytaj wszystkie dane</string>
-
     <plurals name="snapshot_backed_up_apps_count">
         <item quantity="one">Zabezpieczona aplikacja (%1$d)</item>
         <item quantity="few">Zabezpieczone aplikacje (%1$d)</item>
@@ -122,7 +113,6 @@
     <string name="snapshot_version_size">Wersja: %1$s - Rozmiar: %2$s</string>
     <string name="dialog_forget_snapshot_title">Zapomnieć migawkę?</string>
     <string name="dialog_forget_snapshot_message">To usunie wpis migawki. Faktyczne dane zostaną usunięte dopiero po uruchomieniu oczyszczania (prune). Jesteś pewien?</string>
-
     <string name="label_password">Hasło</string>
     <string name="label_repository_password">Hasło do repozytorium</string>
     <string name="label_rest_username">Nazwa użytkownika REST</string>
@@ -146,7 +136,6 @@
     <string name="action_forget">Zapomnij</string>
     <string name="action_try_again">Spróbuj ponownie</string>
     <string name="action_disable">Wyłącz</string>
-
     <string name="progress_initializing">Inicjowanie…</string>
     <string name="progress_stopping">Zatrzymywanie…</string>
     <string name="progress_operation_complete">%1$s Zakończono</string>
@@ -158,7 +147,6 @@
     <string name="progress_size">Rozmiar</string>
     <string name="progress_processing">Przetwarzanie: </string>
     <string name="progress_placeholder">...</string>
-
     <string name="dialog_add_repository_title">Dodaj repozytorium</string>
     <string name="label_repository_type">Typ repozytorium</string>
     <string name="label_repository_specification">Specyfikacja repozytorium</string>
@@ -174,39 +162,32 @@
     <string name="dialog_sftp_trust_title">Zaufaj serwerowi SFTP</string>
     <string name="dialog_sftp_trust_message">Serwer %1$s zaprezentował te odciski palców (fingerprints) klucza hosta:</string>
     <string name="dialog_sftp_trust_fingerprints">Odciski palców (Fingerprints)</string>
-
     <string name="repo_backend_local">Lokalny katalog</string>
     <string name="repo_backend_sftp">SFTP (SSH)</string>
     <string name="repo_backend_rest">Serwer HTTP REST</string>
     <string name="repo_backend_s3">Amazon S3 / MinIO</string>
-
     <string name="repo_hint_sftp">user@host:/srv/restic-repo</string>
     <string name="repo_hint_rest">http://host:8000/</string>
     <string name="repo_hint_s3">s3.us-east-1.amazonaws.com/bucket_name</string>
-
     <string name="label_path">Ścieżka</string>
     <string name="placeholder_select_directory">Wybierz katalog…</string>
     <string name="cd_select_folder">Wybierz folder</string>
     <string name="cd_select_private_key_file">Wybierz plik klucza prywatnego</string>
     <string name="cd_hide_password">Ukryj hasło</string>
     <string name="cd_show_password">Pokaż hasło</string>
-
     <string name="backup_repositories_title">Repozytoria backupu</string>
     <string name="cd_add_repository">Dodaj repozytorium</string>
     <string name="no_repositories_configured">Brak skonfigurowanych repozytoriów. Dodaj jakieś na start.</string>
     <string name="install_restic_manage_repositories">Zainstaluj restic, żeby zarządzać repozytoriami.</string>
-
     <string name="system_title">System</string>
     <string name="root_access_denied">Brak dostępu do roota</string>
     <string name="checking_for_root">Sprawdzanie roota…</string>
     <string name="root_access_granted">Dostęp do roota przyznany</string>
-
     <string name="dependencies_title">Zależności</string>
     <string name="about_title">O aplikacji</string>
     <string name="version_label">Wersja</string>
     <string name="open_source_licenses">Licencje Open Source</string>
     <string name="translate">Tłumaczenie</string>
-
     <string name="notifications_enabled">Powiadomienia włączone</string>
     <string name="notifications_disabled">Powiadomienia wyłączone</string>
     <string name="notification_permission">Uprawnienia powiadomień</string>
@@ -234,7 +215,6 @@
     <string name="restic_binary">Plik wykonywalny Restic</string>
     <string name="restic_checking_status">Sprawdzanie statusu…</string>
     <string name="restic_error_with_message">Błąd: %1$s</string>
-
     <string name="error_failed_change_password">Nie udało się zmienić hasła.</string>
     <string name="dialog_change_password">Zmień hasło</string>
     <string name="label_old_password">Stare hasło</string>
@@ -250,12 +230,10 @@
     <string name="dialog_save_s3_credentials">Zapisz dane uwierzytelniające S3</string>
     <string name="rest_credentials_hint">Zapisane dane są zaszyfrowane na tym urządzeniu.</string>
     <string name="s3_credentials_hint">Zapisane dane są zaszyfrowane na tym urządzeniu.</string>
-
     <string name="backup_item_permissions">Uprawnienia</string>
     <string name="backup_item_unknown">Nieznane elementy</string>
     <string name="backup_item_obb">OBB</string>
     <string name="backup_item_media">Multimedia</string>
-
     <string name="backup_error_repository_id_not_found">Nie znaleziono ID repozytorium. Nie można zapisać metadanych.</string>
     <string name="backup_stage_preparing">[%1$d/%2$d] Przygotowywanie backupu...</string>
     <string name="backup_stage_running">[%1$d/%2$d] Tworzenie kopii aplikacji…</string>
@@ -269,7 +247,6 @@
         <item quantity="many">Zrobiono kopię %1$d aplikacji.</item>
         <item quantity="other">Zrobiono kopię %1$d aplikacji.</item>
     </plurals>
-
     <string name="error_fatal_with_message">Wystąpił błąd krytyczny: %1$s</string>
     <string name="error_no_apps_selected">Nie wybrano żadnych aplikacji.</string>
     <string name="summary_no_apps_selected">Żadne aplikacje nie zostały wybrane.</string>
@@ -289,7 +266,6 @@
     <string name="summary_s3_credentials_not_found">Nie udało się znaleźć danych S3.</string>
     <string name="error_operation_already_running">Inna operacja jest już w toku.</string>
     <string name="summary_operation_already_running">Inna operacja jest aktualnie wykonywana. Poczekaj na jej zakończenie.</string>
-
     <string name="error_snapshot_not_found">Nie znaleziono migawki.</string>
     <string name="error_repository_password_or_id_not_found">Nie znaleziono repozytorium, hasła lub ID repo.</string>
     <string name="restore_stage_restore_files">Przywracanie plików</string>
@@ -322,7 +298,6 @@
         <item quantity="other"> Nie udało się przywrócić %1$d aplikacji.</item>
     </plurals>
     <string name="restore_summary_details">\n\nSzczegóły:\n- %1$s</string>
-
     <string name="maintenance_task_unlock">Odblokuj</string>
     <string name="maintenance_task_forget">Zapomnij</string>
     <string name="maintenance_task_prune">Oczyść</string>
@@ -335,7 +310,6 @@
     <string name="run_tasks_error_one_or_more_failed">Uruchomienie jednego lub więcej zadań zawiodło.</string>
     <string name="maintenance_error_no_tasks">Brak wybranych zadań.</string>
     <string name="maintenance_summary_no_tasks">Żadne zadania konserwacji nie zostały wybrane.</string>
-
     <string name="home_error_repository_id_not_found">Nie znaleziono ID repozytorium</string>
     <string name="home_error_repository_password_incorrect">Hasło do repozytorium jest nieprawidłowe.</string>
     <string name="home_error_sftp_password_incorrect">Dane uwierzytelniające SFTP są nieprawidłowe.</string>
@@ -361,7 +335,6 @@
     <string name="error_sftp_key_file_empty">Wybrany plik klucza prywatnego jest pusty.</string>
     <string name="error_sftp_key_cannot_be_empty">Klucz prywatny SSH SFTP nie może być pusty.</string>
     <string name="error_unknown">Nieznany błąd</string>
-
     <string name="channel_ongoing_operations">Trwające operacje</string>
     <string name="channel_completed_operations">Zakończone operacje</string>
     <string name="channel_ongoing_description">Pokazuje postęp backupu i przywracania bez pikania.</string>
@@ -379,7 +352,6 @@
     <string name="operation_interrupted">Operacja została przerwana.</string>
     <string name="dialog_stop_operation_title">Zatrzymać operację?</string>
     <string name="dialog_stop_operation_message">Czy na pewno chcesz zatrzymać obecną operację? Wszystkie niezakończone akcje zostaną przerwane.</string>
-
     <string name="repo_error_exists">Repozytorium już istnieje.</string>
     <string name="repo_error_binary_not_ready">Restic nie jest gotowy do działania.</string>
     <string name="repo_error_invalid_password_or_corrupted">Nieprawidłowe hasło lub repozytorium jest uszkodzone.</string>
@@ -395,12 +367,10 @@
     <string name="repo_error_sftp_fingerprint_probe_failed">Nie udało się pobrać odcisku palca (fingerprint) serwera SFTP.</string>
     <string name="repo_error_s3_bucket_not_found">Nie znaleziono bucketu S3</string>
     <string name="action_trust">Zaufaj</string>
-
     <string name="restic_unknown_version">Nieznana wersja</string>
     <string name="restic_unknown">nieznane</string>
     <string name="restic_error_binary_corrupted">Plik wykonywalny uszkodzony lub nieprawidłowy</string>
     <string name="restic_error_bundled_not_found">Wbudowany plik wykonywalny nie został znaleziony lub nie ma praw do uruchomienia.</string>
-
     <string name="restic_failure_load_snapshots">Nie udało się załadować migawek</string>
     <string name="restic_failure_check_repository">Nie udało się sprawdzić repozytorium</string>
     <string name="restic_failure_prune_repository">Nie udało się oczyścić repozytorium</string>
@@ -428,12 +398,10 @@
         <item quantity="many">%1$d zmienionych plików</item>
         <item quantity="other">%1$d zmienionych plików</item>
     </plurals>
-
     <string name="restic_executor_failure_command">Polecenie restic nie powiodło się</string>
     <string name="restic_executor_failure_not_ready">Restic nie jest zainstalowany ani gotowy.</string>
     <string name="restic_executor_failure_invalid_env_name">Jedna lub więcej nazw zmiennych środowiskowych jest błędna.</string>
     <string name="restic_executor_failure_invalid_option_name">Jedna lub więcej nazw opcji restic jest błędna.</string>
-
     <string name="maintenance_summary_prune_completed">Operacja oczyszczania (prune) zakończona.</string>
     <plurals name="maintenance_summary_removed_snapshots">
         <item quantity="one">Usunięto %1$d migawkę.</item>
@@ -444,9 +412,7 @@
     <string name="maintenance_summary_no_snapshots_removed">Żadne migawki nie spełniły zasad do usunięcia.</string>
     <string name="maintenance_summary_check_completed">Sprawdzanie zakończone.</string>
     <string name="maintenance_summary_unlock_finished">Odblokowywanie zakończone.</string>
-
     <string name="not_available">Brak danych</string>
-
     <string name="section_general">Ogólne</string>
     <string name="section_conditions">Warunki</string>
     <string name="condition_battery_not_low">Bateria nie jest słaba</string>
@@ -457,7 +423,6 @@
     <string name="preset_hours">%dh</string>
     <string name="preset_1_week">1t</string>
     <string name="preset_1_month">1m</string>
-
     <string name="license_unknown_author">Nieznany</string>
     <string name="license_unknown_name">Nieznana Licencja</string>
     <string name="license_restoid_author" translatable="false">hddq</string>
@@ -473,4 +438,11 @@
     <string name="license_tap_to_expand">… (dotknij, by rozwinąć)</string>
     <string name="cd_open_link">Otwórz link</string>
     <string name="cd_copy_license">Skopiuj licencję</string>
+    <string name="time_just_now">teraz</string>
+    <plurals name="time_mins_ago">
+        <item quantity="one">%d minutę temu</item>
+        <item quantity="few">%d minuty temu</item>
+        <item quantity="many">%d minut temu</item>
+        <item quantity="other">%d minut temu</item>
+    </plurals>
 </resources>
