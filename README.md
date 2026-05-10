@@ -33,31 +33,11 @@ Restoid gives you control over your app backups through a clean and simple user 
 * **Flexible Restore**: Restore entire apps or just specific parts (like only app data).
 * **Automated Schedules**: Set up recurring backups with customizable intervals and trigger conditions (battery, charging, and network status).
 * **Downgrade Protection**: Prevents you from accidentally restoring an older app version over a newer one (can be overridden).
-* **Zero-Hassle Dependencies**: Automatically downloads and manages the `restic` binary for your device's architecture.
 
 ## ⚠️ Requirements
 
 * **Root Access**: Restoid requires elevated privileges to access app data directories. It uses `libsu` for robust root command execution.
 * **Android Version**: Minimum SDK 33 (Android 13).
-
-## 🚀 Getting Started
-
-1.  **Grant Root**: Launch the app and grant it Superuser access when prompted.
-2.  **Install Restic**: Go to **Settings**. The app will show that `restic` is not installed. Tap **Download** to automatically fetch and set it up.
-3.  **Create a Repository**:
-   * In **Settings**, tap the `+` icon to add a new repository.
-   * Choose a backend type (local or one of the supported remote backends).
-   * For local repositories, select a folder on your device. For remote repositories, enter the restic repository specification.
-   * If needed, add backend credentials as environment variables (one `KEY=value` per line).
-   * Set a strong password to encrypt your backups. You can choose to save it securely in the app.
-4.  **Run Your First Backup**:
-   * Go **Home** and tap the **Backup** FAB (the `+` button).
-   * Choose what data types you want to back up (APK, Data, etc.).
-   * Select the apps.
-   * Tap **Start Backup** and watch the magic happen.
-5.  **Restore From a Backup**:
-   * From the **Home** screen, tap on a snapshot.
-   * Tap **Restore**, select what you want to bring back, and confirm.
 
 ## 🤝 How to Contribute
 
