@@ -19,9 +19,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.SelectAll
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -215,11 +219,58 @@ fun SelectAllListItem(isChecked: Boolean, onToggle: () -> Unit) {
 }
 
 @Composable
-fun AppListItem(app: AppInfo, onToggle: () -> Unit) {
+fun BulkBackupTypesListItem(subtitle: String, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onToggle)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Default.SelectAll,
+            contentDescription = null,
+            modifier = Modifier
+                .size(48.dp)
+                .padding(8.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.backup_types_for_selected_apps),
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Icon(
+            imageVector = Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+fun AppListItem(
+    app: AppInfo,
+    subtitle: String? = null,
+    onClick: () -> Unit,
+    onToggle: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -237,6 +288,15 @@ fun AppListItem(app: AppInfo, onToggle: () -> Unit) {
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
         Switch(
             checked = app.isSelected,
@@ -253,5 +313,59 @@ fun AppListItem(app: AppInfo, onToggle: () -> Unit) {
                 null
             }
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BackupTypesBottomSheet(
+    title: String,
+    backupTypes: BackupTypes,
+    onBackupTypesChange: (BackupTypes) -> Unit,
+    onDismissRequest: () -> Unit
+) {
+    ModalBottomSheet(onDismissRequest = onDismissRequest) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, bottom = 32.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+            ) {
+                Column {
+                    BackupTypeToggle(stringResource(R.string.backup_type_apk), backupTypes.apk) {
+                        onBackupTypesChange(backupTypes.copy(apk = it))
+                    }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                    BackupTypeToggle(stringResource(R.string.backup_type_data), backupTypes.data) {
+                        onBackupTypesChange(backupTypes.copy(data = it))
+                    }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                    BackupTypeToggle(stringResource(R.string.backup_type_device_protected_data), backupTypes.deviceProtectedData) {
+                        onBackupTypesChange(backupTypes.copy(deviceProtectedData = it))
+                    }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                    BackupTypeToggle(stringResource(R.string.backup_type_external_data), backupTypes.externalData) {
+                        onBackupTypesChange(backupTypes.copy(externalData = it))
+                    }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                    BackupTypeToggle(stringResource(R.string.backup_type_obb_data), backupTypes.obb) {
+                        onBackupTypesChange(backupTypes.copy(obb = it))
+                    }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                    BackupTypeToggle(stringResource(R.string.backup_type_media_data), backupTypes.media) {
+                        onBackupTypesChange(backupTypes.copy(media = it))
+                    }
+                }
+            }
+        }
     }
 }

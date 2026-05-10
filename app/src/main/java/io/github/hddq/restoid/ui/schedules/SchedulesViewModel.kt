@@ -35,6 +35,7 @@ data class AddEditScheduleUiState(
     val isEnabled: Boolean = true,
     val backupEnabled: Boolean = true,
     val backupTypes: BackupTypes = BackupTypes(),
+    val appBackupTypes: Map<String, BackupTypes> = emptyMap(),
     val apps: List<AppInfo> = emptyList(),
     val maintenance: RunTasksMaintenanceConfig = RunTasksMaintenanceConfig(),
     val triggerConditions: TriggerConditions = TriggerConditions(),
@@ -122,28 +123,29 @@ class SchedulesViewModel(
         initialState = newState
         loadAppsForAddEdit()
     }
-fun startEditSchedule(schedule: Schedule) {
-    val newState = AddEditScheduleUiState(
-        id = schedule.id,
-        name = schedule.name,
-        intervalHours = schedule.intervalHours,
-        isEnabled = schedule.isEnabled,
-        backupEnabled = schedule.config.backupEnabled,
-        backupTypes = schedule.config.backupTypes.toUiModel(),
-        maintenance = RunTasksMaintenanceConfig(
-            unlockRepo = schedule.config.unlockRepo,
-            forgetSnapshots = schedule.config.forgetSnapshots,
-            pruneRepo = schedule.config.pruneRepo,
-            checkRepo = schedule.config.checkRepo,
-            readData = schedule.config.readData,
-            keepLast = schedule.config.keepLast,
-            keepDaily = schedule.config.keepDaily,
-            keepWeekly = schedule.config.keepWeekly,
-            keepMonthly = schedule.config.keepMonthly
-        ),
-        triggerConditions = schedule.triggerConditions,
-        lastRunTimestamp = schedule.lastRunTimestamp
-    )
+    fun startEditSchedule(schedule: Schedule) {
+        val newState = AddEditScheduleUiState(
+            id = schedule.id,
+            name = schedule.name,
+            intervalHours = schedule.intervalHours,
+            isEnabled = schedule.isEnabled,
+            backupEnabled = schedule.config.backupEnabled,
+            backupTypes = schedule.config.backupTypes.toUiModel(),
+            appBackupTypes = schedule.config.appBackupTypes.mapValues { it.value.toUiModel() },
+            maintenance = RunTasksMaintenanceConfig(
+                unlockRepo = schedule.config.unlockRepo,
+                forgetSnapshots = schedule.config.forgetSnapshots,
+                pruneRepo = schedule.config.pruneRepo,
+                checkRepo = schedule.config.checkRepo,
+                readData = schedule.config.readData,
+                keepLast = schedule.config.keepLast,
+                keepDaily = schedule.config.keepDaily,
+                keepWeekly = schedule.config.keepWeekly,
+                keepMonthly = schedule.config.keepMonthly
+            ),
+            triggerConditions = schedule.triggerConditions,
+            lastRunTimestamp = schedule.lastRunTimestamp
+        )
         _addEditState.value = newState
         initialState = newState
         loadAppsForAddEdit(schedule.config.selectedPackageNames)
@@ -153,13 +155,18 @@ fun startEditSchedule(schedule: Schedule) {
         viewModelScope.launch {
             _addEditState.update { it.copy(isLoadingApps = true) }
             val allApps = appInfoRepository.getInstalledUserApps()
+            val currentTypes = _addEditState.value.appBackupTypes
+            val defaultTypes = _addEditState.value.backupTypes
             val apps = if (selectedPackageNames != null) {
                 allApps.map { it.copy(isSelected = selectedPackageNames.contains(it.packageName)) }
             } else {
                 allApps // Default selection from AppInfo might be true, we might want to default to true for new schedules too
             }
+            val appBackupTypes = apps.associate { app ->
+                app.packageName to (currentTypes[app.packageName] ?: defaultTypes)
+            }
             _addEditState.update { 
-                val updated = it.copy(apps = apps, isLoadingApps = false)
+                val updated = it.copy(apps = apps, appBackupTypes = appBackupTypes, isLoadingApps = false)
                 // Update initialState if it was just set (apps are loaded asynchronously)
                 if (initialState?.apps?.isEmpty() == true && apps.isNotEmpty()) {
                     initialState = updated
@@ -178,6 +185,7 @@ fun startEditSchedule(schedule: Schedule) {
                 current.isEnabled != initial.isEnabled ||
                 current.backupEnabled != initial.backupEnabled ||
                 current.backupTypes != initial.backupTypes ||
+                current.appBackupTypes != initial.appBackupTypes ||
                 current.apps.map { it.packageName to it.isSelected } != initial.apps.map { it.packageName to it.isSelected } ||
                 current.maintenance != initial.maintenance ||
                 current.triggerConditions != initial.triggerConditions
@@ -215,6 +223,7 @@ fun startEditSchedule(schedule: Schedule) {
                 backupEnabled = state.backupEnabled,
                 backupTypes = state.backupTypes.toSelection(),
                 selectedPackageNames = state.apps.filter { it.isSelected }.map { it.packageName },
+                appBackupTypes = selectedAppBackupTypes(state).mapValues { it.value.toSelection() },
                 unlockRepo = state.maintenance.unlockRepo,
                 forgetSnapshots = state.maintenance.forgetSnapshots,
                 pruneRepo = state.maintenance.pruneRepo,
@@ -249,16 +258,41 @@ fun startEditSchedule(schedule: Schedule) {
 
     fun toggleAppSelection(packageName: String) {
         _addEditState.update { state ->
-            state.copy(apps = state.apps.map {
-                if (it.packageName == packageName) it.copy(isSelected = !it.isSelected) else it
-            })
+            state.copy(
+                apps = state.apps.map {
+                    if (it.packageName == packageName) it.copy(isSelected = !it.isSelected) else it
+                },
+                appBackupTypes = state.appBackupTypes.ensurePackage(packageName, state.backupTypes)
+            )
         }
     }
 
     fun toggleAllApps() {
         _addEditState.update { state ->
             val shouldSelectAll = state.apps.any { !it.isSelected }
-            state.copy(apps = state.apps.map { it.copy(isSelected = shouldSelectAll) })
+            val apps = state.apps.map { it.copy(isSelected = shouldSelectAll) }
+            state.copy(
+                apps = apps,
+                appBackupTypes = apps.fold(state.appBackupTypes) { acc, app ->
+                    acc.ensurePackage(app.packageName, state.backupTypes)
+                }
+            )
+        }
+    }
+
+    fun setAppBackupTypes(packageName: String, backupTypes: BackupTypes) {
+        _addEditState.update { state ->
+            state.copy(appBackupTypes = state.appBackupTypes + (packageName to backupTypes))
+        }
+    }
+
+    fun setSelectedAppsBackupTypes(backupTypes: BackupTypes) {
+        _addEditState.update { state ->
+            val selectedPackageNames = state.apps.filter { it.isSelected }.map { it.packageName }
+            state.copy(
+                backupTypes = backupTypes,
+                appBackupTypes = state.appBackupTypes + selectedPackageNames.associateWith { backupTypes }
+            )
         }
     }
 
@@ -297,5 +331,17 @@ fun startEditSchedule(schedule: Schedule) {
             loadSchedules()
             _uiEvents.emit(SchedulesUiEvent.NavigateBack)
         }
+    }
+
+    private fun selectedAppBackupTypes(state: AddEditScheduleUiState): Map<String, BackupTypes> {
+        return state.apps
+            .filter { it.isSelected }
+            .associate { app ->
+                app.packageName to (state.appBackupTypes[app.packageName] ?: state.backupTypes)
+            }
+    }
+
+    private fun Map<String, BackupTypes>.ensurePackage(packageName: String, defaultTypes: BackupTypes): Map<String, BackupTypes> {
+        return if (containsKey(packageName)) this else this + (packageName to defaultTypes)
     }
 }

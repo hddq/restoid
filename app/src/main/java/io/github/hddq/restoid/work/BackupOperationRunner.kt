@@ -118,6 +118,7 @@ class BackupOperationRunner(
             val (pathsToBackup, excludePatterns, metadata) = prepareBackupData(
                 selectedApps,
                 request.backupTypes,
+                request.appBackupTypes,
                 shouldStop
             )
             restoidMetadataFile = File(context.cacheDir, "restoid.json")
@@ -273,6 +274,7 @@ class BackupOperationRunner(
     private suspend fun prepareBackupData(
         selectedApps: List<AppInfo>,
         backupTypes: BackupTypeSelection,
+        appBackupTypes: Map<String, BackupTypeSelection>,
         shouldStop: () -> Boolean
     ): Triple<MutableList<String>, List<String>, RestoidMetadata> {
         fun throwIfCancelled() {
@@ -284,26 +286,27 @@ class BackupOperationRunner(
         val pathsToBackup = mutableListOf<String>()
         val excludePatterns = mutableListOf<String>()
         val appMetadataMap = mutableMapOf<String, AppMetadata>()
-        val backupTypesList = mutableListOf<String>().apply {
-            if (backupTypes.apk) add("apk")
-            if (backupTypes.data) add("data")
-            if (backupTypes.deviceProtectedData) add("user_de")
-            if (backupTypes.externalData) add("external_data")
-            if (backupTypes.obb) add("obb")
-            if (backupTypes.media) add("media")
-        }
 
         selectedApps.forEach { app ->
             throwIfCancelled()
-            val appPaths = generateFilePathsForApp(app, backupTypes)
+            val effectiveBackupTypes = appBackupTypes[app.packageName] ?: backupTypes
+            val backupTypesList = mutableListOf<String>().apply {
+                if (effectiveBackupTypes.apk) add("apk")
+                if (effectiveBackupTypes.data) add("data")
+                if (effectiveBackupTypes.deviceProtectedData) add("user_de")
+                if (effectiveBackupTypes.externalData) add("external_data")
+                if (effectiveBackupTypes.obb) add("obb")
+                if (effectiveBackupTypes.media) add("media")
+            }
+            val appPaths = generateFilePathsForApp(app, effectiveBackupTypes)
             val existingAppPaths = appPaths.filter { Shell.cmd("[ -e '$it' ]").exec().isSuccess }
             pathsToBackup.addAll(existingAppPaths)
 
-            if (backupTypes.data) {
+            if (effectiveBackupTypes.data) {
                 excludePatterns.add("'/data/data/${app.packageName}/cache'")
                 excludePatterns.add("'/data/data/${app.packageName}/code_cache'")
             }
-            if (backupTypes.externalData) {
+            if (effectiveBackupTypes.externalData) {
                 excludePatterns.add("'/storage/emulated/0/Android/data/${app.packageName}/cache'")
             }
 
@@ -334,8 +337,16 @@ class BackupOperationRunner(
             )
         }
 
-        val backupOptions = request.backupTypes
-        if (!backupOptions.apk && !backupOptions.data && !backupOptions.deviceProtectedData && !backupOptions.externalData && !backupOptions.obb && !backupOptions.media) {
+        val hasAnyBackupType = selectedApps.any { app ->
+            val backupOptions = request.appBackupTypes[app.packageName] ?: request.backupTypes
+            backupOptions.apk ||
+                    backupOptions.data ||
+                    backupOptions.deviceProtectedData ||
+                    backupOptions.externalData ||
+                    backupOptions.obb ||
+                    backupOptions.media
+        }
+        if (!hasAnyBackupType) {
             return OperationProgress(
                 isFinished = true,
                 error = context.getString(R.string.error_no_backup_types_selected),

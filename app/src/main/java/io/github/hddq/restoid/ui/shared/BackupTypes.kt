@@ -1,7 +1,9 @@
 package io.github.hddq.restoid.ui.shared
 
 import io.github.hddq.restoid.work.BackupTypeSelection
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class BackupTypes(
     val apk: Boolean = true,
     val data: Boolean = true,

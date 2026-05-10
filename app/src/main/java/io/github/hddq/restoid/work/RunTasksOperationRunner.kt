@@ -98,7 +98,8 @@ class RunTasksOperationRunner(
                 val backupRequest = BackupWorkRequest(
                     repositoryKey = request.repositoryKey,
                     backupTypes = request.backupTypes,
-                    selectedPackageNames = request.selectedPackageNames
+                    selectedPackageNames = request.selectedPackageNames,
+                    appBackupTypes = request.appBackupTypes
                 )
 
                 val result = backupRunner.run(

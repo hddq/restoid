@@ -45,6 +45,9 @@
     <string name="backup_type_media_data">Media Data</string>
     <string name="apps_title">Apps</string>
     <string name="toggle_all">Toggle All</string>
+    <string name="backup_types_for_selected_apps">Backup types for selected apps</string>
+    <string name="backup_types_none">None</string>
+    <string name="backup_types_mixed">Mixed</string>
 
     <string name="restore_options_title">Restore Options</string>
     <string name="allow_downgrade">Allow Downgrade</string>

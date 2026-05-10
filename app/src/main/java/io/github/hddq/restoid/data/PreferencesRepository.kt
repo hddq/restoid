@@ -4,9 +4,12 @@ import android.content.Context
 import io.github.hddq.restoid.ui.shared.BackupTypes
 import io.github.hddq.restoid.ui.runtasks.RunTasksMaintenanceConfig
 import io.github.hddq.restoid.ui.restore.RestoreTypes
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 class PreferencesRepository(context: Context) {
     private val prefs = context.getSharedPreferences("user_preferences", Context.MODE_PRIVATE)
+    private val json = Json { ignoreUnknownKeys = true }
 
     private companion object {
         const val KEY_REQUIRE_APP_UNLOCK = "require_app_unlock"
@@ -65,6 +68,21 @@ class PreferencesRepository(context: Context) {
 
     fun loadRunTasksSelectedPackages(): Set<String> {
         return prefs.getStringSet("runtasks_selected_packages", emptySet()) ?: emptySet()
+    }
+
+    fun saveRunTasksAppBackupTypes(types: Map<String, BackupTypes>) {
+        prefs.edit()
+            .putString("runtasks_app_backup_types", json.encodeToString(types))
+            .apply()
+    }
+
+    fun loadRunTasksAppBackupTypes(): Map<String, BackupTypes> {
+        val serialized = prefs.getString("runtasks_app_backup_types", null) ?: return emptyMap()
+        return try {
+            json.decodeFromString<Map<String, BackupTypes>>(serialized)
+        } catch (e: Exception) {
+            emptyMap()
+        }
     }
 
     // Backup Preferences

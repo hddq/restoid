@@ -41,6 +41,7 @@ data class RunTasksUiState(
     val isLoadingApps: Boolean = true,
     val backupEnabled: Boolean = true,
     val backupTypes: BackupTypes = BackupTypes(),
+    val appBackupTypes: Map<String, BackupTypes> = emptyMap(),
     val maintenance: RunTasksMaintenanceConfig = RunTasksMaintenanceConfig(),
     val isRunning: Boolean = false,
     val progress: OperationProgress = OperationProgress()
@@ -88,7 +89,10 @@ class RunTasksViewModel(
             _uiState.update { it.copy(isLoadingApps = true) }
             val selectAll = preferencesRepository.loadRunTasksSelectAllApps()
             val selectedPackages = preferencesRepository.loadRunTasksSelectedPackages()
+            val savedAppBackupTypes = preferencesRepository.loadRunTasksAppBackupTypes()
             val currentSelection = _uiState.value.apps.associate { it.packageName to it.isSelected }
+            val currentBackupTypes = _uiState.value.appBackupTypes
+            val defaultBackupTypes = _uiState.value.backupTypes
             val apps = appInfoRepository.getInstalledUserApps().map { app ->
                 val selected = if (_uiState.value.apps.isEmpty()) {
                     // Initial load: restore from preferences
@@ -99,7 +103,14 @@ class RunTasksViewModel(
                 }
                 app.copy(isSelected = selected)
             }
-            _uiState.update { it.copy(apps = apps, isLoadingApps = false) }
+            val appBackupTypes = apps.associate { app ->
+                app.packageName to (
+                        currentBackupTypes[app.packageName]
+                            ?: savedAppBackupTypes[app.packageName]
+                            ?: defaultBackupTypes
+                        )
+            }
+            _uiState.update { it.copy(apps = apps, appBackupTypes = appBackupTypes, isLoadingApps = false) }
         }
     }
 
@@ -119,6 +130,7 @@ class RunTasksViewModel(
         if (_uiState.value.isRunning) return
 
         preferencesRepository.saveBackupTypes(_uiState.value.backupTypes)
+        preferencesRepository.saveRunTasksAppBackupTypes(_uiState.value.appBackupTypes)
         preferencesRepository.saveMaintenanceState(_uiState.value.maintenance)
         preferencesRepository.saveRunTasksBackupEnabled(_uiState.value.backupEnabled)
         
@@ -152,6 +164,7 @@ class RunTasksViewModel(
             backupEnabled = _uiState.value.backupEnabled,
             backupTypes = _uiState.value.backupTypes.toSelection(),
             selectedPackageNames = _uiState.value.apps.filter { it.isSelected }.map { it.packageName },
+            appBackupTypes = selectedAppBackupTypes().mapValues { it.value.toSelection() },
             unlockRepo = maintenance.unlockRepo,
             forgetSnapshots = maintenance.forgetSnapshots,
             pruneRepo = maintenance.pruneRepo,
@@ -203,7 +216,10 @@ class RunTasksViewModel(
                     finalSummary = application.getString(R.string.summary_no_apps_selected)
                 )
             }
-            if (!state.backupTypes.anyEnabled()) {
+            val hasSelectedBackupType = state.apps
+                .filter { it.isSelected }
+                .any { app -> effectiveBackupTypes(state, app.packageName).anyEnabled() }
+            if (!hasSelectedBackupType) {
                 return OperationProgress(
                     isFinished = true,
                     error = application.getString(R.string.error_no_backup_types_selected),
@@ -293,7 +309,8 @@ class RunTasksViewModel(
             state.copy(
                 apps = state.apps.map { app ->
                     if (app.packageName == packageName) app.copy(isSelected = !app.isSelected) else app
-                }
+                },
+                appBackupTypes = state.appBackupTypes.ensurePackage(packageName, state.backupTypes)
             )
         }
     }
@@ -301,7 +318,29 @@ class RunTasksViewModel(
     fun toggleAllApps() {
         _uiState.update { state ->
             val shouldSelectAll = state.apps.any { !it.isSelected }
-            state.copy(apps = state.apps.map { it.copy(isSelected = shouldSelectAll) })
+            val apps = state.apps.map { it.copy(isSelected = shouldSelectAll) }
+            state.copy(
+                apps = apps,
+                appBackupTypes = apps.fold(state.appBackupTypes) { acc, app ->
+                    acc.ensurePackage(app.packageName, state.backupTypes)
+                }
+            )
+        }
+    }
+
+    fun setAppBackupTypes(packageName: String, backupTypes: BackupTypes) {
+        _uiState.update { state ->
+            state.copy(appBackupTypes = state.appBackupTypes + (packageName to backupTypes))
+        }
+    }
+
+    fun setSelectedAppsBackupTypes(backupTypes: BackupTypes) {
+        _uiState.update { state ->
+            val selectedPackageNames = state.apps.filter { it.isSelected }.map { it.packageName }
+            state.copy(
+                backupTypes = backupTypes,
+                appBackupTypes = state.appBackupTypes + selectedPackageNames.associateWith { backupTypes }
+            )
         }
     }
 
@@ -311,4 +350,19 @@ class RunTasksViewModel(
     fun setBackupExternalData(value: Boolean) = _uiState.update { it.copy(backupTypes = it.backupTypes.copy(externalData = value)) }
     fun setBackupObb(value: Boolean) = _uiState.update { it.copy(backupTypes = it.backupTypes.copy(obb = value)) }
     fun setBackupMedia(value: Boolean) = _uiState.update { it.copy(backupTypes = it.backupTypes.copy(media = value)) }
+
+    private fun selectedAppBackupTypes(): Map<String, BackupTypes> {
+        val state = _uiState.value
+        return state.apps
+            .filter { it.isSelected }
+            .associate { app -> app.packageName to effectiveBackupTypes(state, app.packageName) }
+    }
+
+    private fun effectiveBackupTypes(state: RunTasksUiState, packageName: String): BackupTypes {
+        return state.appBackupTypes[packageName] ?: state.backupTypes
+    }
+
+    private fun Map<String, BackupTypes>.ensurePackage(packageName: String, defaultTypes: BackupTypes): Map<String, BackupTypes> {
+        return if (containsKey(packageName)) this else this + (packageName to defaultTypes)
+    }
 }

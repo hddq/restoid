@@ -65,8 +65,10 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.model.Schedule
 import io.github.hddq.restoid.ui.shared.AppListItem
+import io.github.hddq.restoid.ui.shared.BackupTypesBottomSheet
 import io.github.hddq.restoid.ui.shared.BackupTypeToggle
 import io.github.hddq.restoid.ui.shared.BackupTypes
+import io.github.hddq.restoid.ui.shared.BulkBackupTypesListItem
 import io.github.hddq.restoid.ui.shared.PolicySlider
 import io.github.hddq.restoid.ui.shared.SelectAllListItem
 import io.github.hddq.restoid.ui.shared.TaskRow
@@ -377,7 +379,7 @@ fun AddEditScheduleScreen(
                 ) {
                     TaskRow(
                         title = stringResource(R.string.run_tasks_applications),
-                        subtitle = buildBackupSubtitle(state.apps, state.backupTypes, context),
+                        subtitle = buildBackupSubtitle(state.apps, state.appBackupTypes, state.backupTypes, context),
                         checked = state.backupEnabled,
                         onCheckedChange = viewModel::setBackupEnabled,
                         onNavigate = onNavigateToBackupConfig
@@ -479,6 +481,8 @@ fun ScheduleBackupConfigScreen(
 ) {
     val state by viewModel.addEditState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
+    var selectedAppPackageName by remember { mutableStateOf<String?>(null) }
+    var showBulkBackupTypesSheet by remember { mutableStateOf(false) }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -497,35 +501,6 @@ fun ScheduleBackupConfigScreen(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        item {
-            Column {
-                Text(
-                    text = stringResource(R.string.backup_types_title),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-                ) {
-                    Column {
-                        BackupTypeToggle(stringResource(R.string.backup_type_apk), state.backupTypes.apk, viewModel::setBackupApk)
-                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                        BackupTypeToggle(stringResource(R.string.backup_type_data), state.backupTypes.data, viewModel::setBackupData)
-                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                        BackupTypeToggle(stringResource(R.string.backup_type_device_protected_data), state.backupTypes.deviceProtectedData, viewModel::setBackupDeviceProtectedData)
-                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                        BackupTypeToggle(stringResource(R.string.backup_type_external_data), state.backupTypes.externalData, viewModel::setBackupExternalData)
-                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                        BackupTypeToggle(stringResource(R.string.backup_type_obb_data), state.backupTypes.obb, viewModel::setBackupObb)
-                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                        BackupTypeToggle(stringResource(R.string.backup_type_media_data), state.backupTypes.media, viewModel::setBackupMedia)
-                    }
-                }
-            }
-        }
-
         if (state.isLoadingApps) {
             item {
                 Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
@@ -550,8 +525,19 @@ fun ScheduleBackupConfigScreen(
                         val isAllSelected = state.apps.isNotEmpty() && state.apps.all { it.isSelected }
                         SelectAllListItem(isChecked = isAllSelected, onToggle = viewModel::toggleAllApps)
                         HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                        BulkBackupTypesListItem(
+                            subtitle = buildSelectedBackupTypesSummary(state.apps, state.appBackupTypes, state.backupTypes, LocalContext.current),
+                            onClick = { showBulkBackupTypesSheet = true }
+                        )
+                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
                         state.apps.forEachIndexed { index, app ->
-                            AppListItem(app = app) { viewModel.toggleAppSelection(app.packageName) }
+                            val appBackupTypes = state.appBackupTypes[app.packageName] ?: state.backupTypes
+                            AppListItem(
+                                app = app,
+                                subtitle = buildBackupTypesSummary(appBackupTypes, LocalContext.current),
+                                onClick = { selectedAppPackageName = app.packageName },
+                                onToggle = { viewModel.toggleAppSelection(app.packageName) }
+                            )
                             if (index < state.apps.size - 1) {
                                 HorizontalDivider(color = MaterialTheme.colorScheme.background)
                             }
@@ -559,6 +545,27 @@ fun ScheduleBackupConfigScreen(
                     }
                 }
             }
+        }
+    }
+
+    if (showBulkBackupTypesSheet) {
+        BackupTypesBottomSheet(
+            title = stringResource(R.string.backup_types_for_selected_apps),
+            backupTypes = selectedBulkBackupTypes(state),
+            onBackupTypesChange = viewModel::setSelectedAppsBackupTypes,
+            onDismissRequest = { showBulkBackupTypesSheet = false }
+        )
+    }
+
+    selectedAppPackageName?.let { packageName ->
+        val app = state.apps.firstOrNull { it.packageName == packageName }
+        if (app != null) {
+            BackupTypesBottomSheet(
+                title = app.name,
+                backupTypes = state.appBackupTypes[packageName] ?: state.backupTypes,
+                onBackupTypesChange = { viewModel.setAppBackupTypes(packageName, it) },
+                onDismissRequest = { selectedAppPackageName = null }
+            )
         }
     }
 }
@@ -695,8 +702,21 @@ private fun ScheduleItem(
     }
 }
 
-private fun buildBackupSubtitle(apps: List<io.github.hddq.restoid.model.AppInfo>, backupTypes: BackupTypes, context: android.content.Context): String {
+private fun buildBackupSubtitle(
+    apps: List<io.github.hddq.restoid.model.AppInfo>,
+    appBackupTypes: Map<String, BackupTypes>,
+    defaultBackupTypes: BackupTypes,
+    context: android.content.Context
+): String {
     val selectedCount = apps.count { it.isSelected }
+    return context.getString(
+        R.string.run_tasks_backup_subtitle,
+        selectedCount,
+        buildSelectedBackupTypesSummary(apps, appBackupTypes, defaultBackupTypes, context)
+    )
+}
+
+private fun buildBackupTypesSummary(backupTypes: BackupTypes, context: android.content.Context): String {
     val types = buildList {
         if (backupTypes.apk) add(context.getString(R.string.backup_type_apk))
         if (backupTypes.data) add(context.getString(R.string.backup_type_data))
@@ -706,7 +726,32 @@ private fun buildBackupSubtitle(apps: List<io.github.hddq.restoid.model.AppInfo>
         if (backupTypes.media) add(context.getString(R.string.backup_type_media_data))
     }.joinToString(", ")
 
-    return context.getString(R.string.run_tasks_backup_subtitle, selectedCount, types)
+    return types.ifBlank { context.getString(R.string.backup_types_none) }
+}
+
+private fun buildSelectedBackupTypesSummary(
+    apps: List<io.github.hddq.restoid.model.AppInfo>,
+    appBackupTypes: Map<String, BackupTypes>,
+    defaultBackupTypes: BackupTypes,
+    context: android.content.Context
+): String {
+    val selectedTypes = apps
+        .filter { it.isSelected }
+        .map { appBackupTypes[it.packageName] ?: defaultBackupTypes }
+        .distinct()
+
+    return when (selectedTypes.size) {
+        0 -> buildBackupTypesSummary(defaultBackupTypes, context)
+        1 -> buildBackupTypesSummary(selectedTypes.first(), context)
+        else -> context.getString(R.string.backup_types_mixed)
+    }
+}
+
+private fun selectedBulkBackupTypes(state: AddEditScheduleUiState): BackupTypes {
+    return state.apps
+        .firstOrNull { it.isSelected }
+        ?.let { state.appBackupTypes[it.packageName] ?: state.backupTypes }
+        ?: state.backupTypes
 }
 
 private fun buildForgetSubtitle(config: io.github.hddq.restoid.ui.runtasks.RunTasksMaintenanceConfig, context: android.content.Context): String {

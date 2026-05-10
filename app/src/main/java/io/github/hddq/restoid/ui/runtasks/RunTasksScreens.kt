@@ -21,6 +21,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -80,7 +83,7 @@ fun RunTasksScreen(
                 ) {
                     TaskRow(
                         title = context.getString(R.string.run_tasks_applications),
-                        subtitle = buildBackupSubtitle(uiState.apps, uiState.backupTypes, context),
+                        subtitle = buildBackupSubtitle(uiState.apps, uiState.appBackupTypes, uiState.backupTypes, context),
                         checked = uiState.backupEnabled,
                         onCheckedChange = viewModel::setBackupEnabled,
                         onNavigate = onNavigateToBackupConfig
@@ -143,6 +146,8 @@ fun BackupConfigScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
+    var selectedAppPackageName by remember { mutableStateOf<String?>(null) }
+    var showBulkBackupTypesSheet by remember { mutableStateOf(false) }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -161,35 +166,6 @@ fun BackupConfigScreen(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp, top = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        item {
-            Column {
-                Text(
-                    text = stringResource(R.string.backup_types_title),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-                ) {
-                    Column {
-                        BackupTypeToggle(stringResource(R.string.backup_type_apk), uiState.backupTypes.apk, viewModel::setBackupApk)
-                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                        BackupTypeToggle(stringResource(R.string.backup_type_data), uiState.backupTypes.data, viewModel::setBackupData)
-                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                        BackupTypeToggle(stringResource(R.string.backup_type_device_protected_data), uiState.backupTypes.deviceProtectedData, viewModel::setBackupDeviceProtectedData)
-                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                        BackupTypeToggle(stringResource(R.string.backup_type_external_data), uiState.backupTypes.externalData, viewModel::setBackupExternalData)
-                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                        BackupTypeToggle(stringResource(R.string.backup_type_obb_data), uiState.backupTypes.obb, viewModel::setBackupObb)
-                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                        BackupTypeToggle(stringResource(R.string.backup_type_media_data), uiState.backupTypes.media, viewModel::setBackupMedia)
-                    }
-                }
-            }
-        }
-
         if (uiState.isLoadingApps) {
             item {
                 Box(
@@ -222,8 +198,19 @@ fun BackupConfigScreen(
                             onToggle = viewModel::toggleAllApps
                         )
                         HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                        BulkBackupTypesListItem(
+                            subtitle = buildSelectedBackupTypesSummary(uiState.apps, uiState.appBackupTypes, uiState.backupTypes, LocalContext.current),
+                            onClick = { showBulkBackupTypesSheet = true }
+                        )
+                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
                         uiState.apps.forEachIndexed { index, app ->
-                            AppListItem(app = app) { viewModel.toggleAppSelection(app.packageName) }
+                            val appBackupTypes = uiState.appBackupTypes[app.packageName] ?: uiState.backupTypes
+                            AppListItem(
+                                app = app,
+                                subtitle = buildBackupTypesSummary(appBackupTypes, LocalContext.current),
+                                onClick = { selectedAppPackageName = app.packageName },
+                                onToggle = { viewModel.toggleAppSelection(app.packageName) }
+                            )
                             if (index < uiState.apps.size - 1) {
                                 HorizontalDivider(color = MaterialTheme.colorScheme.background)
                             }
@@ -231,6 +218,27 @@ fun BackupConfigScreen(
                     }
                 }
             }
+        }
+    }
+
+    if (showBulkBackupTypesSheet) {
+        BackupTypesBottomSheet(
+            title = stringResource(R.string.backup_types_for_selected_apps),
+            backupTypes = selectedBulkBackupTypes(uiState),
+            onBackupTypesChange = viewModel::setSelectedAppsBackupTypes,
+            onDismissRequest = { showBulkBackupTypesSheet = false }
+        )
+    }
+
+    selectedAppPackageName?.let { packageName ->
+        val app = uiState.apps.firstOrNull { it.packageName == packageName }
+        if (app != null) {
+            BackupTypesBottomSheet(
+                title = app.name,
+                backupTypes = uiState.appBackupTypes[packageName] ?: uiState.backupTypes,
+                onBackupTypesChange = { viewModel.setAppBackupTypes(packageName, it) },
+                onDismissRequest = { selectedAppPackageName = null }
+            )
         }
     }
 }
@@ -294,8 +302,21 @@ fun CheckConfigScreen(
     }
 }
 
-private fun buildBackupSubtitle(apps: List<AppInfo>, backupTypes: BackupTypes, context: android.content.Context): String {
+private fun buildBackupSubtitle(
+    apps: List<AppInfo>,
+    appBackupTypes: Map<String, BackupTypes>,
+    defaultBackupTypes: BackupTypes,
+    context: android.content.Context
+): String {
     val selectedCount = apps.count { it.isSelected }
+    return context.getString(
+        R.string.run_tasks_backup_subtitle,
+        selectedCount,
+        buildSelectedBackupTypesSummary(apps, appBackupTypes, defaultBackupTypes, context)
+    )
+}
+
+private fun buildBackupTypesSummary(backupTypes: BackupTypes, context: android.content.Context): String {
     val types = buildList {
         if (backupTypes.apk) add(context.getString(R.string.backup_type_apk))
         if (backupTypes.data) add(context.getString(R.string.backup_type_data))
@@ -305,7 +326,32 @@ private fun buildBackupSubtitle(apps: List<AppInfo>, backupTypes: BackupTypes, c
         if (backupTypes.media) add(context.getString(R.string.backup_type_media_data))
     }.joinToString(", ")
 
-    return context.getString(R.string.run_tasks_backup_subtitle, selectedCount, types)
+    return types.ifBlank { context.getString(R.string.backup_types_none) }
+}
+
+private fun buildSelectedBackupTypesSummary(
+    apps: List<AppInfo>,
+    appBackupTypes: Map<String, BackupTypes>,
+    defaultBackupTypes: BackupTypes,
+    context: android.content.Context
+): String {
+    val selectedTypes = apps
+        .filter { it.isSelected }
+        .map { appBackupTypes[it.packageName] ?: defaultBackupTypes }
+        .distinct()
+
+    return when (selectedTypes.size) {
+        0 -> buildBackupTypesSummary(defaultBackupTypes, context)
+        1 -> buildBackupTypesSummary(selectedTypes.first(), context)
+        else -> context.getString(R.string.backup_types_mixed)
+    }
+}
+
+private fun selectedBulkBackupTypes(state: RunTasksUiState): BackupTypes {
+    return state.apps
+        .firstOrNull { it.isSelected }
+        ?.let { state.appBackupTypes[it.packageName] ?: state.backupTypes }
+        ?: state.backupTypes
 }
 
 private fun buildForgetSubtitle(config: RunTasksMaintenanceConfig, context: android.content.Context): String {
