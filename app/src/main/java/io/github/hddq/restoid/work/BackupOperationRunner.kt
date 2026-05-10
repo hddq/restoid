@@ -126,7 +126,9 @@ class BackupOperationRunner(
             restoidMetadataFile.writeText(json.encodeToString(metadata))
             pathsToBackup.add(0, restoidMetadataFile.absolutePath)
 
-            if (pathsToBackup.size <= 1) throw IllegalStateException(context.getString(R.string.backup_error_no_files_selected))
+            if (pathsToBackup.size <= 1 && metadata.apps.values.none { "permissions" in it.types }) {
+                throw IllegalStateException(context.getString(R.string.backup_error_no_files_selected))
+            }
 
             currentStage = 2
             val stage2Title = context.getString(
@@ -297,6 +299,7 @@ class BackupOperationRunner(
                 if (effectiveBackupTypes.externalData) add("external_data")
                 if (effectiveBackupTypes.obb) add("obb")
                 if (effectiveBackupTypes.media) add("media")
+                if (effectiveBackupTypes.permissions) add("permissions")
             }
             val appPaths = generateFilePathsForApp(app, effectiveBackupTypes)
             val existingAppPaths = appPaths.filter { Shell.cmd("[ -e '$it' ]").exec().isSuccess }
@@ -312,7 +315,11 @@ class BackupOperationRunner(
 
             throwIfCancelled()
             val size = getDirectorySize(existingAppPaths)
-            val grantedRuntimePermissions = appInfoRepository.getGrantedRuntimePermissions(app.packageName)
+            val grantedRuntimePermissions = if (effectiveBackupTypes.permissions) {
+                appInfoRepository.getGrantedRuntimePermissions(app.packageName)
+            } else {
+                emptyList()
+            }
             appMetadataMap[app.packageName] = AppMetadata(
                 size = size,
                 types = backupTypesList,
@@ -344,7 +351,8 @@ class BackupOperationRunner(
                     backupOptions.deviceProtectedData ||
                     backupOptions.externalData ||
                     backupOptions.obb ||
-                    backupOptions.media
+                    backupOptions.media ||
+                    backupOptions.permissions
         }
         if (!hasAnyBackupType) {
             return OperationProgress(

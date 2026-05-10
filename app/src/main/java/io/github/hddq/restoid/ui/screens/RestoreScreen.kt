@@ -405,6 +405,10 @@ private fun RestoreTypesBottomSheet(
                     RestoreTypeToggle(stringResource(R.string.backup_type_media_data), restoreTypes.media) {
                         onRestoreTypesChange(restoreTypes.copy(media = it))
                     }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                    RestoreTypeToggle(stringResource(R.string.backup_type_permissions), restoreTypes.permissions) {
+                        onRestoreTypesChange(restoreTypes.copy(permissions = it))
+                    }
                 }
             }
         }
@@ -419,6 +423,7 @@ private fun buildRestoreTypesSummary(restoreTypes: RestoreTypes, context: androi
         if (restoreTypes.externalData) add(context.getString(R.string.backup_type_external_data))
         if (restoreTypes.obb) add(context.getString(R.string.backup_type_obb_data))
         if (restoreTypes.media) add(context.getString(R.string.backup_type_media_data))
+        if (restoreTypes.permissions) add(context.getString(R.string.backup_type_permissions))
     }.joinToString(", ")
 
     return types.ifBlank { context.getString(R.string.backup_types_none) }

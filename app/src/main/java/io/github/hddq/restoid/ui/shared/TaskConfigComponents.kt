@@ -367,6 +367,10 @@ fun BackupTypesBottomSheet(
                     BackupTypeToggle(stringResource(R.string.backup_type_media_data), backupTypes.media) {
                         onBackupTypesChange(backupTypes.copy(media = it))
                     }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                    BackupTypeToggle(stringResource(R.string.backup_type_permissions), backupTypes.permissions) {
+                        onBackupTypesChange(backupTypes.copy(permissions = it))
+                    }
                 }
             }
         }

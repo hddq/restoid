@@ -321,6 +321,7 @@ private fun buildBackupTypesSummary(backupTypes: BackupTypes, context: android.c
         if (backupTypes.externalData) add(context.getString(R.string.backup_type_external_data))
         if (backupTypes.obb) add(context.getString(R.string.backup_type_obb_data))
         if (backupTypes.media) add(context.getString(R.string.backup_type_media_data))
+        if (backupTypes.permissions) add(context.getString(R.string.backup_type_permissions))
     }.joinToString(", ")
 
     return types.ifBlank { context.getString(R.string.backup_types_none) }

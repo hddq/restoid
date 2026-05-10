@@ -39,7 +39,8 @@ data class RestoreTypes(
     val deviceProtectedData: Boolean = true,
     val externalData: Boolean = false,
     val obb: Boolean = false,
-    val media: Boolean = false
+    val media: Boolean = false,
+    val permissions: Boolean = true
 ) {
     fun toSelection(): RestoreTypeSelection {
         return RestoreTypeSelection(
@@ -48,12 +49,13 @@ data class RestoreTypes(
             deviceProtectedData = deviceProtectedData,
             externalData = externalData,
             obb = obb,
-            media = media
+            media = media,
+            permissions = permissions
         )
     }
 
     fun anyEnabled(): Boolean {
-        return apk || data || deviceProtectedData || externalData || obb || media
+        return apk || data || deviceProtectedData || externalData || obb || media || permissions
     }
 }
 
@@ -64,7 +66,8 @@ fun RestoreTypeSelection.toUiModel(): RestoreTypes {
         deviceProtectedData = deviceProtectedData,
         externalData = externalData,
         obb = obb,
-        media = media
+        media = media,
+        permissions = permissions
     )
 }
 
@@ -366,14 +369,7 @@ class RestoreViewModel(
         val request = RestoreWorkRequest(
             repositoryKey = selectedRepoKey,
             snapshotId = currentSnapshot.id,
-            restoreTypes = RestoreTypeSelection(
-                apk = _restoreTypes.value.apk,
-                data = _restoreTypes.value.data,
-                deviceProtectedData = _restoreTypes.value.deviceProtectedData,
-                externalData = _restoreTypes.value.externalData,
-                obb = _restoreTypes.value.obb,
-                media = _restoreTypes.value.media
-            ),
+            restoreTypes = _restoreTypes.value.toSelection(),
             allowDowngrade = _allowDowngrade.value,
             selectedApps = selectedApps.map {
                 RestoreAppSelection(

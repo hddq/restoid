@@ -43,6 +43,7 @@
     <string name="backup_type_external_data">External Data</string>
     <string name="backup_type_obb_data">OBB Data</string>
     <string name="backup_type_media_data">Media Data</string>
+    <string name="backup_type_permissions">Permissions</string>
     <string name="apps_title">Apps</string>
     <string name="toggle_all">Toggle All</string>
     <string name="backup_types_for_selected_apps">Backup types for selected apps</string>

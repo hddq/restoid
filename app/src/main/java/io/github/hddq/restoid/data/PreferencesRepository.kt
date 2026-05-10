@@ -94,6 +94,7 @@ class PreferencesRepository(context: Context) {
             putBoolean("backup_externalData", types.externalData)
             putBoolean("backup_obb", types.obb)
             putBoolean("backup_media", types.media)
+            putBoolean("backup_permissions", types.permissions)
             apply()
         }
     }
@@ -105,7 +106,8 @@ class PreferencesRepository(context: Context) {
             deviceProtectedData = prefs.getBoolean("backup_deviceProtectedData", true),
             externalData = prefs.getBoolean("backup_externalData", false),
             obb = prefs.getBoolean("backup_obb", false),
-            media = prefs.getBoolean("backup_media", false)
+            media = prefs.getBoolean("backup_media", false),
+            permissions = prefs.getBoolean("backup_permissions", true)
         )
     }
 
@@ -118,6 +120,7 @@ class PreferencesRepository(context: Context) {
             putBoolean("restore_externalData", types.externalData)
             putBoolean("restore_obb", types.obb)
             putBoolean("restore_media", types.media)
+            putBoolean("restore_permissions", types.permissions)
             apply()
         }
     }
@@ -129,7 +132,8 @@ class PreferencesRepository(context: Context) {
             deviceProtectedData = prefs.getBoolean("restore_deviceProtectedData", true),
             externalData = prefs.getBoolean("restore_externalData", false),
             obb = prefs.getBoolean("restore_obb", false),
-            media = prefs.getBoolean("restore_media", false)
+            media = prefs.getBoolean("restore_media", false),
+            permissions = prefs.getBoolean("restore_permissions", true)
         )
     }
 

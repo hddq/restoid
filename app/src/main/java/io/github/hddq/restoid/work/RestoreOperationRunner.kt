@@ -62,9 +62,10 @@ class RestoreOperationRunner(
 
         val apkRestoreSelected = effectiveRestoreTypes.values.any { it.apk }
         val anyDataRestoreSelected = effectiveRestoreTypes.values.any { it.data || it.deviceProtectedData || it.externalData || it.obb || it.media }
+        val permissionsRestoreSelected = effectiveRestoreTypes.values.any { it.permissions }
 
         val stageList = mutableListOf(context.getString(R.string.restore_stage_restore_files))
-        if (apkRestoreSelected || anyDataRestoreSelected) stageList.add(context.getString(R.string.restore_stage_processing_apps))
+        if (apkRestoreSelected || anyDataRestoreSelected || permissionsRestoreSelected) stageList.add(context.getString(R.string.restore_stage_processing_apps))
         stageList.add(context.getString(R.string.restore_stage_cleanup))
         val totalStages = stageList.size
         var currentStageNum = 1
@@ -118,76 +119,87 @@ class RestoreOperationRunner(
             tempRestoreDir = File(context.cacheDir, "restic-restore-${System.currentTimeMillis()}").also { it.mkdirs() }
 
             val pathsToRestore = generatePathsToRestore(selectedAppPackages, currentSnapshot, request.restoreTypes, request.appRestoreTypes)
-            if (pathsToRestore.isEmpty()) {
-                throw IllegalStateException(context.getString(R.string.restore_error_no_files_found))
-            }
-
             val metadata = selectedRepository.id?.let { repoId ->
                 metadataRepository.getMetadataForSnapshot(repoId, currentSnapshot.id)
             }
 
+            if (pathsToRestore.isEmpty() && !permissionsRestoreSelected) {
+                throw IllegalStateException(context.getString(R.string.restore_error_no_files_found))
+            }
+
             val restoreStageTitle = "[${currentStageNum}/${totalStages}] ${stageList[0]}"
-            val includes = pathsToRestore.joinToString(" ") { "--include ${shellQuote(it)}" }
-            val commandEnvironment = linkedMapOf(
-                "HOME" to context.filesDir.absolutePath,
-                "TMPDIR" to context.cacheDir.absolutePath
-            ).apply {
-                putAll(repositoriesRepository.getExecutionEnvironmentVariables(request.repositoryKey))
-            }
-            val envPrefix = buildShellEnvironmentPrefix(commandEnvironment)
-            val resticOptionFlags = buildResticOptionFlags(
-                repositoriesRepository.getExecutionResticOptions(request.repositoryKey)
-            )
+            if (pathsToRestore.isNotEmpty()) {
+                val includes = pathsToRestore.joinToString(" ") { "--include ${shellQuote(it)}" }
+                val commandEnvironment = linkedMapOf(
+                    "HOME" to context.filesDir.absolutePath,
+                    "TMPDIR" to context.cacheDir.absolutePath
+                ).apply {
+                    putAll(repositoriesRepository.getExecutionEnvironmentVariables(request.repositoryKey))
+                }
+                val envPrefix = buildShellEnvironmentPrefix(commandEnvironment)
+                val resticOptionFlags = buildResticOptionFlags(
+                    repositoriesRepository.getExecutionResticOptions(request.repositoryKey)
+                )
 
-            val command = buildString {
-                if (envPrefix.isNotEmpty()) append(envPrefix).append(' ')
-                append("RESTIC_PASSWORD_FILE=").append(shellQuote(passwordFile.absolutePath)).append(' ')
-                append("RESTIC_CACHE_DIR=").append(shellQuote(File(context.cacheDir, "restic").absolutePath)).append(' ')
-                append(shellQuote(resticState.path)).append(' ')
-                append("--retry-lock 5s ")
-                if (resticOptionFlags.isNotEmpty()) append(resticOptionFlags).append(' ')
-                append("-r ")
-                append(shellQuote(selectedRepoPath)).append(' ')
-                append("restore ").append(currentSnapshot.id).append(" --target ")
-                append(shellQuote(tempRestoreDir.absolutePath)).append(' ')
-                append("--exclude-xattr 'security.selinux' ")
-                append(includes)
-                append(" --json")
-            }
+                val command = buildString {
+                    if (envPrefix.isNotEmpty()) append(envPrefix).append(' ')
+                    append("RESTIC_PASSWORD_FILE=").append(shellQuote(passwordFile.absolutePath)).append(' ')
+                    append("RESTIC_CACHE_DIR=").append(shellQuote(File(context.cacheDir, "restic").absolutePath)).append(' ')
+                    append(shellQuote(resticState.path)).append(' ')
+                    append("--retry-lock 5s ")
+                    if (resticOptionFlags.isNotEmpty()) append(resticOptionFlags).append(' ')
+                    append("-r ")
+                    append(shellQuote(selectedRepoPath)).append(' ')
+                    append("restore ").append(currentSnapshot.id).append(" --target ")
+                    append(shellQuote(tempRestoreDir.absolutePath)).append(' ')
+                    append("--exclude-xattr 'security.selinux' ")
+                    append(includes)
+                    append(" --json")
+                }
 
-            val stdoutCallback = object : CallbackList<String>() {
-                override fun onAddElement(line: String) {
-                    ResticOutputParser.parse(line, context)?.let { progressUpdate ->
-                        val elapsedTime = (System.currentTimeMillis() - startTime) / 1000
-                        val newProgress = if (progressUpdate.isFinished) {
-                            progressState.copy(
-                                isFinished = false,
-                                stageTitle = restoreStageTitle,
-                                stagePercentage = 1f,
-                                overallPercentage = currentStageNum.toFloat() / totalStages.toFloat(),
-                                elapsedTime = elapsedTime,
-                                finalSummary = ""
-                            )
-                        } else {
-                            progressUpdate.copy(
-                                stageTitle = restoreStageTitle,
-                                overallPercentage = ((currentStageNum - 1) + progressUpdate.stagePercentage) / totalStages.toFloat(),
-                                elapsedTime = elapsedTime,
-                                isFinished = false
-                            )
+                val stdoutCallback = object : CallbackList<String>() {
+                    override fun onAddElement(line: String) {
+                        ResticOutputParser.parse(line, context)?.let { progressUpdate ->
+                            val elapsedTime = (System.currentTimeMillis() - startTime) / 1000
+                            val newProgress = if (progressUpdate.isFinished) {
+                                progressState.copy(
+                                    isFinished = false,
+                                    stageTitle = restoreStageTitle,
+                                    stagePercentage = 1f,
+                                    overallPercentage = currentStageNum.toFloat() / totalStages.toFloat(),
+                                    elapsedTime = elapsedTime,
+                                    finalSummary = ""
+                                )
+                            } else {
+                                progressUpdate.copy(
+                                    stageTitle = restoreStageTitle,
+                                    overallPercentage = ((currentStageNum - 1) + progressUpdate.stagePercentage) / totalStages.toFloat(),
+                                    elapsedTime = elapsedTime,
+                                    isFinished = false
+                                )
+                            }
+                            progressState = newProgress
+                            onProgress(newProgress)
                         }
-                        progressState = newProgress
-                        onProgress(newProgress)
                     }
                 }
-            }
-            val stderr = mutableListOf<String>()
-            val restoreResult = Shell.cmd(command).to(stdoutCallback, stderr).exec()
-            throwIfCancelled()
+                val stderr = mutableListOf<String>()
+                val restoreResult = Shell.cmd(command).to(stdoutCallback, stderr).exec()
+                throwIfCancelled()
 
-            if (!restoreResult.isSuccess) {
-                val errorOutput = stderr.joinToString("\n")
-                throw IllegalStateException(if (errorOutput.isEmpty()) context.getString(R.string.restore_error_command_failed) else errorOutput)
+                if (!restoreResult.isSuccess) {
+                    val errorOutput = stderr.joinToString("\n")
+                    throw IllegalStateException(if (errorOutput.isEmpty()) context.getString(R.string.restore_error_command_failed) else errorOutput)
+                }
+            } else {
+                progressState = progressState.copy(
+                    stageTitle = restoreStageTitle,
+                    stagePercentage = 1f,
+                    overallPercentage = currentStageNum.toFloat() / totalStages.toFloat(),
+                    elapsedTime = (System.currentTimeMillis() - startTime) / 1000,
+                    isFinished = false
+                )
+                onProgress(progressState)
             }
 
             val processingAppsStageIndex = stageList.indexOf(context.getString(R.string.restore_stage_processing_apps))
@@ -274,7 +286,11 @@ class RestoreOperationRunner(
                         }
                     }
 
-                    val permissionsToRestore = metadata?.apps?.get(packageName)?.grantedRuntimePermissions.orEmpty()
+                    val permissionsToRestore = if (appRestoreTypes.permissions) {
+                        metadata?.apps?.get(packageName)?.grantedRuntimePermissions.orEmpty()
+                    } else {
+                        emptyList()
+                    }
                     if (permissionsToRestore.isNotEmpty()) {
                         if (!isPackageInstalled(packageName)) {
                             appProcessSuccess = false

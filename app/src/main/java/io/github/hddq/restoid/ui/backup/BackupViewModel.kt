@@ -117,7 +117,8 @@ class BackupViewModel(
                 deviceProtectedData = _backupTypes.value.deviceProtectedData,
                 externalData = _backupTypes.value.externalData,
                 obb = _backupTypes.value.obb,
-                media = _backupTypes.value.media
+                media = _backupTypes.value.media,
+                permissions = _backupTypes.value.permissions
             ),
             selectedPackageNames = _apps.value.filter { it.isSelected }.map { it.packageName }
         )
@@ -148,7 +149,7 @@ class BackupViewModel(
         }
 
         val backupOptions = _backupTypes.value
-        if (!backupOptions.apk && !backupOptions.data && !backupOptions.deviceProtectedData && !backupOptions.externalData && !backupOptions.obb && !backupOptions.media) {
+        if (!backupOptions.apk && !backupOptions.data && !backupOptions.deviceProtectedData && !backupOptions.externalData && !backupOptions.obb && !backupOptions.media && !backupOptions.permissions) {
             return OperationProgress(
                 isFinished = true,
                 error = application.getString(R.string.error_no_backup_types_selected),
