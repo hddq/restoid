@@ -313,6 +313,7 @@
     <string name="restore_stage_cleanup">Cleanup</string>
     <string name="restore_error_preflight_failed">Pre-restore checks failed.</string>
     <string name="restore_error_no_apps_selected">No apps selected for restore.</string>
+    <string name="restore_error_no_restore_types_selected">No restore types selected.</string>
     <string name="restore_error_password_not_found">Password not found for repository.</string>
     <string name="restore_error_no_files_found">No files found in the snapshot for the selected apps.</string>
     <string name="restore_error_command_failed">Restic restore command failed.</string>

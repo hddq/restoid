@@ -56,9 +56,12 @@ class RestoreOperationRunner(
 
         val selectedAppPackages = request.selectedApps.map { it.packageName }
         val selectedAppNames = request.selectedApps.associate { it.packageName to it.appName }
+        val effectiveRestoreTypes = selectedAppPackages.associateWith { packageName ->
+            request.appRestoreTypes[packageName] ?: request.restoreTypes
+        }
 
-        val apkRestoreSelected = request.restoreTypes.apk
-        val anyDataRestoreSelected = with(request.restoreTypes) { data || deviceProtectedData || externalData || obb || media }
+        val apkRestoreSelected = effectiveRestoreTypes.values.any { it.apk }
+        val anyDataRestoreSelected = effectiveRestoreTypes.values.any { it.data || it.deviceProtectedData || it.externalData || it.obb || it.media }
 
         val stageList = mutableListOf(context.getString(R.string.restore_stage_restore_files))
         if (apkRestoreSelected || anyDataRestoreSelected) stageList.add(context.getString(R.string.restore_stage_processing_apps))
@@ -114,7 +117,7 @@ class RestoreOperationRunner(
 
             tempRestoreDir = File(context.cacheDir, "restic-restore-${System.currentTimeMillis()}").also { it.mkdirs() }
 
-            val pathsToRestore = generatePathsToRestore(selectedAppPackages, currentSnapshot, request.restoreTypes)
+            val pathsToRestore = generatePathsToRestore(selectedAppPackages, currentSnapshot, request.restoreTypes, request.appRestoreTypes)
             if (pathsToRestore.isEmpty()) {
                 throw IllegalStateException(context.getString(R.string.restore_error_no_files_found))
             }
@@ -210,7 +213,9 @@ class RestoreOperationRunner(
                     )
                     onProgress(progressState)
 
-                    if (apkRestoreSelected) {
+                    val appRestoreTypes = effectiveRestoreTypes[packageName] ?: request.restoreTypes
+
+                    if (appRestoreTypes.apk) {
                         throwIfCancelled()
                         val originalApkPath = pathsToRestore.find { it.startsWith("/data/app/") && it.contains("/$packageName-") }
                         val restoredContentDir = originalApkPath?.let { File(tempRestoreDir, it.drop(1)) }
@@ -262,8 +267,8 @@ class RestoreOperationRunner(
                         }
                     }
 
-                    if (appProcessSuccess && anyDataRestoreSelected) {
-                        if (!moveRestoredDataAndFixPerms(packageName, tempRestoreDir, request.restoreTypes)) {
+                    if (appProcessSuccess && with(appRestoreTypes) { data || deviceProtectedData || externalData || obb || media }) {
+                        if (!moveRestoredDataAndFixPerms(packageName, tempRestoreDir, appRestoreTypes)) {
                             appProcessSuccess = false
                             failureDetails.add(context.getString(R.string.restore_failure_data_restore, appName))
                         }
@@ -394,11 +399,14 @@ class RestoreOperationRunner(
     private fun generatePathsToRestore(
         selectedPackageNames: List<String>,
         snapshot: SnapshotInfo,
-        types: RestoreTypeSelection
+        defaultTypes: RestoreTypeSelection,
+        appRestoreTypes: Map<String, RestoreTypeSelection>
     ): List<String> {
         val paths = mutableListOf<String>()
 
         selectedPackageNames.forEach { pkg ->
+            val types = appRestoreTypes[pkg] ?: defaultTypes
+
             fun addPathIfExists(path: String) {
                 if (snapshot.paths.contains(path)) paths.add(path)
             }

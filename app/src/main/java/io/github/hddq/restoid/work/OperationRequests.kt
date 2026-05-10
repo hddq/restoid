@@ -42,7 +42,8 @@ data class RestoreWorkRequest(
     val snapshotId: String,
     val restoreTypes: RestoreTypeSelection,
     val allowDowngrade: Boolean,
-    val selectedApps: List<RestoreAppSelection>
+    val selectedApps: List<RestoreAppSelection>,
+    val appRestoreTypes: Map<String, RestoreTypeSelection> = emptyMap()
 )
 
 @Serializable

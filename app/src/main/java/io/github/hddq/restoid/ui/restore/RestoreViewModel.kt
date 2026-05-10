@@ -21,6 +21,7 @@ import io.github.hddq.restoid.work.OperationWorkRepository
 import io.github.hddq.restoid.work.RestoreAppSelection
 import io.github.hddq.restoid.work.RestoreTypeSelection
 import io.github.hddq.restoid.work.RestoreWorkRequest
+import kotlinx.serialization.Serializable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -31,6 +32,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+@Serializable
 data class RestoreTypes(
     val apk: Boolean = true,
     val data: Boolean = true,
@@ -38,7 +40,33 @@ data class RestoreTypes(
     val externalData: Boolean = false,
     val obb: Boolean = false,
     val media: Boolean = false
-)
+) {
+    fun toSelection(): RestoreTypeSelection {
+        return RestoreTypeSelection(
+            apk = apk,
+            data = data,
+            deviceProtectedData = deviceProtectedData,
+            externalData = externalData,
+            obb = obb,
+            media = media
+        )
+    }
+
+    fun anyEnabled(): Boolean {
+        return apk || data || deviceProtectedData || externalData || obb || media
+    }
+}
+
+fun RestoreTypeSelection.toUiModel(): RestoreTypes {
+    return RestoreTypes(
+        apk = apk,
+        data = data,
+        deviceProtectedData = deviceProtectedData,
+        externalData = externalData,
+        obb = obb,
+        media = media
+    )
+}
 
 sealed interface RestoreUiEvent {
     data object NavigateToOperationProgress : RestoreUiEvent
@@ -72,6 +100,9 @@ class RestoreViewModel(
 
     private val _restoreTypes = MutableStateFlow(RestoreTypes())
     val restoreTypes = _restoreTypes.asStateFlow()
+
+    private val _appRestoreTypes = MutableStateFlow<Map<String, RestoreTypes>>(emptyMap())
+    val appRestoreTypes = _appRestoreTypes.asStateFlow()
 
     private val _allowDowngrade = MutableStateFlow(false)
     val allowDowngrade = _allowDowngrade.asStateFlow()
@@ -225,6 +256,9 @@ class RestoreViewModel(
             compareByDescending<BackupDetail> { it.backupSize ?: 0L }
                 .thenBy { it.appInfo.name.lowercase() }
         )
+        _appRestoreTypes.value = details.associate { detail ->
+            detail.appInfo.packageName to (_appRestoreTypes.value[detail.appInfo.packageName] ?: _restoreTypes.value)
+        }
     }
 
     private fun findBackedUpItems(snapshot: SnapshotInfo, pkg: String, hasPermissionBackup: Boolean): List<String> {
@@ -271,6 +305,15 @@ class RestoreViewModel(
                 isFinished = true,
                 error = application.getString(R.string.restore_error_no_apps_selected),
                 finalSummary = application.getString(R.string.restore_error_no_apps_selected)
+            )
+            return
+        }
+
+        if (selectedApps.none { effectiveRestoreTypes(it.appInfo.packageName).anyEnabled() }) {
+            _restoreProgress.value = OperationProgress(
+                isFinished = true,
+                error = application.getString(R.string.restore_error_no_restore_types_selected),
+                finalSummary = application.getString(R.string.restore_error_no_restore_types_selected)
             )
             return
         }
@@ -337,7 +380,8 @@ class RestoreViewModel(
                     packageName = it.appInfo.packageName,
                     appName = it.appInfo.name
                 )
-            }
+            },
+            appRestoreTypes = selectedApps.associate { it.appInfo.packageName to effectiveRestoreTypes(it.appInfo.packageName).toSelection() }
         )
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -365,6 +409,7 @@ class RestoreViewModel(
     }
 
     fun toggleRestoreAppSelection(packageName: String) {
+        _appRestoreTypes.update { it.ensurePackage(packageName, _restoreTypes.value) }
         _backupDetails.update { currentDetails ->
             currentDetails.map { detail ->
                 if (detail.appInfo.packageName == packageName) {
@@ -384,6 +429,11 @@ class RestoreViewModel(
         _backupDetails.update { currentDetails ->
             val selectableDetails = currentDetails.filter { _allowDowngrade.value || !it.isDowngrade }
             val shouldSelectAll = selectableDetails.any { !it.appInfo.isSelected }
+            _appRestoreTypes.update { currentTypes ->
+                selectableDetails.fold(currentTypes) { acc, detail ->
+                    acc.ensurePackage(detail.appInfo.packageName, _restoreTypes.value)
+                }
+            }
             currentDetails.map { detail ->
                 val canBeSelected = _allowDowngrade.value || !detail.isDowngrade
                 detail.copy(appInfo = detail.appInfo.copy(isSelected = shouldSelectAll && canBeSelected))
@@ -408,4 +458,24 @@ class RestoreViewModel(
     fun setRestoreExternalData(value: Boolean) = _restoreTypes.update { it.copy(externalData = value) }
     fun setRestoreObb(value: Boolean) = _restoreTypes.update { it.copy(obb = value) }
     fun setRestoreMedia(value: Boolean) = _restoreTypes.update { it.copy(media = value) }
+
+    fun setAppRestoreTypes(packageName: String, restoreTypes: RestoreTypes) {
+        _appRestoreTypes.update { it + (packageName to restoreTypes) }
+    }
+
+    fun setSelectedAppsRestoreTypes(restoreTypes: RestoreTypes) {
+        val selectedPackageNames = _backupDetails.value
+            .filter { it.appInfo.isSelected && (_allowDowngrade.value || !it.isDowngrade) }
+            .map { it.appInfo.packageName }
+        _restoreTypes.value = restoreTypes
+        _appRestoreTypes.update { it + selectedPackageNames.associateWith { restoreTypes } }
+    }
+
+    private fun effectiveRestoreTypes(packageName: String): RestoreTypes {
+        return _appRestoreTypes.value[packageName] ?: _restoreTypes.value
+    }
+
+    private fun Map<String, RestoreTypes>.ensurePackage(packageName: String, defaultTypes: RestoreTypes): Map<String, RestoreTypes> {
+        return if (containsKey(packageName)) this else this + (packageName to defaultTypes)
+    }
 }
