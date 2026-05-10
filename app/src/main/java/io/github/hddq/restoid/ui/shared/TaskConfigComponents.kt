@@ -176,11 +176,17 @@ fun BackupTypeToggle(label: String, checked: Boolean, onCheckedChange: (Boolean)
 }
 
 @Composable
-fun SelectAllListItem(isChecked: Boolean, onToggle: () -> Unit) {
+fun SelectAllListItem(
+    isChecked: Boolean,
+    subtitle: String? = null,
+    onClick: () -> Unit,
+    onToggle: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onToggle)
+            .height(IntrinsicSize.Min)
+            .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -193,13 +199,37 @@ fun SelectAllListItem(isChecked: Boolean, onToggle: () -> Unit) {
             tint = MaterialTheme.colorScheme.primary
         )
         Spacer(Modifier.width(16.dp))
-        Text(
-            text = stringResource(R.string.toggle_all),
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.weight(1f)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.toggle_all),
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+        Spacer(Modifier.width(12.dp))
+        Icon(
+            imageVector = Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        Spacer(Modifier.width(12.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxHeight(0.5f)
+                .width(1.dp)
+                .background(MaterialTheme.colorScheme.outlineVariant)
+        )
+        Spacer(Modifier.width(16.dp))
         Switch(
             checked = isChecked,
             onCheckedChange = { onToggle() },
@@ -219,48 +249,6 @@ fun SelectAllListItem(isChecked: Boolean, onToggle: () -> Unit) {
 }
 
 @Composable
-fun BulkBackupTypesListItem(subtitle: String, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = Icons.Default.SelectAll,
-            contentDescription = null,
-            modifier = Modifier
-                .size(48.dp)
-                .padding(8.dp),
-            tint = MaterialTheme.colorScheme.primary
-        )
-        Spacer(Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = stringResource(R.string.backup_types_for_selected_apps),
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        Spacer(Modifier.width(12.dp))
-        Icon(
-            imageVector = Icons.Default.ChevronRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
 fun AppListItem(
     app: AppInfo,
     subtitle: String? = null,
@@ -270,6 +258,7 @@ fun AppListItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .height(IntrinsicSize.Min)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -298,6 +287,20 @@ fun AppListItem(
                 )
             }
         }
+        Spacer(Modifier.width(12.dp))
+        Icon(
+            imageVector = Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.width(12.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxHeight(0.5f)
+                .width(1.dp)
+                .background(MaterialTheme.colorScheme.outlineVariant)
+        )
+        Spacer(Modifier.width(16.dp))
         Switch(
             checked = app.isSelected,
             onCheckedChange = { onToggle() },

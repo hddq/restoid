@@ -68,7 +68,6 @@ import io.github.hddq.restoid.ui.shared.AppListItem
 import io.github.hddq.restoid.ui.shared.BackupTypesBottomSheet
 import io.github.hddq.restoid.ui.shared.BackupTypeToggle
 import io.github.hddq.restoid.ui.shared.BackupTypes
-import io.github.hddq.restoid.ui.shared.BulkBackupTypesListItem
 import io.github.hddq.restoid.ui.shared.PolicySlider
 import io.github.hddq.restoid.ui.shared.SelectAllListItem
 import io.github.hddq.restoid.ui.shared.TaskRow
@@ -523,11 +522,11 @@ fun ScheduleBackupConfigScreen(
                 ) {
                     Column {
                         val isAllSelected = state.apps.isNotEmpty() && state.apps.all { it.isSelected }
-                        SelectAllListItem(isChecked = isAllSelected, onToggle = viewModel::toggleAllApps)
-                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                        BulkBackupTypesListItem(
+                        SelectAllListItem(
+                            isChecked = isAllSelected,
                             subtitle = buildSelectedBackupTypesSummary(state.apps, state.appBackupTypes, state.backupTypes, LocalContext.current),
-                            onClick = { showBulkBackupTypesSheet = true }
+                            onClick = { showBulkBackupTypesSheet = true },
+                            onToggle = viewModel::toggleAllApps
                         )
                         HorizontalDivider(color = MaterialTheme.colorScheme.background)
                         state.apps.forEachIndexed { index, app ->

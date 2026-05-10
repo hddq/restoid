@@ -195,12 +195,9 @@ fun BackupConfigScreen(
                         val isAllSelected = uiState.apps.isNotEmpty() && uiState.apps.all { it.isSelected }
                         SelectAllListItem(
                             isChecked = isAllSelected,
-                            onToggle = viewModel::toggleAllApps
-                        )
-                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                        BulkBackupTypesListItem(
                             subtitle = buildSelectedBackupTypesSummary(uiState.apps, uiState.appBackupTypes, uiState.backupTypes, LocalContext.current),
-                            onClick = { showBulkBackupTypesSheet = true }
+                            onClick = { showBulkBackupTypesSheet = true },
+                            onToggle = viewModel::toggleAllApps
                         )
                         HorizontalDivider(color = MaterialTheme.colorScheme.background)
                         uiState.apps.forEachIndexed { index, app ->
