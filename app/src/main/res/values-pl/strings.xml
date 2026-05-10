@@ -469,4 +469,9 @@
         <item quantity="many">%d lat temu</item>
         <item quantity="other">%d lat temu</item>
     </plurals>
+    <string name="backup_type_permissions">Uprawnienia</string>
+    <string name="backup_types_for_selected_apps">Typy kopii zapasowych dla wybranych aplikacji</string>
+    <string name="backup_types_none">Żadne</string>
+    <string name="backup_types_mixed">Mieszane</string>
+    <string name="restore_error_no_restore_types_selected">Nie wybrano typów przywracania.</string>
 </resources>
