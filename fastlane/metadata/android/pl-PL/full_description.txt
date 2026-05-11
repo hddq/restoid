@@ -1,12 +1,13 @@
-Restoid daje ci pełną kontrolę nad backupami aplikacji przez przejrzysty, nowoczesny i prosty interfejs. Napędzany przez silnik open-source „restic", stworzony dla użytkowników którzy wymagają solidnych, szyfrowanych i deduplikowanych backupów.
+Restoid zapewnia pełną kontrolę nad kopiami zapasowymi aplikacji dzięki czystemu, nowoczesnemu i prostemu interfejsowi użytkownika. Oparty na otwartym silniku „restic”, został stworzony dla użytkowników wymagających solidnych, szyfrowanych i deduplikowanych kopii zapasowych.
 
-Do odczytu i zapisu prywatnych katalogów danych aplikacji wymagany jest dostęp root.
+Dostęp do roota jest bezwzględnie wymagany do odczytu i zapisu prywatnych katalogów danych aplikacji.
 
 Funkcje:
-* Oparty na restic: Wykorzystuje szybkość, bezpieczeństwo i wydajność restic do lokalnych, deduplikowanych i szyfrowanych backupów.
-* Selektywny backup: Wybierz dokładnie, które zainstalowane aplikacje chcesz zapisać.
-* Szczegółowa kontrola: Precyzyjnie określ, co uwzględnić dla każdej aplikacji — pliki APK, dane użytkownika, dane chronione urządzenia, pliki zewnętrzne/OBB lub media.
-* Elastyczne przechowywanie: Twórz repozytoria backupów lokalnie (pamięć urządzenia, karta SD, dyski zewnętrzne) lub zdalnie (SFTP, REST, Amazon S3/MinIO).
-* Zarządzanie migawkami: Przeglądaj historyczne migawki, sprawdzaj szczegóły backupów i usuwaj stare dane, żeby zwolnić miejsce.
-* Precyzyjne przywracanie: Przywróć całą aplikację lub tylko wybrane elementy — np. same dane bez nadpisywania APK.
-* Ochrona przed downgrade'em: Zapobiega przypadkowemu przywróceniu starszej wersji aplikacji nad nowszą.
+* Oparte na silniku Restic: Wykorzystuje szybkość, bezpieczeństwo i wydajność restic do lokalnych, deduplikowanych i szyfrowanych kopii zapasowych.
+* Selektywna kopia zapasowa: Wybierz dokładnie, które aplikacje zainstalowane przez użytkownika chcesz zapisać.
+* Szczegółowa kontrola: Precyzyjnie wybieraj elementy dla każdej aplikacji: pliki APK, dane użytkownika, dane chronione urządzeniem, pliki zewnętrzne/OBB lub pliki multimedialne.
+* Elastyczne zarządzanie repozytoriami: Twórz i zarządzaj repozytoriami w natywnych backendach restic: katalog lokalny, SFTP, serwer REST oraz Amazon S3/MinIO.
+* Zarządzanie migawkami: Łatwo przeglądaj historyczne migawki kopii zapasowych, sprawdzaj szczegóły zawartości i usuwaj stare dane, aby zaoszczędzić miejsce.
+* Precyzyjne przywracanie: Przywracaj całe aplikacje lub tylko ich wybrane części (np. przywracanie samych danych bez nadpisywania pliku APK).
+* Automatyczne harmonogramy: Konfiguruj cykliczne kopie zapasowe z dostosowywanymi interwałami i warunkami wyzwalania (stan baterii, ładowanie i status sieci).
+* Ochrona przed starszą wersją: Zapobiega przypadkowemu przywróceniu starszej wersji aplikacji na nowszą.
