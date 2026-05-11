@@ -144,7 +144,7 @@ fun PolicySlider(
 }
 
 @Composable
-fun BackupTypeToggle(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+fun BackupTypeToggle(label: String, description: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -152,11 +152,17 @@ fun BackupTypeToggle(label: String, checked: Boolean, onCheckedChange: (Boolean)
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.weight(1f)
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
@@ -344,31 +350,59 @@ fun BackupTypesBottomSheet(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
             ) {
                 Column {
-                    BackupTypeToggle(stringResource(R.string.backup_type_apk), backupTypes.apk) {
+                    BackupTypeToggle(
+                        label = stringResource(R.string.backup_type_apk),
+                        description = stringResource(R.string.backup_type_apk_desc),
+                        checked = backupTypes.apk
+                    ) {
                         onBackupTypesChange(backupTypes.copy(apk = it))
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    BackupTypeToggle(stringResource(R.string.backup_type_data), backupTypes.data) {
+                    BackupTypeToggle(
+                        label = stringResource(R.string.backup_type_data),
+                        description = stringResource(R.string.backup_type_data_desc),
+                        checked = backupTypes.data
+                    ) {
                         onBackupTypesChange(backupTypes.copy(data = it))
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    BackupTypeToggle(stringResource(R.string.backup_type_device_protected_data), backupTypes.deviceProtectedData) {
+                    BackupTypeToggle(
+                        label = stringResource(R.string.backup_type_device_protected_data),
+                        description = stringResource(R.string.backup_type_device_protected_data_desc),
+                        checked = backupTypes.deviceProtectedData
+                    ) {
                         onBackupTypesChange(backupTypes.copy(deviceProtectedData = it))
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    BackupTypeToggle(stringResource(R.string.backup_type_external_data), backupTypes.externalData) {
+                    BackupTypeToggle(
+                        label = stringResource(R.string.backup_type_external_data),
+                        description = stringResource(R.string.backup_type_external_data_desc),
+                        checked = backupTypes.externalData
+                    ) {
                         onBackupTypesChange(backupTypes.copy(externalData = it))
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    BackupTypeToggle(stringResource(R.string.backup_type_obb_data), backupTypes.obb) {
+                    BackupTypeToggle(
+                        label = stringResource(R.string.backup_type_obb_data),
+                        description = stringResource(R.string.backup_type_obb_data_desc),
+                        checked = backupTypes.obb
+                    ) {
                         onBackupTypesChange(backupTypes.copy(obb = it))
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    BackupTypeToggle(stringResource(R.string.backup_type_media_data), backupTypes.media) {
+                    BackupTypeToggle(
+                        label = stringResource(R.string.backup_type_media_data),
+                        description = stringResource(R.string.backup_type_media_data_desc),
+                        checked = backupTypes.media
+                    ) {
                         onBackupTypesChange(backupTypes.copy(media = it))
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    BackupTypeToggle(stringResource(R.string.backup_type_permissions), backupTypes.permissions) {
+                    BackupTypeToggle(
+                        label = stringResource(R.string.backup_type_permissions),
+                        description = stringResource(R.string.backup_type_permissions_desc),
+                        checked = backupTypes.permissions
+                    ) {
                         onBackupTypesChange(backupTypes.copy(permissions = it))
                     }
                 }

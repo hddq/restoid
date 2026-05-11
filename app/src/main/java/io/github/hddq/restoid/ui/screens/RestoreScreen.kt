@@ -226,7 +226,7 @@ fun RestoreSelectionContent(
 }
 
 @Composable
-fun RestoreTypeToggle(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+fun RestoreTypeToggle(label: String, description: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -234,11 +234,17 @@ fun RestoreTypeToggle(label: String, checked: Boolean, onCheckedChange: (Boolean
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.weight(1f)
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
@@ -382,31 +388,59 @@ private fun RestoreTypesBottomSheet(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
             ) {
                 Column {
-                    RestoreTypeToggle(stringResource(R.string.backup_type_apk), restoreTypes.apk) {
+                    RestoreTypeToggle(
+                        label = stringResource(R.string.backup_type_apk),
+                        description = stringResource(R.string.backup_type_apk_desc),
+                        checked = restoreTypes.apk
+                    ) {
                         onRestoreTypesChange(restoreTypes.copy(apk = it))
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    RestoreTypeToggle(stringResource(R.string.backup_type_data), restoreTypes.data) {
+                    RestoreTypeToggle(
+                        label = stringResource(R.string.backup_type_data),
+                        description = stringResource(R.string.backup_type_data_desc),
+                        checked = restoreTypes.data
+                    ) {
                         onRestoreTypesChange(restoreTypes.copy(data = it))
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    RestoreTypeToggle(stringResource(R.string.backup_type_device_protected_data), restoreTypes.deviceProtectedData) {
+                    RestoreTypeToggle(
+                        label = stringResource(R.string.backup_type_device_protected_data),
+                        description = stringResource(R.string.backup_type_device_protected_data_desc),
+                        checked = restoreTypes.deviceProtectedData
+                    ) {
                         onRestoreTypesChange(restoreTypes.copy(deviceProtectedData = it))
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    RestoreTypeToggle(stringResource(R.string.backup_type_external_data), restoreTypes.externalData) {
+                    RestoreTypeToggle(
+                        label = stringResource(R.string.backup_type_external_data),
+                        description = stringResource(R.string.backup_type_external_data_desc),
+                        checked = restoreTypes.externalData
+                    ) {
                         onRestoreTypesChange(restoreTypes.copy(externalData = it))
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    RestoreTypeToggle(stringResource(R.string.backup_type_obb_data), restoreTypes.obb) {
+                    RestoreTypeToggle(
+                        label = stringResource(R.string.backup_type_obb_data),
+                        description = stringResource(R.string.backup_type_obb_data_desc),
+                        checked = restoreTypes.obb
+                    ) {
                         onRestoreTypesChange(restoreTypes.copy(obb = it))
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    RestoreTypeToggle(stringResource(R.string.backup_type_media_data), restoreTypes.media) {
+                    RestoreTypeToggle(
+                        label = stringResource(R.string.backup_type_media_data),
+                        description = stringResource(R.string.backup_type_media_data_desc),
+                        checked = restoreTypes.media
+                    ) {
                         onRestoreTypesChange(restoreTypes.copy(media = it))
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    RestoreTypeToggle(stringResource(R.string.backup_type_permissions), restoreTypes.permissions) {
+                    RestoreTypeToggle(
+                        label = stringResource(R.string.backup_type_permissions),
+                        description = stringResource(R.string.backup_type_permissions_desc),
+                        checked = restoreTypes.permissions
+                    ) {
                         onRestoreTypesChange(restoreTypes.copy(permissions = it))
                     }
                 }

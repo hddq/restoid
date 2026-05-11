@@ -350,6 +350,7 @@ class RunTasksViewModel(
     fun setBackupExternalData(value: Boolean) = _uiState.update { it.copy(backupTypes = it.backupTypes.copy(externalData = value)) }
     fun setBackupObb(value: Boolean) = _uiState.update { it.copy(backupTypes = it.backupTypes.copy(obb = value)) }
     fun setBackupMedia(value: Boolean) = _uiState.update { it.copy(backupTypes = it.backupTypes.copy(media = value)) }
+    fun setBackupPermissions(value: Boolean) = _uiState.update { it.copy(backupTypes = it.backupTypes.copy(permissions = value)) }
 
     private fun selectedAppBackupTypes(): Map<String, BackupTypes> {
         val state = _uiState.value
