@@ -904,7 +904,7 @@ class RepositoriesRepository(
         return AddRepositoryState.Error(context.getString(R.string.repo_error_failed_get_id))
     }
 
-    private suspend fun restoreMetadataForRepo(
+    suspend fun restoreMetadataForRepo(
         repoId: String,
         repoPath: String,
         password: String,

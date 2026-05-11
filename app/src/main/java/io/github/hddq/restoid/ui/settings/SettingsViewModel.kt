@@ -174,6 +174,55 @@ class SettingsViewModel(
         viewModelScope.launch { repositoriesRepository.deleteRepository(key) }
     }
 
+    fun restoreMetadata(key: String) {
+        viewModelScope.launch {
+            if (resticState.value !is ResticState.Installed) {
+                _showMetadataWarning.value = context.getString(R.string.error_restic_not_installed)
+                return@launch
+            }
+
+            val repository = repositoriesRepository.getRepositoryByKey(key)
+            val password = repositoriesRepository.getRepositoryPassword(key)
+            if (repository == null || password.isNullOrBlank()) {
+                _showMetadataWarning.value = context.getString(R.string.error_repository_password_or_id_not_found)
+                return@launch
+            }
+
+            val repoId = repository.id ?: run {
+                val configResult = resticRepository.getConfig(
+                    repository.path,
+                    password,
+                    repositoriesRepository.getExecutionEnvironmentVariables(key),
+                    repositoriesRepository.getExecutionResticOptions(key)
+                )
+                if (configResult.isFailure) {
+                    _showMetadataWarning.value = context.getString(R.string.repo_error_failed_get_id)
+                    return@launch
+                }
+                configResult.getOrNull()?.id
+            }
+
+            if (repoId.isNullOrBlank()) {
+                _showMetadataWarning.value = context.getString(R.string.repo_error_failed_get_id)
+                return@launch
+            }
+
+            val restoreResult = repositoriesRepository.restoreMetadataForRepo(
+                repoId = repoId,
+                repoPath = repository.path,
+                password = password,
+                resticRepository = resticRepository,
+                environmentVariables = repositoriesRepository.getExecutionEnvironmentVariables(key),
+                resticOptions = repositoriesRepository.getExecutionResticOptions(key)
+            )
+
+            if (restoreResult.isFailure) {
+                _showMetadataWarning.value = restoreResult.exceptionOrNull()?.message
+                    ?: context.getString(R.string.repo_warning_metadata_restore_failed)
+            }
+        }
+    }
+
     fun changePassword(key: String, oldPassword: String, newPassword: String) {
         viewModelScope.launch {
             _changePasswordState.value = ChangePasswordState.InProgress

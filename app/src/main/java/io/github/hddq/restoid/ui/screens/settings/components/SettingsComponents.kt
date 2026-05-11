@@ -261,6 +261,13 @@ fun SelectableRepositoryRow(
                         showMenu = false
                     }
                 )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_restore_metadata)) },
+                    onClick = {
+                        viewModel.restoreMetadata(repoKey)
+                        showMenu = false
+                    }
+                )
                 if (repo.backendType == RepositoryBackendType.SFTP) {
                     val hasCredentials = viewModel.hasStoredSftpCredentials(repoKey)
                     if (hasCredentials) {
