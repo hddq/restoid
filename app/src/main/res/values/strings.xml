@@ -172,6 +172,10 @@
     <string name="action_forget">Forget</string>
     <string name="action_try_again">Try Again</string>
     <string name="action_disable">Disable</string>
+    <string name="action_enable">Enable</string>
+    <string name="usage_stats_permission_enabled">App usage access granted</string>
+    <string name="usage_stats_permission_disabled">App usage access required</string>
+    <string name="usage_stats_permission_description">Enables faster application size calculation during backups instead of scanning directories</string>
 
     <string name="progress_initializing">Initializing…</string>
     <string name="progress_stopping">Stopping…</string>

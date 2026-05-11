@@ -87,6 +87,9 @@ class SettingsViewModel(
     private val _isIgnoringBatteryOptimizations = MutableStateFlow(false)
     val isIgnoringBatteryOptimizations = _isIgnoringBatteryOptimizations.asStateFlow()
 
+    private val _hasUsageStatsPermission = MutableStateFlow(false)
+    val hasUsageStatsPermission = _hasUsageStatsPermission.asStateFlow()
+
     private var pendingSftpTrustRequest: PendingSftpTrustRequest? = null
 
     init {
@@ -106,7 +109,18 @@ class SettingsViewModel(
             refreshRootDependentState()
             refreshBatteryOptimizationStatus()
             checkNotificationPermission()
+            refreshUsageStatsPermissionStatus()
         }
+    }
+
+    private fun refreshUsageStatsPermissionStatus() {
+        val appOps = context.getSystemService(android.content.Context.APP_OPS_SERVICE) as android.app.AppOpsManager
+        val mode = appOps.unsafeCheckOpNoThrow(
+            android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
+            android.os.Process.myUid(),
+            context.packageName
+        )
+        _hasUsageStatsPermission.value = mode == android.app.AppOpsManager.MODE_ALLOWED
     }
 
     private suspend fun refreshRootDependentState() {

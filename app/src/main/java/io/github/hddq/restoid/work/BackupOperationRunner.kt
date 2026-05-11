@@ -314,7 +314,33 @@ class BackupOperationRunner(
             }
 
             throwIfCancelled()
-            val size = getDirectorySize(existingAppPaths)
+            var size = 0L
+            val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
+            val mode = appOps.unsafeCheckOpNoThrow(
+                android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
+                android.os.Process.myUid(),
+                context.packageName
+            )
+            val hasUsageStatsPermission = mode == android.app.AppOpsManager.MODE_ALLOWED
+
+            if (hasUsageStatsPermission) {
+                try {
+                    val storageStatsManager = context.getSystemService(android.app.usage.StorageStatsManager::class.java)
+                    val uuid = android.os.storage.StorageManager.UUID_DEFAULT
+                    val stats = storageStatsManager.queryStatsForPackage(uuid, app.packageName, android.os.Process.myUserHandle())
+                    if (effectiveBackupTypes.apk) {
+                        size += stats.appBytes
+                    }
+                    if (effectiveBackupTypes.data || effectiveBackupTypes.deviceProtectedData || effectiveBackupTypes.externalData) {
+                        size += stats.dataBytes
+                    }
+                } catch (e: Exception) {
+                    size = getDirectorySize(existingAppPaths)
+                }
+            } else {
+                size = getDirectorySize(existingAppPaths)
+            }
+
             val grantedRuntimePermissions = if (effectiveBackupTypes.permissions) {
                 appInfoRepository.getGrantedRuntimePermissions(app.packageName)
             } else {

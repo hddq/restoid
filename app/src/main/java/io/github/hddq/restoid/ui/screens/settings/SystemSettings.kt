@@ -39,6 +39,7 @@ fun SystemSettings(
     val rootState by viewModel.rootState.collectAsStateWithLifecycle()
     val notificationPermissionState by viewModel.notificationPermissionState.collectAsStateWithLifecycle()
     val batteryOptimizationDisabled by viewModel.isIgnoringBatteryOptimizations.collectAsStateWithLifecycle()
+    val hasUsageStatsPermission by viewModel.hasUsageStatsPermission.collectAsStateWithLifecycle()
     val context = androidx.compose.ui.platform.LocalContext.current
 
     Column {
@@ -102,7 +103,62 @@ fun SystemSettings(
                             }
                     }
                 )
+                HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                UsageStatsPermissionRow(
+                    granted = hasUsageStatsPermission,
+                    onRequestGrant = {
+                        val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+                        runCatching { context.startActivity(intent) }
+                    }
+                )
                 // App unlock moved to separate Options card
+            }
+        }
+    }
+}
+
+@Composable
+private fun UsageStatsPermissionRow(
+    granted: Boolean,
+    onRequestGrant: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
+            Icon(
+                imageVector = if (granted) Icons.Default.CheckCircle else Icons.Default.Error,
+                contentDescription = null,
+                modifier = Modifier.padding(end = 16.dp),
+                tint = if (granted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+            )
+            Column {
+                Text(
+                    text = if (granted) {
+                        stringResource(R.string.usage_stats_permission_enabled)
+                    } else {
+                        stringResource(R.string.usage_stats_permission_disabled)
+                    }
+                )
+                if (!granted) {
+                    Text(
+                        text = stringResource(R.string.usage_stats_permission_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+        if (!granted) {
+            Button(onClick = onRequestGrant) {
+                Text(stringResource(R.string.action_enable))
             }
         }
     }
