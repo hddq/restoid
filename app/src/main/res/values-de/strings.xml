@@ -410,4 +410,45 @@
     <string name="license_tap_to_expand">… (tippen zum Erweitern)</string>
     <string name="cd_open_link">Link öffnen</string>
     <string name="cd_copy_license">Lizenz kopieren</string>
+    <string name="time_just_now">gerade eben</string>
+    <plurals name="time_mins_ago">
+        <item quantity="one">vor %d Minute</item>
+        <item quantity="other">vor %d Minuten</item>
+    </plurals>
+    <plurals name="time_hours_ago">
+        <item quantity="one">vor %d Stunde</item>
+        <item quantity="other">vor %d Stunden</item>
+    </plurals>
+    <plurals name="time_days_ago">
+        <item quantity="one">vor %d Tag</item>
+        <item quantity="other">vor %d Tagen</item>
+    </plurals>
+    <plurals name="time_months_ago">
+        <item quantity="one">vor %d Monat</item>
+        <item quantity="other">vor %d Monaten</item>
+    </plurals>
+    <plurals name="time_years_ago">
+        <item quantity="one">vor %d Jahr</item>
+        <item quantity="other">vor %d Jahren</item>
+    </plurals>
+    <string name="backup_type_permissions">Berechtigungen</string>
+    <string name="backup_types_for_selected_apps">Sicherungstypen für ausgewählte Apps</string>
+    <string name="backup_types_none">Keine</string>
+    <string name="backup_types_mixed">Gemischt</string>
+    <string name="restore_error_no_restore_types_selected">Keine Wiederherstellungstypen ausgewählt.</string>
+    <string name="backup_type_apk_desc">Die Anwendungspaketdatei</string>
+    <string name="backup_type_data_desc">Interne App-Daten (/data/data)</string>
+    <string name="backup_type_device_protected_data_desc">Daten zugänglich vor Geräteentsperrung (/data/user_de)</string>
+    <string name="backup_type_external_data_desc">App-Daten auf externem Speicher (/sdcard/Android/data)</string>
+    <string name="backup_type_obb_data_desc">Opaque Binary Blob-Dateien (/sdcard/Android/obb)</string>
+    <string name="backup_type_media_data_desc">App-Mediendateien (/sdcard/Android/media)</string>
+    <string name="backup_type_permissions_desc">Erteilte Laufzeitberechtigungen</string>
+    <string name="action_enable">Aktivieren</string>
+    <string name="usage_stats_permission_enabled">App-Nutzungszugriff gewährt</string>
+    <string name="usage_stats_permission_disabled">Zugriff auf App-Nutzungsdaten erforderlich</string>
+    <string name="usage_stats_permission_description">Ermöglicht eine schnellere Berechnung der App-Größe bei Backups statt des Durchsuchens von Verzeichnissen</string>
+    <string name="metadata_restore_success">Metadaten erfolgreich wiederhergestellt.</string>
+    <string name="action_restore_metadata">Metadaten wiederherstellen</string>
+    <string name="repo_warning_metadata_restore_failed_title">Wiederherstellung der Metadaten fehlgeschlagen</string>
+    <string name="repo_warning_metadata_restore_failed">Das Repository wurde erfolgreich hinzugefügt, aber die Wiederherstellung der Metadaten (Zeitpläne, detaillierte Backup-Infos) schlug fehl. Dies bedeutet normalerweise, dass der Metadaten-Snapshot fehlt oder das Repository gesperrt ist. Um es erneut zu versuchen, öffnen Sie Einstellungen → Repositories, tippen Sie auf das Repository-Menü und wählen Sie „Metadaten wiederherstellen“.</string>
 </resources>
