@@ -258,7 +258,7 @@
     <string name="error_operation_already_running">Başka bir işlem zaten çalışıyor.</string>
     <string name="summary_operation_already_running">Başka bir işlem çalışıyor. Bitmesini bekleyin.</string>
     <string name="error_snapshot_not_found">Anlık görüntü (snapshot) bulunamadı.</string>
-    <string name="error_repository_password_or_id_not_found">Depo, şifre veya depo kimliği bulunamadı.</string>
+    <string name="error_repository_password_or_id_not_found">Depo, parola veya depo kimliği bulunamadı.</string>
     <string name="restore_stage_restore_files">Dosyaları Geri Yükle</string>
     <string name="restore_stage_processing_apps">Uygulamalar İşleniyor</string>
     <string name="restore_stage_cleanup">Temizlik</string>
@@ -416,8 +416,8 @@
     <string name="backup_types_mixed">Karışık</string>
     <string name="time_just_now">az önce</string>
     <plurals name="time_mins_ago">
-        <item quantity="one">%d dk önce</item>
-        <item quantity="other">%d dk önce</item>
+        <item quantity="one">%d dakika önce</item>
+        <item quantity="other">%d dakika önce</item>
     </plurals>
     <plurals name="time_days_ago">
         <item quantity="one">%d gün önce</item>
@@ -443,4 +443,12 @@
         <item quantity="other">%d yıl önce</item>
     </plurals>
     <string name="restore_error_no_restore_types_selected">Geri yükleme türü seçilmedi.</string>
+    <string name="action_enable">Etkinleştir</string>
+    <string name="usage_stats_permission_enabled">Uygulama kullanım erişimi verildi</string>
+    <string name="usage_stats_permission_disabled">Uygulama kullanım erişimi gerekli</string>
+    <string name="usage_stats_permission_description">Yedeklemeler sırasında dizinleri taramak yerine daha hızlı uygulama boyutu hesaplamasını sağlar</string>
+    <string name="metadata_restore_success">Meta veriler başarıyla geri yüklendi.</string>
+    <string name="action_restore_metadata">Meta verileri geri yükle</string>
+    <string name="repo_warning_metadata_restore_failed_title">Meta veri Geri Yükleme Başarısız</string>
+    <string name="repo_warning_metadata_restore_failed">Depo başarıyla eklendi ancak meta verileri (zamanlamalar, ayrıntılı yedekleme bilgileri) geri yüklenemedi. Bu durum genellikle meta veri anlık görüntüsünün eksik olduğu veya deponun kilitli olduğu anlamına gelir. Yeniden denemek için Ayarlar → Depolar\'ı açın, depo menüsüne dokunun ve \"Meta verileri geri yükle\" seçeneğini belirleyin.</string>
 </resources>
