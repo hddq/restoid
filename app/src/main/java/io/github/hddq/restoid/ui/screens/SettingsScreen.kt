@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,6 +23,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import android.widget.Toast
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.ui.screens.settings.*
 import io.github.hddq.restoid.ui.settings.SettingsViewModel
@@ -35,8 +37,15 @@ fun SettingsScreen(
 ) {
     val addRepoUiState by viewModel.addRepoUiState.collectAsStateWithLifecycle()
     val showMetadataWarning by viewModel.showMetadataWarning.collectAsStateWithLifecycle()
+    val metadataRestoreSuccess by viewModel.metadataRestoreSuccess.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+
+    LaunchedEffect(metadataRestoreSuccess) {
+        val message = metadataRestoreSuccess ?: return@LaunchedEffect
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        viewModel.consumeMetadataRestoreSuccess()
+    }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->

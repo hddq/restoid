@@ -106,6 +106,7 @@
     </plurals>
     <string name="no_app_info_for_snapshot">No app information available for this snapshot.</string>
     <string name="metadata_missing_or_corrupted">Metadata is missing or corrupted.</string>
+    <string name="metadata_restore_success">Metadata restored successfully.</string>
 
     <string name="time_just_now">just now</string>
     <plurals name="time_mins_ago">
@@ -165,6 +166,7 @@
     <string name="action_done">Done</string>
     <string name="action_add">Add</string>
     <string name="action_delete">Delete</string>
+    <string name="action_restore_metadata">Restore metadata</string>
     <string name="action_change">Change</string>
     <string name="action_save">Save</string>
     <string name="action_grant">Grant</string>
@@ -491,5 +493,5 @@
     <string name="cd_open_link">Open Link</string>
     <string name="cd_copy_license">Copy License</string>
     <string name="repo_warning_metadata_restore_failed_title">Metadata Restoration Failed</string>
-    <string name="repo_warning_metadata_restore_failed">The repository was added successfully, but restoring its metadata (schedules, detailed backups info) failed. This usually means the metadata snapshot is missing or the repository is locked. </string>
+    <string name="repo_warning_metadata_restore_failed">The repository was added successfully, but restoring its metadata (schedules, detailed backups info) failed. This usually means the metadata snapshot is missing or the repository is locked. To try again, open Settings → Repositories, tap the repo menu, and choose “Restore metadata”.</string>
 </resources>

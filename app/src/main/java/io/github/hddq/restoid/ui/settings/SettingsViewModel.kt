@@ -81,8 +81,15 @@ class SettingsViewModel(
     private val _showMetadataWarning = MutableStateFlow<String?>(null)
     val showMetadataWarning = _showMetadataWarning.asStateFlow()
 
+    private val _metadataRestoreSuccess = MutableStateFlow<String?>(null)
+    val metadataRestoreSuccess = _metadataRestoreSuccess.asStateFlow()
+
     fun dismissMetadataWarning() {
         _showMetadataWarning.value = null
+    }
+
+    fun consumeMetadataRestoreSuccess() {
+        _metadataRestoreSuccess.value = null
     }
 
     private val _changePasswordState = MutableStateFlow(ChangePasswordState.Idle)
@@ -219,6 +226,8 @@ class SettingsViewModel(
             if (restoreResult.isFailure) {
                 _showMetadataWarning.value = restoreResult.exceptionOrNull()?.message
                     ?: context.getString(R.string.repo_warning_metadata_restore_failed)
+            } else {
+                _metadataRestoreSuccess.value = context.getString(R.string.metadata_restore_success)
             }
         }
     }
