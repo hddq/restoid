@@ -78,6 +78,13 @@ class SettingsViewModel(
     private val _addRepoUiState = MutableStateFlow(AddRepoUiState())
     val addRepoUiState = _addRepoUiState.asStateFlow()
 
+    private val _showMetadataWarning = MutableStateFlow<String?>(null)
+    val showMetadataWarning = _showMetadataWarning.asStateFlow()
+
+    fun dismissMetadataWarning() {
+        _showMetadataWarning.value = null
+    }
+
     private val _changePasswordState = MutableStateFlow(ChangePasswordState.Idle)
     val changePasswordState = _changePasswordState.asStateFlow()
 
@@ -489,8 +496,11 @@ class SettingsViewModel(
 
         _addRepoUiState.update { it.copy(state = result, sftpServerTrustInfo = null) }
 
-        if (result is AddRepositoryState.Success) {
+        if (result is AddRepositoryState.Success || result is AddRepositoryState.SuccessWithMetadataWarning) {
             delay(1000)
+            if (result is AddRepositoryState.SuccessWithMetadataWarning) {
+                _showMetadataWarning.value = result.warning
+            }
             onNewRepoDialogDismiss()
         }
     }

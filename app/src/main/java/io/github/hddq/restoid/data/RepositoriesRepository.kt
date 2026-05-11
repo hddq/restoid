@@ -23,6 +23,7 @@ sealed class AddRepositoryState {
     object Idle : AddRepositoryState()
     object Initializing : AddRepositoryState()
     object Success : AddRepositoryState()
+    data class SuccessWithMetadataWarning(val warning: String) : AddRepositoryState()
     data class Error(val message: String) : AddRepositoryState()
 }
 
@@ -866,8 +867,9 @@ class RepositoriesRepository(
         )
         if (configResult.isSuccess) {
             val repoId = configResult.getOrNull()?.id
+            var metadataRestoreSuccess = true
             if (repoId != null) {
-                restoreMetadataForRepo(
+                val restoreResult = restoreMetadataForRepo(
                     repoId,
                     repo.path,
                     password,
@@ -875,6 +877,9 @@ class RepositoriesRepository(
                     executionEnvironmentVariables,
                     repo.resticOptions
                 )
+                if (restoreResult.isFailure) {
+                    metadataRestoreSuccess = false
+                }
             }
             resticRepository.clearSnapshots()
             saveNewRepository(
@@ -890,7 +895,11 @@ class RepositoriesRepository(
                 save = savePassword,
                 wasEmpty = wasEmpty
             )
-            return AddRepositoryState.Success
+            return if (metadataRestoreSuccess) {
+                AddRepositoryState.Success
+            } else {
+                AddRepositoryState.SuccessWithMetadataWarning(context.getString(R.string.repo_warning_metadata_restore_failed))
+            }
         }
         return AddRepositoryState.Error(context.getString(R.string.repo_error_failed_get_id))
     }
@@ -902,10 +911,15 @@ class RepositoriesRepository(
         resticRepository: ResticRepository,
         environmentVariables: Map<String, String>,
         resticOptions: Map<String, String>
-    ) {
+    ): Result<Unit> {
         val tempRestoreDir = File(context.cacheDir, "metadata_restore_${System.currentTimeMillis()}").also { it.mkdirs() }
-        try {
-            val snapshots = resticRepository.getSnapshots(repoPath, password, environmentVariables, resticOptions).getOrNull()
+        return try {
+            val snapshotsResult = resticRepository.getSnapshots(repoPath, password, environmentVariables, resticOptions)
+            if (snapshotsResult.isFailure) {
+                return Result.failure(Exception("Failed to load snapshots for metadata restoration: ${snapshotsResult.exceptionOrNull()?.message}"))
+            }
+            
+            val snapshots = snapshotsResult.getOrNull()
             val metadataSnapshot = snapshots
                 ?.filter { it.tags.contains("restoid") && it.tags.contains("metadata") }
                 ?.maxByOrNull { it.time }
@@ -929,13 +943,25 @@ class RepositoriesRepository(
                     val owner = if (ownerResult.isSuccess) ownerResult.out.firstOrNull()?.trim() else null
 
                     if (owner != null) {
-                        Shell.cmd("chown -R $owner ${shellQuote(tempRestoreDir.absolutePath)}").exec()
-                        Shell.cmd("cp -a ${shellQuote(tempRestoreDir.absolutePath + "/.")} ${shellQuote(finalMetadataParentDir.absolutePath + "/")}").exec()
+                        val chownResult = Shell.cmd("chown -R $owner ${shellQuote(tempRestoreDir.absolutePath)}").exec()
+                        val cpResult = Shell.cmd("cp -a ${shellQuote(tempRestoreDir.absolutePath + "/.")} ${shellQuote(finalMetadataParentDir.absolutePath + "/")}").exec()
+                        if (chownResult.isSuccess && cpResult.isSuccess) {
+                            Result.success(Unit)
+                        } else {
+                            Result.failure(Exception("Failed to copy or chown metadata files"))
+                        }
+                    } else {
+                        Result.failure(Exception("Failed to get owner for metadata directory"))
                     }
+                } else {
+                    Result.failure(Exception("Restic restore command failed"))
                 }
+            } else {
+                Result.success(Unit) // No metadata to restore, which is fine
             }
         } catch (e: Exception) {
             Log.e("RepoRepo", "Error during metadata restore", e)
+            Result.failure(e)
         } finally {
             tempRestoreDir.deleteRecursively()
         }

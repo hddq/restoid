@@ -490,4 +490,6 @@
     <string name="license_tap_to_expand">… (tap to expand)</string>
     <string name="cd_open_link">Open Link</string>
     <string name="cd_copy_license">Copy License</string>
+    <string name="repo_warning_metadata_restore_failed_title">Metadata Restoration Failed</string>
+    <string name="repo_warning_metadata_restore_failed">The repository was added successfully, but restoring its metadata (schedules, detailed backups info) failed. This usually means the metadata snapshot is missing or the repository is locked. </string>
 </resources>

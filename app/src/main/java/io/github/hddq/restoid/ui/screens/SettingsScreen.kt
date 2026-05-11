@@ -18,6 +18,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.res.stringResource
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import io.github.hddq.restoid.R
 import io.github.hddq.restoid.ui.screens.settings.*
 import io.github.hddq.restoid.ui.settings.SettingsViewModel
 import io.github.hddq.restoid.util.StorageUtils
@@ -29,6 +34,7 @@ fun SettingsScreen(
     modifier: Modifier = Modifier
 ) {
     val addRepoUiState by viewModel.addRepoUiState.collectAsStateWithLifecycle()
+    val showMetadataWarning by viewModel.showMetadataWarning.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -65,6 +71,19 @@ fun SettingsScreen(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { viewModel.checkNotificationPermission() }
     )
+
+    if (showMetadataWarning != null) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissMetadataWarning() },
+            title = { Text(stringResource(R.string.repo_warning_metadata_restore_failed_title)) },
+            text = { Text(showMetadataWarning ?: stringResource(R.string.repo_warning_metadata_restore_failed)) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.dismissMetadataWarning() }) {
+                    Text(stringResource(R.string.action_ok))
+                }
+            }
+        )
+    }
 
     if (addRepoUiState.showDialog) {
         AddRepositoryDialog(
