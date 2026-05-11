@@ -474,4 +474,11 @@
     <string name="backup_types_none">Żadne</string>
     <string name="backup_types_mixed">Mieszane</string>
     <string name="restore_error_no_restore_types_selected">Nie wybrano typów przywracania.</string>
+    <string name="backup_type_apk_desc">Plik pakietu aplikacji</string>
+    <string name="backup_type_data_desc">Wewnętrzne dane aplikacji (/data/data)</string>
+    <string name="backup_type_device_protected_data_desc">Dane dostępne przed odblokowaniem urządzenia (/data/user_de)</string>
+    <string name="backup_type_external_data_desc">Dane aplikacji w pamięci zewnętrznej (/sdcard/Android/data)</string>
+    <string name="backup_type_obb_data_desc">Pliki zasobów (obb) (/sdcard/Android/obb)</string>
+    <string name="backup_type_media_data_desc">Pliki multimedialne aplikacji (/sdcard/Android/media)</string>
+    <string name="backup_type_permissions_desc">Przyznane uprawnienia</string>
 </resources>
