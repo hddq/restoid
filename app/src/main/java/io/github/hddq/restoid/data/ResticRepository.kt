@@ -245,7 +245,7 @@ class ResticRepository(
         return executor.execute(
             repoPath,
             password,
-            "cat config --json",
+            "cat config --json --no-lock",
             context.getString(R.string.restic_failure_get_repo_config),
             environmentVariables = environmentVariables,
             resticOptions = resticOptions
