@@ -1,0 +1,6 @@
+* Backup type can now be configured per app (previously was per-backup)
+* Faster backup preparation (requires PACKAGE_USAGE_STATS permission)
+* Added restore metadata button
+* Fixed an issue where adding a locked repository was sometimes not possible
+* Added warning when metadata restoration fails
+* Updated translations
