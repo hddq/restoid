@@ -481,4 +481,5 @@
     <string name="backup_type_obb_data_desc">Pliki zasobów (obb) (/sdcard/Android/obb)</string>
     <string name="backup_type_media_data_desc">Pliki multimedialne aplikacji (/sdcard/Android/media)</string>
     <string name="backup_type_permissions_desc">Przyznane uprawnienia</string>
+    <string name="action_enable">Włacz</string>
 </resources>
