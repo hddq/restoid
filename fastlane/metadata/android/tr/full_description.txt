@@ -1,13 +1,13 @@
-Restoid, temiz, modern ve basit bir arayüz ile uygulama yedekleriniz üzerinde tam kontrol sahibi olmanızı sağlar. Açık kaynaklı "restic" motoruyla güçlendirilmiş olan bu uygulama, sağlam, şifrelenmiş ve tekilleştirilmiş yedeklemeler talep eden kullanıcılar için geliştirilmiştir.
+Restoid, temiz, modern ve basit bir kullanıcı arayüzü aracılığıyla uygulama yedeklemeleriniz üzerinde tam denetim sağlar. Açık kaynaklı "restic" motoruyla güçlendirilmiş olup, sağlam, şifreli ve tekilleştirilmiş yedeklemelere ihtiyaç duyan kullanıcılar için geliştirilmiştir.
 
-Gizli uygulama veri dizinlerini okumak ve yazmak için Root erişimi kesinlikle gereklidir.
+Özel uygulama verisi dizinlerini okumak ve yazmak için kesinlikle root erişimi gereklidir.
 
 Özellikler:
-* Restic Altyapısı: Yerel, tekilleştirilmiş ve şifrelenmiş yedeklemeler için restic'in hızından, güvenliğinden ve verimliliğinden yararlanır.
-* Seçici Yedekleme: Kullanıcı tarafından yüklenen uygulamalardan hangilerini kaydetmek istediğinizi tam olarak seçin.
-* İnce Ayar Kontrolü: Her uygulama için nelerin dahil edileceğini ayrıntılı olarak seçin: APK dosyaları, kullanıcı verileri, cihaz korumalı veriler, harici/OBB veya medya dosyaları.
-* Esnek Depo Yönetimi: Restic'in yerel arka uçları üzerinden depolar oluşturun ve yönetin: Yerel Dizin, SFTP, REST sunucusu ve Amazon S3/MinIO.
-* Snapshot Yönetimi: Geçmiş yedekleme snapshot'larına kolayca göz atın, nelerin yedeklendiğine dair detayları görüntüleyin ve alan tasarrufu yapmak için eski verileri silin.
-* Hassas Geri Yükleme: Uygulamaları tamamen geri yükleyin veya yalnızca belirli parçalarını geri yükleyin (örneğin APK'nın üzerine yazmadan sadece uygulama verisini geri yüklemek).
-* Otomatik Zamanlamalar: Özelleştirilebilir aralıklar ve tetikleme koşullarıyla (pil, şarj olma durumu ve ağ) tekrarlayan yedeklemeler ayarlayın.
-* Sürüm Düşürme Koruması: Eski bir uygulama sürümünü yanlışlıkla daha yeni bir sürümün üzerine geri yüklemenizi engeller.
+* Restic Destekli: Yerel, tekilleştirilmiş ve şifreli yedeklemeler için restic'in hızından, güvenliğinden ve verimliliğinden yararlanır.
+* Seçici Yedekleme: Hangi kullanıcı uygulamalarının yedekleneceğini tam olarak seçin.
+* Ayrıntılı Denetim: Her uygulama için nelerin dahil edileceğini ayrıntılı olarak belirleyin: APK dosyaları, kullanıcı verileri, cihaz korumalı veriler, harici/OBB dosyaları veya medya dosyaları.
+* Esnek Depo Yönetimi: Yerel dizin, SFTP, REST sunucusu ve Amazon S3/MinIO gibi yerel restic arka uçlarında depolar oluşturun ve yönetin.
+* Anlık Görüntü Yönetimi: Geçmiş yedekleme anlık görüntülerini kolayca inceleyin, nelerin yedeklendiğine dair ayrıntıları görün ve yer açmak için eski verileri silin.
+* Cerrahi Geri Yükleme: Uygulamaların tamamını veya yalnızca belirli kısımlarını (APK'nın üzerine yazmadan sadece uygulama verilerini geri yüklemek gibi) geri yükleyin.
+* Otomatik Zamanlamalar: Özelleştirilebilir aralıklar ve tetikleme koşullarıyla (pil, şarj durumu ve ağ durumu) düzenli yedeklemeler ayarlayın.
+* Sürüm Düşürme Koruması: Daha eski bir uygulama sürümünü yanlışlıkla daha yenisinin üzerine geri yüklemenizi engeller.
