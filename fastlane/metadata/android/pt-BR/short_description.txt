@@ -1,1 +1,1 @@
-Ferramenta de backup de apps Android com root, dita pelo restic
+Ferramenta de backup de aplicativos Android com root baseada no restic
