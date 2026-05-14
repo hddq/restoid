@@ -1,1 +1,1 @@
-Restic 기반의 Root 필요 Android 앱 백업 도구
+restic 기반의 루팅 환경 안드로이드 앱 백업 도구
