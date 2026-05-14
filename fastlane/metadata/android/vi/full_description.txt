@@ -1,13 +1,13 @@
-Restoid cung cấp cho bạn toàn quyền kiểm soát các bản sao lưu ứng dụng thông qua một giao diện gọn gàng, hiện đại và đơn giản. Được phát triển dựa trên engine mã nguồn mở "restic", ứng dụng dành cho những người dùng cần các bản sao lưu mạnh mẽ, được mã hóa và loại bỏ dữ liệu trùng lặp.
+Restoid mang đến cho bạn quyền kiểm soát hoàn toàn việc sao lưu ứng dụng thông qua giao diện người dùng sạch, hiện đại và đơn giản. Sử dụng công cụ mã nguồn mở "restic", ứng dụng này được xây dựng cho những người dùng yêu cầu các bản sao lưu mạnh mẽ, được mã hóa và chống trùng lặp.
 
-Quyền Root là bắt buộc để đọc và ghi vào các thư mục dữ liệu riêng tư của ứng dụng.
+Quyền truy cập root là bắt buộc để đọc và ghi các thư mục dữ liệu ứng dụng cá nhân.
 
 Tính năng:
-* Nền tảng Restic: Tận dụng tốc độ, tính bảo mật và hiệu quả của restic để sao lưu cục bộ, chống trùng lặp và mã hóa.
-* Sao lưu có chọn lọc: Chọn chính xác những ứng dụng nào bạn muốn sao lưu.
-* Kiểm soát chi tiết: Lựa chọn chi tiết những thành phần cần sao lưu cho mỗi ứng dụng: tệp APK, dữ liệu người dùng, dữ liệu được bảo vệ của thiết bị, dữ liệu ngoài/OBB hoặc tệp phương tiện.
-* Quản lý kho lưu trữ linh hoạt: Tạo và quản lý kho lưu trữ thông qua các backend gốc của restic: Thư mục cục bộ, SFTP, Máy chủ REST và Amazon S3/MinIO.
-* Quản lý Snapshot: Dễ dàng duyệt qua lịch sử các snapshot sao lưu, xem chi tiết những gì đã được sao lưu và xóa dữ liệu cũ để giải phóng không gian.
-* Khôi phục chính xác: Khôi phục toàn bộ ứng dụng hoặc chỉ các phần cụ thể (chẳng hạn như chỉ khôi phục dữ liệu ứng dụng mà không ghi đè lên tệp APK).
-* Lịch trình tự động: Thiết lập sao lưu định kỳ với khoảng thời gian và điều kiện kích hoạt tùy chỉnh (pin, trạng thái sạc và mạng).
-* Bảo vệ chống hạ cấp: Ngăn bạn vô tình khôi phục phiên bản ứng dụng cũ đè lên phiên bản mới hơn.
+* Vận hành bởi Restic: Tận dụng tốc độ, bảo mật và hiệu quả của restic cho việc sao lưu cục bộ, chống trùng lặp và mã hóa.
+* Sao lưu chọn lọc: Chọn chính xác những ứng dụng do người dùng cài đặt mà bạn muốn lưu.
+* Kiểm soát chi tiết: Lựa chọn chi tiết những gì cần bao gồm cho mỗi ứng dụng: tệp APK, dữ liệu người dùng, dữ liệu bảo vệ thiết bị, dữ liệu ngoài/OBB hoặc tệp phương tiện.
+* Quản lý kho lưu trữ linh hoạt: Tạo và quản lý kho lưu trữ trên các backend restic gốc: Thư mục cục bộ, SFTP, máy chủ REST và Amazon S3/MinIO.
+* Quản lý bản chụp (Snapshot): Dễ dàng duyệt qua các bản chụp sao lưu lịch sử, xem chi tiết những gì đã sao lưu và xóa dữ liệu cũ để tiết kiệm dung lượng.
+* Khôi phục chính xác: Khôi phục toàn bộ ứng dụng hoặc chỉ các phần cụ thể (ví dụ: chỉ khôi phục dữ liệu ứng dụng mà không ghi đè APK).
+* Lịch trình tự động: Thiết lập các bản sao lưu định kỳ với khoảng thời gian và điều kiện kích hoạt có thể tùy chỉnh (pin, sạc và trạng thái mạng).
+* Bảo vệ hạ cấp: Ngăn bạn vô tình khôi phục phiên bản ứng dụng cũ hơn đè lên phiên bản mới hơn.
