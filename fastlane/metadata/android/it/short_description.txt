@@ -1,1 +1,1 @@
-Strumento di backup per app Android basato su root, potenziato da restic
+Strumento di backup per app Android basato su root e alimentato da restic

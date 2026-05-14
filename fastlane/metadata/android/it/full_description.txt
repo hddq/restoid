@@ -1,13 +1,13 @@
-Restoid ti dà il controllo completo sui backup delle tue app attraverso un'interfaccia pulita, moderna e semplice. Potenziato dal motore open source "restic", è costruito per gli utenti che esigono backup robusti, criptati e deduplicati.
+Restoid ti offre il controllo completo sui backup delle tue app attraverso un'interfaccia utente pulita, moderna e semplice. Basato sul motore open source "restic", è progettato per gli utenti che richiedono backup robusti, crittografati e deduplicati.
 
-L'accesso Root è strettamente necessario per leggere e scrivere nelle directory dei dati privati delle applicazioni.
+L'accesso root è strettamente necessario per leggere e scrivere nelle directory dei dati privati delle applicazioni.
 
 Funzionalità:
-* Potenziato da Restic: Sfrutta la velocità, la sicurezza e l'efficienza di restic per backup locali, deduplicati e criptati.
-* Backup Selettivo: Scegli esattamente quali applicazioni installate dall'utente desideri salvare.
-* Controllo Granulare: Seleziona minuziosamente cosa includere per ogni app: file APK, dati utente, dati protetti dal dispositivo, dati esterni/OBB o file multimediali.
-* Gestione Flessibile dei Repository: Crea e gestisci repository attraverso i backend nativi di restic: Directory locale, SFTP, server REST e Amazon S3/MinIO.
-* Gestione Snapshot: Esplora facilmente la cronologia degli snapshot di backup, visualizza i dettagli di ciò che è stato salvato e rimuovi i vecchi dati per risparmiare spazio.
-* Ripristino Chirurgico: Ripristina app intere in modo completo, o solo parti specifiche (ad esempio ripristinare solo i dati dell'app senza sovrascrivere l'APK).
-* Pianificazioni Automatizzate: Imposta backup ricorrenti con intervalli personalizzabili e condizioni di avvio (batteria, carica e stato della rete).
-* Protezione Downgrade: Impedisce di ripristinare accidentalmente una versione precedente di un'app su una più recente.
+* Basato su Restic: Sfrutta la velocità, la sicurezza e l'efficienza di restic per backup locali, deduplicati e crittografati.
+* Backup selettivo: Scegli esattamente quali applicazioni installate dall'utente desideri salvare.
+* Controllo granulare: Seleziona in modo granulare cosa includere per ogni app: file APK, dati utente, dati protetti dal dispositivo, file esterni/OBB o file multimediali.
+* Gestione flessibile dei repository: Crea e gestisci repository tramite i backend nativi di restic: directory locale, SFTP, server REST e Amazon S3/MinIO.
+* Gestione degli snapshot: Sfoglia facilmente gli snapshot di backup storici, visualizza i dettagli di ciò che è stato salvato ed elimina i vecchi dati per risparmiare spazio.
+* Ripristino chirurgico: Ripristina intere app completamente, oppure solo parti specifiche (come il ripristino dei soli dati dell'app senza sovrascrivere l'APK).
+* Pianificazioni automatizzate: Imposta backup ricorrenti con intervalli e condizioni di attivazione personalizzabili (batteria, ricarica e stato della rete).
+* Protezione dal downgrade: Impedisce di ripristinare accidentalmente una versione di un'app più vecchia su una più recente.
