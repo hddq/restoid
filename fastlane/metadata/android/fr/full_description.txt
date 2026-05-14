@@ -1,13 +1,13 @@
-Restoid vous donne un contrôle total sur les sauvegardes de vos applications grâce à une interface claire, moderne et simple. Propulsé par le moteur open-source "restic", il est conçu pour les utilisateurs qui exigent des sauvegardes robustes, chiffrées et dédupliquées.
+Restoid vous donne un contrôle total sur vos sauvegardes d'applications via une interface utilisateur propre, moderne et simple. Propulsé par le moteur open-source « restic », il est conçu pour les utilisateurs exigeant des sauvegardes robustes, chiffrées et dédupliquées.
 
-L'accès Root est strictement requis pour lire et écrire dans les répertoires de données privés des applications.
+L'accès root est strictement requis pour lire et écrire dans les répertoires de données privées des applications.
 
-Fonctionnalités :
-* Restic-Powered : Exploite la vitesse, la sécurité et l'efficacité de restic pour des sauvegardes locales, dédupliquées et chiffrées.
-* Sauvegarde sélective : Choisissez exactement les applications installées que vous souhaitez sauvegarder.
-* Contrôle granulaire : Sélectionnez avec précision ce qu'il faut inclure pour chaque application : fichiers APK, données utilisateur, données protégées, fichiers externes/OBB ou médias.
-* Gestion flexible des dépôts : Créez et gérez des dépôts via les backends natifs de restic : Répertoire local, SFTP, Serveur REST et Amazon S3/MinIO.
-* Gestion des Snapshots : Parcourez facilement l'historique de vos snapshots, consultez les détails de ce qui a été sauvegardé, et supprimez les anciennes données pour gagner de l'espace.
-* Restauration chirurgicale : Restaurez des applications entières, ou seulement des parties spécifiques (comme restaurer uniquement les données de l'application sans écraser l'APK).
-* Planifications automatisées : Configurez des sauvegardes récurrentes avec des intervalles et des conditions de déclenchement personnalisables (batterie, charge et réseau).
-* Protection contre le Downgrade : Empêche la restauration accidentelle d'une ancienne version d'application sur une version plus récente.
+Fonctionnalités :
+* Propulsé par Restic : Exploite la vitesse, la sécurité et l'efficacité de restic pour des sauvegardes locales, dédupliquées et chiffrées.
+* Sauvegarde sélective : Choisissez exactement les applications installées par l'utilisateur que vous souhaitez sauvegarder.
+* Contrôle granulaire : Sélectionnez précisément ce qu'il faut inclure pour chaque application : fichiers APK, données utilisateur, données protégées de l'appareil, fichiers externes/OBB ou fichiers multimédias.
+* Gestion flexible des dépôts : Créez et gérez des dépôts sur les backends natifs de restic : répertoire local, SFTP, serveur REST et Amazon S3/MinIO.
+* Gestion des instantanés : Parcourez facilement les instantanés de sauvegarde historiques, consultez les détails des éléments sauvegardés et supprimez les anciennes données pour libérer de l'espace.
+* Restauration chirurgicale : Restaurez entièrement les applications ou seulement des parties spécifiques (par exemple, restaurer uniquement les données d'application sans écraser l'APK).
+* Planification automatisée : Configurez des sauvegardes récurrentes avec des intervalles et des conditions de déclenchement personnalisables (batterie, charge et état du réseau).
+* Protection contre les retours aux versions antérieures : Vous empêche de restaurer accidentellement une ancienne version d'une application sur une version plus récente.
