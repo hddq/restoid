@@ -1,1 +1,1 @@
-Alat backup aplikasi Android berbasis root yang ditenagai restic
+Alat pencadangan aplikasi Android berbasis root yang didukung oleh restic

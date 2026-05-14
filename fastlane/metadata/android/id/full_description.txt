@@ -1,13 +1,13 @@
-Restoid memberi kamu kontrol penuh atas backup aplikasi melalui antarmuka pengguna yang bersih, modern, dan simpel. Ditenagai oleh engine open-source "restic", aplikasi ini dibangun untuk pengguna yang membutuhkan backup yang tangguh, terenkripsi, dan terdeduplikasi.
+Restoid memberi Anda kendali penuh atas cadangan aplikasi melalui antarmuka pengguna yang bersih, modern, dan sederhana. Ditenagai oleh mesin sumber terbuka "restic", aplikasi ini dibuat untuk pengguna yang menginginkan cadangan yang tangguh, terenkripsi, dan terdeduplikasi.
 
-Akses root sangat diwajibkan untuk membaca dan menulis direktori data aplikasi privat.
+Akses root sangat diperlukan untuk membaca dan menulis direktori data aplikasi pribadi.
 
 Fitur:
-* Ditenagai Restic: Memanfaatkan kecepatan, keamanan, dan efisiensi restic untuk backup lokal, terdeduplikasi, dan terenkripsi.
-* Backup Selektif: Pilih dengan pasti aplikasi terinstal mana yang ingin kamu simpan.
-* Kontrol Granular: Pilih secara detail apa yang akan dimasukkan untuk setiap aplikasi: file APK, data pengguna, data yang dilindungi perangkat, eksternal/OBB, atau file media.
-* Manajemen Repositori Fleksibel: Buat dan kelola repositori di berbagai backend restic asli: Direktori lokal, SFTP, server REST, dan Amazon S3/MinIO.
-* Manajemen Snapshot: Telusuri riwayat snapshot backup dengan mudah, lihat detail apa yang telah di-backup, dan hapus data lama untuk menghemat ruang.
-* Pemulihan Presisi: Pulihkan seluruh aplikasi secara lengkap, atau hanya bagian tertentu (seperti hanya memulihkan data aplikasi tanpa menimpa APK).
-* Jadwal Otomatis: Siapkan backup berulang dengan interval yang bisa disesuaikan dan kondisi pemicu (baterai, status pengisian daya, dan jaringan).
-* Perlindungan Downgrade: Mencegah kamu menimpa versi aplikasi yang lebih baru dengan versi yang lebih lama saat pemulihan.
+* Didukung Restic: Memanfaatkan kecepatan, keamanan, dan efisiensi restic untuk pencadangan lokal, terdeduplikasi, dan terenkripsi.
+* Pencadangan Selektif: Pilih aplikasi yang diinstal pengguna mana yang ingin Anda simpan.
+* Kendali Granular: Pilih secara mendetail apa yang disertakan untuk setiap aplikasi: file APK, data pengguna, data yang dilindungi perangkat, eksternal/OBB, atau file media.
+* Manajemen Repositori Fleksibel: Buat dan kelola repositori di seluruh backend restic asli: Direktori lokal, SFTP, server REST, dan Amazon S3/MinIO.
+* Manajemen Snapshot: Telusuri snapshot cadangan historis dengan mudah, lihat detail apa yang dicadangkan, dan hapus data lama untuk menghemat ruang.
+* Pemulihan Bedah: Pulihkan aplikasi sepenuhnya, atau hanya bagian tertentu (seperti memulihkan data aplikasi saja tanpa menimpa APK).
+* Jadwal Otomatis: Atur pencadangan rutin dengan interval dan kondisi pemicu yang dapat disesuaikan (baterai, pengisian daya, dan status jaringan).
+* Perlindungan Penurunan Versi: Mencegah Anda memulihkan versi aplikasi lama secara tidak sengaja di atas versi yang lebih baru.
