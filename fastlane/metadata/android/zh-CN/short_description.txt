@@ -1,1 +1,1 @@
-基于 Root 和 restic 引擎的 Android 应用备份工具
+基于 Root 的 Android 应用备份工具，由 restic 驱动
