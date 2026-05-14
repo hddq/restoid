@@ -1,13 +1,13 @@
-Restoid ti daje potpunu kontrolu nad backupima aplikacija kroz čisto, moderno i jednostavno korisničko sučelje. Pokretan open-source "restic" pogonom, napravljen je za korisnike koji zahtijevaju robusne, kriptirane i deduplicirane backupe.
+Restoid vam daje potpunu kontrolu nad sigurnosnim kopijama aplikacija kroz čisto, moderno i jednostavno korisničko sučelje. Pokretan open-source "restic" mehanizmom, stvoren je za korisnike koji zahtijevaju robusne, šifrirane i deduplicirane sigurnosne kopije.
 
-Root pristup strogo je potreban za čitanje i pisanje po privatnim podatkovnim mapama aplikacija.
+Root pristup je strogo obvezan za čitanje i pisanje privatnih direktorija s podacima aplikacija.
 
 Značajke:
-* Pokretan Resticom: Koristi brzinu, sigurnost i učinkovitost restica za lokalne, deduplicirane i kriptirane backupe.
-* Selektivni backup: Odaberi točno one instalirane aplikacije koje želiš spremiti.
-* Granularna kontrola: Precizno odaberi što želiš uključiti za svaku aplikaciju: APK datoteke, korisničke podatke, podatke zaštićene uređajem, vanjske/OBB ili medijske datoteke.
-* Fleksibilno upravljanje repozitorijima: Stvaraj i upravljaj repozitorijima preko izvornih restic backendova: Lokalni direktorij, SFTP, REST server i Amazon S3/MinIO.
-* Upravljanje snapshotovima: Jednostavno pregledavaj povijest snapshotova, gledaj detalje o tome što je backupirano i ukloni stare podatke da uštediš prostor.
-* Kirurški restore: Vrati cijele aplikacije u potpunosti, ili samo specifične dijelove (poput vraćanja samo podataka aplikacije bez prepisivanja APK datoteke).
-* Automatizirani rasporedi: Postavi ponavljajuće backupe s prilagodljivim intervalima i uvjetima pokretanja (baterija, punjenje i status mreže).
-* Downgrade zaštita: Sprječava te da slučajno vratiš staru verziju aplikacije preko novije.
+* Pokretan Restic-om: Iskorištava brzinu, sigurnost i učinkovitost restic-a za lokalne, deduplicirane i šifrirane sigurnosne kopije.
+* Selektivno sigurnosno kopiranje: Odaberite točno koje aplikacije koje ste instalirali želite spremiti.
+* Granularna kontrola: Detaljno odaberite što uključiti za svaku aplikaciju: APK datoteke, korisničke podatke, podatke zaštićene uređajem, vanjske/OBB datoteke ili medijske datoteke.
+* Fleksibilno upravljanje repozitorijima: Stvarajte i upravljajte repozitorijima putem izvornih restic pozadinskih sustava: Lokalni direktorij, SFTP, REST poslužitelj i Amazon S3/MinIO.
+* Upravljanje snimkama: Jednostavno pregledavajte povijesne snimke sigurnosnih kopija, pogledajte detalje o tome što je sigurnosno kopirano i izbrišite stare podatke radi uštede prostora.
+* Kirurško vraćanje: Vratite cijele aplikacije u potpunosti ili samo određene dijelove (poput vraćanja samo podataka aplikacije bez prepisivanja APK-a).
+* Automatizirani rasporedi: Postavite ponavljajuće sigurnosne kopije s prilagodljivim intervalima i uvjetima aktivacije (baterija, punjenje i mrežni status).
+* Zaštita od vraćanja na stariju verziju: Sprječava slučajno vraćanje starije verzije aplikacije preko novije.
