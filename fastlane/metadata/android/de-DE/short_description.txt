@@ -1,1 +1,1 @@
-Root-basiertes Android-App-Backup-Tool, angetrieben von restic
+Root-basiertes Backup-Tool für Android, unterstützt durch restic
