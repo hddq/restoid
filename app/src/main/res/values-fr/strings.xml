@@ -410,4 +410,45 @@
     <string name="license_tap_to_expand">… (appuyer pour étendre)</string>
     <string name="cd_open_link">Ouvrir le lien</string>
     <string name="cd_copy_license">Copier la licence</string>
+    <string name="time_just_now">à l\'instant</string>
+    <plurals name="time_mins_ago">
+        <item quantity="one">il y a %d minute</item>
+        <item quantity="other">il y a %d minutes</item>
+    </plurals>
+    <plurals name="time_hours_ago">
+        <item quantity="one">il y a %d heure</item>
+        <item quantity="other">il y a %d heures</item>
+    </plurals>
+    <plurals name="time_days_ago">
+        <item quantity="one">il y a %d jour</item>
+        <item quantity="other">il y a %d jours</item>
+    </plurals>
+    <plurals name="time_months_ago">
+        <item quantity="one">il y a %d mois</item>
+        <item quantity="other">il y a %d mois</item>
+    </plurals>
+    <plurals name="time_years_ago">
+        <item quantity="one">il y a %d an</item>
+        <item quantity="other">il y a %d ans</item>
+    </plurals>
+    <string name="backup_type_permissions">Autorisations</string>
+    <string name="backup_types_for_selected_apps">Types de sauvegarde pour les applications sélectionnées</string>
+    <string name="backup_types_none">Aucun</string>
+    <string name="backup_types_mixed">Mixte</string>
+    <string name="restore_error_no_restore_types_selected">Aucun type de restauration sélectionné.</string>
+    <string name="backup_type_apk_desc">Le fichier package de l\'application</string>
+    <string name="backup_type_data_desc">Données internes de l\'application (/data/user/&lt;id&gt;)</string>
+    <string name="backup_type_device_protected_data_desc">Données accessibles avant le déverrouillage de l\'appareil (/data/user_de/&lt;id&gt;)</string>
+    <string name="backup_type_external_data_desc">Données d\'application sur le stockage externe (/storage/emulated/&lt;id&gt;/Android/data)</string>
+    <string name="backup_type_obb_data_desc">Fichiers Opaque Binary Blob (/storage/emulated/&lt;id&gt;/Android/obb)</string>
+    <string name="backup_type_media_data_desc">Fichiers multimédias de l\'application (/storage/emulated/&lt;id&gt;/Android/media)</string>
+    <string name="backup_type_permissions_desc">Autorisations d\'exécution accordées</string>
+    <string name="action_enable">Activer</string>
+    <string name="usage_stats_permission_enabled">Accès aux statistiques d\'utilisation accordé</string>
+    <string name="usage_stats_permission_disabled">Accès aux statistiques d\'utilisation requis</string>
+    <string name="usage_stats_permission_description">Permet un calcul plus rapide de la taille des applications lors des sauvegardes au lieu d\'analyser les répertoires</string>
+    <string name="metadata_restore_success">Métadonnées restaurées avec succès.</string>
+    <string name="action_restore_metadata">Restaurer les métadonnées</string>
+    <string name="repo_warning_metadata_restore_failed_title">Échec de la restauration des métadonnées</string>
+    <string name="repo_warning_metadata_restore_failed">Le dépôt a été ajouté avec succès, mais la restauration de ses métadonnées (plannings, informations détaillées sur les sauvegardes) a échoué. Cela signifie généralement que l\'instantané de métadonnées est manquant ou que le dépôt est verrouillé. Pour réessayer, ouvrez Paramètres → Dépôts, appuyez sur le menu du dépôt et choisissez « Restaurer les métadonnées ».</string>
 </resources>
