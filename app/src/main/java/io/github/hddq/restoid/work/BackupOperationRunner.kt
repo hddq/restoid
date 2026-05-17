@@ -306,11 +306,11 @@ class BackupOperationRunner(
             pathsToBackup.addAll(existingAppPaths)
 
             if (effectiveBackupTypes.data) {
-                excludePatterns.add("'/data/data/${app.packageName}/cache'")
-                excludePatterns.add("'/data/data/${app.packageName}/code_cache'")
+                excludePatterns.add("'/data/user/${getCurrentUserId()}/${app.packageName}/cache'")
+                excludePatterns.add("'/data/user/${getCurrentUserId()}/${app.packageName}/code_cache'")
             }
             if (effectiveBackupTypes.externalData) {
-                excludePatterns.add("'/storage/emulated/0/Android/data/${app.packageName}/cache'")
+                excludePatterns.add("'/storage/emulated/${getCurrentUserId()}/Android/data/${app.packageName}/cache'")
             }
 
             throwIfCancelled()
@@ -448,18 +448,27 @@ class BackupOperationRunner(
         return null
     }
 
+    private fun getCurrentUserId(): Int {
+        return try {
+            android.os.UserHandle::class.java.getMethod("myUserId").invoke(null) as Int
+        } catch (_: Exception) {
+            android.os.Process.myUid() / 100000
+        }
+    }
+
     private fun generateFilePathsForApp(app: AppInfo, backupTypes: BackupTypeSelection): List<String> {
+        val currentUserId = getCurrentUserId()
         return mutableListOf<String>().apply {
             if (backupTypes.apk) {
                 app.apkPaths.firstOrNull()?.let { path ->
                     File(path).parentFile?.absolutePath?.let { add(it) }
                 }
             }
-            if (backupTypes.data) add("/data/data/${app.packageName}")
-            if (backupTypes.deviceProtectedData) add("/data/user_de/0/${app.packageName}")
-            if (backupTypes.externalData) add("/storage/emulated/0/Android/data/${app.packageName}")
-            if (backupTypes.obb) add("/storage/emulated/0/Android/obb/${app.packageName}")
-            if (backupTypes.media) add("/storage/emulated/0/Android/media/${app.packageName}")
+            if (backupTypes.data) add("/data/user/$currentUserId/${app.packageName}")
+            if (backupTypes.deviceProtectedData) add("/data/user_de/$currentUserId/${app.packageName}")
+            if (backupTypes.externalData) add("/storage/emulated/$currentUserId/Android/data/${app.packageName}")
+            if (backupTypes.obb) add("/storage/emulated/$currentUserId/Android/obb/${app.packageName}")
+            if (backupTypes.media) add("/storage/emulated/$currentUserId/Android/media/${app.packageName}")
         }
     }
 

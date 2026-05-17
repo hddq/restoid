@@ -412,6 +412,17 @@ class RestoreOperationRunner(
             android.os.Process.myUid() / 100000
         }
     }
+
+    private fun ceDataPath(userId: Int, packageName: String) = "/data/user/$userId/$packageName"
+
+    private fun deDataPath(userId: Int, packageName: String) = "/data/user_de/$userId/$packageName"
+
+    private fun externalDataPath(userId: Int, packageName: String) = "/storage/emulated/$userId/Android/data/$packageName"
+
+    private fun obbPath(userId: Int, packageName: String) = "/storage/emulated/$userId/Android/obb/$packageName"
+
+    private fun mediaPath(userId: Int, packageName: String) = "/storage/emulated/$userId/Android/media/$packageName"
+
     private fun generatePathsToRestore(
         selectedPackageNames: List<String>,
         snapshot: SnapshotInfo,
@@ -423,20 +434,28 @@ class RestoreOperationRunner(
         selectedPackageNames.forEach { pkg ->
             val types = appRestoreTypes[pkg] ?: defaultTypes
 
-            fun addPathIfExists(path: String) {
-                if (snapshot.paths.contains(path)) paths.add(path)
-            }
-
             fun addApkPathIfExists() {
                 snapshot.paths.find { it.startsWith("/data/app/") && it.contains("/$pkg-") }?.let { paths.add(it) }
             }
 
+            fun addDataPaths() {
+                val escapedPackageName = Regex.escape(pkg)
+                snapshot.paths.filter {
+                    it == "/data/data/$pkg" || it.matches(Regex("^/data/user/\\d+/$escapedPackageName$"))
+                }.forEach { paths.add(it) }
+            }
+
+            fun addMatchingProfilePath(pattern: String) {
+                val regex = Regex(pattern.format(Regex.escape(pkg)))
+                snapshot.paths.filter { it.matches(regex) }.forEach { paths.add(it) }
+            }
+
             if (types.apk) addApkPathIfExists()
-            if (types.data) addPathIfExists("/data/data/$pkg")
-            if (types.deviceProtectedData) addPathIfExists("/data/user_de/0/$pkg")
-            if (types.externalData) addPathIfExists("/storage/emulated/0/Android/data/$pkg")
-            if (types.obb) addPathIfExists("/storage/emulated/0/Android/obb/$pkg")
-            if (types.media) addPathIfExists("/storage/emulated/0/Android/media/$pkg")
+            if (types.data) addDataPaths()
+            if (types.deviceProtectedData) addMatchingProfilePath("^/data/user_de/\\d+/%s$")
+            if (types.externalData) addMatchingProfilePath("^/storage/emulated/\\d+/Android/data/%s$")
+            if (types.obb) addMatchingProfilePath("^/storage/emulated/\\d+/Android/obb/%s$")
+            if (types.media) addMatchingProfilePath("^/storage/emulated/\\d+/Android/media/%s$")
         }
 
         return paths.distinct()
@@ -449,37 +468,95 @@ class RestoreOperationRunner(
     ): Boolean {
         var allSucceeded = true
 
-        val ownerResult = Shell.cmd("stat -c '%U:%G' /data/data/$packageName").exec()
+        val currentUserId = getCurrentUserId()
+        val targetDestination = ceDataPath(currentUserId, packageName)
+        val ownerResult = Shell.cmd("stat -c '%u:%g' ${shellQuote(targetDestination)}").exec()
         if (!ownerResult.isSuccess || ownerResult.out.isEmpty()) return false
         val owner = ownerResult.out.first().trim()
 
         val dataMappings = mutableListOf<Pair<File, String>>()
-        if (types.data) dataMappings.add(File(tempRestoreDir, "data/data/$packageName") to "/data/data/$packageName")
-        if (types.deviceProtectedData) dataMappings.add(File(tempRestoreDir, "data/user_de/0/$packageName") to "/data/user_de/0/$packageName")
-        if (types.externalData) dataMappings.add(File(tempRestoreDir, "storage/emulated/0/Android/data/$packageName") to "/storage/emulated/0/Android/data/$packageName")
-        if (types.obb) dataMappings.add(File(tempRestoreDir, "storage/emulated/0/Android/obb/$packageName") to "/storage/emulated/0/Android/obb/$packageName")
-        if (types.media) dataMappings.add(File(tempRestoreDir, "storage/emulated/0/Android/media/$packageName") to "/storage/emulated/0/Android/media/$packageName")
+        if (types.data) {
+            val legacySource = File(tempRestoreDir, "data/data/$packageName")
+            if (Shell.cmd("[ -e '${legacySource.absolutePath}' ]").exec().isSuccess) {
+                dataMappings.add(legacySource to targetDestination)
+            } else {
+                findRestoredProfilePackageDir(tempRestoreDir, "data/user", 2, packageName)?.let {
+                    dataMappings.add(it to targetDestination)
+                }
+            }
+        }
+        if (types.deviceProtectedData) {
+            findRestoredProfilePackageDir(tempRestoreDir, "data/user_de", 2, packageName)?.let {
+                dataMappings.add(it to deDataPath(currentUserId, packageName))
+            }
+        }
+        if (types.externalData) {
+            findRestoredExternalPackageDir(tempRestoreDir, "data", packageName)?.let {
+                dataMappings.add(it to externalDataPath(currentUserId, packageName))
+            }
+        }
+        if (types.obb) {
+            findRestoredExternalPackageDir(tempRestoreDir, "obb", packageName)?.let {
+                dataMappings.add(it to obbPath(currentUserId, packageName))
+            }
+        }
+        if (types.media) {
+            findRestoredExternalPackageDir(tempRestoreDir, "media", packageName)?.let {
+                dataMappings.add(it to mediaPath(currentUserId, packageName))
+            }
+        }
 
-        Shell.cmd("am force-stop $packageName").exec()
+        Shell.cmd("am force-stop --user $currentUserId ${shellQuote(packageName)}").exec()
+        if (dataMappings.any { (_, destination) -> destination.startsWith("/data/user/") || destination.startsWith("/data/user_de/") }) {
+            val clearPackageResult = Shell.cmd("pm clear --user $currentUserId ${shellQuote(packageName)}").exec()
+            if (!clearPackageResult.isSuccess) {
+                allSucceeded = false
+                Log.w("RestoreOperationRunner", "Failed to clear package data before restoring $packageName")
+            }
+        }
 
         for ((source, destination) in dataMappings) {
             if (Shell.cmd("[ -e '${source.absolutePath}' ]").exec().isSuccess) {
                 Shell.cmd("mkdir -p '$destination'").exec()
-                val copyResult = Shell.cmd("cp -a '${source.absolutePath}/.' '$destination/'").exec()
+                val isPrivateAppData = destination.startsWith("/data/user/") || destination.startsWith("/data/user_de/")
+                if (isPrivateAppData) {
+                    Shell.cmd("restorecon -F ${shellQuote(destination)}").exec()
+                }
+                val destinationContext = if (isPrivateAppData) {
+                    val contextResult = Shell.cmd("stat -c '%C' ${shellQuote(destination)}").exec()
+                    contextResult.out.firstOrNull()?.trim()?.takeIf { contextResult.isSuccess && it.isNotEmpty() }
+                } else {
+                    null
+                }
+                val clearResult = Shell.cmd(
+                    "find ${shellQuote(destination)} -mindepth 1 -maxdepth 1 -exec rm -rf '{}' '+'"
+                ).exec()
+                if (!clearResult.isSuccess) {
+                    allSucceeded = false
+                    continue
+                }
+
+                val copyResult = Shell.cmd(
+                    "find ${shellQuote(source.absolutePath)} -mindepth 1 -maxdepth 1 -exec cp -R '{}' ${shellQuote(destination)} ';'"
+                ).exec()
                 if (!copyResult.isSuccess) {
                     allSucceeded = false
                     continue
                 }
 
-                val chownResult = Shell.cmd("chown -R $owner '$destination'").exec()
-                if (!chownResult.isSuccess) {
-                    allSucceeded = false
+                if (isPrivateAppData) {
+                    val chownResult = Shell.cmd("chown -R $owner ${shellQuote(destination)}").exec()
+                    if (!chownResult.isSuccess) {
+                        allSucceeded = false
+                    }
                 }
 
-                val relabelCommand = if (destination.startsWith("/data/data/")) {
-                    "restorecon -RFD '$destination'"
+                val relabelCommand = if (isPrivateAppData && destinationContext != null) {
+                    "chcon -R ${shellQuote(destinationContext)} ${shellQuote(destination)}"
+                } else if (isPrivateAppData) {
+                    "restorecon -F ${shellQuote(destination)}"
                 } else {
-                    "restorecon -RF '$destination'"
+                    "restorecon -RF ${shellQuote(destination)}"
                 }
                 val relabelResult = Shell.cmd(relabelCommand).exec()
                 if (!relabelResult.isSuccess) {
@@ -491,12 +568,51 @@ class RestoreOperationRunner(
         return allSucceeded
     }
 
+    private fun findRestoredProfilePackageDir(
+        tempRestoreDir: File,
+        rootRelativePath: String,
+        packageDepth: Int,
+        packageName: String
+    ): File? {
+        val root = File(tempRestoreDir, rootRelativePath)
+        if (Shell.cmd("[ -d ${shellQuote(root.absolutePath)} ]").exec().isSuccess.not()) return null
+
+        val findResult = Shell.cmd(
+            "find ${shellQuote(root.absolutePath)} -mindepth $packageDepth -maxdepth $packageDepth -type d -name ${shellQuote(packageName)}"
+        ).exec()
+        return if (findResult.isSuccess) {
+            findResult.out.firstOrNull()?.trim()?.takeIf { it.isNotEmpty() }?.let { File(it) }
+        } else {
+            null
+        }
+    }
+
+    private fun findRestoredExternalPackageDir(
+        tempRestoreDir: File,
+        androidDirName: String,
+        packageName: String
+    ): File? {
+        val root = File(tempRestoreDir, "storage/emulated")
+        if (Shell.cmd("[ -d ${shellQuote(root.absolutePath)} ]").exec().isSuccess.not()) return null
+
+        val pathPattern = "*/Android/$androidDirName/$packageName"
+        val findResult = Shell.cmd(
+            "find ${shellQuote(root.absolutePath)} -mindepth 4 -maxdepth 4 -type d -path ${shellQuote(pathPattern)}"
+        ).exec()
+        return if (findResult.isSuccess) {
+            findResult.out.firstOrNull()?.trim()?.takeIf { it.isNotEmpty() }?.let { File(it) }
+        } else {
+            null
+        }
+    }
+
     private fun restoreGrantedRuntimePermissions(packageName: String, permissions: List<String>): List<String> {
         if (permissions.isEmpty()) return emptyList()
 
         val failures = mutableListOf<String>()
+        val currentUserId = getCurrentUserId()
         permissions.forEach { permission ->
-            val result = Shell.cmd("pm grant '$packageName' '$permission'").exec()
+            val result = Shell.cmd("pm grant --user $currentUserId ${shellQuote(packageName)} ${shellQuote(permission)}").exec()
             if (!result.isSuccess) {
                 val output = (result.err + result.out).joinToString(" ").trim()
                 failures.add(if (output.isBlank()) permission else "$permission ($output)")
