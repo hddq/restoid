@@ -420,4 +420,45 @@
     <string name="license_tap_to_expand">… (dodirni za proširenje)</string>
     <string name="cd_open_link">Otvori poveznicu</string>
     <string name="cd_copy_license">Kopiraj licencu</string>
+    <string name="time_just_now">upravo sada</string>
+    <plurals name="time_mins_ago">
+        <item quantity="few">prije %d minute</item>
+        <item quantity="other">Prije %d minuta</item>
+    </plurals>
+    <plurals name="time_hours_ago">
+        <item quantity="few">prije %d sati</item>
+        <item quantity="other">Prije %d sati</item>
+    </plurals>
+    <plurals name="time_days_ago">
+        <item quantity="few">prije %d dana</item>
+        <item quantity="other">Prije %d dana</item>
+    </plurals>
+    <plurals name="time_months_ago">
+        <item quantity="few">prije %d mjeseca</item>
+        <item quantity="other">Prije %d mjeseci</item>
+    </plurals>
+    <plurals name="time_years_ago">
+        <item quantity="few">prije %d godine</item>
+        <item quantity="other">Prije %d godina</item>
+    </plurals>
+    <string name="backup_type_permissions">Dozvole</string>
+    <string name="backup_types_for_selected_apps">Vrste sigurnosnih kopija za odabrane aplikacije</string>
+    <string name="backup_types_none">Nijedna</string>
+    <string name="backup_types_mixed">Mješovito</string>
+    <string name="restore_error_no_restore_types_selected">Nisu odabrane vrste vraćanja.</string>
+    <string name="backup_type_apk_desc">Datoteka paketa aplikacije</string>
+    <string name="backup_type_data_desc">Interni podaci aplikacije (/data/user/&lt;id&gt;)</string>
+    <string name="backup_type_device_protected_data_desc">Podaci dostupni prije otključavanja uređaja (/data/user_de/&lt;id&gt;)</string>
+    <string name="backup_type_external_data_desc">Podaci aplikacije na vanjskoj pohrani (/storage/emulated/&lt;id&gt;/Android/data)</string>
+    <string name="backup_type_obb_data_desc">Opaque Binary Blob datoteke (/storage/emulated/&lt;id&gt;/Android/obb)</string>
+    <string name="backup_type_media_data_desc">Medijske datoteke aplikacije (/storage/emulated/&lt;id&gt;/Android/media)</string>
+    <string name="backup_type_permissions_desc">Odobrene runtime dozvole</string>
+    <string name="action_enable">Omogući</string>
+    <string name="usage_stats_permission_enabled">Pristup uporabi aplikacije je omogućen</string>
+    <string name="usage_stats_permission_disabled">Potreban je pristup uporabi aplikacije</string>
+    <string name="usage_stats_permission_description">Omogućuje brži izračun veličine aplikacija tijekom izrade sigurnosnih kopija umjesto skeniranja direktorija</string>
+    <string name="metadata_restore_success">Metapodaci su uspješno vraćeni.</string>
+    <string name="action_restore_metadata">Vrati metapodatke</string>
+    <string name="repo_warning_metadata_restore_failed_title">Neuspjelo vraćanje metapodataka</string>
+    <string name="repo_warning_metadata_restore_failed">Repozitorij je uspješno dodan, ali vraćanje njegovih metapodataka (rasporedi, detaljne informacije o sigurnosnim kopijama) nije uspjelo. To obično znači da nedostaje snimka metapodataka ili je repozitorij zaključan. Kako biste pokušali ponovo, otvorite Postavke → Repozitoriji, dodirnite izbornik repozitorija i odaberite „Vrati metapodatke“.</string>
 </resources>
