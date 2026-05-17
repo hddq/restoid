@@ -400,4 +400,40 @@
     <string name="license_tap_to_expand">… (点击展开)</string>
     <string name="cd_open_link">打开链接</string>
     <string name="cd_copy_license">复制许可证</string>
+    <string name="time_just_now">刚刚</string>
+    <plurals name="time_mins_ago">
+        <item quantity="other">%d 分钟前</item>
+    </plurals>
+    <plurals name="time_hours_ago">
+        <item quantity="other">%d 小时前</item>
+    </plurals>
+    <plurals name="time_days_ago">
+        <item quantity="other">%d 天前</item>
+    </plurals>
+    <plurals name="time_months_ago">
+        <item quantity="other">%d 个月前</item>
+    </plurals>
+    <plurals name="time_years_ago">
+        <item quantity="other">%d 年前</item>
+    </plurals>
+    <string name="backup_type_permissions">权限</string>
+    <string name="backup_types_for_selected_apps">所选应用的备份类型</string>
+    <string name="backup_types_none">无</string>
+    <string name="backup_types_mixed">混合</string>
+    <string name="restore_error_no_restore_types_selected">未选择还原类型。</string>
+    <string name="backup_type_apk_desc">应用程序安装包文件</string>
+    <string name="backup_type_data_desc">内部应用数据 (/data/user/&lt;id&gt;)</string>
+    <string name="backup_type_device_protected_data_desc">设备解锁前可访问的数据 (/data/user_de/&lt;id&gt;)</string>
+    <string name="backup_type_external_data_desc">外部存储上的应用数据 (/storage/emulated/&lt;id&gt;/Android/data)</string>
+    <string name="backup_type_obb_data_desc">不透明二进制大对象文件 (/storage/emulated/&lt;id&gt;/Android/obb)</string>
+    <string name="backup_type_media_data_desc">应用媒体文件 (/storage/emulated/&lt;id&gt;/Android/media)</string>
+    <string name="backup_type_permissions_desc">已授予的运行时权限</string>
+    <string name="action_enable">启用</string>
+    <string name="usage_stats_permission_enabled">已授予应用使用情况访问权限</string>
+    <string name="usage_stats_permission_disabled">需要应用使用情况访问权限</string>
+    <string name="usage_stats_permission_description">启用后，在备份过程中无需扫描目录，即可更快地计算应用大小</string>
+    <string name="metadata_restore_success">元数据恢复成功。</string>
+    <string name="action_restore_metadata">恢复元数据</string>
+    <string name="repo_warning_metadata_restore_failed_title">元数据恢复失败</string>
+    <string name="repo_warning_metadata_restore_failed">存储库已成功添加，但恢复其元数据（计划、备份详情信息）失败。这通常意味着元数据快照缺失或存储库被锁定。如需重试，请打开“设置”→“存储库”，点击存储库菜单，然后选择“恢复元数据”。</string>
 </resources>
