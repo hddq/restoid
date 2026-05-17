@@ -400,4 +400,40 @@
     <string name="license_tap_to_expand">… (ketuk untuk perluas)</string>
     <string name="cd_open_link">Buka Tautan</string>
     <string name="cd_copy_license">Salin Lisensi</string>
+    <string name="time_just_now">baru saja</string>
+    <plurals name="time_mins_ago">
+        <item quantity="other">%d menit yang lalu</item>
+    </plurals>
+    <plurals name="time_hours_ago">
+        <item quantity="other">%d jam yang lalu</item>
+    </plurals>
+    <plurals name="time_days_ago">
+        <item quantity="other">%d hari yang lalu</item>
+    </plurals>
+    <plurals name="time_months_ago">
+        <item quantity="other">%d bulan yang lalu</item>
+    </plurals>
+    <plurals name="time_years_ago">
+        <item quantity="other">%d tahun yang lalu</item>
+    </plurals>
+    <string name="backup_type_permissions">Izin</string>
+    <string name="backup_types_for_selected_apps">Jenis cadangan untuk aplikasi yang dipilih</string>
+    <string name="backup_types_none">Tidak ada</string>
+    <string name="backup_types_mixed">Campuran</string>
+    <string name="restore_error_no_restore_types_selected">Tidak ada jenis pemulihan yang dipilih.</string>
+    <string name="backup_type_apk_desc">File paket aplikasi</string>
+    <string name="backup_type_data_desc">Data aplikasi internal (/data/user/&lt;id&gt;)</string>
+    <string name="backup_type_device_protected_data_desc">Data yang dapat diakses sebelum perangkat tidak terkunci (/data/user_de/&lt;id&gt;)</string>
+    <string name="backup_type_external_data_desc">Data aplikasi pada penyimpanan eksternal (/storage/emulated/&lt;id&gt;/Android/data)</string>
+    <string name="backup_type_obb_data_desc">File Opaque Binary Blob (/storage/emulated/&lt;id&gt;/Android/obb)</string>
+    <string name="backup_type_media_data_desc">File media aplikasi (/storage/emulated/&lt;id&gt;/Android/media)</string>
+    <string name="backup_type_permissions_desc">Izin runtime yang diberikan</string>
+    <string name="action_enable">Aktifkan</string>
+    <string name="usage_stats_permission_enabled">Akses penggunaan aplikasi diberikan</string>
+    <string name="usage_stats_permission_disabled">Akses penggunaan aplikasi diperlukan</string>
+    <string name="usage_stats_permission_description">Memungkinkan perhitungan ukuran aplikasi yang lebih cepat selama pencadangan alih-alih memindai direktori</string>
+    <string name="metadata_restore_success">Metadata berhasil dipulihkan.</string>
+    <string name="action_restore_metadata">Pulihkan metadata</string>
+    <string name="repo_warning_metadata_restore_failed_title">Pemulihan Metadata Gagal</string>
+    <string name="repo_warning_metadata_restore_failed">Repositori berhasil ditambahkan, tetapi pemulihan metadatanya (jadwal, info cadangan terperinci) gagal. Ini biasanya berarti snapshot metadata hilang atau repositori terkunci. Untuk mencoba lagi, buka Pengaturan → Repositori, ketuk menu repo, dan pilih “Pulihkan metadata”.</string>
 </resources>
