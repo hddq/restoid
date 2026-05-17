@@ -162,7 +162,7 @@ class SnapshotDetailsViewModel(
             }
 
             val finalAppInfo = appInfo ?: AppInfo(
-                name = packageName,
+                name = appMeta.appName ?: packageName,
                 packageName = packageName,
                 versionName = appMeta.versionName,
                 versionCode = appMeta.versionCode,

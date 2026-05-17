@@ -32,5 +32,6 @@ data class AppMetadata(
     val types: List<String>,
     val versionCode: Long,
     val versionName: String,
+    val appName: String? = null,
     val grantedRuntimePermissions: List<String> = emptyList()
 )

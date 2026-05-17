@@ -351,6 +351,7 @@ class BackupOperationRunner(
                 types = backupTypesList,
                 versionCode = app.versionCode,
                 versionName = app.versionName,
+                appName = app.name,
                 grantedRuntimePermissions = grantedRuntimePermissions
             )
         }
