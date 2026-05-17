@@ -267,7 +267,7 @@
     <string name="error_operation_already_running">Inna operacja jest już w toku.</string>
     <string name="summary_operation_already_running">Inna operacja jest aktualnie wykonywana. Poczekaj na jej zakończenie.</string>
     <string name="error_snapshot_not_found">Nie znaleziono migawki.</string>
-    <string name="error_repository_password_or_id_not_found">Nie znaleziono repozytorium, hasła lub ID repo.</string>
+    <string name="error_repository_password_or_id_not_found">Nie znaleziono repozytorium, hasła lub ID repo</string>
     <string name="restore_stage_restore_files">Przywracanie plików</string>
     <string name="restore_stage_processing_apps">Przetwarzanie aplikacji</string>
     <string name="restore_stage_cleanup">Sprzątanie</string>
