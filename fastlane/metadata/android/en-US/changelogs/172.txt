@@ -1,0 +1,4 @@
+* Backup and restore now work correctly on non-owner user profiles (secondary users, work profiles)
+* App names are now stored in metadata and shown in snapshot details and restore screens, even if the app isn’t installed
+* Improved Russian translations (thanks @tommynok!)
+* Added Arabic translations
