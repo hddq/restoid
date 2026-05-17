@@ -410,4 +410,45 @@
     <string name="license_tap_to_expand">… (toca para expandir)</string>
     <string name="cd_open_link">Abrir enlace</string>
     <string name="cd_copy_license">Copiar Licencia</string>
+    <string name="time_just_now">ahora mismo</string>
+    <plurals name="time_mins_ago">
+        <item quantity="one">hace %d minuto</item>
+        <item quantity="other">hace %d minutos</item>
+    </plurals>
+    <plurals name="time_hours_ago">
+        <item quantity="one">hace %d hora</item>
+        <item quantity="other">hace %d horas</item>
+    </plurals>
+    <plurals name="time_days_ago">
+        <item quantity="one">hace %d día</item>
+        <item quantity="other">hace %d días</item>
+    </plurals>
+    <plurals name="time_months_ago">
+        <item quantity="one">hace %d mes</item>
+        <item quantity="other">hace %d meses</item>
+    </plurals>
+    <plurals name="time_years_ago">
+        <item quantity="one">hace %d año</item>
+        <item quantity="other">hace %d años</item>
+    </plurals>
+    <string name="backup_type_permissions">Permisos</string>
+    <string name="backup_types_for_selected_apps">Tipos de copia de seguridad para las aplicaciones seleccionadas</string>
+    <string name="backup_types_none">Ninguno</string>
+    <string name="backup_types_mixed">Mixto</string>
+    <string name="restore_error_no_restore_types_selected">No se han seleccionado tipos de restauración.</string>
+    <string name="backup_type_apk_desc">Archivo del paquete de la aplicación</string>
+    <string name="backup_type_data_desc">Datos internos de la aplicación (/data/user/&lt;id&gt;)</string>
+    <string name="backup_type_device_protected_data_desc">Datos accesibles antes de desbloquear el dispositivo (/data/user_de/&lt;id&gt;)</string>
+    <string name="backup_type_external_data_desc">Datos de la aplicación en almacenamiento externo (/storage/emulated/&lt;id&gt;/Android/data)</string>
+    <string name="backup_type_obb_data_desc">Archivos Opaque Binary Blob (/storage/emulated/&lt;id&gt;/Android/obb)</string>
+    <string name="backup_type_media_data_desc">Archivos multimedia de la aplicación (/storage/emulated/&lt;id&gt;/Android/media)</string>
+    <string name="backup_type_permissions_desc">Permisos de tiempo de ejecución concedidos</string>
+    <string name="action_enable">Activar</string>
+    <string name="usage_stats_permission_enabled">Acceso al uso de aplicaciones concedido</string>
+    <string name="usage_stats_permission_disabled">Se requiere acceso al uso de la aplicación</string>
+    <string name="usage_stats_permission_description">Permite un cálculo más rápido del tamaño de la aplicación durante las copias de seguridad en lugar de escanear directorios</string>
+    <string name="metadata_restore_success">Metadatos restaurados correctamente.</string>
+    <string name="action_restore_metadata">Restaurar metadatos</string>
+    <string name="repo_warning_metadata_restore_failed_title">Error en la restauración de metadatos</string>
+    <string name="repo_warning_metadata_restore_failed">El repositorio se añadió correctamente, pero falló la restauración de sus metadatos (programaciones, información detallada de copias de seguridad). Esto suele significar que falta la instantánea de metadatos o que el repositorio está bloqueado. Para intentarlo de nuevo, abra Ajustes → Repositorios, toque el menú del repositorio y elija \"Restaurar metadatos\".</string>
 </resources>

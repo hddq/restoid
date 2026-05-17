@@ -400,4 +400,40 @@
     <string name="license_tap_to_expand">… (탭하여 펼치기)</string>
     <string name="cd_open_link">링크 열기</string>
     <string name="cd_copy_license">라이선스 복사</string>
+    <string name="time_just_now">방금 전</string>
+    <plurals name="time_mins_ago">
+        <item quantity="other">%d분 전</item>
+    </plurals>
+    <plurals name="time_hours_ago">
+        <item quantity="other">%d시간 전</item>
+    </plurals>
+    <plurals name="time_days_ago">
+        <item quantity="other">%d일 전</item>
+    </plurals>
+    <plurals name="time_months_ago">
+        <item quantity="other">%d개월 전</item>
+    </plurals>
+    <plurals name="time_years_ago">
+        <item quantity="other">%d년 전</item>
+    </plurals>
+    <string name="backup_type_permissions">권한</string>
+    <string name="backup_types_for_selected_apps">선택한 앱의 백업 유형</string>
+    <string name="backup_types_none">없음</string>
+    <string name="backup_types_mixed">혼합</string>
+    <string name="restore_error_no_restore_types_selected">복원 유형이 선택되지 않았습니다.</string>
+    <string name="backup_type_apk_desc">애플리케이션 패키지 파일</string>
+    <string name="backup_type_data_desc">내부 앱 데이터 (/data/user/&lt;id&gt;)</string>
+    <string name="backup_type_device_protected_data_desc">기기 잠금 해제 전 액세스 가능한 데이터 (/data/user_de/&lt;id&gt;)</string>
+    <string name="backup_type_external_data_desc">외부 저장소의 앱 데이터 (/storage/emulated/&lt;id&gt;/Android/data)</string>
+    <string name="backup_type_obb_data_desc">불투명 바이너리 블롭(OBB) 파일 (/storage/emulated/&lt;id&gt;/Android/obb)</string>
+    <string name="backup_type_media_data_desc">앱 미디어 파일 (/storage/emulated/&lt;id&gt;/Android/media)</string>
+    <string name="backup_type_permissions_desc">부여된 런타임 권한</string>
+    <string name="action_enable">사용</string>
+    <string name="usage_stats_permission_enabled">앱 사용 정보 액세스 권한 허용됨</string>
+    <string name="usage_stats_permission_disabled">앱 사용 기록 액세스 권한 필요</string>
+    <string name="usage_stats_permission_description">디렉터리 스캔 대신 백업 중 더 빠른 앱 크기 계산을 활성화합니다</string>
+    <string name="metadata_restore_success">메타데이터 복원에 성공했습니다.</string>
+    <string name="action_restore_metadata">메타데이터 복원</string>
+    <string name="repo_warning_metadata_restore_failed_title">메타데이터 복원 실패</string>
+    <string name="repo_warning_metadata_restore_failed">저장소가 성공적으로 추가되었지만 메타데이터(일정, 세부 백업 정보) 복원에 실패했습니다. 이는 일반적으로 메타데이터 스냅샷이 없거나 저장소가 잠겨 있을 때 발생합니다. 다시 시도하려면 설정 → 저장소로 이동하여 저장소 메뉴를 탭하고 \"메타데이터 복원\"을 선택하세요.</string>
 </resources>

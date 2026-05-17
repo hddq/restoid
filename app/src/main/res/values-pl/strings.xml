@@ -475,11 +475,18 @@
     <string name="backup_types_mixed">Mieszane</string>
     <string name="restore_error_no_restore_types_selected">Nie wybrano typów przywracania.</string>
     <string name="backup_type_apk_desc">Plik pakietu aplikacji</string>
-    <string name="backup_type_data_desc">Wewnętrzne dane aplikacji (/data/data)</string>
-    <string name="backup_type_device_protected_data_desc">Dane dostępne przed odblokowaniem urządzenia (/data/user_de)</string>
-    <string name="backup_type_external_data_desc">Dane aplikacji w pamięci zewnętrznej (/sdcard/Android/data)</string>
-    <string name="backup_type_obb_data_desc">Pliki zasobów (obb) (/sdcard/Android/obb)</string>
-    <string name="backup_type_media_data_desc">Pliki multimedialne aplikacji (/sdcard/Android/media)</string>
+    <string name="backup_type_data_desc">Wewnętrzne dane aplikacji (/data/user/&lt;id&gt;)</string>
+    <string name="backup_type_device_protected_data_desc">Dane dostępne przed odblokowaniem urządzenia (/data/user_de/&lt;id&gt;)</string>
+    <string name="backup_type_external_data_desc">Dane aplikacji w pamięci zewnętrznej (/storage/emulated/&lt;id&gt;/Android/data)</string>
+    <string name="backup_type_obb_data_desc">Pliki zasobów (obb) (/storage/emulated/&lt;id&gt;/Android/obb)</string>
+    <string name="backup_type_media_data_desc">Pliki multimedialne aplikacji (/storage/emulated/&lt;id&gt;/Android/media)</string>
     <string name="backup_type_permissions_desc">Przyznane uprawnienia</string>
     <string name="action_enable">Włacz</string>
+    <string name="usage_stats_permission_enabled">Przyznano dostęp do użycia aplikacji</string>
+    <string name="usage_stats_permission_disabled">Wymagany dostęp do użycia aplikacji</string>
+    <string name="usage_stats_permission_description">Umożliwia szybsze obliczanie rozmiaru aplikacji podczas tworzenia kopii zapasowych zamiast skanowania katalogów</string>
+    <string name="metadata_restore_success">Metadane zostały pomyślnie przywrócone.</string>
+    <string name="action_restore_metadata">Przywróć metadane</string>
+    <string name="repo_warning_metadata_restore_failed_title">Przywracanie metadanych nie powiodło się</string>
+    <string name="repo_warning_metadata_restore_failed">Repozytorium zostało pomyślnie dodane, ale przywrócenie jego metadanych (harmonogramy, szczegółowe informacje o kopiach zapasowych) nie powiodło się. Zazwyczaj oznacza to, że migawka metadanych jest brakująca lub repozytorium jest zablokowane. Aby spróbować ponownie, otwórz Ustawienia → Repozytoria, dotknij menu repozytorium i wybierz „Przywróć metadane”.</string>
 </resources>

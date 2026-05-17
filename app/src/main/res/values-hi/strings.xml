@@ -410,4 +410,45 @@
     <string name="license_tap_to_expand">… (विस्तार करने के लिए टैप करें)</string>
     <string name="cd_open_link">लिंक खोलें</string>
     <string name="cd_copy_license">लाइसेंस कॉपी करें</string>
+    <string name="time_just_now">अभी</string>
+    <plurals name="time_mins_ago">
+        <item quantity="one">%d मिनट पहले</item>
+        <item quantity="other">%d मिनट पहले</item>
+    </plurals>
+    <plurals name="time_hours_ago">
+        <item quantity="one">%d घंटे पहले</item>
+        <item quantity="other">%d घंटे पहले</item>
+    </plurals>
+    <plurals name="time_days_ago">
+        <item quantity="one">%d दिन पहले</item>
+        <item quantity="other">%d दिन पहले</item>
+    </plurals>
+    <plurals name="time_months_ago">
+        <item quantity="one">%d महीने पहले</item>
+        <item quantity="other">%d महीने पहले</item>
+    </plurals>
+    <plurals name="time_years_ago">
+        <item quantity="one">%d साल पहले</item>
+        <item quantity="other">%d साल पहले</item>
+    </plurals>
+    <string name="backup_type_permissions">अनुमतियाँ</string>
+    <string name="backup_types_for_selected_apps">चयनित ऐप्स के लिए बैकअप प्रकार</string>
+    <string name="backup_types_none">कोई नहीं</string>
+    <string name="backup_types_mixed">मिश्रित</string>
+    <string name="restore_error_no_restore_types_selected">कोई रिस्टोर प्रकार नहीं चुना गया।</string>
+    <string name="backup_type_apk_desc">एप्लिकेशन पैकेज फ़ाइल</string>
+    <string name="backup_type_data_desc">आंतरिक ऐप डेटा (/data/user/&lt;id&gt;)</string>
+    <string name="backup_type_device_protected_data_desc">डिवाइस अनलॉक करने से पहले एक्सेस योग्य डेटा (/data/user_de/&lt;id&gt;)</string>
+    <string name="backup_type_external_data_desc">बाहरी स्टोरेज पर ऐप डेटा (/storage/emulated/&lt;id&gt;/Android/data)</string>
+    <string name="backup_type_obb_data_desc">ओपेक बाइनरी ब्लॉब फाइलें (/storage/emulated/&lt;id&gt;/Android/obb)</string>
+    <string name="backup_type_media_data_desc">ऐप मीडिया फाइलें (/storage/emulated/&lt;id&gt;/Android/media)</string>
+    <string name="backup_type_permissions_desc">अनुमतियाँ प्रदान की गईं</string>
+    <string name="action_enable">सक्षम करें</string>
+    <string name="usage_stats_permission_enabled">ऐप उपयोग एक्सेस प्रदान किया गया</string>
+    <string name="usage_stats_permission_disabled">ऐप उपयोग का एक्सेस आवश्यक है</string>
+    <string name="usage_stats_permission_description">बैकअप के दौरान डायरेक्टरी स्कैन करने के बजाय तेज़ी से एप्लिकेशन के आकार की गणना करने में सक्षम बनाता है</string>
+    <string name="metadata_restore_success">मेटाडेटा सफलतापूर्वक रिस्टोर हो गया।</string>
+    <string name="action_restore_metadata">मेटाडेटा रिस्टोर करें</string>
+    <string name="repo_warning_metadata_restore_failed_title">मेटाडेटा रिस्टोरेशन विफल</string>
+    <string name="repo_warning_metadata_restore_failed">रिपॉजिटरी सफलतापूर्वक जोड़ दी गई, लेकिन इसका मेटाडेटा (शेड्यूल, विस्तृत बैकअप जानकारी) रिस्टोर करने में विफलता हुई। इसका आमतौर पर मतलब है कि मेटाडेटा स्नैपशॉट गायब है या रिपॉजिटरी लॉक है। पुनः प्रयास करने के लिए, सेटिंग्स → रिपॉजिटरी खोलें, रेपो मेनू पर टैप करें, और \"मेटाडेटा रिस्टोर करें\" चुनें।</string>
 </resources>
