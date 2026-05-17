@@ -400,4 +400,40 @@
     <string name="license_tap_to_expand">… (nhấn để mở rộng)</string>
     <string name="cd_open_link">Mở liên kết</string>
     <string name="cd_copy_license">Sao chép Giấy phép</string>
+    <string name="time_just_now">vừa xong</string>
+    <plurals name="time_mins_ago">
+        <item quantity="other">%d phút trước</item>
+    </plurals>
+    <plurals name="time_hours_ago">
+        <item quantity="other">%d giờ trước</item>
+    </plurals>
+    <plurals name="time_days_ago">
+        <item quantity="other">%d ngày trước</item>
+    </plurals>
+    <plurals name="time_months_ago">
+        <item quantity="other">%d tháng trước</item>
+    </plurals>
+    <plurals name="time_years_ago">
+        <item quantity="other">%d năm trước</item>
+    </plurals>
+    <string name="backup_type_permissions">Quyền</string>
+    <string name="backup_types_for_selected_apps">Các loại sao lưu cho ứng dụng đã chọn</string>
+    <string name="backup_types_none">Không có</string>
+    <string name="backup_types_mixed">Hỗn hợp</string>
+    <string name="restore_error_no_restore_types_selected">Chưa chọn loại khôi phục nào.</string>
+    <string name="backup_type_apk_desc">Tệp gói ứng dụng</string>
+    <string name="backup_type_data_desc">Dữ liệu ứng dụng nội bộ (/data/user/&lt;id&gt;)</string>
+    <string name="backup_type_device_protected_data_desc">Dữ liệu truy cập được trước khi mở khóa thiết bị (/data/user_de/&lt;id&gt;)</string>
+    <string name="backup_type_external_data_desc">Dữ liệu ứng dụng trên bộ nhớ ngoài (/storage/emulated/&lt;id&gt;/Android/data)</string>
+    <string name="backup_type_obb_data_desc">Tệp Opaque Binary Blob (/storage/emulated/&lt;id&gt;/Android/obb)</string>
+    <string name="backup_type_media_data_desc">Tệp phương tiện của ứng dụng (/storage/emulated/&lt;id&gt;/Android/media)</string>
+    <string name="backup_type_permissions_desc">Quyền truy cập thời gian chạy đã cấp</string>
+    <string name="action_enable">Bật</string>
+    <string name="usage_stats_permission_enabled">Đã cấp quyền truy cập sử dụng ứng dụng</string>
+    <string name="usage_stats_permission_disabled">Yêu cầu quyền truy cập vào mức sử dụng ứng dụng</string>
+    <string name="usage_stats_permission_description">Cho phép tính toán kích thước ứng dụng nhanh hơn trong quá trình sao lưu thay vì quét thư mục</string>
+    <string name="metadata_restore_success">Khôi phục siêu dữ liệu thành công.</string>
+    <string name="action_restore_metadata">Khôi phục siêu dữ liệu</string>
+    <string name="repo_warning_metadata_restore_failed_title">Khôi phục siêu dữ liệu thất bại</string>
+    <string name="repo_warning_metadata_restore_failed">Kho lưu trữ đã được thêm thành công, nhưng việc khôi phục siêu dữ liệu (lịch biểu, thông tin sao lưu chi tiết) đã thất bại. Điều này thường có nghĩa là ảnh chụp nhanh siêu dữ liệu bị thiếu hoặc kho lưu trữ đã bị khóa. Để thử lại, hãy mở Cài đặt → Kho lưu trữ, nhấn vào menu kho lưu trữ và chọn \"Khôi phục siêu dữ liệu\".</string>
 </resources>
