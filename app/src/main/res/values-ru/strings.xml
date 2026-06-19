@@ -427,11 +427,11 @@
     <string name="cd_open_link">Открыть</string>
     <string name="cd_copy_license">Скопировать</string>
     <string name="backup_type_apk_desc">Файл пакета приложения</string>
-    <string name="backup_type_data_desc">Внутренние данные приложения (/data/data)</string>
-    <string name="backup_type_device_protected_data_desc">Данные до разблокировки устройства (/data/user_de)</string>
-    <string name="backup_type_external_data_desc">Данные приложений на внешней памяти (/sdcard/Android/data)</string>
-    <string name="backup_type_obb_data_desc">Файлы OBB на внешней памяти (/sdcard/Android/obb)</string>
-    <string name="backup_type_media_data_desc">Медиафайлы приложений на внешней памяти (/sdcard/Android/media)</string>
+    <string name="backup_type_data_desc">Внутренние данные приложения (/data/user/&lt;id&gt;)</string>
+    <string name="backup_type_device_protected_data_desc">Данные до разблокировки устройства (/data/user_de/&lt;id&gt;)</string>
+    <string name="backup_type_external_data_desc">Данные приложений на внешней памяти (/storage/emulated/&lt;id&gt;/Android/data)</string>
+    <string name="backup_type_obb_data_desc">Файлы OBB на внешней памяти (/storage/emulated/&lt;id&gt;/Android/obb)</string>
+    <string name="backup_type_media_data_desc">Медиафайлы приложений на внешней памяти (/storage/emulated/&lt;id&gt;/Android/media)</string>
     <string name="backup_type_permissions">Разрешения</string>
     <string name="backup_type_permissions_desc">Выданные разрешения</string>
     <string name="backup_types_for_selected_apps">Типы бэкапа для выбранных приложений</string>
