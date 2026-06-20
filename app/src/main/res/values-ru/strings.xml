@@ -481,4 +481,12 @@
     <string name="repo_warning_metadata_restore_failed">Репозиторий успешно добавлен, но не удалось восстановить его метаданные (расписания, подробные сведения о бэкапах). Обычно это означает, что снимок метаданных отсутствует или репозиторий заблокирован. Чтобы повторить попытку, откройте Настройки → Репозитории, нажмите на меню репозитория и выберите «Восстановить метаданные».</string>
     <string name="screen_tasks">Задачи</string>
     <string name="topbar_tasks">Задачи</string>
+    <string name="license_restic_license" translatable="false"></string>
+    <string name="license_restoid_author" translatable="false"></string>
+    <string name="license_restoid_name" translatable="false"></string>
+    <string name="license_restic_name" translatable="false"></string>
+    <string name="license_restoid_url" translatable="false"></string>
+    <string name="license_restic_url" translatable="false"></string>
+    <string name="app_name" translatable="false"></string>
+    <string name="license_restic_author" translatable="false"></string>
 </resources>
