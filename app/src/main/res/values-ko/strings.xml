@@ -436,4 +436,12 @@
     <string name="repo_warning_metadata_restore_failed">저장소가 성공적으로 추가되었지만 메타데이터(일정, 세부 백업 정보) 복원에 실패했습니다. 이는 일반적으로 메타데이터 스냅샷이 없거나 저장소가 잠겨 있을 때 발생합니다. 다시 시도하려면 설정 → 저장소로 이동하여 저장소 메뉴를 탭하고 \"메타데이터 복원\"을 선택하세요.</string>
     <string name="screen_tasks">작업</string>
     <string name="topbar_tasks">작업</string>
+    <string name="license_restic_license" translatable="false"></string>
+    <string name="license_restoid_author" translatable="false"></string>
+    <string name="license_restoid_name" translatable="false"></string>
+    <string name="license_restic_name" translatable="false"></string>
+    <string name="license_restoid_url" translatable="false"></string>
+    <string name="license_restic_url" translatable="false"></string>
+    <string name="app_name" translatable="false"></string>
+    <string name="license_restic_author" translatable="false"></string>
 </resources>
