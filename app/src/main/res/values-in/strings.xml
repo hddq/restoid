@@ -434,4 +434,6 @@
     <string name="action_restore_metadata">Pulihkan metadata</string>
     <string name="repo_warning_metadata_restore_failed_title">Pemulihan Metadata Gagal</string>
     <string name="repo_warning_metadata_restore_failed">Repositori berhasil ditambahkan, tetapi pemulihan metadatanya (jadwal, info cadangan terperinci) gagal. Ini biasanya berarti snapshot metadata hilang atau repositori terkunci. Untuk mencoba lagi, buka Pengaturan → Repositori, ketuk menu repo, dan pilih “Pulihkan metadata”.</string>
+    <string name="screen_tasks">Tugas</string>
+    <string name="topbar_tasks">Tugas</string>
 </resources>
