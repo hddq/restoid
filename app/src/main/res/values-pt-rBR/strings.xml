@@ -449,4 +449,6 @@
     <string name="action_restore_metadata">Restaurar metadados</string>
     <string name="repo_warning_metadata_restore_failed_title">Falha na restauração de metadados</string>
     <string name="repo_warning_metadata_restore_failed">O repositório foi adicionado com sucesso, mas a restauração de seus metadados (agendamentos, informações detalhadas de backup) falhou. Isso geralmente significa que o snapshot de metadados está ausente ou o repositório está bloqueado. Para tentar novamente, abra Configurações → Repositórios, toque no menu do repositório e escolha “Restaurar metadados”.</string>
+    <string name="screen_tasks">Tarefas</string>
+    <string name="topbar_tasks">Tarefas</string>
 </resources>
