@@ -487,4 +487,6 @@
     <string name="action_restore_metadata">Przywróć metadane</string>
     <string name="repo_warning_metadata_restore_failed_title">Przywracanie metadanych nie powiodło się</string>
     <string name="repo_warning_metadata_restore_failed">Repozytorium zostało pomyślnie dodane, ale przywrócenie jego metadanych (harmonogramy, szczegółowe informacje o kopiach zapasowych) nie powiodło się. Zazwyczaj oznacza to, że migawka metadanych jest brakująca lub repozytorium jest zablokowane. Aby spróbować ponownie, otwórz Ustawienia → Repozytoria, dotknij menu repozytorium i wybierz „Przywróć metadane”.</string>
+    <string name="screen_tasks">Zadania</string>
+    <string name="topbar_tasks">Zadania</string>
 </resources>
