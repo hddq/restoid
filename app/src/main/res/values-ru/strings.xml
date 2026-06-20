@@ -44,7 +44,7 @@
     <string name="no_app_data_found_in_snapshot">Данные в снимке отсутствуют.</string>
     <string name="restore_backup_version_with_installed">Бэкап: %1$s -&gt; Установлено: %2$s</string>
     <string name="restore_backup_version_only">Бэкап: %1$s</string>
-    <string name="home_title">Restoid</string>
+    <string name="home_title" translatable="false">Restoid</string>
     <string name="run_tasks_applications">Приложения</string>
     <string name="run_tasks_backup_subtitle">Выбрано: %1$d - %2$s</string>
     <string name="run_tasks_forget_snapshots">Удалить снимки</string>
