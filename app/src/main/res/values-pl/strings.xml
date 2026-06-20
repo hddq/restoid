@@ -3,13 +3,11 @@
     <string name="app_name" translatable="false">Restoid</string>
     <string name="screen_home">Strona główna</string>
     <string name="screen_settings">Ustawienia</string>
-    <string name="screen_run_tasks">Uruchom zadania</string>
     <string name="screen_snapshot_details">Szczegóły migawki</string>
     <string name="screen_restore">Przywróć</string>
     <string name="screen_licenses">Licencje</string>
     <string name="screen_schedules">Harmonogramy</string>
     <string name="screen_operation_progress">Postęp operacji</string>
-    <string name="topbar_run_tasks">Uruchom zadania</string>
     <string name="topbar_backup_config">Konfiguracja backupu</string>
     <string name="topbar_forget_config">Zasady zapominania</string>
     <string name="topbar_check_config">Sprawdź integralność</string>
@@ -267,7 +265,7 @@
     <string name="error_operation_already_running">Inna operacja jest już w toku.</string>
     <string name="summary_operation_already_running">Inna operacja jest aktualnie wykonywana. Poczekaj na jej zakończenie.</string>
     <string name="error_snapshot_not_found">Nie znaleziono migawki.</string>
-    <string name="error_repository_password_or_id_not_found">Nie znaleziono repozytorium, hasła lub ID repo.</string>
+    <string name="error_repository_password_or_id_not_found">Nie znaleziono repozytorium, hasła lub ID repo</string>
     <string name="restore_stage_restore_files">Przywracanie plików</string>
     <string name="restore_stage_processing_apps">Przetwarzanie aplikacji</string>
     <string name="restore_stage_cleanup">Sprzątanie</string>
@@ -489,4 +487,6 @@
     <string name="action_restore_metadata">Przywróć metadane</string>
     <string name="repo_warning_metadata_restore_failed_title">Przywracanie metadanych nie powiodło się</string>
     <string name="repo_warning_metadata_restore_failed">Repozytorium zostało pomyślnie dodane, ale przywrócenie jego metadanych (harmonogramy, szczegółowe informacje o kopiach zapasowych) nie powiodło się. Zazwyczaj oznacza to, że migawka metadanych jest brakująca lub repozytorium jest zablokowane. Aby spróbować ponownie, otwórz Ustawienia → Repozytoria, dotknij menu repozytorium i wybierz „Przywróć metadane”.</string>
+    <string name="screen_tasks">Zadania</string>
+    <string name="topbar_tasks">Zadania</string>
 </resources>

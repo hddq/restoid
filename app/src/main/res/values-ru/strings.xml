@@ -2,13 +2,11 @@
 <resources>
     <string name="screen_home">Главная</string>
     <string name="screen_settings">Настройки</string>
-    <string name="screen_run_tasks">Запустить задачи</string>
     <string name="screen_snapshot_details">О снимке</string>
     <string name="screen_restore">Восстановить</string>
     <string name="screen_licenses">Лицензии</string>
     <string name="screen_schedules">Расписания</string>
     <string name="screen_operation_progress">Ход операции</string>
-    <string name="topbar_run_tasks">Запуск задач</string>
     <string name="topbar_backup_config">Настройка бэкапа</string>
     <string name="topbar_forget_config">Правила очистки</string>
     <string name="topbar_check_config">Проверка целостности</string>
@@ -427,11 +425,11 @@
     <string name="cd_open_link">Открыть</string>
     <string name="cd_copy_license">Скопировать</string>
     <string name="backup_type_apk_desc">Файл пакета приложения</string>
-    <string name="backup_type_data_desc">Внутренние данные приложения (/data/data)</string>
-    <string name="backup_type_device_protected_data_desc">Данные до разблокировки устройства (/data/user_de)</string>
-    <string name="backup_type_external_data_desc">Данные приложений на внешней памяти (/sdcard/Android/data)</string>
-    <string name="backup_type_obb_data_desc">Файлы OBB на внешней памяти (/sdcard/Android/obb)</string>
-    <string name="backup_type_media_data_desc">Медиафайлы приложений на внешней памяти (/sdcard/Android/media)</string>
+    <string name="backup_type_data_desc">Внутренние данные приложения (/data/user/&lt;id&gt;)</string>
+    <string name="backup_type_device_protected_data_desc">Данные до разблокировки устройства (/data/user_de/&lt;id&gt;)</string>
+    <string name="backup_type_external_data_desc">Данные приложений на внешней памяти (/storage/emulated/&lt;id&gt;/Android/data)</string>
+    <string name="backup_type_obb_data_desc">Файлы OBB на внешней памяти (/storage/emulated/&lt;id&gt;/Android/obb)</string>
+    <string name="backup_type_media_data_desc">Медиафайлы приложений на внешней памяти (/storage/emulated/&lt;id&gt;/Android/media)</string>
     <string name="backup_type_permissions">Разрешения</string>
     <string name="backup_type_permissions_desc">Выданные разрешения</string>
     <string name="backup_types_for_selected_apps">Типы бэкапа для выбранных приложений</string>
@@ -481,4 +479,6 @@
     <string name="restore_error_no_restore_types_selected">Не выбраны типы восстановления.</string>
     <string name="repo_warning_metadata_restore_failed_title">Ошибка восстановления метаданных</string>
     <string name="repo_warning_metadata_restore_failed">Репозиторий успешно добавлен, но не удалось восстановить его метаданные (расписания, подробные сведения о бэкапах). Обычно это означает, что снимок метаданных отсутствует или репозиторий заблокирован. Чтобы повторить попытку, откройте Настройки → Репозитории, нажмите на меню репозитория и выберите «Восстановить метаданные».</string>
+    <string name="screen_tasks">Задачи</string>
+    <string name="topbar_tasks">Задачи</string>
 </resources>

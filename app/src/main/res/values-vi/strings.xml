@@ -2,13 +2,11 @@
 <resources>
     <string name="screen_home">Trang chủ</string>
     <string name="screen_settings">Cài đặt</string>
-    <string name="screen_run_tasks">Chạy tác vụ</string>
     <string name="screen_snapshot_details">Chi tiết Snapshot</string>
     <string name="screen_restore">Khôi phục</string>
     <string name="screen_licenses">Giấy phép</string>
     <string name="screen_schedules">Lịch trình</string>
     <string name="screen_operation_progress">Tiến trình hoạt động</string>
-    <string name="topbar_run_tasks">Chạy tác vụ</string>
     <string name="topbar_backup_config">Cấu hình sao lưu</string>
     <string name="topbar_forget_config">Chính sách xóa (Forget)</string>
     <string name="topbar_check_config">Kiểm tra tính toàn vẹn</string>
@@ -436,4 +434,6 @@
     <string name="action_restore_metadata">Khôi phục siêu dữ liệu</string>
     <string name="repo_warning_metadata_restore_failed_title">Khôi phục siêu dữ liệu thất bại</string>
     <string name="repo_warning_metadata_restore_failed">Kho lưu trữ đã được thêm thành công, nhưng việc khôi phục siêu dữ liệu (lịch biểu, thông tin sao lưu chi tiết) đã thất bại. Điều này thường có nghĩa là ảnh chụp nhanh siêu dữ liệu bị thiếu hoặc kho lưu trữ đã bị khóa. Để thử lại, hãy mở Cài đặt → Kho lưu trữ, nhấn vào menu kho lưu trữ và chọn \"Khôi phục siêu dữ liệu\".</string>
+    <string name="screen_tasks">Tác vụ</string>
+    <string name="topbar_tasks">Tác vụ</string>
 </resources>

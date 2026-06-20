@@ -2,13 +2,11 @@
 <resources>
     <string name="screen_home">Accueil</string>
     <string name="screen_settings">Paramètres</string>
-    <string name="screen_run_tasks">Exécuter les tâches</string>
     <string name="screen_snapshot_details">Détails du Snapshot</string>
     <string name="screen_restore">Restaurer</string>
     <string name="screen_licenses">Licences</string>
     <string name="screen_schedules">Planifications</string>
     <string name="screen_operation_progress">Progression</string>
-    <string name="topbar_run_tasks">Exécuter les tâches</string>
     <string name="topbar_backup_config">Configuration de sauvegarde</string>
     <string name="topbar_forget_config">Règles de suppression (Forget)</string>
     <string name="topbar_check_config">Vérifier l\'intégrité</string>
@@ -451,4 +449,6 @@
     <string name="action_restore_metadata">Restaurer les métadonnées</string>
     <string name="repo_warning_metadata_restore_failed_title">Échec de la restauration des métadonnées</string>
     <string name="repo_warning_metadata_restore_failed">Le dépôt a été ajouté avec succès, mais la restauration de ses métadonnées (plannings, informations détaillées sur les sauvegardes) a échoué. Cela signifie généralement que l\'instantané de métadonnées est manquant ou que le dépôt est verrouillé. Pour réessayer, ouvrez Paramètres → Dépôts, appuyez sur le menu du dépôt et choisissez « Restaurer les métadonnées ».</string>
+    <string name="screen_tasks">Tâches</string>
+    <string name="topbar_tasks">Tâches</string>
 </resources>

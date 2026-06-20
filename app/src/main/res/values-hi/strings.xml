@@ -2,13 +2,11 @@
 <resources>
     <string name="screen_home">होम</string>
     <string name="screen_settings">सेटिंग्स</string>
-    <string name="screen_run_tasks">टास्क चलाएं</string>
     <string name="screen_snapshot_details">स्नैपशॉट विवरण</string>
     <string name="screen_restore">रीस्टोर</string>
     <string name="screen_licenses">लाइसेंस</string>
     <string name="screen_schedules">शेड्यूल</string>
     <string name="screen_operation_progress">प्रगति</string>
-    <string name="topbar_run_tasks">टास्क चलाएं</string>
     <string name="topbar_backup_config">बैकअप कॉन्फ़िगरेशन</string>
     <string name="topbar_forget_config">हटाने की नीति (Forget)</string>
     <string name="topbar_check_config">अखंडता जांच (Integrity)</string>
@@ -451,4 +449,6 @@
     <string name="action_restore_metadata">मेटाडेटा रिस्टोर करें</string>
     <string name="repo_warning_metadata_restore_failed_title">मेटाडेटा रिस्टोरेशन विफल</string>
     <string name="repo_warning_metadata_restore_failed">रिपॉजिटरी सफलतापूर्वक जोड़ दी गई, लेकिन इसका मेटाडेटा (शेड्यूल, विस्तृत बैकअप जानकारी) रिस्टोर करने में विफलता हुई। इसका आमतौर पर मतलब है कि मेटाडेटा स्नैपशॉट गायब है या रिपॉजिटरी लॉक है। पुनः प्रयास करने के लिए, सेटिंग्स → रिपॉजिटरी खोलें, रेपो मेनू पर टैप करें, और \"मेटाडेटा रिस्टोर करें\" चुनें।</string>
+    <string name="screen_tasks">कार्य</string>
+    <string name="topbar_tasks">कार्य</string>
 </resources>

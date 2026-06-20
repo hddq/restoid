@@ -2,13 +2,11 @@
 <resources>
     <string name="screen_home">Beranda</string>
     <string name="screen_settings">Pengaturan</string>
-    <string name="screen_run_tasks">Jalankan Tugas</string>
     <string name="screen_snapshot_details">Detail Snapshot</string>
     <string name="screen_restore">Pulihkan</string>
     <string name="screen_licenses">Lisensi</string>
     <string name="screen_schedules">Jadwal</string>
     <string name="screen_operation_progress">Kemajuan</string>
-    <string name="topbar_run_tasks">Jalankan Tugas</string>
     <string name="topbar_backup_config">Konfigurasi Backup</string>
     <string name="topbar_forget_config">Kebijakan Retensi (Lupakan)</string>
     <string name="topbar_check_config">Cek Integritas</string>
@@ -436,4 +434,6 @@
     <string name="action_restore_metadata">Pulihkan metadata</string>
     <string name="repo_warning_metadata_restore_failed_title">Pemulihan Metadata Gagal</string>
     <string name="repo_warning_metadata_restore_failed">Repositori berhasil ditambahkan, tetapi pemulihan metadatanya (jadwal, info cadangan terperinci) gagal. Ini biasanya berarti snapshot metadata hilang atau repositori terkunci. Untuk mencoba lagi, buka Pengaturan → Repositori, ketuk menu repo, dan pilih “Pulihkan metadata”.</string>
+    <string name="screen_tasks">Tugas</string>
+    <string name="topbar_tasks">Tugas</string>
 </resources>

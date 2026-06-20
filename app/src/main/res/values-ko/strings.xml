@@ -2,13 +2,11 @@
 <resources>
     <string name="screen_home">홈</string>
     <string name="screen_settings">설정</string>
-    <string name="screen_run_tasks">작업 실행</string>
     <string name="screen_snapshot_details">스냅샷 상세</string>
     <string name="screen_restore">복원</string>
     <string name="screen_licenses">라이선스</string>
     <string name="screen_schedules">예약</string>
     <string name="screen_operation_progress">작업 진행률</string>
-    <string name="topbar_run_tasks">작업 실행</string>
     <string name="topbar_backup_config">백업 구성</string>
     <string name="topbar_forget_config">삭제 정책 (Forget)</string>
     <string name="topbar_check_config">무결성 검사</string>
@@ -436,4 +434,6 @@
     <string name="action_restore_metadata">메타데이터 복원</string>
     <string name="repo_warning_metadata_restore_failed_title">메타데이터 복원 실패</string>
     <string name="repo_warning_metadata_restore_failed">저장소가 성공적으로 추가되었지만 메타데이터(일정, 세부 백업 정보) 복원에 실패했습니다. 이는 일반적으로 메타데이터 스냅샷이 없거나 저장소가 잠겨 있을 때 발생합니다. 다시 시도하려면 설정 → 저장소로 이동하여 저장소 메뉴를 탭하고 \"메타데이터 복원\"을 선택하세요.</string>
+    <string name="screen_tasks">작업</string>
+    <string name="topbar_tasks">작업</string>
 </resources>

@@ -2,13 +2,11 @@
 <resources>
     <string name="screen_home">Home</string>
     <string name="screen_settings">Impostazioni</string>
-    <string name="screen_run_tasks">Esegui Task</string>
     <string name="screen_snapshot_details">Dettagli Snapshot</string>
     <string name="screen_restore">Ripristina</string>
     <string name="screen_licenses">Licenze</string>
     <string name="screen_schedules">Pianificazioni</string>
     <string name="screen_operation_progress">Avanzamento</string>
-    <string name="topbar_run_tasks">Esegui Task</string>
     <string name="topbar_backup_config">Configurazione Backup</string>
     <string name="topbar_forget_config">Policy di Rimozione (Forget)</string>
     <string name="topbar_check_config">Verifica Integrità</string>
@@ -451,4 +449,6 @@
     <string name="action_restore_metadata">Ripristina metadati</string>
     <string name="repo_warning_metadata_restore_failed_title">Ripristino metadati non riuscito</string>
     <string name="repo_warning_metadata_restore_failed">Il repository è stato aggiunto correttamente, ma il ripristino dei suoi metadati (pianificazioni, informazioni dettagliate sui backup) non è riuscito. Solitamente ciò significa che l\'istantanea dei metadati manca o che il repository è bloccato. Per riprovare, apri Impostazioni → Repository, tocca il menu del repository e scegli \"Ripristina metadati\".</string>
+    <string name="screen_tasks">Attività</string>
+    <string name="topbar_tasks">Attività</string>
 </resources>

@@ -4,12 +4,10 @@
     <string name="screen_restore">Restore</string>
     <string name="screen_licenses">Licence</string>
     <string name="screen_operation_progress">Napredak Operacije</string>
-    <string name="topbar_run_tasks">Pokreni zadatke</string>
     <string name="topbar_backup_config">Konfiguracija Sigurnosne Kopije</string>
     <string name="topbar_check_config">Provjeri Integritet</string>
     <string name="cd_back">Natrag</string>
     <string name="screen_home">Početna</string>
-    <string name="screen_run_tasks">Pokreni zadatke</string>
     <string name="screen_snapshot_details">Detalji snapshota</string>
     <string name="screen_schedules">Rasporedi</string>
     <string name="topbar_forget_config">Pravila brisanja (Forget)</string>
@@ -461,4 +459,6 @@
     <string name="action_restore_metadata">Vrati metapodatke</string>
     <string name="repo_warning_metadata_restore_failed_title">Neuspjelo vraćanje metapodataka</string>
     <string name="repo_warning_metadata_restore_failed">Repozitorij je uspješno dodan, ali vraćanje njegovih metapodataka (rasporedi, detaljne informacije o sigurnosnim kopijama) nije uspjelo. To obično znači da nedostaje snimka metapodataka ili je repozitorij zaključan. Kako biste pokušali ponovo, otvorite Postavke → Repozitoriji, dodirnite izbornik repozitorija i odaberite „Vrati metapodatke“.</string>
+    <string name="screen_tasks">Zadaci</string>
+    <string name="topbar_tasks">Zadaci</string>
 </resources>
