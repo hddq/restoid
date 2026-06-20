@@ -144,7 +144,7 @@
     <string name="progress_items">Elementy</string>
     <string name="progress_size">Rozmiar</string>
     <string name="progress_processing">Przetwarzanie: </string>
-    <string name="progress_placeholder">...</string>
+    <string name="progress_placeholder" translatable="false">...</string>
     <string name="dialog_add_repository_title">Dodaj repozytorium</string>
     <string name="label_repository_type">Typ repozytorium</string>
     <string name="label_repository_specification">Specyfikacja repozytorium</string>
@@ -290,10 +290,10 @@
         <item quantity="other">Pomyślnie przetworzono %1$d aplikacji.</item>
     </plurals>
     <plurals name="restore_summary_failed">
-        <item quantity="one"> Nie udało się przywrócić %1$d aplikacji.</item>
-        <item quantity="few"> Nie udało się przywrócić %1$d aplikacji.</item>
-        <item quantity="many"> Nie udało się przywrócić %1$d aplikacji.</item>
-        <item quantity="other"> Nie udało się przywrócić %1$d aplikacji.</item>
+        <item quantity="one">Nie udało się przywrócić %1$d aplikacji.</item>
+        <item quantity="few">Nie udało się przywrócić %1$d aplikacji.</item>
+        <item quantity="many">Nie udało się przywrócić %1$d aplikacji.</item>
+        <item quantity="other">Nie udało się przywrócić %1$d aplikacji.</item>
     </plurals>
     <string name="restore_summary_details">\n\nSzczegóły:\n- %1$s</string>
     <string name="maintenance_task_unlock">Odblokuj</string>
