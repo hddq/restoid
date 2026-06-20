@@ -264,7 +264,7 @@ class MainActivity : FragmentActivity() {
                             TopAppBar(
                                 title = {
                                     val titleRes = when {
-                                        currentDestination?.route == RunTasksRoutes.Main -> R.string.topbar_run_tasks
+                                        currentDestination?.route == RunTasksRoutes.Main -> R.string.topbar_tasks
                                         currentDestination?.route == RunTasksRoutes.BackupConfig -> R.string.topbar_backup_config
                                         currentDestination?.route == RunTasksRoutes.ForgetConfig -> R.string.topbar_forget_config
                                         currentDestination?.route == RunTasksRoutes.CheckConfig -> R.string.topbar_check_config
@@ -329,9 +329,9 @@ class MainActivity : FragmentActivity() {
                         when (currentDestination?.route) {
                             Screen.Home.route -> {
                                 val isRepoReady = homeUiState.isRepoReady
-                                ExtendedFloatingActionButton(
-                                    text = { Text(stringResource(R.string.fab_run_tasks)) },
-                                    icon = { Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.fab_run_tasks)) },
+                                 ExtendedFloatingActionButton(
+                                    text = { Text(stringResource(R.string.screen_tasks)) },
+                                    icon = { Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.screen_tasks)) },
                                     onClick = { if (isRepoReady) { navController.navigate(Screen.RunTasks.route) } },
                                     containerColor = if (isRepoReady) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
                                     contentColor = if (isRepoReady) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)

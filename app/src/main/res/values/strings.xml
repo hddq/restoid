@@ -3,14 +3,14 @@
 
     <string name="screen_home">Home</string>
     <string name="screen_settings">Settings</string>
-    <string name="screen_run_tasks">Run Tasks</string>
+    <string name="screen_tasks">Tasks</string>
     <string name="screen_snapshot_details">Snapshot Details</string>
     <string name="screen_restore">Restore</string>
     <string name="screen_licenses">Licenses</string>
     <string name="screen_schedules">Schedules</string>
     <string name="screen_operation_progress">Operation Progress</string>
 
-    <string name="topbar_run_tasks">Run Tasks</string>
+    <string name="topbar_tasks">Tasks</string>
     <string name="topbar_backup_config">Backup Configuration</string>
     <string name="topbar_forget_config">Forget Policy</string>
     <string name="topbar_check_config">Check Integrity</string>
