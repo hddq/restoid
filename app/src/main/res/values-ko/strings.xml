@@ -44,7 +44,7 @@
     <string name="no_app_data_found_in_snapshot">이 스냅샷에서 앱 데이터를 찾을 수 없습니다.</string>
     <string name="restore_backup_version_with_installed">백업: %1$s -&gt; 설치됨: %2$s</string>
     <string name="restore_backup_version_only">백업: %1$s</string>
-    <string name="home_title">Restoid</string>
+    <string name="home_title" translatable="false">Restoid</string>
     <string name="run_tasks_applications">애플리케이션</string>
     <string name="run_tasks_backup_subtitle">%1$d개 앱 선택됨 - %2$s</string>
     <string name="run_tasks_forget_snapshots">스냅샷 삭제</string>
@@ -134,7 +134,7 @@
     <string name="progress_items">항목</string>
     <string name="progress_size">크기</string>
     <string name="progress_processing">처리 중:</string>
-    <string name="progress_placeholder">...</string>
+    <string name="progress_placeholder" translatable="false">...</string>
     <string name="dialog_add_repository_title">저장소 추가</string>
     <string name="label_repository_type">저장소 유형</string>
     <string name="label_repository_specification">저장소 사양</string>
@@ -144,7 +144,7 @@
     <string name="label_sftp_password">SFTP 비밀번호</string>
     <string name="label_sftp_ssh_key">SSH 키</string>
     <string name="label_sftp_private_key">SFTP SSH 개인 키</string>
-    <string name="placeholder_sftp_private_key">-----BEGIN OPENSSH PRIVATE KEY-----\n...</string>
+    <string name="placeholder_sftp_private_key" translatable="false">-----BEGIN OPENSSH PRIVATE KEY-----\n...</string>
     <string name="label_sftp_key_passphrase">SSH 키 암호(Passphrase)</string>
     <string name="label_sftp_key_passphrase_optional">SSH 키 암호 (선택사항)</string>
     <string name="dialog_sftp_trust_title">SFTP 서버 신뢰</string>
@@ -153,10 +153,10 @@
     <string name="repo_backend_local">로컬 디렉토리</string>
     <string name="repo_backend_sftp">SFTP (SSH)</string>
     <string name="repo_backend_rest">HTTP REST 서버</string>
-    <string name="repo_backend_s3">Amazon S3 / MinIO</string>
-    <string name="repo_hint_sftp">user@host:/srv/restic-repo</string>
-    <string name="repo_hint_rest">http://host:8000/</string>
-    <string name="repo_hint_s3">s3.us-east-1.amazonaws.com/bucket_name</string>
+    <string name="repo_backend_s3" translatable="false">Amazon S3 / MinIO</string>
+    <string name="repo_hint_sftp" translatable="false">user@host:/srv/restic-repo</string>
+    <string name="repo_hint_rest" translatable="false">http://host:8000/</string>
+    <string name="repo_hint_s3" translatable="false">s3.us-east-1.amazonaws.com/bucket_name</string>
     <string name="label_path">경로</string>
     <string name="placeholder_select_directory">디렉토리를 선택하세요…</string>
     <string name="cd_select_folder">폴더 선택</string>
