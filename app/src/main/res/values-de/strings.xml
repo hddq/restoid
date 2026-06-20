@@ -449,4 +449,6 @@
     <string name="action_restore_metadata">Metadaten wiederherstellen</string>
     <string name="repo_warning_metadata_restore_failed_title">Wiederherstellung der Metadaten fehlgeschlagen</string>
     <string name="repo_warning_metadata_restore_failed">Das Repository wurde erfolgreich hinzugefügt, aber die Wiederherstellung der Metadaten (Zeitpläne, detaillierte Backup-Infos) schlug fehl. Dies bedeutet normalerweise, dass der Metadaten-Snapshot fehlt oder das Repository gesperrt ist. Um es erneut zu versuchen, öffnen Sie Einstellungen → Repositories, tippen Sie auf das Repository-Menü und wählen Sie „Metadaten wiederherstellen“.</string>
+    <string name="screen_tasks">Aufgaben</string>
+    <string name="topbar_tasks">Aufgaben</string>
 </resources>
