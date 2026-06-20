@@ -44,7 +44,7 @@
     <string name="no_app_data_found_in_snapshot">इस स्नैपशॉट में कोई ऐप डेटा नहीं मिला।</string>
     <string name="restore_backup_version_with_installed">बैकअप: %1$s -&gt; स्थापित: %2$s</string>
     <string name="restore_backup_version_only">बैकअप: %1$s</string>
-    <string name="home_title">Restoid</string>
+    <string name="home_title" translatable="false">Restoid</string>
     <string name="run_tasks_applications">एप्लिकेशन</string>
     <string name="run_tasks_backup_subtitle">%1$d ऐप्स चुने गए - %2$s</string>
     <string name="run_tasks_forget_snapshots">स्नैपशॉट हटाएं</string>
@@ -137,7 +137,7 @@
     <string name="progress_items">आइटम</string>
     <string name="progress_size">आकार</string>
     <string name="progress_processing">प्रसंस्करण:</string>
-    <string name="progress_placeholder">..।</string>
+    <string name="progress_placeholder" translatable="false">..।</string>
     <string name="dialog_add_repository_title">रिपॉजिटरी जोड़ें</string>
     <string name="label_repository_type">रिपॉजिटरी प्रकार</string>
     <string name="label_repository_specification">रिपॉजिटरी विशिष्टता</string>
@@ -147,7 +147,7 @@
     <string name="label_sftp_password">SFTP पासवर्ड</string>
     <string name="label_sftp_ssh_key">SSH कुंजी</string>
     <string name="label_sftp_private_key">SFTP SSH निजी कुंजी</string>
-    <string name="placeholder_sftp_private_key">-----BEGIN OPENSSH PRIVATE KEY-----\n..।</string>
+    <string name="placeholder_sftp_private_key" translatable="false">-----BEGIN OPENSSH PRIVATE KEY-----\n..।</string>
     <string name="label_sftp_key_passphrase">SSH कुंजी पासफ़्रेज़</string>
     <string name="label_sftp_key_passphrase_optional">SSH कुंजी पासफ़्रेज़ (वैकल्पिक)</string>
     <string name="dialog_sftp_trust_title">SFTP सर्वर पर विश्वास करें</string>
@@ -156,10 +156,10 @@
     <string name="repo_backend_local">स्थानीय निर्देशिका (Local directory)</string>
     <string name="repo_backend_sftp">SFTP (SSH)</string>
     <string name="repo_backend_rest">HTTP REST सर्वर</string>
-    <string name="repo_backend_s3">Amazon S3 / MinIO</string>
-    <string name="repo_hint_sftp">user@host:/srv/restic-repo</string>
-    <string name="repo_hint_rest">http://host:8000/</string>
-    <string name="repo_hint_s3">s3.us-east-1.amazonaws.com/bucket_name</string>
+    <string name="repo_backend_s3" translatable="false">Amazon S3 / MinIO</string>
+    <string name="repo_hint_sftp" translatable="false">user@host:/srv/restic-repo</string>
+    <string name="repo_hint_rest" translatable="false">http://host:8000/</string>
+    <string name="repo_hint_s3" translatable="false">s3.us-east-1.amazonaws.com/bucket_name</string>
     <string name="label_path">पथ (Path)</string>
     <string name="placeholder_select_directory">एक निर्देशिका चुनें…</string>
     <string name="cd_select_folder">फ़ोल्डर चुनें</string>
