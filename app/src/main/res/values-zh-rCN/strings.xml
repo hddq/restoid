@@ -44,7 +44,7 @@
     <string name="no_app_data_found_in_snapshot">此快照中未找到应用数据。</string>
     <string name="restore_backup_version_with_installed">备份: %1$s -&gt; 已安装: %2$s</string>
     <string name="restore_backup_version_only">备份: %1$s</string>
-    <string name="home_title">Restoid</string>
+    <string name="home_title" translatable="false">Restoid</string>
     <string name="run_tasks_applications">应用程序</string>
     <string name="run_tasks_backup_subtitle">已选择 %1$d 个应用 - %2$s</string>
     <string name="run_tasks_forget_snapshots">移除快照</string>
@@ -134,7 +134,7 @@
     <string name="progress_items">项目</string>
     <string name="progress_size">大小</string>
     <string name="progress_processing">正在处理:</string>
-    <string name="progress_placeholder">...</string>
+    <string name="progress_placeholder" translatable="false">...</string>
     <string name="dialog_add_repository_title">添加存储库</string>
     <string name="label_repository_type">存储库类型</string>
     <string name="label_repository_specification">存储库规范</string>
@@ -144,7 +144,7 @@
     <string name="label_sftp_password">SFTP 密码</string>
     <string name="label_sftp_ssh_key">SSH 密钥</string>
     <string name="label_sftp_private_key">SFTP SSH 私钥</string>
-    <string name="placeholder_sftp_private_key">-----BEGIN OPENSSH PRIVATE KEY-----\n...</string>
+    <string name="placeholder_sftp_private_key" translatable="false">-----BEGIN OPENSSH PRIVATE KEY-----\n...</string>
     <string name="label_sftp_key_passphrase">SSH 密钥密码短语 (Passphrase)</string>
     <string name="label_sftp_key_passphrase_optional">SSH 密钥密码短语 (可选)</string>
     <string name="dialog_sftp_trust_title">信任 SFTP 服务器</string>
@@ -153,10 +153,10 @@
     <string name="repo_backend_local">本地目录</string>
     <string name="repo_backend_sftp">SFTP (SSH)</string>
     <string name="repo_backend_rest">HTTP REST 服务器</string>
-    <string name="repo_backend_s3">Amazon S3 / MinIO</string>
-    <string name="repo_hint_sftp">user@host:/srv/restic-repo</string>
-    <string name="repo_hint_rest">http://host:8000/</string>
-    <string name="repo_hint_s3">s3.us-east-1.amazonaws.com/bucket_name</string>
+    <string name="repo_backend_s3" translatable="false">Amazon S3 / MinIO</string>
+    <string name="repo_hint_sftp" translatable="false">user@host:/srv/restic-repo</string>
+    <string name="repo_hint_rest" translatable="false">http://host:8000/</string>
+    <string name="repo_hint_s3" translatable="false">s3.us-east-1.amazonaws.com/bucket_name</string>
     <string name="label_path">路径</string>
     <string name="placeholder_select_directory">选择一个目录…</string>
     <string name="cd_select_folder">选择文件夹</string>
