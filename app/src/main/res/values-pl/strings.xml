@@ -45,7 +45,7 @@
     <string name="no_app_data_found_in_snapshot">Nie znaleziono danych aplikacji w tej migawce.</string>
     <string name="restore_backup_version_with_installed">Backup: %1$s -&gt; Zainstalowano: %2$s</string>
     <string name="restore_backup_version_only">Backup: %1$s</string>
-    <string name="home_title">Restoid</string>
+    <string name="home_title" translatable="false">Restoid</string>
     <string name="run_tasks_applications">Aplikacje</string>
     <string name="run_tasks_backup_subtitle">Wybrano %1$d aplikacji - %2$s</string>
     <string name="run_tasks_forget_snapshots">Zapomnij migawki</string>
@@ -143,7 +143,7 @@
     <string name="progress_elapsed">Upłynęło</string>
     <string name="progress_items">Elementy</string>
     <string name="progress_size">Rozmiar</string>
-    <string name="progress_processing">Przetwarzanie: </string>
+    <string name="progress_processing">Przetwarzanie:</string>
     <string name="progress_placeholder" translatable="false">...</string>
     <string name="dialog_add_repository_title">Dodaj repozytorium</string>
     <string name="label_repository_type">Typ repozytorium</string>
@@ -154,7 +154,7 @@
     <string name="label_sftp_password">Hasło SFTP</string>
     <string name="label_sftp_ssh_key">Klucz SSH</string>
     <string name="label_sftp_private_key">Klucz prywatny SSH SFTP</string>
-    <string name="placeholder_sftp_private_key">-----BEGIN OPENSSH PRIVATE KEY-----\n...</string>
+    <string name="placeholder_sftp_private_key" translatable="false">-----BEGIN OPENSSH PRIVATE KEY-----\n...</string>
     <string name="label_sftp_key_passphrase">Hasło klucza SSH</string>
     <string name="label_sftp_key_passphrase_optional">Hasło klucza SSH (opcjonalne)</string>
     <string name="dialog_sftp_trust_title">Zaufaj serwerowi SFTP</string>
@@ -163,10 +163,10 @@
     <string name="repo_backend_local">Lokalny katalog</string>
     <string name="repo_backend_sftp">SFTP (SSH)</string>
     <string name="repo_backend_rest">Serwer HTTP REST</string>
-    <string name="repo_backend_s3">Amazon S3 / MinIO</string>
-    <string name="repo_hint_sftp">user@host:/srv/restic-repo</string>
-    <string name="repo_hint_rest">http://host:8000/</string>
-    <string name="repo_hint_s3">s3.us-east-1.amazonaws.com/bucket_name</string>
+    <string name="repo_backend_s3" translatable="false">Amazon S3 / MinIO</string>
+    <string name="repo_hint_sftp" translatable="false">user@host:/srv/restic-repo</string>
+    <string name="repo_hint_rest" translatable="false">http://host:8000/</string>
+    <string name="repo_hint_s3" translatable="false">s3.us-east-1.amazonaws.com/bucket_name</string>
     <string name="label_path">Ścieżka</string>
     <string name="placeholder_select_directory">Wybierz katalog…</string>
     <string name="cd_select_folder">Wybierz folder</string>
@@ -282,7 +282,7 @@
     <string name="restore_failure_data_restore">%1$s: Przywracanie danych nie powiodło się lub jest niekompletne.</string>
     <string name="restore_failure_permissions_app_not_installed">%1$s: Nie udało się przywrócić uprawnień, bo aplikacja nie jest zainstalowana.</string>
     <string name="restore_failure_permissions_partial">%1$s: Nie udało się przywrócić niektórych uprawnień: %2$s</string>
-    <string name="restore_summary_finished_in">Przywracanie zakończone w %1$s. </string>
+    <string name="restore_summary_finished_in">Przywracanie zakończone w %1$s.</string>
     <plurals name="restore_summary_processed">
         <item quantity="one">Pomyślnie przetworzono %1$d aplikację.</item>
         <item quantity="few">Pomyślnie przetworzono %1$d aplikacje.</item>
