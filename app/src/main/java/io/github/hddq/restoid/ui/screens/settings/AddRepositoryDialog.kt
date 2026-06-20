@@ -2,6 +2,8 @@ package io.github.hddq.restoid.ui.screens.settings
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Visibility
@@ -99,7 +101,10 @@ fun AddRepositoryDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.dialog_add_repository_title)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 ExposedDropdownMenuBox(
                     expanded = backendExpanded,
                     onExpandedChange = { if (!isBusy) backendExpanded = !backendExpanded }
