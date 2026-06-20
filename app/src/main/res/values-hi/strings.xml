@@ -451,12 +451,4 @@
     <string name="repo_warning_metadata_restore_failed">रिपॉजिटरी सफलतापूर्वक जोड़ दी गई, लेकिन इसका मेटाडेटा (शेड्यूल, विस्तृत बैकअप जानकारी) रिस्टोर करने में विफलता हुई। इसका आमतौर पर मतलब है कि मेटाडेटा स्नैपशॉट गायब है या रिपॉजिटरी लॉक है। पुनः प्रयास करने के लिए, सेटिंग्स → रिपॉजिटरी खोलें, रेपो मेनू पर टैप करें, और \"मेटाडेटा रिस्टोर करें\" चुनें।</string>
     <string name="screen_tasks">कार्य</string>
     <string name="topbar_tasks">कार्य</string>
-    <string name="license_restic_license" translatable="false"></string>
-    <string name="license_restoid_author" translatable="false"></string>
-    <string name="license_restoid_name" translatable="false"></string>
-    <string name="license_restic_name" translatable="false"></string>
-    <string name="license_restoid_url" translatable="false"></string>
-    <string name="license_restic_url" translatable="false"></string>
-    <string name="app_name" translatable="false"></string>
-    <string name="license_restic_author" translatable="false"></string>
 </resources>

@@ -415,42 +415,4 @@
     <string name="settings_error_invalid_environment_variables">Variáveis de ambiente inválidas.</string>
     <string name="settings_error_invalid_environment_line">Formato de variável de ambiente inválido na linha %1$d. Use CHAVE=valor.</string>
     <string name="settings_error_invalid_environment_name">Nome de variável de ambiente inválido: %1$s</string>
-    <string name="license_restic_license" translatable="false"></string>
-    <string name="placeholder_sftp_private_key" translatable="false"></string>
-    <string name="restic_stage_backing_up"></string>
-    <string name="restic_summary_added"></string>
-    <string name="restic_failure_unlock_repository"></string>
-    <string name="restic_unknown"></string>
-    <string name="license_restoid_author" translatable="false"></string>
-    <string name="license_restoid_name" translatable="false"></string>
-    <string name="license_restic_name" translatable="false"></string>
-    <string name="license_restoid_url" translatable="false"></string>
-    <string name="repo_backend_s3" translatable="false"></string>
-    <string name="repo_hint_s3" translatable="false"></string>
-    <string name="restic_failure_load_snapshots"></string>
-    <plurals name="restic_summary_changed_files">
-    </plurals>
-    <string name="restic_stage_finishing"></string>
-    <plurals name="restic_summary_new_files">
-    </plurals>
-    <string name="action_trust"></string>
-    <string name="repo_error_sftp_key_storage_failed"></string>
-    <string name="section_general"></string>
-    <string name="repo_error_s3_bucket_not_found"></string>
-    <string name="repo_hint_rest" translatable="false"></string>
-    <string name="restic_failure_check_repository"></string>
-    <string name="home_title" translatable="false"></string>
-    <plurals name="maintenance_summary_removed_snapshots">
-    </plurals>
-    <string name="license_restic_url" translatable="false"></string>
-    <string name="progress_placeholder" translatable="false"></string>
-    <string name="repo_error_sftp_known_hosts_setup_failed"></string>
-    <string name="restic_error_binary_corrupted"></string>
-    <string name="app_name" translatable="false"></string>
-    <string name="restic_stage_restoring_files"></string>
-    <string name="restic_unknown_version"></string>
-    <string name="restic_failure_restore_snapshot"></string>
-    <string name="repo_hint_sftp" translatable="false"></string>
-    <string name="license_restic_author" translatable="false"></string>
-    <string name="section_conditions"></string>
 </resources>

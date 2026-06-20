@@ -451,12 +451,4 @@
     <string name="repo_warning_metadata_restore_failed">Le dépôt a été ajouté avec succès, mais la restauration de ses métadonnées (plannings, informations détaillées sur les sauvegardes) a échoué. Cela signifie généralement que l\'instantané de métadonnées est manquant ou que le dépôt est verrouillé. Pour réessayer, ouvrez Paramètres → Dépôts, appuyez sur le menu du dépôt et choisissez « Restaurer les métadonnées ».</string>
     <string name="screen_tasks">Tâches</string>
     <string name="topbar_tasks">Tâches</string>
-    <string name="license_restic_license" translatable="false"></string>
-    <string name="license_restoid_author" translatable="false"></string>
-    <string name="license_restoid_name" translatable="false"></string>
-    <string name="license_restic_name" translatable="false"></string>
-    <string name="license_restoid_url" translatable="false"></string>
-    <string name="license_restic_url" translatable="false"></string>
-    <string name="app_name" translatable="false"></string>
-    <string name="license_restic_author" translatable="false"></string>
 </resources>

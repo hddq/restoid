@@ -451,12 +451,4 @@
     <string name="repo_warning_metadata_restore_failed">Il repository è stato aggiunto correttamente, ma il ripristino dei suoi metadati (pianificazioni, informazioni dettagliate sui backup) non è riuscito. Solitamente ciò significa che l\'istantanea dei metadati manca o che il repository è bloccato. Per riprovare, apri Impostazioni → Repository, tocca il menu del repository e scegli \"Ripristina metadati\".</string>
     <string name="screen_tasks">Attività</string>
     <string name="topbar_tasks">Attività</string>
-    <string name="license_restic_license" translatable="false"></string>
-    <string name="license_restoid_author" translatable="false"></string>
-    <string name="license_restoid_name" translatable="false"></string>
-    <string name="license_restic_name" translatable="false"></string>
-    <string name="license_restoid_url" translatable="false"></string>
-    <string name="license_restic_url" translatable="false"></string>
-    <string name="app_name" translatable="false"></string>
-    <string name="license_restic_author" translatable="false"></string>
 </resources>

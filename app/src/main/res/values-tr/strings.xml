@@ -451,12 +451,4 @@
     <string name="repo_warning_metadata_restore_failed">Depo başarıyla eklendi ancak meta verileri (zamanlamalar, ayrıntılı yedekleme bilgileri) geri yüklenemedi. Bu durum genellikle meta veri anlık görüntüsünün eksik olduğu veya deponun kilitli olduğu anlamına gelir. Yeniden denemek için Ayarlar → Depolar\'ı açın, depo menüsüne dokunun ve \"Meta verileri geri yükle\" seçeneğini belirleyin.</string>
     <string name="screen_tasks">Görevler</string>
     <string name="topbar_tasks">Görevler</string>
-    <string name="license_restic_license" translatable="false"></string>
-    <string name="license_restoid_author" translatable="false"></string>
-    <string name="license_restoid_name" translatable="false"></string>
-    <string name="license_restic_name" translatable="false"></string>
-    <string name="license_restoid_url" translatable="false"></string>
-    <string name="license_restic_url" translatable="false"></string>
-    <string name="app_name" translatable="false"></string>
-    <string name="license_restic_author" translatable="false"></string>
 </resources>
