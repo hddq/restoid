@@ -44,7 +44,7 @@
     <string name="no_app_data_found_in_snapshot">Keine App-Daten in diesem Snapshot gefunden.</string>
     <string name="restore_backup_version_with_installed">Backup: %1$s -&gt; Installiert: %2$s</string>
     <string name="restore_backup_version_only">Backup: %1$s</string>
-    <string name="home_title">Restoid</string>
+    <string name="home_title" translatable="false">Restoid</string>
     <string name="run_tasks_applications">Anwendungen</string>
     <string name="run_tasks_backup_subtitle">%1$d Apps ausgewählt - %2$s</string>
     <string name="run_tasks_forget_snapshots">Snapshots vergessen</string>
@@ -137,7 +137,7 @@
     <string name="progress_items">Elemente</string>
     <string name="progress_size">Größe</string>
     <string name="progress_processing">Verarbeite:</string>
-    <string name="progress_placeholder">...</string>
+    <string name="progress_placeholder" translatable="false">...</string>
     <string name="dialog_add_repository_title">Repository hinzufügen</string>
     <string name="label_repository_type">Repository-Typ</string>
     <string name="label_repository_specification">Repository-Spezifikation</string>
@@ -147,7 +147,7 @@
     <string name="label_sftp_password">SFTP-Passwort</string>
     <string name="label_sftp_ssh_key">SSH-Key</string>
     <string name="label_sftp_private_key">SFTP SSH Private Key</string>
-    <string name="placeholder_sftp_private_key">-----BEGIN OPENSSH PRIVATE KEY-----\n...</string>
+    <string name="placeholder_sftp_private_key" translatable="false">-----BEGIN OPENSSH PRIVATE KEY-----\n...</string>
     <string name="label_sftp_key_passphrase">SSH-Key Passphrase</string>
     <string name="label_sftp_key_passphrase_optional">SSH-Key Passphrase (optional)</string>
     <string name="dialog_sftp_trust_title">SFTP-Server vertrauen</string>
@@ -156,10 +156,10 @@
     <string name="repo_backend_local">Lokales Verzeichnis</string>
     <string name="repo_backend_sftp">SFTP (SSH)</string>
     <string name="repo_backend_rest">HTTP REST Server</string>
-    <string name="repo_backend_s3">Amazon S3 / MinIO</string>
-    <string name="repo_hint_sftp">user@host:/srv/restic-repo</string>
-    <string name="repo_hint_rest">http://host:8000/</string>
-    <string name="repo_hint_s3">s3.us-east-1.amazonaws.com/bucket_name</string>
+    <string name="repo_backend_s3" translatable="false">Amazon S3 / MinIO</string>
+    <string name="repo_hint_sftp" translatable="false">user@host:/srv/restic-repo</string>
+    <string name="repo_hint_rest" translatable="false">http://host:8000/</string>
+    <string name="repo_hint_s3" translatable="false">s3.us-east-1.amazonaws.com/bucket_name</string>
     <string name="label_path">Pfad</string>
     <string name="placeholder_select_directory">Wähle ein Verzeichnis…</string>
     <string name="cd_select_folder">Ordner auswählen</string>
