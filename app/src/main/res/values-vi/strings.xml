@@ -436,12 +436,4 @@
     <string name="repo_warning_metadata_restore_failed">Kho lưu trữ đã được thêm thành công, nhưng việc khôi phục siêu dữ liệu (lịch biểu, thông tin sao lưu chi tiết) đã thất bại. Điều này thường có nghĩa là ảnh chụp nhanh siêu dữ liệu bị thiếu hoặc kho lưu trữ đã bị khóa. Để thử lại, hãy mở Cài đặt → Kho lưu trữ, nhấn vào menu kho lưu trữ và chọn \"Khôi phục siêu dữ liệu\".</string>
     <string name="screen_tasks">Tác vụ</string>
     <string name="topbar_tasks">Tác vụ</string>
-    <string name="license_restic_license" translatable="false"></string>
-    <string name="license_restoid_author" translatable="false"></string>
-    <string name="license_restoid_name" translatable="false"></string>
-    <string name="license_restic_name" translatable="false"></string>
-    <string name="license_restoid_url" translatable="false"></string>
-    <string name="license_restic_url" translatable="false"></string>
-    <string name="app_name" translatable="false"></string>
-    <string name="license_restic_author" translatable="false"></string>
 </resources>

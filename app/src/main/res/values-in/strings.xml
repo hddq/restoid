@@ -436,12 +436,4 @@
     <string name="repo_warning_metadata_restore_failed">Repositori berhasil ditambahkan, tetapi pemulihan metadatanya (jadwal, info cadangan terperinci) gagal. Ini biasanya berarti snapshot metadata hilang atau repositori terkunci. Untuk mencoba lagi, buka Pengaturan → Repositori, ketuk menu repo, dan pilih “Pulihkan metadata”.</string>
     <string name="screen_tasks">Tugas</string>
     <string name="topbar_tasks">Tugas</string>
-    <string name="license_restic_license" translatable="false"></string>
-    <string name="license_restoid_author" translatable="false"></string>
-    <string name="license_restoid_name" translatable="false"></string>
-    <string name="license_restic_name" translatable="false"></string>
-    <string name="license_restoid_url" translatable="false"></string>
-    <string name="license_restic_url" translatable="false"></string>
-    <string name="app_name" translatable="false"></string>
-    <string name="license_restic_author" translatable="false"></string>
 </resources>
