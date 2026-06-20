@@ -17,6 +17,8 @@ class ScheduleWorker(
     private val app = applicationContext as RestoidApplication
 
     override suspend fun doWork(): Result {
+        app.repositoriesRepository.loadRepositories()
+
         // Show an initial foreground notification for the schedule worker itself
         val initialProgress = OperationProgress(stageTitle = applicationContext.getString(R.string.progress_initializing))
         setForeground(createForegroundInfo(initialProgress))
@@ -53,13 +55,14 @@ class ScheduleWorker(
             scheduleName = schedule.name
         )
         val enqueued = app.operationWorkRepository.enqueueRunTasks(workRequest)
-
-        if (enqueued) {
-            // Update last run timestamp
-            val updatedSchedule = schedule.copy(lastRunTimestamp = System.currentTimeMillis())
-            schedules[scheduleIndex] = updatedSchedule
-            app.metadataRepository.saveSchedules(repoId, schedules)
+        if (!enqueued) {
+            return Result.retry()
         }
+
+        // Update last run timestamp
+        val updatedSchedule = schedule.copy(lastRunTimestamp = System.currentTimeMillis())
+        schedules[scheduleIndex] = updatedSchedule
+        app.metadataRepository.saveSchedules(repoId, schedules)
 
         return Result.success()
     }

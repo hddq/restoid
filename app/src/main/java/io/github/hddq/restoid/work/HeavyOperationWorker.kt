@@ -24,6 +24,8 @@ class HeavyOperationWorker(
     private val emitMonitor = Any()
 
     override suspend fun doWork(): Result {
+        app.repositoriesRepository.loadRepositories()
+
         val operationType = OperationWorkContract.parseOperationType(
             inputData.getString(OperationWorkContract.INPUT_OPERATION_TYPE)
         ) ?: return Result.failure()
