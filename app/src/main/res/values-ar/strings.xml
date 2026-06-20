@@ -487,4 +487,6 @@
     <string name="topbar_schedules">الجداول الزمنية</string>
     <string name="topbar_add_schedule">إضافة جدول زمني</string>
     <string name="topbar_edit_schedule">تعديل الجدول الزمني</string>
+    <string name="screen_tasks">المهام</string>
+    <string name="topbar_tasks">المهام</string>
 </resources>
