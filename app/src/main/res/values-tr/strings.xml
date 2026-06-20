@@ -44,7 +44,7 @@
     <string name="no_app_data_found_in_snapshot">Bu anlık görüntüde hiçbir uygulama verisi bulunamadı.</string>
     <string name="restore_backup_version_with_installed">Yedek: %1$s -&gt; Yüklü: %2$s</string>
     <string name="restore_backup_version_only">Yedek: %1$s</string>
-    <string name="home_title">Restoid</string>
+    <string name="home_title" translatable="false">Restoid</string>
     <string name="run_tasks_applications">Uygulamalar</string>
     <string name="run_tasks_backup_subtitle">%1$d uygulama seçildi - %2$s</string>
     <string name="run_tasks_forget_snapshots">Anlık Görüntüleri Unut</string>
@@ -137,7 +137,7 @@
     <string name="progress_items">Öğeler</string>
     <string name="progress_size">Boyut</string>
     <string name="progress_processing">İşleniyor:</string>
-    <string name="progress_placeholder">...</string>
+    <string name="progress_placeholder" translatable="false">...</string>
     <string name="dialog_add_repository_title">Depo Ekle</string>
     <string name="label_repository_type">Depo türü</string>
     <string name="label_repository_specification">Depo belirtimi</string>
@@ -147,7 +147,7 @@
     <string name="label_sftp_password">SFTP parolası</string>
     <string name="label_sftp_ssh_key">SSH anahtarı</string>
     <string name="label_sftp_private_key">SFTP SSH özel anahtarı</string>
-    <string name="placeholder_sftp_private_key">-----BEGIN OPENSSH PRIVATE KEY-----\n...</string>
+    <string name="placeholder_sftp_private_key" translatable="false">-----BEGIN OPENSSH PRIVATE KEY-----\n...</string>
     <string name="label_sftp_key_passphrase">SSH anahtarı parolası</string>
     <string name="label_sftp_key_passphrase_optional">SSH anahtarı parolası (isteğe bağlı)</string>
     <string name="dialog_sftp_trust_title">SFTP sunucusuna güven</string>
@@ -156,10 +156,10 @@
     <string name="repo_backend_local">Yerel dizin</string>
     <string name="repo_backend_sftp">SFTP (SSH)</string>
     <string name="repo_backend_rest">HTTP REST sunucusu</string>
-    <string name="repo_backend_s3">Amazon S3 / MinIO</string>
-    <string name="repo_hint_sftp">kullanici@host:/srv/restic-repo</string>
-    <string name="repo_hint_rest">http://host:8000/</string>
-    <string name="repo_hint_s3">s3.us-east-1.amazonaws.com/bucket_adi</string>
+    <string name="repo_backend_s3" translatable="false">Amazon S3 / MinIO</string>
+    <string name="repo_hint_sftp" translatable="false">kullanici@host:/srv/restic-repo</string>
+    <string name="repo_hint_rest" translatable="false">http://host:8000/</string>
+    <string name="repo_hint_s3" translatable="false">s3.us-east-1.amazonaws.com/bucket_adi</string>
     <string name="label_path">Yol</string>
     <string name="placeholder_select_directory">Bir dizin seçin…</string>
     <string name="cd_select_folder">Klasör Seç</string>
