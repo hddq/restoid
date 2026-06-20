@@ -1,0 +1,4 @@
+* Rename "Run Tasks" screen and FAB to "Tasks"
+* Make screens scrollable to prevent UI overflow on smaller displays
+* Improved schedule reliability
+* Improved Russian and Portuguese translations (thanks @Bodriyar and @SantosSi!)
