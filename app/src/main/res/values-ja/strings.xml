@@ -427,4 +427,6 @@
     <string name="preset_1_month">1か月</string>
     <string name="license_unknown_author">不明</string>
     <string name="license_no_link_available">リンクなし</string>
+    <string name="screen_tasks">タスク</string>
+    <string name="topbar_tasks">タスク</string>
 </resources>
