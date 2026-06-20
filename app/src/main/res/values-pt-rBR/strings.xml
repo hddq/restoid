@@ -451,4 +451,12 @@
     <string name="repo_warning_metadata_restore_failed">O repositório foi adicionado com sucesso, mas a restauração de seus metadados (agendamentos, informações detalhadas de backup) falhou. Isso geralmente significa que o snapshot de metadados está ausente ou o repositório está bloqueado. Para tentar novamente, abra Configurações → Repositórios, toque no menu do repositório e escolha “Restaurar metadados”.</string>
     <string name="screen_tasks">Tarefas</string>
     <string name="topbar_tasks">Tarefas</string>
+    <string name="license_restic_license" translatable="false"></string>
+    <string name="license_restoid_author" translatable="false"></string>
+    <string name="license_restoid_name" translatable="false"></string>
+    <string name="license_restic_name" translatable="false"></string>
+    <string name="license_restoid_url" translatable="false"></string>
+    <string name="license_restic_url" translatable="false"></string>
+    <string name="app_name" translatable="false"></string>
+    <string name="license_restic_author" translatable="false"></string>
 </resources>
