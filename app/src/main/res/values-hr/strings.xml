@@ -459,4 +459,6 @@
     <string name="action_restore_metadata">Vrati metapodatke</string>
     <string name="repo_warning_metadata_restore_failed_title">Neuspjelo vraćanje metapodataka</string>
     <string name="repo_warning_metadata_restore_failed">Repozitorij je uspješno dodan, ali vraćanje njegovih metapodataka (rasporedi, detaljne informacije o sigurnosnim kopijama) nije uspjelo. To obično znači da nedostaje snimka metapodataka ili je repozitorij zaključan. Kako biste pokušali ponovo, otvorite Postavke → Repozitoriji, dodirnite izbornik repozitorija i odaberite „Vrati metapodatke“.</string>
+    <string name="screen_tasks">Zadaci</string>
+    <string name="topbar_tasks">Zadaci</string>
 </resources>
