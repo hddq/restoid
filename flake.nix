@@ -46,7 +46,7 @@
         platformVersions = [ "36" ];
         buildToolsVersions = [ "36.0.0" ];
         abiVersions = [ "arm64-v8a" "x86_64" ];
-        includeEmulator = false;
+        includeEmulator = true;
         includeSystemImages = false;
         includeNDK = true;
         ndkVersions = [ ndkVersion ];
