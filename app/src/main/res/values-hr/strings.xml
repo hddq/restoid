@@ -44,7 +44,7 @@
     <string name="no_app_data_found_in_snapshot">U ovom snapshotu nisu pronađeni podaci aplikacije.</string>
     <string name="restore_backup_version_with_installed">Backup: %1$s -&gt; Instalirano: %2$s</string>
     <string name="restore_backup_version_only">Backup: %1$s</string>
-    <string name="home_title">Restoid</string>
+    <string name="home_title" translatable="false">Restoid</string>
     <string name="run_tasks_applications">Aplikacije</string>
     <string name="run_tasks_backup_subtitle">Odabrano %1$d aplikacija - %2$s</string>
     <string name="run_tasks_forget_snapshots">Ukloni snapshotove</string>
@@ -140,7 +140,7 @@
     <string name="progress_items">Stavke</string>
     <string name="progress_size">Veličina</string>
     <string name="progress_processing">Obrađujem:</string>
-    <string name="progress_placeholder">...</string>
+    <string name="progress_placeholder" translatable="false">...</string>
     <string name="dialog_add_repository_title">Dodaj repozitorij</string>
     <string name="label_repository_type">Vrsta repozitorija</string>
     <string name="label_repository_specification">Specifikacija repozitorija</string>
@@ -150,7 +150,7 @@
     <string name="label_sftp_password">SFTP lozinka</string>
     <string name="label_sftp_ssh_key">SSH ključ</string>
     <string name="label_sftp_private_key">SFTP SSH privatni ključ</string>
-    <string name="placeholder_sftp_private_key">-----BEGIN OPENSSH PRIVATE KEY-----\n...</string>
+    <string name="placeholder_sftp_private_key" translatable="false">-----BEGIN OPENSSH PRIVATE KEY-----\n...</string>
     <string name="label_sftp_key_passphrase">Passphrase SSH ključa</string>
     <string name="label_sftp_key_passphrase_optional">Passphrase SSH ključa (opcionalno)</string>
     <string name="dialog_sftp_trust_title">Vjeruj SFTP serveru</string>
@@ -159,10 +159,10 @@
     <string name="repo_backend_local">Lokalni direktorij</string>
     <string name="repo_backend_sftp">SFTP (SSH)</string>
     <string name="repo_backend_rest">HTTP REST server</string>
-    <string name="repo_backend_s3">Amazon S3 / MinIO</string>
-    <string name="repo_hint_sftp">user@host:/srv/restic-repo</string>
-    <string name="repo_hint_rest">http://host:8000/</string>
-    <string name="repo_hint_s3">s3.us-east-1.amazonaws.com/ime_bucketa</string>
+    <string name="repo_backend_s3" translatable="false">Amazon S3 / MinIO</string>
+    <string name="repo_hint_sftp" translatable="false">user@host:/srv/restic-repo</string>
+    <string name="repo_hint_rest" translatable="false">http://host:8000/</string>
+    <string name="repo_hint_s3" translatable="false">s3.us-east-1.amazonaws.com/ime_bucketa</string>
     <string name="label_path">Putanja</string>
     <string name="placeholder_select_directory">Odaberi direktorij…</string>
     <string name="cd_select_folder">Odaberi mapu</string>
