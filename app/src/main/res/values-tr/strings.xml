@@ -2,13 +2,11 @@
 <resources>
     <string name="screen_home">Ana Sayfa</string>
     <string name="screen_settings">Ayarlar</string>
-    <string name="screen_run_tasks">Görevleri Çalıştır</string>
     <string name="screen_snapshot_details">Anlık Görüntü Detayları</string>
     <string name="screen_restore">Geri Yükle</string>
     <string name="screen_licenses">Lisanslar</string>
     <string name="screen_schedules">Zamanlamalar</string>
     <string name="screen_operation_progress">İşlem İlerlemesi</string>
-    <string name="topbar_run_tasks">Görevleri Çalıştır</string>
     <string name="topbar_backup_config">Yedekleme Yapılandırması</string>
     <string name="topbar_forget_config">İlkeyi Unut</string>
     <string name="topbar_check_config">Bütünlüğü Denetle</string>

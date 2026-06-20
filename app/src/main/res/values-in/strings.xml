@@ -2,13 +2,11 @@
 <resources>
     <string name="screen_home">Beranda</string>
     <string name="screen_settings">Pengaturan</string>
-    <string name="screen_run_tasks">Jalankan Tugas</string>
     <string name="screen_snapshot_details">Detail Snapshot</string>
     <string name="screen_restore">Pulihkan</string>
     <string name="screen_licenses">Lisensi</string>
     <string name="screen_schedules">Jadwal</string>
     <string name="screen_operation_progress">Kemajuan</string>
-    <string name="topbar_run_tasks">Jalankan Tugas</string>
     <string name="topbar_backup_config">Konfigurasi Backup</string>
     <string name="topbar_forget_config">Kebijakan Retensi (Lupakan)</string>
     <string name="topbar_check_config">Cek Integritas</string>

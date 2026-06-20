@@ -3,13 +3,11 @@
     <string name="app_name" translatable="false">Restoid</string>
     <string name="screen_home">Strona główna</string>
     <string name="screen_settings">Ustawienia</string>
-    <string name="screen_run_tasks">Uruchom zadania</string>
     <string name="screen_snapshot_details">Szczegóły migawki</string>
     <string name="screen_restore">Przywróć</string>
     <string name="screen_licenses">Licencje</string>
     <string name="screen_schedules">Harmonogramy</string>
     <string name="screen_operation_progress">Postęp operacji</string>
-    <string name="topbar_run_tasks">Uruchom zadania</string>
     <string name="topbar_backup_config">Konfiguracja backupu</string>
     <string name="topbar_forget_config">Zasady zapominania</string>
     <string name="topbar_check_config">Sprawdź integralność</string>

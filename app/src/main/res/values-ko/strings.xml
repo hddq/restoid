@@ -2,13 +2,11 @@
 <resources>
     <string name="screen_home">홈</string>
     <string name="screen_settings">설정</string>
-    <string name="screen_run_tasks">작업 실행</string>
     <string name="screen_snapshot_details">스냅샷 상세</string>
     <string name="screen_restore">복원</string>
     <string name="screen_licenses">라이선스</string>
     <string name="screen_schedules">예약</string>
     <string name="screen_operation_progress">작업 진행률</string>
-    <string name="topbar_run_tasks">작업 실행</string>
     <string name="topbar_backup_config">백업 구성</string>
     <string name="topbar_forget_config">삭제 정책 (Forget)</string>
     <string name="topbar_check_config">무결성 검사</string>

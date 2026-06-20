@@ -2,13 +2,11 @@
 <resources>
     <string name="screen_home">Trang chủ</string>
     <string name="screen_settings">Cài đặt</string>
-    <string name="screen_run_tasks">Chạy tác vụ</string>
     <string name="screen_snapshot_details">Chi tiết Snapshot</string>
     <string name="screen_restore">Khôi phục</string>
     <string name="screen_licenses">Giấy phép</string>
     <string name="screen_schedules">Lịch trình</string>
     <string name="screen_operation_progress">Tiến trình hoạt động</string>
-    <string name="topbar_run_tasks">Chạy tác vụ</string>
     <string name="topbar_backup_config">Cấu hình sao lưu</string>
     <string name="topbar_forget_config">Chính sách xóa (Forget)</string>
     <string name="topbar_check_config">Kiểm tra tính toàn vẹn</string>

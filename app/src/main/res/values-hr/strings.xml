@@ -4,12 +4,10 @@
     <string name="screen_restore">Restore</string>
     <string name="screen_licenses">Licence</string>
     <string name="screen_operation_progress">Napredak Operacije</string>
-    <string name="topbar_run_tasks">Pokreni zadatke</string>
     <string name="topbar_backup_config">Konfiguracija Sigurnosne Kopije</string>
     <string name="topbar_check_config">Provjeri Integritet</string>
     <string name="cd_back">Natrag</string>
     <string name="screen_home">Početna</string>
-    <string name="screen_run_tasks">Pokreni zadatke</string>
     <string name="screen_snapshot_details">Detalji snapshota</string>
     <string name="screen_schedules">Rasporedi</string>
     <string name="topbar_forget_config">Pravila brisanja (Forget)</string>

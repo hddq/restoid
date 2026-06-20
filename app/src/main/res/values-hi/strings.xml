@@ -2,13 +2,11 @@
 <resources>
     <string name="screen_home">होम</string>
     <string name="screen_settings">सेटिंग्स</string>
-    <string name="screen_run_tasks">टास्क चलाएं</string>
     <string name="screen_snapshot_details">स्नैपशॉट विवरण</string>
     <string name="screen_restore">रीस्टोर</string>
     <string name="screen_licenses">लाइसेंस</string>
     <string name="screen_schedules">शेड्यूल</string>
     <string name="screen_operation_progress">प्रगति</string>
-    <string name="topbar_run_tasks">टास्क चलाएं</string>
     <string name="topbar_backup_config">बैकअप कॉन्फ़िगरेशन</string>
     <string name="topbar_forget_config">हटाने की नीति (Forget)</string>
     <string name="topbar_check_config">अखंडता जांच (Integrity)</string>

@@ -461,7 +461,6 @@
     <string name="repo_warning_metadata_restore_failed_title">فشل استعادة البيانات الوصفية</string>
     <string name="screen_settings">الإعدادات</string>
     <string name="screen_operation_progress">تقدم العملية</string>
-    <string name="topbar_run_tasks">تشغيل المهام</string>
     <string name="topbar_open_source_licenses">تراخيص المصادر المفتوحة</string>
     <string name="fab_start_restore">بدء الاستعادة</string>
     <string name="operation_restore">استعادة</string>
@@ -480,7 +479,6 @@
     <string name="action_discard">تجاهل</string>
     <string name="maintenance_keep_last">الاحتفاظ بآخر</string>
     <string name="open_source_licenses">تراخيص المصادر المفتوحة</string>
-    <string name="screen_run_tasks">تشغيل المهام</string>
     <string name="screen_snapshot_details">تفاصيل اللقطة</string>
     <string name="screen_restore">استعادة</string>
     <string name="screen_schedules">الجداول الزمنية</string>

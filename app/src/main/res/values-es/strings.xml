@@ -2,13 +2,11 @@
 <resources>
     <string name="screen_home">Inicio</string>
     <string name="screen_settings">Ajustes</string>
-    <string name="screen_run_tasks">Ejecutar tareas</string>
     <string name="screen_snapshot_details">Detalles del Snapshot</string>
     <string name="screen_restore">Restaurar</string>
     <string name="screen_licenses">Licencias</string>
     <string name="screen_schedules">Horarios</string>
     <string name="screen_operation_progress">Progreso</string>
-    <string name="topbar_run_tasks">Ejecutar tareas</string>
     <string name="topbar_backup_config">Configuración de Backup</string>
     <string name="topbar_forget_config">Política de eliminación</string>
     <string name="topbar_check_config">Comprobar integridad</string>

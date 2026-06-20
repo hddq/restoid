@@ -2,13 +2,11 @@
 <resources>
     <string name="screen_home">ホーム</string>
     <string name="screen_settings">設定</string>
-    <string name="screen_run_tasks">タスクを実行</string>
     <string name="screen_snapshot_details">スナップショットの詳細</string>
     <string name="screen_restore">復元</string>
     <string name="screen_licenses">ライセンス</string>
     <string name="screen_schedules">スケジュール</string>
     <string name="screen_operation_progress">操作の進捗</string>
-    <string name="topbar_run_tasks">タスクを実行</string>
     <string name="topbar_backup_config">バックアップ設定</string>
     <string name="topbar_forget_config">ポリシーを削除</string>
     <string name="topbar_check_config">整合性を確認</string>

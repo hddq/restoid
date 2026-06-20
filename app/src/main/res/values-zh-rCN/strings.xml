@@ -2,13 +2,11 @@
 <resources>
     <string name="screen_home">主页</string>
     <string name="screen_settings">设置</string>
-    <string name="screen_run_tasks">运行任务</string>
     <string name="screen_snapshot_details">快照详情</string>
     <string name="screen_restore">恢复</string>
     <string name="screen_licenses">许可证</string>
     <string name="screen_schedules">定时任务</string>
     <string name="screen_operation_progress">操作进度</string>
-    <string name="topbar_run_tasks">运行任务</string>
     <string name="topbar_backup_config">备份配置</string>
     <string name="topbar_forget_config">移除策略</string>
     <string name="topbar_check_config">完整性检查</string>
