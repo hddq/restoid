@@ -479,4 +479,6 @@
     <string name="restore_error_no_restore_types_selected">Не выбраны типы восстановления.</string>
     <string name="repo_warning_metadata_restore_failed_title">Ошибка восстановления метаданных</string>
     <string name="repo_warning_metadata_restore_failed">Репозиторий успешно добавлен, но не удалось восстановить его метаданные (расписания, подробные сведения о бэкапах). Обычно это означает, что снимок метаданных отсутствует или репозиторий заблокирован. Чтобы повторить попытку, откройте Настройки → Репозитории, нажмите на меню репозитория и выберите «Восстановить метаданные».</string>
+    <string name="screen_tasks">Задачи</string>
+    <string name="topbar_tasks">Задачи</string>
 </resources>
