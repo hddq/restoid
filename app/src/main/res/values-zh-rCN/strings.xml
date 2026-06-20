@@ -436,4 +436,12 @@
     <string name="repo_warning_metadata_restore_failed">存储库已成功添加，但恢复其元数据（计划、备份详情信息）失败。这通常意味着元数据快照缺失或存储库被锁定。如需重试，请打开“设置”→“存储库”，点击存储库菜单，然后选择“恢复元数据”。</string>
     <string name="screen_tasks">任务</string>
     <string name="topbar_tasks">任务</string>
+    <string name="license_restic_license" translatable="false"></string>
+    <string name="license_restoid_author" translatable="false"></string>
+    <string name="license_restoid_name" translatable="false"></string>
+    <string name="license_restic_name" translatable="false"></string>
+    <string name="license_restoid_url" translatable="false"></string>
+    <string name="license_restic_url" translatable="false"></string>
+    <string name="app_name" translatable="false"></string>
+    <string name="license_restic_author" translatable="false"></string>
 </resources>
