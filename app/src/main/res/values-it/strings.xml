@@ -2,14 +2,14 @@
 <resources>
     <string name="screen_home">Home</string>
     <string name="screen_settings">Impostazioni</string>
-    <string name="screen_snapshot_details">Dettagli Snapshot</string>
+    <string name="screen_snapshot_details">Dettagli snapshot</string>
     <string name="screen_restore">Ripristina</string>
     <string name="screen_licenses">Licenze</string>
     <string name="screen_schedules">Pianificazioni</string>
     <string name="screen_operation_progress">Avanzamento</string>
-    <string name="topbar_backup_config">Configurazione Backup</string>
+    <string name="topbar_backup_config">Configurazione backup</string>
     <string name="topbar_forget_config">Policy di Rimozione (Forget)</string>
-    <string name="topbar_check_config">Verifica Integrità</string>
+    <string name="topbar_check_config">Verifica integrità</string>
     <string name="topbar_schedules">Pianificazioni</string>
     <string name="topbar_add_schedule">Aggiungi Pianificazione</string>
     <string name="topbar_edit_schedule">Modifica Pianificazione</string>
