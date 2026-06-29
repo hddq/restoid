@@ -12,6 +12,7 @@ concurrency:
 
 jobs:
   build-debug:
+    if: github.head_ref != 'weblate'
     runs-on: ubuntu-latest
     env:
       JAVA_VERSION: "21"
