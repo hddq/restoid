@@ -1,0 +1,62 @@
+name: Android Debug CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+concurrency:
+  group: android-debug-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-debug:
+    runs-on: ubuntu-latest
+    env:
+      JAVA_VERSION: "21"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: '.go-version'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android NDK
+        run: |
+          set -euo pipefail
+          NDK_VER=$(sed -n -E 's/.*ndkVersion = "(.*)".*/\1/p' app/build.gradle.kts | tr -d ' ')
+          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;$NDK_VER"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/$NDK_VER" >> "$GITHUB_ENV"
+
+      - name: Verify Android NDK toolchain
+        run: |
+          set -euo pipefail
+          "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/clang" --version
+
+      - name: Build restic binaries
+        run: |
+          set -euo pipefail
+          ./scripts/build_restic.sh
+
+      - name: Set up Gradle cache
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Build debug APKs
+        run: |
+          set -euo pipefail
+          ./gradlew --no-daemon clean assembleDebug
