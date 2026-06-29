@@ -37,7 +37,6 @@ import io.github.hddq.restoid.ui.restore.RestoreTypes
 import io.github.hddq.restoid.ui.restore.RestoreViewModel
 import io.github.hddq.restoid.ui.restore.RestoreViewModelFactory
 import io.github.hddq.restoid.ui.shared.TaskRow
-import io.github.hddq.restoid.ui.theme.Orange
 
 @Composable
 fun RestoreScreen(navController: NavController, snapshotId: String?, modifier: Modifier = Modifier) {
@@ -303,7 +302,7 @@ private fun RestoreAppListItem(
                 color = if (isEnabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
             )
 
-            val versionColor = if (detail.isDowngrade) Orange else MaterialTheme.colorScheme.onSurfaceVariant
+            val versionColor = if (detail.isDowngrade) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
             val versionText = if (detail.isInstalled) {
                 stringResource(
                     R.string.restore_backup_version_with_installed,
