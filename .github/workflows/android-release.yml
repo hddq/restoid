@@ -34,6 +34,7 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: '.go-version'
+          cache-dependency-path: 'restic/go.sum'
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
