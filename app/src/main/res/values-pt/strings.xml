@@ -415,4 +415,33 @@
     <string name="settings_error_invalid_environment_variables">Variáveis de ambiente inválidas.</string>
     <string name="settings_error_invalid_environment_line">Formato de variável de ambiente inválido na linha %1$d. Use CHAVE=valor.</string>
     <string name="settings_error_invalid_environment_name">Nome de variável de ambiente inválido: %1$s</string>
+    <string name="repo_error_sftp_known_hosts_setup_failed">Falha ao preparar o armazenamento de hosts conhecidos SSH.</string>
+    <string name="repo_error_sftp_key_storage_failed">Falha ao preparar o armazenamento da chave privada SSH.</string>
+    <string name="repo_error_s3_bucket_not_found">Bucket S3 não encontrado</string>
+    <string name="action_trust">Confiar</string>
+    <string name="restic_unknown_version">Versão desconhecida</string>
+    <string name="restic_unknown">desconhecido</string>
+    <string name="restic_error_binary_corrupted">Binário corrompido ou inválido</string>
+    <string name="restic_failure_load_snapshots">Falha ao carregar instantâneos</string>
+    <string name="restic_failure_check_repository">Falha ao verificar o repositório</string>
+    <string name="restic_failure_unlock_repository">Falha ao desbloquear o repositório</string>
+    <string name="restic_failure_restore_snapshot">Falha ao restaurar o instantâneo</string>
+    <string name="restic_stage_restoring_files">A restaurar ficheiros…</string>
+    <string name="restic_stage_backing_up">A efetuar cópia de segurança…</string>
+    <string name="restic_stage_finishing">A terminar…</string>
+    <string name="restic_summary_added">Adicionado %1$s (%2$s, %3$s) em %4$s.</string>
+    <plurals name="restic_summary_new_files">
+        <item quantity="one">%1$d novo ficheiro</item>
+        <item quantity="other">%1$d ficheiros novos</item>
+    </plurals>
+    <plurals name="restic_summary_changed_files">
+        <item quantity="one">%1$d ficheiro alterado</item>
+        <item quantity="other">%1$d ficheiros alterados</item>
+    </plurals>
+    <plurals name="maintenance_summary_removed_snapshots">
+        <item quantity="one">Removidos %1$d instantâneos.</item>
+        <item quantity="other">Removidos %1$d instantâneos.</item>
+    </plurals>
+    <string name="section_general">Geral</string>
+    <string name="section_conditions">Condições</string>
 </resources>

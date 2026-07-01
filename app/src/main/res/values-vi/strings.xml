@@ -44,7 +44,7 @@
     <string name="no_app_data_found_in_snapshot">Không tìm thấy dữ liệu ứng dụng trong snapshot này.</string>
     <string name="restore_backup_version_with_installed">Bản sao lưu: %1$s -&gt; Đã cài đặt: %2$s</string>
     <string name="restore_backup_version_only">Bản sao lưu: %1$s</string>
-    <string name="home_title">Restoid</string>
+    <string name="home_title" translatable="false">Restoid</string>
     <string name="run_tasks_applications">Các ứng dụng</string>
     <string name="run_tasks_backup_subtitle">Đã chọn %1$d ứng dụng - %2$s</string>
     <string name="run_tasks_forget_snapshots">Xóa Snapshots</string>
@@ -134,7 +134,7 @@
     <string name="progress_items">Mục</string>
     <string name="progress_size">Kích thước</string>
     <string name="progress_processing">Đang xử lý:</string>
-    <string name="progress_placeholder">...</string>
+    <string name="progress_placeholder" translatable="false">...</string>
     <string name="dialog_add_repository_title">Thêm kho lưu trữ</string>
     <string name="label_repository_type">Loại kho lưu trữ</string>
     <string name="label_repository_specification">Đặc tả kho lưu trữ</string>
@@ -144,7 +144,7 @@
     <string name="label_sftp_password">Mật khẩu SFTP</string>
     <string name="label_sftp_ssh_key">Khóa SSH</string>
     <string name="label_sftp_private_key">Khóa riêng SSH SFTP</string>
-    <string name="placeholder_sftp_private_key">-----BEGIN OPENSSH PRIVATE KEY-----\n...</string>
+    <string name="placeholder_sftp_private_key" translatable="false">-----BEGIN OPENSSH PRIVATE KEY-----\n...</string>
     <string name="label_sftp_key_passphrase">Mật khẩu khóa SSH (Passphrase)</string>
     <string name="label_sftp_key_passphrase_optional">Mật khẩu khóa SSH (Tùy chọn)</string>
     <string name="dialog_sftp_trust_title">Tin cậy máy chủ SFTP</string>
@@ -153,10 +153,10 @@
     <string name="repo_backend_local">Thư mục cục bộ</string>
     <string name="repo_backend_sftp">SFTP (SSH)</string>
     <string name="repo_backend_rest">Máy chủ HTTP REST</string>
-    <string name="repo_backend_s3">Amazon S3 / MinIO</string>
-    <string name="repo_hint_sftp">user@host:/srv/restic-repo</string>
-    <string name="repo_hint_rest">http://host:8000/</string>
-    <string name="repo_hint_s3">s3.us-east-1.amazonaws.com/bucket_name</string>
+    <string name="repo_backend_s3" translatable="false">Amazon S3 / MinIO</string>
+    <string name="repo_hint_sftp" translatable="false">user@host:/srv/restic-repo</string>
+    <string name="repo_hint_rest" translatable="false">http://host:8000/</string>
+    <string name="repo_hint_s3" translatable="false">s3.us-east-1.amazonaws.com/bucket_name</string>
     <string name="label_path">Đường dẫn</string>
     <string name="placeholder_select_directory">Chọn một thư mục…</string>
     <string name="cd_select_folder">Chọn Thư mục</string>
