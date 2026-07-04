@@ -434,4 +434,39 @@
     <string name="repo_warning_metadata_restore_failed">Depo başarıyla eklendi ancak meta verileri (zamanlamalar, ayrıntılı yedekleme bilgileri) geri yüklenemedi. Bu durum genellikle meta veri anlık görüntüsünün eksik olduğu veya deponun kilitli olduğu anlamına gelir. Yeniden denemek için Ayarlar → Depolar\'ı açın, depo menüsüne dokunun ve \"Meta verileri geri yükle\" seçeneğini belirleyin.</string>
     <string name="screen_tasks">Görevler</string>
     <string name="topbar_tasks">Görevler</string>
+    <string name="run_tasks_custom_directories">Özel Dizinler</string>
+    <string name="run_tasks_custom_directories_subtitle_none">Dizin seçilmedi</string>
+    <string name="run_tasks_custom_directories_subtitle_count">%1$d dizin seçildi</string>
+    <string name="action_add_directory">Dizin Ekle</string>
+    <string name="title_custom_directories">Özel Dizinler</string>
+    <string name="custom_directories_description">Yedeklemeye dahil etmek için cihazınızdaki özel dizinleri seçin.</string>
+    <string name="error_cannot_backup_repo_to_itself">Yedekleme için deponun kendisi bir özel dizin olarak eklenemez.</string>
+    <plurals name="backed_up_items_count">
+        <item quantity="one">Yedeklendi (%1$d):</item>
+        <item quantity="other">Yedeklendi (%1$d):</item>
+    </plurals>
+    <plurals name="custom_directories_count">
+        <item quantity="one">Özel Dizin (%1$d):</item>
+        <item quantity="other">Özel Dizinler (%1$d):</item>
+    </plurals>
+    <plurals name="snapshot_backed_up_custom_directories_count">
+        <item quantity="one">Yedeklenen Özel Dizin (%1$d)</item>
+        <item quantity="other">Yedeklenen Özel Dizinler (%1$d)</item>
+    </plurals>
+    <string name="backup_error_no_files_selected_for_items">Seçilen ögeler için yedeklenecek dosya bulunamadı.</string>
+    <plurals name="backup_summary_success_items">
+        <item quantity="one">Yedeklenen öge sayısı: %1$d.</item>
+        <item quantity="other">Yedeklenen öge sayısı: %1$d.</item>
+    </plurals>
+    <string name="error_no_items_selected">Hiçbir öge seçilmedi.</string>
+    <string name="summary_no_items_selected">Hiçbir öge seçilmedi.</string>
+    <string name="restore_error_no_items_selected">Geri yükleme için hiçbir öge seçilmedi.</string>
+    <string name="restore_stage_processing_template_apps">[%1$d/%2$d] Uygulamalar işleniyor</string>
+    <string name="restore_stage_processing_template_custom_directories">[%1$d/%2$d] Özel Dizinler işleniyor</string>
+    <string name="restore_stage_processing_custom_directories">Özel Dizinler işleniyor…</string>
+    <string name="restore_failure_custom_directory">Özel dizin geri yüklenemedi: %1$s</string>
+    <plurals name="restore_summary_processed_items">
+        <item quantity="one">Başarıyla işlenen öge sayısı: %1$d.</item>
+        <item quantity="other">Başarıyla işlenen öge sayısı: %1$d.</item>
+    </plurals>
 </resources>
