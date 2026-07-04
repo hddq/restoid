@@ -246,15 +246,9 @@
     <string name="backup_stage_preparing">[%1$d/%2$d] バックアップを準備中…</string>
     <string name="backup_stage_running">[%1$d/%2$d] アプリをバックアップ中…</string>
     <string name="backup_stage_finalizing">[%1$d/%2$d] バックアップを完了中…</string>
-    <string name="backup_error_no_files_selected">選択されたアプリにバックアップするファイルが見つかりません。</string>
     <string name="backup_error_command_failed_with_code">Resticコマンドが終了コード %1$d で失敗しました。</string>
     <string name="backup_warning_metadata_not_saved">警告: バックアップメタデータファイルをローカルに保存できませんでした。</string>
-    <plurals name="backup_summary_success">
-        <item quantity="other">%1$d個のアプリをバックアップしました。</item>
-    </plurals>
     <string name="error_fatal_with_message">致命的なエラーが発生しました: %1$s</string>
-    <string name="error_no_apps_selected">アプリが選択されていません。</string>
-    <string name="summary_no_apps_selected">アプリは選択されていませんでした。</string>
     <string name="error_no_backup_types_selected">バックアップタイプが選択されていません。</string>
     <string name="summary_no_backup_types_selected">バックアップの種類が選択されていません。</string>
     <string name="error_restic_not_installed">Resticがインストールされていません。</string>
@@ -327,7 +321,6 @@
     <string name="license_project_website_label">プロジェクトウェブサイト: %1$s</string>
     <string name="cd_open_link">リンクを開く</string>
     <string name="repo_warning_metadata_restore_failed">リポジトリは正常に追加されましたが、そのメタデータ（スケジュール、バックアップ詳細情報）の復元に失敗しました。これは通常、メタデータスナップショットが存在しないか、リポジトリがロックされていることを意味します。再試行するには、[設定] → [リポジトリ] を開き、リポジトリメニューをタップして「メタデータを復元」を選択してください。</string>
-    <string name="restore_stage_processing_template">[%1$d/%2$d] アプリを処理中</string>
     <string name="restore_failure_install_commit">%1$s: インストールのコミットに失敗しました: %2$s</string>
     <string name="maintenance_task_forget">削除</string>
     <string name="maintenance_stage_running_task">[%1$d/%2$d] \'%3$s\' を実行中…</string>
@@ -365,12 +358,6 @@
     <string name="repo_warning_metadata_restore_failed_title">メタデータの復元に失敗しました</string>
     <string name="restore_failure_permissions_app_not_installed">%1$s: アプリがインストールされていないため、権限を復元できませんでした。</string>
     <string name="restore_summary_finished_in">復元が %1$s で完了しました。</string>
-    <plurals name="restore_summary_processed">
-        <item quantity="other">%1$d 個のアプリを正常に処理しました。</item>
-    </plurals>
-    <plurals name="restore_summary_failed">
-        <item quantity="other">%1$d 個のアプリの復元に失敗しました。</item>
-    </plurals>
     <string name="home_open_needed_message">リポジトリは閉じられています。スナップショットを読み込むには開いてください。</string>
     <string name="action_enter_rest_credentials_again">REST認証情報を再入力</string>
     <string name="action_enter_s3_credentials_again">S3認証情報を再入力</string>
@@ -407,7 +394,6 @@
     <string name="restore_failure_permissions_partial">%1$s: 一部の権限の復元に失敗しました: %2$s</string>
     <string name="maintenance_task_unlock">ロック解除</string>
     <string name="restore_error_preflight_failed">復元前チェックに失敗しました。</string>
-    <string name="restore_error_no_apps_selected">復元するアプリが選択されていません。</string>
     <string name="restore_error_no_restore_types_selected">復元タイプが選択されていません。</string>
     <string name="restore_error_password_not_found">リポジトリのパスワードが見つかりません。</string>
     <string name="unit_hours">時間</string>

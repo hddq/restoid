@@ -222,7 +222,6 @@
     <string name="app_unlock_prompt_subtitle">Use sua impressão digital ou bloqueio de tela para continuar</string>
     <string name="repository_id_short">ID: %1$s…</string>
     <string name="cd_more_options">Mais opções</string>
-    <string name="summary_no_apps_selected">Nenhuma app foi selecionada.</string>
     <string name="summary_restic_binary_not_installed">Binário do Restic não está instalado.</string>
     <string name="error_sftp_password_not_found_for_repository">Credenciais SFTP do repositório não encontradas.</string>
     <string name="error_rest_credentials_not_found_for_repository">Credenciais REST do repositório não encontradas.</string>
@@ -233,11 +232,9 @@
     <string name="restore_stage_restore_files">Restaurar Ficheiros</string>
     <string name="restore_stage_processing_apps">A processar Apps</string>
     <string name="restore_error_preflight_failed">Verificações pré-restauração falharam.</string>
-    <string name="restore_error_no_apps_selected">Nenhuma app selecionada para a restauração.</string>
     <string name="restore_error_password_not_found">Palavra-passe do repositório não encontrada.</string>
     <string name="restore_error_no_files_found">Nenhum ficheiro encontrado no snapshot para as apps selecionadas.</string>
     <string name="restore_error_command_failed">Comando de restauração do restic falhou.</string>
-    <string name="restore_stage_processing_template">[%1$d/%2$d] A processar Apps</string>
     <string name="restore_failure_install_commit">%1$s: Commit de instalação falhou: %2$s</string>
     <string name="restore_failure_write_apk_splits">%1$s: Falha ao gravar splits do APK.</string>
     <string name="restore_failure_data_restore">%1$s: Restore de dados falhou ou está incompleto.</string>
@@ -330,15 +327,9 @@
     <string name="backup_stage_preparing">[%1$d/%2$d] A preparar cópia de segurança...</string>
     <string name="backup_stage_running">[%1$d/%2$d] A criar cópia de segurança das aplicações…</string>
     <string name="backup_stage_finalizing">[%1$d/%2$d] A finalizar a cópia de segurança…</string>
-    <string name="backup_error_no_files_selected">Não foram encontrados ficheiros para criar cópia de segurança para as aplicações selecionadas.</string>
     <string name="backup_error_command_failed_with_code">O comando Restic falhou com o código de saída %1$d.</string>
     <string name="backup_warning_metadata_not_saved">Aviso: não foi possível guardar localmente o ficheiro de metadados da cópia de segurança.</string>
-    <plurals name="backup_summary_success">
-        <item quantity="one">Cópia de segurança de %1$d aplicação efetuada.</item>
-        <item quantity="other">Efetuado o backup de %1$d aplicações.</item>
-    </plurals>
     <string name="error_fatal_with_message">Ocorreu um erro fatal: %1$s</string>
-    <string name="error_no_apps_selected">Nenhuma aplicação selecionada.</string>
     <string name="error_no_backup_types_selected">Nenhum tipo de cópia de segurança selecionado.</string>
     <string name="summary_no_backup_types_selected">Nenhum tipo de cópia de segurança foi selecionado.</string>
     <string name="error_restic_not_installed">O Restic não está instalado.</string>
@@ -389,14 +380,6 @@
     <string name="license_tap_to_expand">… (toque para expandir)</string>
     <string name="repo_warning_metadata_restore_failed_title">Falha na Restauração de Metadados</string>
     <string name="repo_warning_metadata_restore_failed">O repositório foi adicionado com sucesso, mas a restauração dos seus metadados (agendamentos, informações detalhadas de cópias de segurança) falhou. Isto significa geralmente que o snapshot de metadados está em falta ou o repositório está bloqueado. Para tentar novamente, abra Definições → Repositórios, toque no menu do repositório e escolha “Restaurar metadados”.</string>
-    <plurals name="restore_summary_processed">
-        <item quantity="one">Apps %1$d processadas com sucesso.</item>
-        <item quantity="other">Processou com sucesso %1$d aplicações.</item>
-    </plurals>
-    <plurals name="restore_summary_failed">
-        <item quantity="one">Falha ao restaurar %1$d apps.</item>
-        <item quantity="other">Falha ao restaurar %1$d aplicações.</item>
-    </plurals>
     <string name="restore_summary_details">\n\nDetalhes:\n- %1$s</string>
     <string name="maintenance_task_unlock">Desbloquear</string>
     <string name="maintenance_task_forget">Esquecer</string>

@@ -229,16 +229,9 @@
     <string name="backup_stage_preparing">[%1$d/%2$d] बैकअप तैयार किया जा रहा है..।</string>
     <string name="backup_stage_running">[%1$d/%2$d] ऐप्स का बैकअप लिया जा रहा है…</string>
     <string name="backup_stage_finalizing">[%1$d/%2$d] बैकअप पूरा किया जा रहा है…</string>
-    <string name="backup_error_no_files_selected">चुने गए ऐप्स के लिए बैकअप लेने हेतु कोई फ़ाइल नहीं मिली।</string>
     <string name="backup_error_command_failed_with_code">Restic कमांड निकास कोड %1$d के साथ विफल रहा।</string>
     <string name="backup_warning_metadata_not_saved">चेतावनी: बैकअप मेटाडेटा फ़ाइल स्थानीय रूप से सहेजी नहीं जा सकी।</string>
-    <plurals name="backup_summary_success">
-        <item quantity="one">%1$d ऐप का बैकअप लिया गया।</item>
-        <item quantity="other">%1$d ऐप्स का बैकअप लिया गया।</item>
-    </plurals>
     <string name="error_fatal_with_message">एक गंभीर त्रुटि हुई: %1$s</string>
-    <string name="error_no_apps_selected">कोई ऐप नहीं चुना गया।</string>
-    <string name="summary_no_apps_selected">कोई ऐप नहीं चुना गया था।</string>
     <string name="error_no_backup_types_selected">कोई बैकअप प्रकार नहीं चुना गया।</string>
     <string name="summary_no_backup_types_selected">कोई बैकअप प्रकार नहीं चुना गया था।</string>
     <string name="error_restic_not_installed">Restic स्थापित नहीं है।</string>
@@ -261,11 +254,9 @@
     <string name="restore_stage_processing_apps">ऐप्स प्रोसेस किए जा रहे हैं</string>
     <string name="restore_stage_cleanup">सफाई (Cleanup)</string>
     <string name="restore_error_preflight_failed">रीस्टोर से पहले की जांच विफल रही।</string>
-    <string name="restore_error_no_apps_selected">रीस्टोर के लिए कोई ऐप नहीं चुना गया।</string>
     <string name="restore_error_password_not_found">रिपॉजिटरी के लिए पासवर्ड नहीं मिला।</string>
     <string name="restore_error_no_files_found">चुने गए ऐप्स के लिए स्नैपशॉट में कोई फ़ाइल नहीं मिली।</string>
     <string name="restore_error_command_failed">Restic रीस्टोर कमांड विफल रहा।</string>
-    <string name="restore_stage_processing_template">[%1$d/%2$d] ऐप्स प्रोसेस किए जा रहे हैं</string>
     <string name="restore_failure_install_commit">%1$s: इंस्टॉल कमिट विफल रहा: %2$s</string>
     <string name="restore_failure_write_apk_splits">%1$s: APK स्प्लिट्स लिखने में विफल।</string>
     <string name="restore_failure_create_install_session">%1$s: इंस्टॉल सत्र बनाने में विफल।</string>
@@ -274,14 +265,6 @@
     <string name="restore_failure_permissions_app_not_installed">%1$s: अनुमतियां रीस्टोर करने में विफल क्योंकि ऐप स्थापित नहीं है।</string>
     <string name="restore_failure_permissions_partial">%1$s: कुछ अनुमतियां रीस्टोर करने में विफल: %2$s</string>
     <string name="restore_summary_finished_in">रीस्टोर %1$s में समाप्त हुआ।</string>
-    <plurals name="restore_summary_processed">
-        <item quantity="one">%1$d ऐप को सफलतापूर्वक प्रोसेस किया गया।</item>
-        <item quantity="other">%1$d ऐप्स को सफलतापूर्वक प्रोसेस किया गया।</item>
-    </plurals>
-    <plurals name="restore_summary_failed">
-        <item quantity="one">%1$d ऐप को रीस्टोर करने में विफल।</item>
-        <item quantity="other">%1$d ऐप्स को रीस्टोर करने में विफल।</item>
-    </plurals>
     <string name="restore_summary_details">\n\nविवरण:\n- %1$s</string>
     <string name="maintenance_task_unlock">अनलॉक</string>
     <string name="maintenance_task_forget">हटाएं</string>

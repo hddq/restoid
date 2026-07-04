@@ -231,18 +231,9 @@
     <string name="backup_stage_preparing">[%1$d/%2$d] Подготовка…</string>
     <string name="backup_stage_running">[%1$d/%2$d] Бэкап…</string>
     <string name="backup_stage_finalizing">[%1$d/%2$d] Завершение…</string>
-    <string name="backup_error_no_files_selected">Нет файлов для бэкапа у этих приложений.</string>
     <string name="backup_error_command_failed_with_code">Restic упал с кодом %1$d.</string>
     <string name="backup_warning_metadata_not_saved">Внимание: не удалось сохранить метаданные бэкапа локально.</string>
-    <plurals name="backup_summary_success">
-        <item quantity="one">Создан бэкап %1$d приложения.</item>
-        <item quantity="few">Создан бэкап %1$d приложений.</item>
-        <item quantity="many">Создан бэкап %1$d приложений.</item>
-        <item quantity="other">Создан бэкап %1$d приложений.</item>
-    </plurals>
     <string name="error_fatal_with_message">Критическая ошибка: %1$s</string>
-    <string name="error_no_apps_selected">Приложения не выбраны.</string>
-    <string name="summary_no_apps_selected">Ничего не выбрано.</string>
     <string name="error_no_backup_types_selected">Типы бэкапа не выбраны.</string>
     <string name="summary_no_backup_types_selected">Ни один тип не выбран.</string>
     <string name="error_restic_not_installed">Restic не установлен.</string>
@@ -265,11 +256,9 @@
     <string name="restore_stage_processing_apps">Обработка</string>
     <string name="restore_stage_cleanup">Очистка</string>
     <string name="restore_error_preflight_failed">Предварительные проверки провалены.</string>
-    <string name="restore_error_no_apps_selected">Не выбраны приложения.</string>
     <string name="restore_error_password_not_found">Пароль не найден.</string>
     <string name="restore_error_no_files_found">В снимке нет файлов для этих приложений.</string>
     <string name="restore_error_command_failed">Restic restore упал.</string>
-    <string name="restore_stage_processing_template">[%1$d/%2$d] Обработка</string>
     <string name="restore_failure_install_commit">%1$s: Ошибка коммита установки: %2$s</string>
     <string name="restore_failure_write_apk_splits">%1$s: Ошибка записи сплитов APK.</string>
     <string name="restore_failure_create_install_session">%1$s: Ошибка создания сессии.</string>
@@ -278,18 +267,6 @@
     <string name="restore_failure_permissions_app_not_installed">%1$s: Приложение не установлено, права не применить.</string>
     <string name="restore_failure_permissions_partial">%1$s: Часть прав не восстановилась: %2$s</string>
     <string name="restore_summary_finished_in">Восстановление завершено за %1$s.</string>
-    <plurals name="restore_summary_processed">
-        <item quantity="one">Успешно обработано %1$d приложение.</item>
-        <item quantity="few">Успешно обработано %1$d приложения.</item>
-        <item quantity="many">Успешно обработано %1$d приложений.</item>
-        <item quantity="other">Успешно обработано %1$d приложений.</item>
-    </plurals>
-    <plurals name="restore_summary_failed">
-        <item quantity="one">Не восстановлено: %1$d приложение.</item>
-        <item quantity="few">Не восстановлено: %1$d приложения.</item>
-        <item quantity="many">Не восстановлено: %1$d приложений.</item>
-        <item quantity="other">Не восстановлено: %1$d приложений.</item>
-    </plurals>
     <string name="restore_summary_details">\n\nДетали:\n- %1$s</string>
     <string name="maintenance_task_unlock">Разблокировать</string>
     <string name="maintenance_task_forget">Забыть</string>

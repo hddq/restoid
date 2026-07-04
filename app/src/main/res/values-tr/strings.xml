@@ -229,16 +229,9 @@
     <string name="backup_stage_preparing">[%1$d/%2$d] Yedekleme hazırlanıyor...</string>
     <string name="backup_stage_running">[%1$d/%2$d] Uygulamalar yedekleniyor…</string>
     <string name="backup_stage_finalizing">[%1$d/%2$d] Yedekleme sonlandırılıyor…</string>
-    <string name="backup_error_no_files_selected">Seçilen uygulamalar için yedeklenecek dosya bulunamadı.</string>
     <string name="backup_error_command_failed_with_code">Restic komutu %1$d çıkış koduyla başarısız oldu.</string>
     <string name="backup_warning_metadata_not_saved">Uyarı: Yedekleme meta veri dosyası yerel olarak kaydedilemedi.</string>
-    <plurals name="backup_summary_success">
-        <item quantity="one">%1$d uygulama yedeklendi.</item>
-        <item quantity="other">%1$d uygulama yedeklendi.</item>
-    </plurals>
     <string name="error_fatal_with_message">Kritik bir hata oluştu: %1$s</string>
-    <string name="error_no_apps_selected">Hiç uygulama seçilmedi.</string>
-    <string name="summary_no_apps_selected">Hiçbir uygulama seçilmedi.</string>
     <string name="error_no_backup_types_selected">Yedekleme türü seçilmedi.</string>
     <string name="summary_no_backup_types_selected">Hiçbir yedekleme türü seçilmedi.</string>
     <string name="error_restic_not_installed">Restic yüklü değil.</string>
@@ -261,11 +254,9 @@
     <string name="restore_stage_processing_apps">Uygulamalar İşleniyor</string>
     <string name="restore_stage_cleanup">Temizlik</string>
     <string name="restore_error_preflight_failed">Geri yükleme öncesi kontroller başarısız oldu.</string>
-    <string name="restore_error_no_apps_selected">Geri yüklenecek uygulama seçilmedi.</string>
     <string name="restore_error_password_not_found">Depo için parola bulunamadı.</string>
     <string name="restore_error_no_files_found">Seçili uygulamalar için anlık görüntüde dosya bulunamadı.</string>
     <string name="restore_error_command_failed">Restic geri yükleme komutu başarısız oldu.</string>
-    <string name="restore_stage_processing_template">[%1$d/%2$d] Uygulamalar İşleniyor</string>
     <string name="restore_failure_install_commit">%1$s: Yükleme işleme başarısız: %2$s</string>
     <string name="restore_failure_write_apk_splits">%1$s: APK bölümleri yazılamadı.</string>
     <string name="restore_failure_create_install_session">%1$s: Yükleme oturumu oluşturulamadı.</string>
@@ -274,14 +265,6 @@
     <string name="restore_failure_permissions_app_not_installed">%1$s: Uygulama yüklü olmadığı için izinler geri yüklenemedi.</string>
     <string name="restore_failure_permissions_partial">%1$s: Bazı izinler geri yüklenemedi: %2$s</string>
     <string name="restore_summary_finished_in">Geri yükleme %1$s içinde tamamlandı.</string>
-    <plurals name="restore_summary_processed">
-        <item quantity="one">%1$d uygulama başarıyla işlendi.</item>
-        <item quantity="other">%1$d uygulama başarıyla işlendi.</item>
-    </plurals>
-    <plurals name="restore_summary_failed">
-        <item quantity="one">%1$d uygulama geri yüklenemedi.</item>
-        <item quantity="other">%1$d uygulama geri yüklenemedi.</item>
-    </plurals>
     <string name="restore_summary_details">\n\nAyrıntılar:\n- %1$s</string>
     <string name="maintenance_task_unlock">Kilidi Aç</string>
     <string name="maintenance_task_forget">Unut</string>

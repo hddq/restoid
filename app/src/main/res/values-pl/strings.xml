@@ -236,18 +236,9 @@
     <string name="backup_stage_preparing">[%1$d/%2$d] Przygotowywanie backupu...</string>
     <string name="backup_stage_running">[%1$d/%2$d] Tworzenie kopii aplikacji…</string>
     <string name="backup_stage_finalizing">[%1$d/%2$d] Zakańczanie backupu…</string>
-    <string name="backup_error_no_files_selected">Nie znaleziono plików do zrobienia backupu dla wybranych aplikacji.</string>
     <string name="backup_error_command_failed_with_code">Polecenie restic zakończyło się błędem z kodem %1$d.</string>
     <string name="backup_warning_metadata_not_saved">Ostrzeżenie: Nie udało się lokalnie zapisać pliku z metadanymi backupu.</string>
-    <plurals name="backup_summary_success">
-        <item quantity="one">Zrobiono kopię %1$d aplikacji.</item>
-        <item quantity="few">Zrobiono kopię %1$d aplikacji.</item>
-        <item quantity="many">Zrobiono kopię %1$d aplikacji.</item>
-        <item quantity="other">Zrobiono kopię %1$d aplikacji.</item>
-    </plurals>
     <string name="error_fatal_with_message">Wystąpił błąd krytyczny: %1$s</string>
-    <string name="error_no_apps_selected">Nie wybrano żadnych aplikacji.</string>
-    <string name="summary_no_apps_selected">Żadne aplikacje nie zostały wybrane.</string>
     <string name="error_no_backup_types_selected">Nie wybrano typów backupu.</string>
     <string name="summary_no_backup_types_selected">Żadne typy backupu nie zostały wybrane.</string>
     <string name="error_restic_not_installed">Restic nie jest zainstalowany.</string>
@@ -270,11 +261,9 @@
     <string name="restore_stage_processing_apps">Przetwarzanie aplikacji</string>
     <string name="restore_stage_cleanup">Sprzątanie</string>
     <string name="restore_error_preflight_failed">Testy przed przywracaniem nie powiodły się.</string>
-    <string name="restore_error_no_apps_selected">Nie wybrano aplikacji do przywrócenia.</string>
     <string name="restore_error_password_not_found">Nie znaleziono hasła dla repozytorium.</string>
     <string name="restore_error_no_files_found">Nie znaleziono plików w migawce dla wybranych aplikacji.</string>
     <string name="restore_error_command_failed">Polecenie restic restore zawiodło.</string>
-    <string name="restore_stage_processing_template">[%1$d/%2$d] Przetwarzanie aplikacji</string>
     <string name="restore_failure_install_commit">%1$s: Zatwierdzenie instalacji nie powiodło się: %2$s</string>
     <string name="restore_failure_write_apk_splits">%1$s: Nie udało się zapisać podziałów APK.</string>
     <string name="restore_failure_create_install_session">%1$s: Nie udało się utworzyć sesji instalacji.</string>
@@ -283,18 +272,6 @@
     <string name="restore_failure_permissions_app_not_installed">%1$s: Nie udało się przywrócić uprawnień, bo aplikacja nie jest zainstalowana.</string>
     <string name="restore_failure_permissions_partial">%1$s: Nie udało się przywrócić niektórych uprawnień: %2$s</string>
     <string name="restore_summary_finished_in">Przywracanie zakończone w %1$s.</string>
-    <plurals name="restore_summary_processed">
-        <item quantity="one">Pomyślnie przetworzono %1$d aplikację.</item>
-        <item quantity="few">Pomyślnie przetworzono %1$d aplikacje.</item>
-        <item quantity="many">Pomyślnie przetworzono %1$d aplikacji.</item>
-        <item quantity="other">Pomyślnie przetworzono %1$d aplikacji.</item>
-    </plurals>
-    <plurals name="restore_summary_failed">
-        <item quantity="one">Nie udało się przywrócić %1$d aplikacji.</item>
-        <item quantity="few">Nie udało się przywrócić %1$d aplikacji.</item>
-        <item quantity="many">Nie udało się przywrócić %1$d aplikacji.</item>
-        <item quantity="other">Nie udało się przywrócić %1$d aplikacji.</item>
-    </plurals>
     <string name="restore_summary_details">\n\nSzczegóły:\n- %1$s</string>
     <string name="maintenance_task_unlock">Odblokuj</string>
     <string name="maintenance_task_forget">Zapomnij</string>

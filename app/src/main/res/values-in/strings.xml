@@ -226,15 +226,9 @@
     <string name="backup_stage_preparing">[%1$d/%2$d] Menyiapkan backup...</string>
     <string name="backup_stage_running">[%1$d/%2$d] Mem-backup aplikasi…</string>
     <string name="backup_stage_finalizing">[%1$d/%2$d] Menyelesaikan backup…</string>
-    <string name="backup_error_no_files_selected">Tidak ada file yang di-backup untuk aplikasi yang dipilih.</string>
     <string name="backup_error_command_failed_with_code">Perintah restic gagal dengan kode exit %1$d.</string>
     <string name="backup_warning_metadata_not_saved">Peringatan: Gagal menyimpan file metadata backup secara lokal.</string>
-    <plurals name="backup_summary_success">
-        <item quantity="other">Berhasil mem-backup %1$d aplikasi.</item>
-    </plurals>
     <string name="error_fatal_with_message">Terjadi error fatal: %1$s</string>
-    <string name="error_no_apps_selected">Tidak ada aplikasi yang dipilih.</string>
-    <string name="summary_no_apps_selected">Belum ada aplikasi yang dipilih.</string>
     <string name="error_no_backup_types_selected">Tipe backup belum dipilih.</string>
     <string name="summary_no_backup_types_selected">Tidak ada tipe backup yang dipilih.</string>
     <string name="error_restic_not_installed">Restic belum diinstal.</string>
@@ -257,11 +251,9 @@
     <string name="restore_stage_processing_apps">Memproses Aplikasi</string>
     <string name="restore_stage_cleanup">Pembersihan</string>
     <string name="restore_error_preflight_failed">Pengecekan pra-pemulihan gagal.</string>
-    <string name="restore_error_no_apps_selected">Tidak ada aplikasi yang dipilih untuk dipulihkan.</string>
     <string name="restore_error_password_not_found">Password repositori tidak ditemukan.</string>
     <string name="restore_error_no_files_found">Tidak ada file yang ditemukan dalam snapshot untuk aplikasi yang dipilih.</string>
     <string name="restore_error_command_failed">Perintah pemulihan restic gagal.</string>
-    <string name="restore_stage_processing_template">[%1$d/%2$d] Memproses Aplikasi</string>
     <string name="restore_failure_install_commit">%1$s: Commit instalasi gagal: %2$s</string>
     <string name="restore_failure_write_apk_splits">%1$s: Gagal menulis bagian-bagian APK.</string>
     <string name="restore_failure_create_install_session">%1$s: Gagal membuat sesi instalasi.</string>
@@ -270,12 +262,6 @@
     <string name="restore_failure_permissions_app_not_installed">%1$s: Gagal memulihkan izin karena aplikasi belum terinstal.</string>
     <string name="restore_failure_permissions_partial">%1$s: Gagal memulihkan beberapa izin: %2$s</string>
     <string name="restore_summary_finished_in">Pemulihan selesai dalam %1$s.</string>
-    <plurals name="restore_summary_processed">
-        <item quantity="other">Berhasil memproses %1$d aplikasi.</item>
-    </plurals>
-    <plurals name="restore_summary_failed">
-        <item quantity="other">Gagal memulihkan %1$d aplikasi.</item>
-    </plurals>
     <string name="restore_summary_details">\n\nDetail:\n- %1$s</string>
     <string name="maintenance_task_unlock">Buka Kunci</string>
     <string name="maintenance_task_forget">Lupakan</string>

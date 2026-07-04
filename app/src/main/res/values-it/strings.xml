@@ -229,16 +229,9 @@
     <string name="backup_stage_preparing">[%1$d/%2$d] Preparazione backup in corso...</string>
     <string name="backup_stage_running">[%1$d/%2$d] Backup delle app in corso…</string>
     <string name="backup_stage_finalizing">[%1$d/%2$d] Finalizzazione backup in corso…</string>
-    <string name="backup_error_no_files_selected">Nessun file da salvare trovato per le app selezionate.</string>
     <string name="backup_error_command_failed_with_code">Comando Restic fallito con codice di uscita %1$d.</string>
     <string name="backup_warning_metadata_not_saved">Attenzione: Impossibile salvare il file dei metadati di backup localmente.</string>
-    <plurals name="backup_summary_success">
-        <item quantity="one">Backup di %1$d app completato.</item>
-        <item quantity="other">Backup di %1$d app completato.</item>
-    </plurals>
     <string name="error_fatal_with_message">Si è verificato un errore fatale: %1$s</string>
-    <string name="error_no_apps_selected">Nessuna app selezionata.</string>
-    <string name="summary_no_apps_selected">Non è stata selezionata alcuna app.</string>
     <string name="error_no_backup_types_selected">Nessun tipo di backup selezionato.</string>
     <string name="summary_no_backup_types_selected">Non è stato selezionato alcun tipo di backup.</string>
     <string name="error_restic_not_installed">Restic non è installato.</string>
@@ -261,11 +254,9 @@
     <string name="restore_stage_processing_apps">Elaborazione App in corso</string>
     <string name="restore_stage_cleanup">Pulizia</string>
     <string name="restore_error_preflight_failed">I controlli pre-ripristino sono falliti.</string>
-    <string name="restore_error_no_apps_selected">Nessuna app selezionata per il ripristino.</string>
     <string name="restore_error_password_not_found">Password non trovata per il repository.</string>
     <string name="restore_error_no_files_found">Nessun file trovato nel snapshot per le app selezionate.</string>
     <string name="restore_error_command_failed">Il comando di ripristino Restic è fallito.</string>
-    <string name="restore_stage_processing_template">[%1$d/%2$d] Elaborazione App in corso</string>
     <string name="restore_failure_install_commit">%1$s: Commit dell\'installazione fallito: %2$s</string>
     <string name="restore_failure_write_apk_splits">%1$s: Errore durante la scrittura degli split APK.</string>
     <string name="restore_failure_create_install_session">%1$s: Errore durante la creazione della sessione di installazione.</string>
@@ -274,14 +265,6 @@
     <string name="restore_failure_permissions_app_not_installed">%1$s: Errore durante il ripristino dei permessi perché l\'app non è installata.</string>
     <string name="restore_failure_permissions_partial">%1$s: Errore durante il ripristino di alcuni permessi: %2$s</string>
     <string name="restore_summary_finished_in">Ripristino terminato in %1$s.</string>
-    <plurals name="restore_summary_processed">
-        <item quantity="one">%1$d app elaborata con successo.</item>
-        <item quantity="other">%1$d app elaborate con successo.</item>
-    </plurals>
-    <plurals name="restore_summary_failed">
-        <item quantity="one">Ripristino fallito per %1$d app.</item>
-        <item quantity="other">Ripristino fallito per %1$d app.</item>
-    </plurals>
     <string name="restore_summary_details">\n\nDettagli:\n- %1$s</string>
     <string name="maintenance_task_unlock">Sblocca</string>
     <string name="maintenance_task_forget">Rimuovi</string>

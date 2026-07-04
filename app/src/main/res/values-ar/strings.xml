@@ -246,15 +246,7 @@
     <string name="backup_stage_preparing">[%1$d/%2$d] جارٍ إعداد النسخة الاحتياطية...</string>
     <string name="backup_stage_finalizing">[%1$d/%2$d] جارٍ إنهاء النسخة الاحتياطية…</string>
     <string name="backup_error_command_failed_with_code">فشل أمر Restic مع رمز الخروج %1$d.</string>
-    <plurals name="backup_summary_success">
-        <item quantity="zero">تم نسخ %1$d تطبيقات احتياطياً.</item>
-        <item quantity="one">تم نسخ تطبيق %1$d احتياطياً.</item>
-        <item quantity="two">تم نسخ %1$d تطبيقًا.</item>
-        <item quantity="few">تم نسخ %1$d تطبيقات احتياطيًا.</item>
-        <item quantity="other">تم إجراء نسخ احتياطي لـ %1$d تطبيق.</item>
-    </plurals>
     <string name="error_fatal_with_message">حدث خطأ فادح: %1$s</string>
-    <string name="summary_no_apps_selected">لم يتم تحديد أي تطبيقات.</string>
     <string name="error_no_backup_types_selected">لم يتم تحديد أنواع للنسخ الاحتياطي.</string>
     <string name="error_restic_not_installed">Restic غير مثبت.</string>
     <string name="summary_restic_binary_not_installed">لم يتم تثبيت ملف Restic الثنائي.</string>
@@ -269,12 +261,10 @@
     <string name="restore_stage_restore_files">استعادة الملفات</string>
     <string name="restore_stage_cleanup">التنظيف</string>
     <string name="restore_error_preflight_failed">فشلت فحوصات ما قبل الاستعادة.</string>
-    <string name="restore_error_no_apps_selected">لم يتم تحديد تطبيقات للاستعادة.</string>
     <string name="restore_error_no_restore_types_selected">لم يتم تحديد أنواع استعادة.</string>
     <string name="restore_error_password_not_found">كلمة المرور الخاصة بالمستودع غير موجودة.</string>
     <string name="restore_error_no_files_found">لم يتم العثور على ملفات في اللقطة للتطبيقات المحددة.</string>
     <string name="restore_error_command_failed">فشل أمر استعادة Restic.</string>
-    <string name="restore_stage_processing_template">[%1$d/%2$d] معالجة التطبيقات</string>
     <string name="restore_failure_install_commit">%1$s: فشل تثبيت الالتزام: %2$s</string>
     <string name="run_tasks_error_one_or_more_failed">فشلت مهمة تشغيل واحدة أو أكثر.</string>
     <string name="maintenance_error_no_tasks">لم يتم تحديد أي مهام.</string>
@@ -286,20 +276,6 @@
     <string name="restore_failure_data_restore">%1$s: فشلت استعادة البيانات أو لم تكتمل.</string>
     <string name="restore_failure_permissions_partial">%1$s: فشلت استعادة بعض الأذونات: %2$s</string>
     <string name="restore_summary_finished_in">اكتملت الاستعادة في %1$s.</string>
-    <plurals name="restore_summary_processed">
-        <item quantity="zero">تمت معالجة %1$d تطبيقًا بنجاح.</item>
-        <item quantity="one">تمت معالجة تطبيق واحد (%1$d) بنجاح.</item>
-        <item quantity="two">تمت معالجة %1$d تطبيق بنجاح.</item>
-        <item quantity="few">تمت معالجة %1$d تطبيق بنجاح.</item>
-        <item quantity="other">تمت معالجة %1$d تطبيق بنجاح.</item>
-    </plurals>
-    <plurals name="restore_summary_failed">
-        <item quantity="zero">فشل استعادة %1$d تطبيقًا.</item>
-        <item quantity="one">فشل استعادة تطبيق واحد (%1$d).</item>
-        <item quantity="two">فشل استعادة %1$d تطبيق.</item>
-        <item quantity="few">فشل استعادة %1$d تطبيق.</item>
-        <item quantity="other">فشل استعادة %1$d تطبيق.</item>
-    </plurals>
     <string name="maintenance_task_successful">تمت مهمة %1$s بنجاح:\n%2$s\n\n</string>
     <string name="home_error_rest_credentials_incorrect">بيانات اعتماد REST غير صحيحة.</string>
     <string name="home_error_s3_credentials_incorrect">بيانات اعتماد S3 غير صحيحة.</string>
@@ -401,9 +377,7 @@
     <string name="dialog_save_s3_credentials">حفظ بيانات اعتماد S3</string>
     <string name="backup_item_permissions">الأذونات</string>
     <string name="backup_stage_running">[%1$d/%2$d] جارٍ نسخ التطبيقات احتياطيًا…</string>
-    <string name="backup_error_no_files_selected">لم يتم العثور على ملفات لنسخها احتياطيًا للتطبيقات المحددة.</string>
     <string name="backup_warning_metadata_not_saved">تحذير: تعذر حفظ ملف البيانات الوصفية للنسخ الاحتياطي محلياً.</string>
-    <string name="error_no_apps_selected">لم يتم تحديد أي تطبيقات.</string>
     <string name="error_sftp_password_not_found_for_repository">لم يتم العثور على بيانات اعتماد SFTP للمستودع.</string>
     <string name="error_s3_credentials_not_found_for_repository">لم يتم العثور على بيانات اعتماد S3 للمستودع.</string>
     <string name="error_operation_already_running">توجد عملية أخرى قيد التشغيل بالفعل.</string>

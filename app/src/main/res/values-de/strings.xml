@@ -229,16 +229,9 @@
     <string name="backup_stage_preparing">[%1$d/%2$d] Bereite Backup vor...</string>
     <string name="backup_stage_running">[%1$d/%2$d] Sichere Apps…</string>
     <string name="backup_stage_finalizing">[%1$d/%2$d] Schließe Backup ab…</string>
-    <string name="backup_error_no_files_selected">Keine Dateien zur Sicherung für die ausgewählten Apps gefunden.</string>
     <string name="backup_error_command_failed_with_code">Restic-Befehl mit Exit-Code %1$d fehlgeschlagen.</string>
     <string name="backup_warning_metadata_not_saved">Warnung: Backup-Metadaten-Datei konnte nicht lokal gespeichert werden.</string>
-    <plurals name="backup_summary_success">
-        <item quantity="one">%1$d App gesichert.</item>
-        <item quantity="other">%1$d Apps gesichert.</item>
-    </plurals>
     <string name="error_fatal_with_message">Ein fataler Fehler ist aufgetreten: %1$s</string>
-    <string name="error_no_apps_selected">Keine Apps ausgewählt.</string>
-    <string name="summary_no_apps_selected">Es wurden keine Apps ausgewählt.</string>
     <string name="error_no_backup_types_selected">Keine Backup-Typen ausgewählt.</string>
     <string name="summary_no_backup_types_selected">Es wurden keine Backup-Typen ausgewählt.</string>
     <string name="error_restic_not_installed">Restic ist nicht installiert.</string>
@@ -261,11 +254,9 @@
     <string name="restore_stage_processing_apps">Verarbeite Apps</string>
     <string name="restore_stage_cleanup">Aufräumen</string>
     <string name="restore_error_preflight_failed">Vorabprüfungen für Restore fehlgeschlagen.</string>
-    <string name="restore_error_no_apps_selected">Keine Apps für den Restore ausgewählt.</string>
     <string name="restore_error_password_not_found">Passwort für Repository nicht gefunden.</string>
     <string name="restore_error_no_files_found">Keine Dateien im Snapshot für die ausgewählten Apps gefunden.</string>
     <string name="restore_error_command_failed">Restic-Restore-Befehl fehlgeschlagen.</string>
-    <string name="restore_stage_processing_template">[%1$d/%2$d] Verarbeite Apps</string>
     <string name="restore_failure_install_commit">%1$s: Install Commit fehlgeschlagen: %2$s</string>
     <string name="restore_failure_write_apk_splits">%1$s: Schreiben der APK-Splits fehlgeschlagen.</string>
     <string name="restore_failure_create_install_session">%1$s: Konnte Installations-Session nicht erstellen.</string>
@@ -274,14 +265,6 @@
     <string name="restore_failure_permissions_app_not_installed">%1$s: Berechtigungen konnten nicht wiederhergestellt werden, da die App nicht installiert ist.</string>
     <string name="restore_failure_permissions_partial">%1$s: Einige Berechtigungen konnten nicht wiederhergestellt werden: %2$s</string>
     <string name="restore_summary_finished_in">Restore abgeschlossen in %1$s.</string>
-    <plurals name="restore_summary_processed">
-        <item quantity="one">%1$d App erfolgreich verarbeitet.</item>
-        <item quantity="other">%1$d Apps erfolgreich verarbeitet.</item>
-    </plurals>
-    <plurals name="restore_summary_failed">
-        <item quantity="one">Restore von %1$d App fehlgeschlagen.</item>
-        <item quantity="other">Restore von %1$d Apps fehlgeschlagen.</item>
-    </plurals>
     <string name="restore_summary_details">\n\nDetails:\n- %1$s</string>
     <string name="maintenance_task_unlock">Entsperren</string>
     <string name="maintenance_task_forget">Vergessen</string>

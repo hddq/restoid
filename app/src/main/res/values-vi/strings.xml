@@ -226,15 +226,9 @@
     <string name="backup_stage_preparing">[%1$d/%2$d] Đang chuẩn bị sao lưu...</string>
     <string name="backup_stage_running">[%1$d/%2$d] Đang sao lưu ứng dụng…</string>
     <string name="backup_stage_finalizing">[%1$d/%2$d] Đang hoàn tất sao lưu…</string>
-    <string name="backup_error_no_files_selected">Không tìm thấy tệp nào để sao lưu cho các ứng dụng đã chọn.</string>
     <string name="backup_error_command_failed_with_code">Lệnh Restic thất bại với mã thoát %1$d.</string>
     <string name="backup_warning_metadata_not_saved">Cảnh báo: Không thể lưu tệp siêu dữ liệu sao lưu cục bộ.</string>
-    <plurals name="backup_summary_success">
-        <item quantity="other">Đã sao lưu %1$d ứng dụng.</item>
-    </plurals>
     <string name="error_fatal_with_message">Đã xảy ra lỗi nghiêm trọng: %1$s</string>
-    <string name="error_no_apps_selected">Không có ứng dụng nào được chọn.</string>
-    <string name="summary_no_apps_selected">Chưa có ứng dụng nào được chọn.</string>
     <string name="error_no_backup_types_selected">Chưa chọn loại sao lưu nào.</string>
     <string name="summary_no_backup_types_selected">Chưa có loại sao lưu nào được chọn.</string>
     <string name="error_restic_not_installed">Restic chưa được cài đặt.</string>
@@ -257,11 +251,9 @@
     <string name="restore_stage_processing_apps">Đang xử lý ứng dụng</string>
     <string name="restore_stage_cleanup">Dọn dẹp</string>
     <string name="restore_error_preflight_failed">Kiểm tra trước khi khôi phục thất bại.</string>
-    <string name="restore_error_no_apps_selected">Không có ứng dụng nào được chọn để khôi phục.</string>
     <string name="restore_error_password_not_found">Không tìm thấy mật khẩu cho kho lưu trữ.</string>
     <string name="restore_error_no_files_found">Không tìm thấy tệp nào trong snapshot cho các ứng dụng đã chọn.</string>
     <string name="restore_error_command_failed">Lệnh khôi phục Restic thất bại.</string>
-    <string name="restore_stage_processing_template">[%1$d/%2$d] Đang xử lý ứng dụng</string>
     <string name="restore_failure_install_commit">%1$s: Tiến trình cài đặt thất bại: %2$s</string>
     <string name="restore_failure_write_apk_splits">%1$s: Ghi các phần APK thất bại.</string>
     <string name="restore_failure_create_install_session">%1$s: Không thể tạo phiên cài đặt.</string>
@@ -270,12 +262,6 @@
     <string name="restore_failure_permissions_app_not_installed">%1$s: Khôi phục quyền thất bại vì ứng dụng chưa được cài đặt.</string>
     <string name="restore_failure_permissions_partial">%1$s: Không thể khôi phục một số quyền: %2$s</string>
     <string name="restore_summary_finished_in">Khôi phục xong trong %1$s.</string>
-    <plurals name="restore_summary_processed">
-        <item quantity="other">Đã xử lý thành công %1$d ứng dụng.</item>
-    </plurals>
-    <plurals name="restore_summary_failed">
-        <item quantity="other">Khôi phục %1$d ứng dụng thất bại.</item>
-    </plurals>
     <string name="restore_summary_details">\n\nChi tiết:\n- %1$s</string>
     <string name="maintenance_task_unlock">Mở khóa</string>
     <string name="maintenance_task_forget">Xóa</string>

@@ -229,16 +229,9 @@
     <string name="backup_stage_preparing">[%1$d/%2$d] Préparation de la sauvegarde...</string>
     <string name="backup_stage_running">[%1$d/%2$d] Sauvegarde des apps en cours…</string>
     <string name="backup_stage_finalizing">[%1$d/%2$d] Finalisation de la sauvegarde…</string>
-    <string name="backup_error_no_files_selected">Aucun fichier trouvé à sauvegarder pour les applications sélectionnées.</string>
     <string name="backup_error_command_failed_with_code">La commande Restic a échoué avec le code de sortie %1$d.</string>
     <string name="backup_warning_metadata_not_saved">Avertissement : Impossible d\'enregistrer le fichier de métadonnées de sauvegarde localement.</string>
-    <plurals name="backup_summary_success">
-        <item quantity="one">%1$d app sauvegardée avec succès.</item>
-        <item quantity="other">%1$d apps sauvegardées avec succès.</item>
-    </plurals>
     <string name="error_fatal_with_message">Une erreur fatale s\'est produite : %1$s</string>
-    <string name="error_no_apps_selected">Aucune application sélectionnée.</string>
-    <string name="summary_no_apps_selected">Aucune application n\'a été sélectionnée.</string>
     <string name="error_no_backup_types_selected">Aucun type de sauvegarde sélectionné.</string>
     <string name="summary_no_backup_types_selected">Aucun type de sauvegarde n\'a été sélectionné.</string>
     <string name="error_restic_not_installed">Restic n\'est pas installé.</string>
@@ -261,11 +254,9 @@
     <string name="restore_stage_processing_apps">Traitement des apps</string>
     <string name="restore_stage_cleanup">Nettoyage</string>
     <string name="restore_error_preflight_failed">Les vérifications préalables à la restauration ont échoué.</string>
-    <string name="restore_error_no_apps_selected">Aucune application sélectionnée pour la restauration.</string>
     <string name="restore_error_password_not_found">Mot de passe introuvable pour le dépôt.</string>
     <string name="restore_error_no_files_found">Aucun fichier trouvé dans le snapshot pour les applications sélectionnées.</string>
     <string name="restore_error_command_failed">La commande de restauration Restic a échoué.</string>
-    <string name="restore_stage_processing_template">[%1$d/%2$d] Traitement des apps</string>
     <string name="restore_failure_install_commit">%1$s : L\'installation a échoué : %2$s</string>
     <string name="restore_failure_write_apk_splits">%1$s : Échec de l\'écriture des splits APK.</string>
     <string name="restore_failure_create_install_session">%1$s : Échec de la création de la session d\'installation.</string>
@@ -274,14 +265,6 @@
     <string name="restore_failure_permissions_app_not_installed">%1$s : Échec de la restauration des autorisations car l\'application n\'est pas installée.</string>
     <string name="restore_failure_permissions_partial">%1$s : Échec de la restauration de certaines autorisations : %2$s</string>
     <string name="restore_summary_finished_in">Restauration terminée en %1$s.</string>
-    <plurals name="restore_summary_processed">
-        <item quantity="one">%1$d app traitée avec succès.</item>
-        <item quantity="other">%1$d apps traitées avec succès.</item>
-    </plurals>
-    <plurals name="restore_summary_failed">
-        <item quantity="one">Échec de la restauration pour %1$d app.</item>
-        <item quantity="other">Échec de la restauration pour %1$d apps.</item>
-    </plurals>
     <string name="restore_summary_details">\n\nDétails :\n- %1$s</string>
     <string name="maintenance_task_unlock">Déverrouiller</string>
     <string name="maintenance_task_forget">Supprimer</string>

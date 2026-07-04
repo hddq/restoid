@@ -232,17 +232,9 @@
     <string name="backup_stage_preparing">[%1$d/%2$d] Priprema backupa...</string>
     <string name="backup_stage_running">[%1$d/%2$d] Backupiranje aplikacija…</string>
     <string name="backup_stage_finalizing">[%1$d/%2$d] Završavanje backupa…</string>
-    <string name="backup_error_no_files_selected">Nisu pronađene datoteke za backupiranje odabranih aplikacija.</string>
     <string name="backup_error_command_failed_with_code">Restic naredba nije uspjela (izlazni kod %1$d).</string>
     <string name="backup_warning_metadata_not_saved">Upozorenje: Nije bilo moguće lokalno spremiti datoteku metapodataka backupa.</string>
-    <plurals name="backup_summary_success">
-        <item quantity="one">Backupirana %1$d aplikacija.</item>
-        <item quantity="few">Backupirane %1$d aplikacije.</item>
-        <item quantity="other">Backupirano %1$d aplikacija.</item>
-    </plurals>
     <string name="error_fatal_with_message">Dogodila se fatalna greška: %1$s</string>
-    <string name="error_no_apps_selected">Nije odabrana nijedna aplikacija.</string>
-    <string name="summary_no_apps_selected">Nijedna aplikacija nije bila odabrana.</string>
     <string name="error_no_backup_types_selected">Nisu odabrane vrste backupa.</string>
     <string name="summary_no_backup_types_selected">Nijedna vrsta backupa nije odabrana.</string>
     <string name="error_restic_not_installed">Restic nije instaliran.</string>
@@ -265,11 +257,9 @@
     <string name="restore_stage_processing_apps">Obrada aplikacija</string>
     <string name="restore_stage_cleanup">Čišćenje</string>
     <string name="restore_error_preflight_failed">Provjere prije vraćanja nisu uspjele.</string>
-    <string name="restore_error_no_apps_selected">Nema odabranih aplikacija za vraćanje.</string>
     <string name="restore_error_password_not_found">Lozinka repozitorija nije pronađena.</string>
     <string name="restore_error_no_files_found">U snapshotu nisu pronađene datoteke za odabrane aplikacije.</string>
     <string name="restore_error_command_failed">Restic naredba za vraćanje nije uspjela.</string>
-    <string name="restore_stage_processing_template">[%1$d/%2$d] Obrada aplikacija</string>
     <string name="restore_failure_install_commit">%1$s: Install commit nije uspio: %2$s</string>
     <string name="restore_failure_write_apk_splits">%1$s: Zapisivanje APK splitova nije uspjelo.</string>
     <string name="restore_failure_create_install_session">%1$s: Stvaranje instalacijske sesije nije uspjelo.</string>
@@ -278,16 +268,6 @@
     <string name="restore_failure_permissions_app_not_installed">%1$s: Vraćanje dopuštenja nije uspjelo jer aplikacija nije instalirana.</string>
     <string name="restore_failure_permissions_partial">%1$s: Vraćanje nekih dopuštenja nije uspjelo: %2$s</string>
     <string name="restore_summary_finished_in">Vraćanje završeno za %1$s.</string>
-    <plurals name="restore_summary_processed">
-        <item quantity="one">Uspješno obrađena %1$d aplikacija.</item>
-        <item quantity="few">Uspješno obrađene %1$d aplikacije.</item>
-        <item quantity="other">Uspješno obrađeno %1$d aplikacija.</item>
-    </plurals>
-    <plurals name="restore_summary_failed">
-        <item quantity="one">Vraćanje nije uspjelo za %1$d aplikaciju.</item>
-        <item quantity="few">Vraćanje nije uspjelo za %1$d aplikacije.</item>
-        <item quantity="other">Vraćanje nije uspjelo za %1$d aplikacija.</item>
-    </plurals>
     <string name="restore_summary_details">\n\nDetalji:\n- %1$s</string>
     <string name="maintenance_task_unlock">Otključaj</string>
     <string name="maintenance_task_forget">Ukloni</string>

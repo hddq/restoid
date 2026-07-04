@@ -226,15 +226,9 @@
     <string name="backup_stage_preparing">[%1$d/%2$d] 백업 준비 중...</string>
     <string name="backup_stage_running">[%1$d/%2$d] 앱 백업 중…</string>
     <string name="backup_stage_finalizing">[%1$d/%2$d] 백업 마무리 중…</string>
-    <string name="backup_error_no_files_selected">선택한 앱에 대해 백업할 파일을 찾을 수 없습니다.</string>
     <string name="backup_error_command_failed_with_code">Restic 명령이 종료 코드 %1$d(으)로 실패했습니다.</string>
     <string name="backup_warning_metadata_not_saved">경고: 로컬에 백업 메타데이터 파일을 저장할 수 없습니다.</string>
-    <plurals name="backup_summary_success">
-        <item quantity="other">%1$d개 앱 백업 완료.</item>
-    </plurals>
     <string name="error_fatal_with_message">치명적인 오류 발생: %1$s</string>
-    <string name="error_no_apps_selected">선택된 앱이 없습니다.</string>
-    <string name="summary_no_apps_selected">선택된 앱이 없습니다.</string>
     <string name="error_no_backup_types_selected">선택된 백업 유형이 없습니다.</string>
     <string name="summary_no_backup_types_selected">선택된 백업 유형이 없습니다.</string>
     <string name="error_restic_not_installed">Restic이 설치되어 있지 않습니다.</string>
@@ -257,11 +251,9 @@
     <string name="restore_stage_processing_apps">앱 처리 중</string>
     <string name="restore_stage_cleanup">정리</string>
     <string name="restore_error_preflight_failed">복원 전 확인에 실패했습니다.</string>
-    <string name="restore_error_no_apps_selected">복원할 앱이 선택되지 않았습니다.</string>
     <string name="restore_error_password_not_found">저장소 비밀번호를 찾을 수 없습니다.</string>
     <string name="restore_error_no_files_found">선택한 앱에 대한 스냅샷에서 파일을 찾을 수 없습니다.</string>
     <string name="restore_error_command_failed">Restic 복원 명령이 실패했습니다.</string>
-    <string name="restore_stage_processing_template">[%1$d/%2$d] 앱 처리 중</string>
     <string name="restore_failure_install_commit">%1$s: 설치 커밋 실패: %2$s</string>
     <string name="restore_failure_write_apk_splits">%1$s: 분할 APK 쓰기 실패.</string>
     <string name="restore_failure_create_install_session">%1$s: 설치 세션 생성 실패.</string>
@@ -270,12 +262,6 @@
     <string name="restore_failure_permissions_app_not_installed">%1$s: 앱이 설치되어 있지 않아 권한 복원 실패.</string>
     <string name="restore_failure_permissions_partial">%1$s: 일부 권한 복원 실패: %2$s</string>
     <string name="restore_summary_finished_in">복원 소요 시간: %1$s.</string>
-    <plurals name="restore_summary_processed">
-        <item quantity="other">%1$d개 앱 성공적으로 처리됨.</item>
-    </plurals>
-    <plurals name="restore_summary_failed">
-        <item quantity="other">%1$d개 앱 복원 실패.</item>
-    </plurals>
     <string name="restore_summary_details">\n\n상세:\n- %1$s</string>
     <string name="maintenance_task_unlock">잠금 해제</string>
     <string name="maintenance_task_forget">삭제</string>
