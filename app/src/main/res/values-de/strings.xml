@@ -434,4 +434,43 @@
     <string name="repo_warning_metadata_restore_failed">Das Repository wurde erfolgreich hinzugefügt, aber die Wiederherstellung der Metadaten (Zeitpläne, detaillierte Backup-Infos) schlug fehl. Dies bedeutet normalerweise, dass der Metadaten-Snapshot fehlt oder das Repository gesperrt ist. Um es erneut zu versuchen, öffnen Sie Einstellungen → Repositories, tippen Sie auf das Repository-Menü und wählen Sie „Metadaten wiederherstellen“.</string>
     <string name="screen_tasks">Aufgaben</string>
     <string name="topbar_tasks">Aufgaben</string>
+    <string name="run_tasks_custom_directories">Benutzerdefinierte Verzeichnisse</string>
+    <string name="run_tasks_custom_directories_subtitle_none">Keine Verzeichnisse ausgewählt</string>
+    <string name="run_tasks_custom_directories_subtitle_count">%1$d Verzeichnisse ausgewählt</string>
+    <string name="action_add_directory">Verzeichnis hinzufügen</string>
+    <string name="title_custom_directories">Benutzerdefinierte Verzeichnisse</string>
+    <string name="custom_directories_description">Wählen Sie benutzerdefinierte Verzeichnisse auf Ihrem Gerät aus, die in das Backup aufgenommen werden sollen.</string>
+    <string name="error_cannot_backup_repo_to_itself">Das Repository selbst kann nicht als benutzerdefiniertes Verzeichnis für das Backup hinzugefügt werden.</string>
+    <plurals name="backed_up_items_count">
+        <item quantity="one">Gesichert (%1$d):</item>
+        <item quantity="other">Gesichert (%1$d):</item>
+    </plurals>
+    <plurals name="custom_directories_count">
+        <item quantity="one">Benutzerdefiniertes Verzeichnis (%1$d):</item>
+        <item quantity="other">Benutzerdefinierte Verzeichnisse (%1$d):</item>
+    </plurals>
+    <plurals name="snapshot_backed_up_custom_directories_count">
+        <item quantity="one">Gesichertes benutzerdefiniertes Verzeichnis (%1$d)</item>
+        <item quantity="other">Gesicherte benutzerdefinierte Verzeichnisse (%1$d)</item>
+    </plurals>
+    <string name="backup_error_no_files_selected_for_items">Für die ausgewählten Elemente wurden keine Dateien zum Sichern gefunden.</string>
+    <plurals name="backup_summary_success_items">
+        <item quantity="one">%1$d Element gesichert.</item>
+        <item quantity="other">%1$d Elemente gesichert.</item>
+    </plurals>
+    <string name="error_no_items_selected">Keine Elemente ausgewählt.</string>
+    <string name="summary_no_items_selected">Es wurden keine Elemente ausgewählt.</string>
+    <string name="restore_error_no_items_selected">Keine Elemente zur Wiederherstellung ausgewählt.</string>
+    <string name="restore_stage_processing_template_apps">[%1$d/%2$d] Verarbeite Apps</string>
+    <string name="restore_stage_processing_template_custom_directories">[%1$d/%2$d] Verarbeite benutzerdefinierte Verzeichnisse</string>
+    <string name="restore_stage_processing_custom_directories">Verarbeite benutzerdefinierte Verzeichnisse…</string>
+    <string name="restore_failure_custom_directory">Wiederherstellung des benutzerdefinierten Verzeichnisses fehlgeschlagen: %1$s</string>
+    <plurals name="restore_summary_processed_items">
+        <item quantity="one">%1$d Element erfolgreich verarbeitet.</item>
+        <item quantity="other">%1$d Elemente erfolgreich verarbeitet.</item>
+    </plurals>
+    <plurals name="restore_summary_failed_items">
+        <item quantity="one">Wiederherstellung von %1$d Element fehlgeschlagen.</item>
+        <item quantity="other">Wiederherstellung von %1$d Elementen fehlgeschlagen.</item>
+    </plurals>
 </resources>
