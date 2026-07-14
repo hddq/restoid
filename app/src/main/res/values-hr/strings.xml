@@ -481,4 +481,7 @@
         <item quantity="other">Neuspjelo vraćanje %1$d stavki.</item>
     </plurals>
     <string name="action_run_now">Pokreni odmah</string>
+    <string name="storage_permission_enabled">Pristup svim datotekama odobren</string>
+    <string name="storage_permission_disabled">Potreban pristup svim datotekama</string>
+    <string name="storage_permission_description">Potrebno za izradu sigurnosnih kopija prilagođenih direktorija bez root pristupa.</string>
 </resources>
