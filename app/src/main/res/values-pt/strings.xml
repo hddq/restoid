@@ -427,4 +427,44 @@
     </plurals>
     <string name="section_general">Geral</string>
     <string name="section_conditions">Condições</string>
+    <string name="run_tasks_custom_directories">Diretórios Personalizados</string>
+    <string name="run_tasks_custom_directories_subtitle_none">Nenhum diretório selecionado</string>
+    <string name="run_tasks_custom_directories_subtitle_count">%1$d diretórios selecionados</string>
+    <string name="action_add_directory">Adicionar Diretório</string>
+    <string name="title_custom_directories">Diretórios Personalizados</string>
+    <string name="custom_directories_description">Selecione diretórios personalizados no seu dispositivo para incluir na cópia de segurança.</string>
+    <string name="error_cannot_backup_repo_to_itself">Não é possível adicionar o próprio repositório como um diretório personalizado para cópia de segurança.</string>
+    <plurals name="backed_up_items_count">
+        <item quantity="one">Com cópia de segurança (%1$d):</item>
+        <item quantity="other">Cópia de segurança (%1$d):</item>
+    </plurals>
+    <plurals name="custom_directories_count">
+        <item quantity="one">Diretórios Personalizados (%1$d):</item>
+        <item quantity="other">Diretórios Personalizados (%1$d):</item>
+    </plurals>
+    <plurals name="snapshot_backed_up_custom_directories_count">
+        <item quantity="one">Diretórios Personalizados com cópia de segurança (%1$d)</item>
+        <item quantity="other">Diretórios Personalizados com cópia de segurança (%1$d)</item>
+    </plurals>
+    <string name="backup_error_no_files_selected_for_items">Não foram encontrados ficheiros para copiar nos itens selecionados.</string>
+    <plurals name="backup_summary_success_items">
+        <item quantity="one">Itens com cópia de segurança: %1$d.</item>
+        <item quantity="other">Itens com cópia de segurança: %1$d.</item>
+    </plurals>
+    <string name="error_no_items_selected">Nenhum item selecionado.</string>
+    <string name="summary_no_items_selected">Nenhum item foi selecionado.</string>
+    <string name="restore_error_no_items_selected">Nenhum item selecionado para restauro.</string>
+    <string name="restore_stage_processing_template_apps">[%1$d/%2$d] A processar Apps</string>
+    <string name="restore_stage_processing_template_custom_directories">[%1$d/%2$d] A processar Diretórios Personalizados</string>
+    <string name="restore_stage_processing_custom_directories">A processar Diretórios Personalizados…</string>
+    <string name="restore_failure_custom_directory">Falha ao restaurar o diretório personalizado %1$s</string>
+    <plurals name="restore_summary_processed_items">
+        <item quantity="one">Itens processados com sucesso: %1$d.</item>
+        <item quantity="other">Processados com sucesso %1$d itens.</item>
+    </plurals>
+    <plurals name="restore_summary_failed_items">
+        <item quantity="one">Falha ao restaurar %1$d itens.</item>
+        <item quantity="other">Falha ao restaurar %1$d itens.</item>
+    </plurals>
+    <string name="action_run_now">Executar agora</string>
 </resources>
