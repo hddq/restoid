@@ -474,4 +474,7 @@
         <item quantity="other">Falha ao restaurar %1$d itens.</item>
     </plurals>
     <string name="action_run_now">Executar agora</string>
+    <string name="storage_permission_enabled">Acesso a todos os arquivos concedido</string>
+    <string name="storage_permission_disabled">Acesso a todos os arquivos necessário</string>
+    <string name="storage_permission_description">Necessário para realizar backup de diretórios personalizados sem acesso root.</string>
 </resources>
