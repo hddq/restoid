@@ -456,4 +456,7 @@
         <item quantity="other">Không thể khôi phục %1$d mục.</item>
     </plurals>
     <string name="action_run_now">Chạy ngay</string>
+    <string name="storage_permission_enabled">Đã cấp quyền truy cập tất cả tệp tin</string>
+    <string name="storage_permission_disabled">Yêu cầu quyền truy cập tất cả tệp tin</string>
+    <string name="storage_permission_description">Cần thiết để sao lưu các thư mục tùy chỉnh mà không cần quyền root.</string>
 </resources>
