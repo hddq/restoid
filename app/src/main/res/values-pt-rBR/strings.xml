@@ -473,4 +473,12 @@
         <item quantity="one">Falha ao restaurar %1$d itens.</item>
         <item quantity="other">Falha ao restaurar %1$d itens.</item>
     </plurals>
+    <string name="license_restic_license" translatable="false"></string>
+    <string name="license_restoid_author" translatable="false"></string>
+    <string name="license_restoid_name" translatable="false"></string>
+    <string name="license_restic_name" translatable="false"></string>
+    <string name="license_restoid_url" translatable="false"></string>
+    <string name="license_restic_url" translatable="false"></string>
+    <string name="app_name" translatable="false"></string>
+    <string name="license_restic_author" translatable="false"></string>
 </resources>
