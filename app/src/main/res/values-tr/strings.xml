@@ -469,4 +469,14 @@
         <item quantity="one">Başarıyla işlenen öge sayısı: %1$d.</item>
         <item quantity="other">Başarıyla işlenen öge sayısı: %1$d.</item>
     </plurals>
+    <string name="license_restic_license" translatable="false"></string>
+    <plurals name="restore_summary_failed_items">
+    </plurals>
+    <string name="license_restoid_author" translatable="false"></string>
+    <string name="license_restoid_name" translatable="false"></string>
+    <string name="license_restic_name" translatable="false"></string>
+    <string name="license_restoid_url" translatable="false"></string>
+    <string name="license_restic_url" translatable="false"></string>
+    <string name="app_name" translatable="false"></string>
+    <string name="license_restic_author" translatable="false"></string>
 </resources>
