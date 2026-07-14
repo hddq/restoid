@@ -473,4 +473,5 @@
         <item quantity="one">Wiederherstellung von %1$d Element fehlgeschlagen.</item>
         <item quantity="other">Wiederherstellung von %1$d Elementen fehlgeschlagen.</item>
     </plurals>
+    <string name="action_run_now">Jetzt ausführen</string>
 </resources>
