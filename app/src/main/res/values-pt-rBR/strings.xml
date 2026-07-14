@@ -473,4 +473,5 @@
         <item quantity="one">Falha ao restaurar %1$d itens.</item>
         <item quantity="other">Falha ao restaurar %1$d itens.</item>
     </plurals>
+    <string name="action_run_now">Executar agora</string>
 </resources>
