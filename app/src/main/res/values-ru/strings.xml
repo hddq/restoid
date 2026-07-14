@@ -504,4 +504,7 @@
         <item quantity="other">Не удалось восстановить %1$d элемент(а/ов).</item>
     </plurals>
     <string name="action_run_now">Запустить</string>
+    <string name="storage_permission_enabled">Доступ ко всем файлам предоставлен</string>
+    <string name="storage_permission_disabled">Требуется доступ ко всем файлам</string>
+    <string name="storage_permission_description">Необходим для резервного копирования пользовательских папок без прав root.</string>
 </resources>
