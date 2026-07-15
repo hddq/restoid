@@ -469,4 +469,15 @@
         <item quantity="one">Başarıyla işlenen öge sayısı: %1$d.</item>
         <item quantity="other">Başarıyla işlenen öge sayısı: %1$d.</item>
     </plurals>
+    <plurals name="restore_summary_failed_items">
+        <item quantity="one">%1$d öge geri yüklenemedi.</item>
+        <item quantity="other">%1$d öge geri yüklenemedi.</item>
+    </plurals>
+    <string name="action_run_now">Şimdi çalıştır</string>
+    <string name="storage_permission_enabled">Tüm dosyalara erişim izni verildi</string>
+    <string name="storage_permission_disabled">Tüm dosyalara erişim gerekli</string>
+    <string name="storage_permission_description">Root erişimi olmadan özel dizinleri yedeklemek için gereklidir.</string>
+    <string name="settings_system_permission_storage">Depolama Erişimi</string>
+    <string name="settings_system_permission_local_network">Yerel Ağ Erişimi</string>
+    <string name="local_network_permission_enabled">Yerel ağ erişimi verildi</string>
 </resources>
