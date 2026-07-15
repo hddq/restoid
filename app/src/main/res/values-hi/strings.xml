@@ -434,4 +434,39 @@
     <string name="repo_warning_metadata_restore_failed">रिपॉजिटरी सफलतापूर्वक जोड़ दी गई, लेकिन इसका मेटाडेटा (शेड्यूल, विस्तृत बैकअप जानकारी) रिस्टोर करने में विफलता हुई। इसका आमतौर पर मतलब है कि मेटाडेटा स्नैपशॉट गायब है या रिपॉजिटरी लॉक है। पुनः प्रयास करने के लिए, सेटिंग्स → रिपॉजिटरी खोलें, रेपो मेनू पर टैप करें, और \"मेटाडेटा रिस्टोर करें\" चुनें।</string>
     <string name="screen_tasks">कार्य</string>
     <string name="topbar_tasks">कार्य</string>
+    <string name="run_tasks_custom_directories">कस्टम डायरेक्टरी</string>
+    <string name="run_tasks_custom_directories_subtitle_none">कोई डायरेक्टरी चयनित नहीं</string>
+    <string name="run_tasks_custom_directories_subtitle_count">%1$d डायरेक्टरी चयनित</string>
+    <string name="action_add_directory">डायरेक्टरी जोड़ें</string>
+    <string name="title_custom_directories">कस्टम निर्देशिकाएं</string>
+    <string name="custom_directories_description">बैकअप में शामिल करने के लिए अपने डिवाइस पर कस्टम डायरेक्टरी चुनें।</string>
+    <string name="error_cannot_backup_repo_to_itself">बैकअप के लिए रिपॉजिटरी को ही कस्टम डायरेक्टरी के रूप में नहीं जोड़ा जा सकता।</string>
+    <plurals name="backed_up_items_count">
+        <item quantity="one">बैकअप लिया गया (%1$d):</item>
+        <item quantity="other">बैकअप लिया गया (%1$d):</item>
+    </plurals>
+    <plurals name="custom_directories_count">
+        <item quantity="one">कस्टम डायरेक्टरी (%1$d):</item>
+        <item quantity="other">कस्टम निर्देशिकाएं (%1$d):</item>
+    </plurals>
+    <plurals name="snapshot_backed_up_custom_directories_count">
+        <item quantity="one">बैकअप ली गई कस्टम डायरेक्टरी (%1$d)</item>
+        <item quantity="other">बैकअप ली गई कस्टम निर्देशिकाएं (%1$d)</item>
+    </plurals>
+    <string name="backup_error_no_files_selected_for_items">चयनित आइटम के लिए बैकअप लेने हेतु कोई फ़ाइल नहीं मिली।</string>
+    <plurals name="backup_summary_success_items">
+        <item quantity="one">बैकअप लिया गया: %1$d आइटम।</item>
+        <item quantity="other">बैकअप ली गई %1$d आइटम।</item>
+    </plurals>
+    <string name="error_no_items_selected">कोई आइटम चयनित नहीं है।</string>
+    <string name="summary_no_items_selected">कोई आइटम चयनित नहीं थे।</string>
+    <string name="restore_error_no_items_selected">रीस्टोर के लिए कोई आइटम चयनित नहीं है।</string>
+    <string name="restore_stage_processing_template_apps">[%1$d/%2$d] ऐप्स प्रोसेस किए जा रहे हैं</string>
+    <string name="restore_stage_processing_template_custom_directories">[%1$d/%2$d] कस्टम डायरेक्टरी प्रोसेस की जा रही हैं</string>
+    <string name="restore_stage_processing_custom_directories">कस्टम डायरेक्टरी प्रोसेस की जा रही हैं…</string>
+    <string name="restore_failure_custom_directory">कस्टम डायरेक्टरी रीस्टोर करने में विफल: %1$s</string>
+    <plurals name="restore_summary_processed_items">
+        <item quantity="one">सफलतापूर्वक प्रोसेस किए गए आइटम: %1$d।</item>
+        <item quantity="other">सफलतापूर्वक संसाधित %1$d आइटम।</item>
+    </plurals>
 </resources>
