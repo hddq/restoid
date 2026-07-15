@@ -484,4 +484,7 @@
     <string name="storage_permission_enabled">Pristup svim datotekama odobren</string>
     <string name="storage_permission_disabled">Potreban pristup svim datotekama</string>
     <string name="storage_permission_description">Potrebno za izradu sigurnosnih kopija prilagođenih direktorija bez root pristupa.</string>
+    <string name="settings_system_permission_storage">Pristup pohrani</string>
+    <string name="settings_system_permission_local_network">Pristup lokalnoj mreži</string>
+    <string name="local_network_permission_enabled">Pristup lokalnoj mreži odobren</string>
 </resources>
