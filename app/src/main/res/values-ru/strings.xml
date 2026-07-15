@@ -78,7 +78,7 @@
     <string name="rest_credentials_required">Нужны данные REST</string>
     <string name="enter_rest_credentials_for_repository">Введите логин и пароль REST для: %1$s</string>
     <string name="s3_credentials_required">Нужны данные S3</string>
-    <string name="enter_s3_credentials_for_repository">Введите access key и secret key S3 для: %1$s</string>
+    <string name="enter_s3_credentials_for_repository">Введите S3 access key и secret key для: %1$s</string>
     <plurals name="apps_count">
         <item quantity="one">Приложение (%1$d):</item>
         <item quantity="few">Приложения (%1$d):</item>
@@ -227,7 +227,7 @@
     <string name="backup_item_unknown">Неизвестно</string>
     <string name="backup_item_obb">OBB</string>
     <string name="backup_item_media">Медиа</string>
-    <string name="backup_error_repository_id_not_found">ID репо не найден. Метаданные не сохранены.</string>
+    <string name="backup_error_repository_id_not_found">ID репозитория не найден. Метаданные не сохранены.</string>
     <string name="backup_stage_preparing">[%1$d/%2$d] Подготовка…</string>
     <string name="backup_stage_running">[%1$d/%2$d] Бэкап выбранных элементов…</string>
     <string name="backup_stage_finalizing">[%1$d/%2$d] Завершение…</string>
@@ -240,7 +240,7 @@
     <string name="summary_restic_binary_not_installed">Бинарник restic отсутствует.</string>
     <string name="error_no_backup_repository_selected">Репозиторий не выбран.</string>
     <string name="summary_no_backup_repository_selected">Выберите репо для бэкапа.</string>
-    <string name="error_password_not_found_for_repository">Пароль от репо не найден.</string>
+    <string name="error_password_not_found_for_repository">Пароль от репозитория не найден.</string>
     <string name="summary_password_not_found">Пароль отсутствует.</string>
     <string name="error_sftp_password_not_found_for_repository">Данные SFTP не найдены.</string>
     <string name="summary_sftp_password_not_found">Данные SFTP отсутствуют.</string>
@@ -268,10 +268,10 @@
     <string name="restore_failure_permissions_partial">%1$s: Часть прав не удалось восстановить: %2$s</string>
     <string name="restore_summary_finished_in">Восстановление завершено за %1$s.</string>
     <string name="restore_summary_details">\n\nДетали:\n- %1$s</string>
-    <string name="maintenance_task_unlock">Разблокировать</string>
-    <string name="maintenance_task_forget">Забыть</string>
+    <string name="maintenance_task_unlock">Разблокировано</string>
+    <string name="maintenance_task_forget">Забыть снимки</string>
     <string name="maintenance_task_prune">Очистить (Prune)</string>
-    <string name="maintenance_task_check">Проверить</string>
+    <string name="maintenance_task_check">Проверка</string>
     <string name="maintenance_error_no_tasks_selected">Задачи обслуживания не выбраны.</string>
     <string name="maintenance_stage_running_task">[%1$d/%2$d] Выполнение \'%3$s\'…</string>
     <string name="maintenance_task_successful">%1$s успешно:\n%2$s\n\n</string>
@@ -324,7 +324,7 @@
     <string name="dialog_stop_operation_message">Точно остановить? Все незавершенные действия отменятся.</string>
     <string name="repo_error_exists">Репозиторий уже существует.</string>
     <string name="repo_error_binary_not_ready">Restic не готов.</string>
-    <string name="repo_error_invalid_password_or_corrupted">Неверный пароль или поврежденный репо.</string>
+    <string name="repo_error_invalid_password_or_corrupted">Неверный пароль или поврежденный репозиторий.</string>
     <string name="repo_error_directory_not_repository">Папка существует, но это не репозиторий restic.</string>
     <string name="repo_error_failed_create_directory">Не удалось создать папку.</string>
     <string name="repo_error_failed_initialize">Не удалось инициализировать репозиторий.</string>
@@ -342,9 +342,9 @@
     <string name="restic_error_binary_corrupted">Бинарник поврежден</string>
     <string name="restic_error_bundled_not_found">Встроенный бинарник не найден или не запускается.</string>
     <string name="restic_failure_load_snapshots">Не удалось загрузить снимки</string>
-    <string name="restic_failure_check_repository">Не удалось проверить репо</string>
+    <string name="restic_failure_check_repository">Не удалось проверить репозиторий</string>
     <string name="restic_failure_prune_repository">Не удалось сделать очистку</string>
-    <string name="restic_failure_unlock_repository">Не удалось разблокировать репо</string>
+    <string name="restic_failure_unlock_repository">Не удалось разблокировать репозиторий</string>
     <string name="restic_failure_no_forget_policy">Не указаны правила хранения для удаления старых копий.</string>
     <string name="restic_failure_forget_snapshots">Не удалось забыть снимки</string>
     <string name="restic_failure_delete_snapshot">Не удалось удалить снимок</string>
@@ -375,9 +375,9 @@
     <string name="maintenance_summary_prune_completed">Очистка завершена.</string>
     <plurals name="maintenance_summary_removed_snapshots">
         <item quantity="one">Удален %1$d снимок.</item>
-        <item quantity="few">Удален %1$d снимка.</item>
-        <item quantity="many">Удален %1$d снимоков.</item>
-        <item quantity="other">Удален %1$d снимоков.</item>
+        <item quantity="few">Удалены %1$d снимка.</item>
+        <item quantity="many">Удалено %1$d снимков.</item>
+        <item quantity="other">Удалено %1$d снимков.</item>
     </plurals>
     <string name="maintenance_summary_no_snapshots_removed">Нет снимков, соответствующих правилам удаления.</string>
     <string name="maintenance_summary_check_completed">Проверка завершена.</string>
