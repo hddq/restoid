@@ -513,4 +513,7 @@
     <string name="storage_permission_enabled">Доступ ко всем файлам предоставлен</string>
     <string name="storage_permission_disabled">Требуется доступ ко всем файлам</string>
     <string name="storage_permission_description">Необходим для резервного копирования пользовательских папок без прав root.</string>
+    <string name="settings_system_permission_storage">Доступ к хранилищу</string>
+    <string name="settings_system_permission_local_network">Доступ к локальной сети</string>
+    <string name="local_network_permission_enabled">Доступ к локальной сети предоставлен</string>
 </resources>
