@@ -471,4 +471,7 @@
     <string name="storage_permission_enabled">Przyznano dostęp do wszystkich plików</string>
     <string name="storage_permission_disabled">Wymagany dostęp do wszystkich plików</string>
     <string name="storage_permission_description">Wymagane do tworzenia kopii zapasowych własnych katalogów bez dostępu root.</string>
+    <string name="settings_system_permission_storage">Dostęp do pamięci</string>
+    <string name="settings_system_permission_local_network">Dostęp do sieci lokalnej</string>
+    <string name="local_network_permission_enabled">Przyznano dostęp do sieci lokalnej</string>
 </resources>
