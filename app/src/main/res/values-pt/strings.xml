@@ -470,4 +470,7 @@
     <string name="storage_permission_enabled">Acesso a todos os ficheiros concedido</string>
     <string name="storage_permission_disabled">Acesso a todos os ficheiros obrigatório</string>
     <string name="storage_permission_description">Necessário para efetuar cópias de segurança de diretórios personalizados sem acesso root.</string>
+    <string name="settings_system_permission_storage">Acesso ao Armazenamento</string>
+    <string name="settings_system_permission_local_network">Acesso à Rede Local</string>
+    <string name="local_network_permission_enabled">Acesso à rede local concedido</string>
 </resources>
