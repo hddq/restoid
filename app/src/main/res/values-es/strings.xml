@@ -434,4 +434,50 @@
     <string name="repo_warning_metadata_restore_failed">El repositorio se añadió correctamente, pero falló la restauración de sus metadatos (programaciones, información detallada de copias de seguridad). Esto suele significar que falta la instantánea de metadatos o que el repositorio está bloqueado. Para intentarlo de nuevo, abra Ajustes → Repositorios, toque el menú del repositorio y elija \"Restaurar metadatos\".</string>
     <string name="screen_tasks">Tareas</string>
     <string name="topbar_tasks">Tareas</string>
+    <string name="run_tasks_custom_directories">Directorios personalizados</string>
+    <string name="run_tasks_custom_directories_subtitle_none">No hay directorios seleccionados</string>
+    <string name="run_tasks_custom_directories_subtitle_count">%1$d directorios seleccionados</string>
+    <string name="action_add_directory">Añadir directorio</string>
+    <string name="title_custom_directories">Directorios personalizados</string>
+    <string name="custom_directories_description">Seleccione los directorios personalizados de su dispositivo que desea incluir en la copia de seguridad.</string>
+    <string name="error_cannot_backup_repo_to_itself">No se puede añadir el propio repositorio como directorio personalizado para la copia de seguridad.</string>
+    <plurals name="backed_up_items_count">
+        <item quantity="one">Copia de seguridad realizada (%1$d):</item>
+        <item quantity="other">Copiado (%1$d):</item>
+    </plurals>
+    <plurals name="custom_directories_count">
+        <item quantity="one">Directorio personalizado (%1$d):</item>
+        <item quantity="other">Directorios personalizados (%1$d):</item>
+    </plurals>
+    <plurals name="snapshot_backed_up_custom_directories_count">
+        <item quantity="one">Directorio personalizado respaldado (%1$d)</item>
+        <item quantity="other">Directorios personalizados respaldados (%1$d)</item>
+    </plurals>
+    <string name="backup_error_no_files_selected_for_items">No se encontraron archivos para respaldar en los elementos seleccionados.</string>
+    <plurals name="backup_summary_success_items">
+        <item quantity="one">Se realizó una copia de seguridad de %1$d elemento.</item>
+        <item quantity="other">Se realizó una copia de seguridad de %1$d elementos.</item>
+    </plurals>
+    <string name="error_no_items_selected">No hay elementos seleccionados.</string>
+    <string name="summary_no_items_selected">No se seleccionó ningún elemento.</string>
+    <string name="restore_error_no_items_selected">No hay elementos seleccionados para la restauración.</string>
+    <string name="restore_stage_processing_template_apps">[%1$d/%2$d] Procesando aplicaciones</string>
+    <string name="restore_stage_processing_template_custom_directories">[%1$d/%2$d] Procesando directorios personalizados</string>
+    <string name="restore_stage_processing_custom_directories">Procesando directorios personalizados…</string>
+    <string name="restore_failure_custom_directory">Error al restaurar el directorio personalizado %1$s</string>
+    <plurals name="restore_summary_processed_items">
+        <item quantity="one">Se procesó correctamente %1$d elemento.</item>
+        <item quantity="other">Se procesaron correctamente %1$d elementos.</item>
+    </plurals>
+    <plurals name="restore_summary_failed_items">
+        <item quantity="one">Error al restaurar %1$d elemento.</item>
+        <item quantity="other">Error al restaurar %1$d elementos.</item>
+    </plurals>
+    <string name="action_run_now">Ejecutar ahora</string>
+    <string name="storage_permission_enabled">Acceso a todos los archivos concedido</string>
+    <string name="storage_permission_disabled">Se requiere acceso a todos los archivos</string>
+    <string name="storage_permission_description">Necesario para realizar copias de seguridad de directorios personalizados sin acceso root.</string>
+    <string name="settings_system_permission_storage">Acceso al almacenamiento</string>
+    <string name="settings_system_permission_local_network">Acceso a red local</string>
+    <string name="local_network_permission_enabled">Acceso a red local concedido</string>
 </resources>
