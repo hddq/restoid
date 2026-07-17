@@ -487,4 +487,12 @@
     <string name="settings_system_permission_storage">Pristup pohrani</string>
     <string name="settings_system_permission_local_network">Pristup lokalnoj mreži</string>
     <string name="local_network_permission_enabled">Pristup lokalnoj mreži odobren</string>
+    <string name="license_restic_license" translatable="false"></string>
+    <string name="license_restoid_author" translatable="false"></string>
+    <string name="license_restoid_name" translatable="false"></string>
+    <string name="license_restic_name" translatable="false"></string>
+    <string name="license_restoid_url" translatable="false"></string>
+    <string name="license_restic_url" translatable="false"></string>
+    <string name="app_name" translatable="false"></string>
+    <string name="license_restic_author" translatable="false"></string>
 </resources>
