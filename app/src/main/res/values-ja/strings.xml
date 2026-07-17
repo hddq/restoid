@@ -445,28 +445,4 @@
     <plurals name="restore_summary_processed_items">
         <item quantity="other">%1$d 個の項目を正常に処理しました。</item>
     </plurals>
-    <string name="local_network_permission_enabled"></string>
-    <string name="license_restic_license" translatable="false"></string>
-    <plurals name="restore_summary_failed_items">
-    </plurals>
-    <string name="placeholder_sftp_private_key" translatable="false"></string>
-    <string name="storage_permission_enabled"></string>
-    <string name="license_restoid_author" translatable="false"></string>
-    <string name="license_restoid_name" translatable="false"></string>
-    <string name="license_restic_name" translatable="false"></string>
-    <string name="license_restoid_url" translatable="false"></string>
-    <string name="repo_backend_s3" translatable="false"></string>
-    <string name="repo_hint_s3" translatable="false"></string>
-    <string name="storage_permission_description"></string>
-    <string name="settings_system_permission_storage"></string>
-    <string name="storage_permission_disabled"></string>
-    <string name="settings_system_permission_local_network"></string>
-    <string name="repo_hint_rest" translatable="false"></string>
-    <string name="home_title" translatable="false"></string>
-    <string name="license_restic_url" translatable="false"></string>
-    <string name="progress_placeholder" translatable="false"></string>
-    <string name="app_name" translatable="false"></string>
-    <string name="repo_hint_sftp" translatable="false"></string>
-    <string name="action_run_now"></string>
-    <string name="license_restic_author" translatable="false"></string>
 </resources>
