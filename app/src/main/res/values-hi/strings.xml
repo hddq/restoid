@@ -469,4 +469,21 @@
         <item quantity="one">सफलतापूर्वक प्रोसेस किए गए आइटम: %1$d।</item>
         <item quantity="other">सफलतापूर्वक संसाधित %1$d आइटम।</item>
     </plurals>
+    <string name="local_network_permission_enabled"></string>
+    <string name="license_restic_license" translatable="false"></string>
+    <plurals name="restore_summary_failed_items">
+    </plurals>
+    <string name="storage_permission_enabled"></string>
+    <string name="license_restoid_author" translatable="false"></string>
+    <string name="license_restoid_name" translatable="false"></string>
+    <string name="license_restic_name" translatable="false"></string>
+    <string name="license_restoid_url" translatable="false"></string>
+    <string name="storage_permission_description"></string>
+    <string name="settings_system_permission_storage"></string>
+    <string name="storage_permission_disabled"></string>
+    <string name="settings_system_permission_local_network"></string>
+    <string name="license_restic_url" translatable="false"></string>
+    <string name="app_name" translatable="false"></string>
+    <string name="action_run_now"></string>
+    <string name="license_restic_author" translatable="false"></string>
 </resources>
