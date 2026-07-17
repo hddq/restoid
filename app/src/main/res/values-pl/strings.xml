@@ -474,4 +474,42 @@
     <string name="settings_system_permission_storage">Dostęp do pamięci</string>
     <string name="settings_system_permission_local_network">Dostęp do sieci lokalnej</string>
     <string name="local_network_permission_enabled">Przyznano dostęp do sieci lokalnej</string>
+    <plurals name="custom_directories_count">
+        <item quantity="one">Katalog niestandardowy (%1$d):</item>
+        <item quantity="few">Katalogi niestandardowe (%1$d):</item>
+        <item quantity="many">Katalogi niestandardowe (%1$d):</item>
+        <item quantity="other">Katalogi niestandardowe (%1$d):</item>
+    </plurals>
+    <plurals name="snapshot_backed_up_custom_directories_count">
+        <item quantity="one">Zarchiwizowany katalog niestandardowy (%1$d)</item>
+        <item quantity="few">Zarchiwizowane katalogi niestandardowe (%1$d)</item>
+        <item quantity="many">Kopie zapasowe katalogów niestandardowych (%1$d)</item>
+        <item quantity="other">Kopie zapasowe katalogów niestandardowych (%1$d)</item>
+    </plurals>
+    <string name="backup_error_no_files_selected_for_items">Nie znaleziono plików do zarchiwizowania dla wybranych elementów.</string>
+    <plurals name="backup_summary_success_items">
+        <item quantity="one">Zarchiwizowano %1$d element.</item>
+        <item quantity="few">Zarchiwizowano %1$d elementów.</item>
+        <item quantity="many">Utworzono kopię zapasową %1$d elementów.</item>
+        <item quantity="other">Utworzono kopię zapasową %1$d elementów.</item>
+    </plurals>
+    <string name="error_no_items_selected">Nie wybrano żadnych elementów.</string>
+    <string name="summary_no_items_selected">Nie wybrano żadnych elementów.</string>
+    <string name="restore_error_no_items_selected">Nie wybrano elementów do przywrócenia.</string>
+    <string name="restore_stage_processing_template_apps">[%1$d/%2$d] Przetwarzanie aplikacji</string>
+    <string name="restore_stage_processing_template_custom_directories">[%1$d/%2$d] Przetwarzanie katalogów niestandardowych</string>
+    <string name="restore_stage_processing_custom_directories">Przetwarzanie katalogów niestandardowych…</string>
+    <string name="restore_failure_custom_directory">Nie udało się przywrócić katalogu niestandardowego %1$s</string>
+    <plurals name="restore_summary_processed_items">
+        <item quantity="one">Pomyślnie przetworzono %1$d element.</item>
+        <item quantity="few">Pomyślnie przetworzono %1$d elementów.</item>
+        <item quantity="many">Pomyślnie przetworzono %1$d elementów.</item>
+        <item quantity="other">Pomyślnie przetworzono %1$d elementów.</item>
+    </plurals>
+    <plurals name="restore_summary_failed_items">
+        <item quantity="one">Nie udało się przywrócić %1$d elementu.</item>
+        <item quantity="few">Nie udało się przywrócić %1$d elementów.</item>
+        <item quantity="many">Nie udało się przywrócić %1$d elementów.</item>
+        <item quantity="other">Nie udało się przywrócić %1$d elementów.</item>
+    </plurals>
 </resources>
