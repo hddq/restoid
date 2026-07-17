@@ -422,4 +422,44 @@
     <string name="repo_warning_metadata_restore_failed">Repositori berhasil ditambahkan, tetapi pemulihan metadatanya (jadwal, info cadangan terperinci) gagal. Ini biasanya berarti snapshot metadata hilang atau repositori terkunci. Untuk mencoba lagi, buka Pengaturan → Repositori, ketuk menu repo, dan pilih “Pulihkan metadata”.</string>
     <string name="screen_tasks">Tugas</string>
     <string name="topbar_tasks">Tugas</string>
+    <string name="run_tasks_custom_directories">Direktori Kustom</string>
+    <string name="run_tasks_custom_directories_subtitle_none">Tidak ada direktori yang dipilih</string>
+    <string name="run_tasks_custom_directories_subtitle_count">%1$d direktori dipilih</string>
+    <string name="action_add_directory">Tambah Direktori</string>
+    <string name="title_custom_directories">Direktori Kustom</string>
+    <string name="custom_directories_description">Pilih direktori kustom di perangkat Anda untuk disertakan dalam cadangan.</string>
+    <string name="error_cannot_backup_repo_to_itself">Tidak dapat menambahkan repositori itu sendiri sebagai direktori kustom untuk dicadangkan.</string>
+    <plurals name="backed_up_items_count">
+        <item quantity="other">Dicadangkan (%1$d):</item>
+    </plurals>
+    <plurals name="custom_directories_count">
+        <item quantity="other">Direktori Kustom (%1$d):</item>
+    </plurals>
+    <plurals name="snapshot_backed_up_custom_directories_count">
+        <item quantity="other">Direktori Kustom yang Dicadangkan (%1$d)</item>
+    </plurals>
+    <string name="backup_error_no_files_selected_for_items">Tidak ada file yang ditemukan untuk dicadangkan pada item yang dipilih.</string>
+    <plurals name="backup_summary_success_items">
+        <item quantity="other">Dicadangkan %1$d item.</item>
+    </plurals>
+    <string name="error_no_items_selected">Tidak ada item yang dipilih.</string>
+    <string name="summary_no_items_selected">Tidak ada item yang dipilih.</string>
+    <string name="restore_error_no_items_selected">Tidak ada item yang dipilih untuk dipulihkan.</string>
+    <string name="restore_stage_processing_template_apps">[%1$d/%2$d] Memproses Aplikasi</string>
+    <string name="restore_stage_processing_template_custom_directories">[%1$d/%2$d] Memproses Direktori Kustom</string>
+    <string name="restore_stage_processing_custom_directories">Memproses Direktori Kustom…</string>
+    <string name="restore_failure_custom_directory">Gagal memulihkan direktori kustom %1$s</string>
+    <plurals name="restore_summary_processed_items">
+        <item quantity="other">Berhasil memproses %1$d item.</item>
+    </plurals>
+    <plurals name="restore_summary_failed_items">
+        <item quantity="other">Gagal memulihkan %1$d item.</item>
+    </plurals>
+    <string name="action_run_now">Jalankan sekarang</string>
+    <string name="storage_permission_enabled">Akses semua file diberikan</string>
+    <string name="storage_permission_disabled">Akses semua file diperlukan</string>
+    <string name="storage_permission_description">Diperlukan untuk mencadangkan direktori kustom tanpa akses root.</string>
+    <string name="settings_system_permission_storage">Akses Penyimpanan</string>
+    <string name="settings_system_permission_local_network">Akses Jaringan Lokal</string>
+    <string name="local_network_permission_enabled">Akses jaringan lokal diberikan</string>
 </resources>
