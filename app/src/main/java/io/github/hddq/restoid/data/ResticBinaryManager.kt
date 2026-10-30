@@ -22,10 +22,16 @@ class ResticBinaryManager(private val context: Context) {
     val resticState = _resticState.asStateFlow()
 
     private val resticFile: File
-        get() = resolveBundledBinary()
+        get() = resolveBundledBinary("librestic.so")
+
+    private val sshAskpassFile: File
+        get() = resolveBundledBinary("libssh_askpass.so")
 
     fun getBinaryPath(): String? =
         resticFile.takeIf { it.exists() && it.canExecute() }?.absolutePath
+
+    fun getSshAskpassPath(): String? =
+        sshAskpassFile.takeIf { it.exists() && it.canExecute() }?.absolutePath
 
     // Check the status of the restic binary by executing it
     suspend fun checkResticStatus() {
@@ -45,20 +51,20 @@ class ResticBinaryManager(private val context: Context) {
         }
     }
 
-    private fun resolveBundledBinary(): File {
+    private fun resolveBundledBinary(libraryName: String = "librestic.so"): File {
         val nativeLibDir = File(context.applicationInfo.nativeLibraryDir)
-        val directBinary = File(nativeLibDir, "librestic.so")
+        val directBinary = File(nativeLibDir, libraryName)
         if (directBinary.exists()) {
             return directBinary
         }
 
         val abi = Build.SUPPORTED_ABIS.firstOrNull().orEmpty()
-        val fallbackBinary = File(nativeLibDir, "../$abi/librestic.so")
+        val fallbackBinary = File(nativeLibDir, "../$abi/$libraryName")
         if (fallbackBinary.exists()) {
             return fallbackBinary
         }
 
-        Log.w("ResticBinMgr", "Bundled restic binary missing in ${nativeLibDir.absolutePath}")
+        Log.w("ResticBinMgr", "Bundled binary $libraryName missing in ${nativeLibDir.absolutePath}")
         return directBinary
     }
 }

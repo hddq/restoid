@@ -606,10 +606,16 @@ class RepositoriesRepository(
                 sftpKeyFilePath = tempSftpKeyFile?.absolutePath
             )
 
-            val persistedEnvironmentVariables = when {
+            val persistedEnvironmentVariables = if (backendType == RepositoryBackendType.SFTP) {
+                applySftpClientEnvironmentDefaults(environmentVariables)
+            } else {
+                environmentVariables
+            }
+
+            val sftpExecutionEnvironmentVariables = when {
                 backendType == RepositoryBackendType.SFTP && !sftpKeyAuthRequired && sftpPassword.isNotBlank() -> {
                     val envResult = prepareSshAuthenticationEnvironment(
-                        baseEnvironmentVariables = environmentVariables,
+                        baseEnvironmentVariables = persistedEnvironmentVariables,
                         sshPassword = sftpPassword
                     )
                     if (envResult.isFailure) {
@@ -623,7 +629,7 @@ class RepositoriesRepository(
                 }
                 backendType == RepositoryBackendType.SFTP && sftpKeyAuthRequired && sftpKeyPassphrase.isNotBlank() -> {
                     val envResult = prepareSshAuthenticationEnvironment(
-                        baseEnvironmentVariables = environmentVariables,
+                        baseEnvironmentVariables = persistedEnvironmentVariables,
                         sftpKeyPassphrase = sftpKeyPassphrase
                     )
                     if (envResult.isFailure) {
@@ -635,8 +641,7 @@ class RepositoriesRepository(
                     }
                     envResult.getOrThrow()
                 }
-                backendType == RepositoryBackendType.SFTP -> applySftpClientEnvironmentDefaults(environmentVariables)
-                else -> environmentVariables
+                else -> persistedEnvironmentVariables
             }
 
             val executionEnvironmentVariables = if (hasRestAuthCredentials) {
@@ -650,7 +655,7 @@ class RepositoriesRepository(
                     "AWS_SECRET_ACCESS_KEY" to s3SecretAccessKey
                 )
             } else {
-                persistedEnvironmentVariables
+                sftpExecutionEnvironmentVariables
             }
 
             val draftRepository = LocalRepository(
@@ -1069,30 +1074,8 @@ class RepositoriesRepository(
             return Result.failure(IllegalStateException(context.getString(R.string.repo_error_sftp_ssh_binary_not_found)))
         }
 
-        val askpassDir = File(context.filesDir, "sftp-askpass")
-        if (!askpassDir.exists() && !askpassDir.mkdirs()) {
-            return Result.failure(IllegalStateException(context.getString(R.string.repo_error_sftp_askpass_create_failed)))
-        }
-
-        val askpassScript = File(askpassDir, "ssh-askpass.sh")
-        runCatching {
-            askpassScript.writeText(
-                "#!/system/bin/sh\n" +
-                        "if [ -n \"\$${SSH_KEY_PASSPHRASE_ENV}\" ]; then\n" +
-                        "  printf '%s\\n' \"\$${SSH_KEY_PASSPHRASE_ENV}\"\n" +
-                        "  exit 0\n" +
-                        "fi\n" +
-                        "if [ -n \"\$SSHPASS\" ]; then\n" +
-                        "  printf '%s\\n' \"\$SSHPASS\"\n" +
-                        "  exit 0\n" +
-                        "fi\n" +
-                        "exit 1\n"
-            )
-            askpassScript.setExecutable(true, true)
-            askpassDir.setExecutable(true, true)
-        }.onFailure {
-            return Result.failure(IllegalStateException(context.getString(R.string.repo_error_sftp_askpass_create_failed)))
-        }
+        val askpassPath = binaryManager.getSshAskpassPath()
+            ?: return Result.failure(IllegalStateException(context.getString(R.string.repo_error_sftp_askpass_create_failed)))
 
         val environmentWithDefaults = applySftpClientEnvironmentDefaults(baseEnvironmentVariables)
         val displayValue = environmentWithDefaults["DISPLAY"] ?: "restoid:0"
@@ -1106,7 +1089,7 @@ class RepositoriesRepository(
 
         return Result.success(
             environmentWithDefaults + authEnvironment + mapOf(
-                "SSH_ASKPASS" to askpassScript.absolutePath,
+                "SSH_ASKPASS" to askpassPath,
                 "SSH_ASKPASS_REQUIRE" to "force",
                 "DISPLAY" to displayValue
             )
@@ -1116,6 +1099,17 @@ class RepositoriesRepository(
     private fun applySftpClientEnvironmentDefaults(baseEnvironmentVariables: Map<String, String>): Map<String, String> {
         val result = linkedMapOf<String, String>()
         result.putAll(baseEnvironmentVariables)
+
+        // Upgrade legacy or stale SSH_ASKPASS paths so they always point to the current nativeLibraryDir
+        val existingAskpass = result["SSH_ASKPASS"]
+        if (existingAskpass != null && (existingAskpass.contains("/files/sftp-askpass/") || existingAskpass.endsWith("/libssh_askpass.so"))) {
+            val bundledAskpass = binaryManager.getSshAskpassPath()
+            if (bundledAskpass != null) {
+                result["SSH_ASKPASS"] = bundledAskpass
+            } else {
+                result.remove("SSH_ASKPASS")
+            }
+        }
 
         if (result["HOME"].isNullOrBlank()) {
             result["HOME"] = context.filesDir.absolutePath
