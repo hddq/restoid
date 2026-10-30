@@ -516,4 +516,5 @@
     <string name="settings_system_permission_storage">Доступ к хранилищу</string>
     <string name="settings_system_permission_local_network">Доступ к локальной сети</string>
     <string name="local_network_permission_enabled">Доступ к локальной сети предоставлен</string>
+    <string name="repo_supporting_sftp">Пользовательский порт: sftp://user@host:2222//srv/restic-repo (используйте один / после порта для относительного пути)</string>
 </resources>
