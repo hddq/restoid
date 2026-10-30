@@ -480,12 +480,4 @@
     <string name="settings_system_permission_storage">Speicherzugriff</string>
     <string name="settings_system_permission_local_network">Zugriff auf lokales Netzwerk</string>
     <string name="local_network_permission_enabled">Zugriff auf lokales Netzwerk gewährt</string>
-    <string name="license_restic_license" translatable="false"></string>
-    <string name="license_restoid_author" translatable="false"></string>
-    <string name="license_restoid_name" translatable="false"></string>
-    <string name="license_restic_name" translatable="false"></string>
-    <string name="license_restoid_url" translatable="false"></string>
-    <string name="license_restic_url" translatable="false"></string>
-    <string name="app_name" translatable="false"></string>
-    <string name="license_restic_author" translatable="false"></string>
 </resources>

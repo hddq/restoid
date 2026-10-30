@@ -462,12 +462,4 @@
     <string name="action_run_now">지금 실행</string>
     <string name="error_cannot_backup_repo_to_itself">저장소 자체를 백업할 사용자 지정 디렉터리로 추가할 수 없습니다.</string>
     <string name="title_custom_directories">사용자 지정 디렉터리</string>
-    <string name="license_restic_license" translatable="false"></string>
-    <string name="license_restoid_author" translatable="false"></string>
-    <string name="license_restoid_name" translatable="false"></string>
-    <string name="license_restic_name" translatable="false"></string>
-    <string name="license_restoid_url" translatable="false"></string>
-    <string name="license_restic_url" translatable="false"></string>
-    <string name="app_name" translatable="false"></string>
-    <string name="license_restic_author" translatable="false"></string>
 </resources>

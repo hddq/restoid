@@ -522,6 +522,4 @@
         <item quantity="many">Utworzono kopię zapasową (%1$d):</item>
         <item quantity="other">Utworzono kopię zapasową (%1$d):</item>
     </plurals>
-    <string name="custom_directories_description"></string>
-    <string name="error_cannot_backup_repo_to_itself"></string>
 </resources>
