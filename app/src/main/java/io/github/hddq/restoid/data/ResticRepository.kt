@@ -2,6 +2,7 @@ package io.github.hddq.restoid.data
 
 import android.content.Context
 import android.util.Log
+import com.topjohnwu.superuser.CallbackList
 import com.topjohnwu.superuser.Shell
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.model.ResticConfig
@@ -132,46 +133,270 @@ class ResticRepository(
         }
     }
 
-    suspend fun lsWithSizes(
+    suspend fun populateMetadataSizes(
+        repoPath: String,
+        password: String,
+        snapshotId: String,
+        metadata: io.github.hddq.restoid.model.RestoidMetadata,
+        apkDirByPackage: Map<String, String> = emptyMap(),
+        environmentVariables: Map<String, String> = emptyMap(),
+        resticOptions: Map<String, String> = emptyMap()
+    ): Result<io.github.hddq.restoid.model.RestoidMetadata> {
+        return withContext(Dispatchers.IO) {
+            val scanResult = scanSnapshotSizes(
+                repoPath = repoPath,
+                password = password,
+                snapshotId = snapshotId,
+                apkDirByPackage = apkDirByPackage,
+                customDirectories = metadata.customDirectories.keys,
+                environmentVariables = environmentVariables,
+                resticOptions = resticOptions
+            )
+            scanResult.map { scanned ->
+                applySnapshotSizesToMetadata(metadata, scanned.appSizes, scanned.customDirSizes)
+            }
+        }
+    }
+
+    suspend fun recoverMetadataFromSnapshot(
         repoPath: String,
         password: String,
         snapshotId: String,
         environmentVariables: Map<String, String> = emptyMap(),
         resticOptions: Map<String, String> = emptyMap()
-    ): Result<List<ResticNodeInfo>> {
+    ): Result<io.github.hddq.restoid.model.RestoidMetadata> {
         return withContext(Dispatchers.IO) {
-            val result = executor.execute(
+            val scanResult = scanSnapshotSizes(
                 repoPath = repoPath,
                 password = password,
-                command = "ls --json $snapshotId",
-                failureMessage = context.getString(R.string.restic_failure_load_snapshots),
+                snapshotId = snapshotId,
+                apkDirByPackage = emptyMap(),
+                customDirectories = emptySet(),
                 environmentVariables = environmentVariables,
                 resticOptions = resticOptions
             )
-
-            result.map { output ->
-                output.lines().mapNotNull { line ->
-                    val trimmed = line.trim()
-                    if (trimmed.startsWith("{")) {
-                        try {
-                            val jsonObj = org.json.JSONObject(trimmed)
-                            val path = jsonObj.optString("path")
-                            val size = jsonObj.optLong("size", 0L)
-                            val type = jsonObj.optString("type")
-                            if (path.isNotEmpty() && type == "file" && size > 0) {
-                                ResticNodeInfo(path, size)
-                            } else {
-                                null
+            scanResult.mapCatching { scanned ->
+                val metadataPath = scanned.restoidJsonPath
+                    ?: throw IllegalStateException("restoid.json not found in snapshot $snapshotId")
+                val content = dump(
+                    repoPath = repoPath,
+                    password = password,
+                    snapshotId = snapshotId,
+                    filePath = metadataPath,
+                    environmentVariables = environmentVariables,
+                    resticOptions = resticOptions
+                ).getOrThrow()
+                val recoveredMetadata = json.decodeFromString<io.github.hddq.restoid.model.RestoidMetadata>(content)
+                // If custom directories exist in recovered metadata, compute their sizes from the paths seen
+                val customDirSizes = if (recoveredMetadata.customDirectories.isNotEmpty()) {
+                    val prefixes = recoveredMetadata.customDirectories.keys.associateWith { "${it.trimEnd('/')}/" }
+                    val sizes = mutableMapOf<String, Long>()
+                    for ((filePath, fileSize) in scanned.otherFileSizes) {
+                        for ((dirPath, prefixWithSlash) in prefixes) {
+                            if (filePath == dirPath || filePath.startsWith(prefixWithSlash)) {
+                                sizes[dirPath] = (sizes[dirPath] ?: 0L) + fileSize
+                                break
                             }
-                        } catch (e: Exception) {
-                            null
+                        }
+                    }
+                    sizes
+                } else {
+                    emptyMap()
+                }
+                applySnapshotSizesToMetadata(recoveredMetadata, scanned.appSizes, customDirSizes)
+            }
+        }
+    }
+
+    private data class SnapshotScanData(
+        val restoidJsonPath: String?,
+        val appSizes: Map<String, Map<String, Long>>,
+        val customDirSizes: Map<String, Long>,
+        val otherFileSizes: List<Pair<String, Long>>
+    )
+
+    private suspend fun scanSnapshotSizes(
+        repoPath: String,
+        password: String,
+        snapshotId: String,
+        apkDirByPackage: Map<String, String>,
+        customDirectories: Set<String>,
+        environmentVariables: Map<String, String>,
+        resticOptions: Map<String, String>
+    ): Result<SnapshotScanData> {
+        val apkPrefixToPkg = apkDirByPackage.entries.associate { (pkg, dir) ->
+            "${dir.trimEnd('/')}/" to pkg
+        }
+        val customDirPrefixes = customDirectories.associateWith { "${it.trimEnd('/')}/" }
+
+        var restoidJsonPath: String? = null
+        val appSizes = mutableMapOf<String, MutableMap<String, Long>>()
+        val customDirSizes = mutableMapOf<String, Long>()
+        val otherFileSizes = mutableListOf<Pair<String, Long>>()
+
+        val callback = object : CallbackList<String>() {
+            override fun onAddElement(line: String) {
+                val trimmed = line.trim()
+                if (!trimmed.startsWith("{")) return
+                try {
+                    val jsonObj = org.json.JSONObject(trimmed)
+                    if (jsonObj.optString("type") != "file") return
+                    val path = jsonObj.optString("path")
+                    if (path.isEmpty()) return
+
+                    if (restoidJsonPath == null && path.endsWith("/restoid.json")) {
+                        restoidJsonPath = path
+                        return
+                    }
+
+                    val size = jsonObj.optLong("size", 0L)
+                    if (size <= 0L) return
+
+                    val appMatch = classifyAppFilePath(path, apkPrefixToPkg)
+                    if (appMatch != null) {
+                        val (pkg, component) = appMatch
+                        val pkgSizes = appSizes.getOrPut(pkg) { mutableMapOf() }
+                        pkgSizes[component] = (pkgSizes[component] ?: 0L) + size
+                    } else if (customDirPrefixes.isNotEmpty()) {
+                        for ((dirPath, prefixWithSlash) in customDirPrefixes) {
+                            if (path == dirPath || path.startsWith(prefixWithSlash)) {
+                                customDirSizes[dirPath] = (customDirSizes[dirPath] ?: 0L) + size
+                                break
+                            }
                         }
                     } else {
-                        null
+                        otherFileSizes.add(path to size)
                     }
+                } catch (_: Exception) {
                 }
             }
         }
+
+        val result = executor.execute(
+            repoPath = repoPath,
+            password = password,
+            command = "ls --json $snapshotId",
+            failureMessage = context.getString(R.string.restic_failure_load_snapshots),
+            environmentVariables = environmentVariables,
+            resticOptions = resticOptions,
+            stdoutCallback = callback
+        )
+
+        return result.map {
+            SnapshotScanData(
+                restoidJsonPath = restoidJsonPath,
+                appSizes = appSizes,
+                customDirSizes = customDirSizes,
+                otherFileSizes = otherFileSizes
+            )
+        }
+    }
+
+    private fun classifyAppFilePath(
+        path: String,
+        apkPrefixToPkg: Map<String, String>
+    ): Pair<String, String>? {
+        return when {
+            path.startsWith("/data/user/") -> {
+                val userEnd = path.indexOf('/', 11)
+                if (userEnd > 11) {
+                    val pkgEnd = path.indexOf('/', userEnd + 1)
+                    if (pkgEnd > userEnd + 1) {
+                        path.substring(userEnd + 1, pkgEnd) to "data"
+                    } else null
+                } else null
+            }
+            path.startsWith("/data/data/") -> {
+                val pkgEnd = path.indexOf('/', 11)
+                if (pkgEnd > 11) {
+                    path.substring(11, pkgEnd) to "data"
+                } else null
+            }
+            path.startsWith("/data/user_de/") -> {
+                val userEnd = path.indexOf('/', 14)
+                if (userEnd > 14) {
+                    val pkgEnd = path.indexOf('/', userEnd + 1)
+                    if (pkgEnd > userEnd + 1) {
+                        path.substring(userEnd + 1, pkgEnd) to "user_de"
+                    } else null
+                } else null
+            }
+            path.startsWith("/storage/emulated/") -> {
+                val userEnd = path.indexOf('/', 18)
+                if (userEnd > 18) {
+                    when {
+                        path.startsWith("/Android/data/", userEnd) -> {
+                            val pkgStart = userEnd + 14
+                            val pkgEnd = path.indexOf('/', pkgStart)
+                            if (pkgEnd > pkgStart) path.substring(pkgStart, pkgEnd) to "external_data" else null
+                        }
+                        path.startsWith("/Android/obb/", userEnd) -> {
+                            val pkgStart = userEnd + 13
+                            val pkgEnd = path.indexOf('/', pkgStart)
+                            if (pkgEnd > pkgStart) path.substring(pkgStart, pkgEnd) to "obb" else null
+                        }
+                        path.startsWith("/Android/media/", userEnd) -> {
+                            val pkgStart = userEnd + 15
+                            val pkgEnd = path.indexOf('/', pkgStart)
+                            if (pkgEnd > pkgStart) path.substring(pkgStart, pkgEnd) to "media" else null
+                        }
+                        else -> null
+                    }
+                } else null
+            }
+            path.startsWith("/data/app/") -> {
+                for ((prefixWithSlash, pkg) in apkPrefixToPkg) {
+                    if (path.startsWith(prefixWithSlash)) {
+                        return pkg to "apk"
+                    }
+                }
+                val firstSlash = path.indexOf('/', 10)
+                if (firstSlash > 10) {
+                    val firstSeg = path.substring(10, firstSlash)
+                    val appDirSeg = if (firstSeg.startsWith("~~")) {
+                        val secondSlash = path.indexOf('/', firstSlash + 1)
+                        if (secondSlash > firstSlash + 1) path.substring(firstSlash + 1, secondSlash) else null
+                    } else {
+                        firstSeg
+                    }
+                    if (appDirSeg != null) {
+                        val dashIdx = appDirSeg.indexOf('-')
+                        if (dashIdx > 0) {
+                            appDirSeg.substring(0, dashIdx) to "apk"
+                        } else null
+                    } else null
+                } else null
+            }
+            else -> null
+        }
+    }
+
+    private fun applySnapshotSizesToMetadata(
+        metadata: io.github.hddq.restoid.model.RestoidMetadata,
+        appSizes: Map<String, Map<String, Long>>,
+        customDirSizes: Map<String, Long>
+    ): io.github.hddq.restoid.model.RestoidMetadata {
+        val updatedApps = metadata.apps.mapValues { (packageName, appMeta) ->
+            val detailedSizes = appSizes[packageName].orEmpty()
+            val totalAppSize = detailedSizes.values.sum()
+            appMeta.copy(
+                size = if (totalAppSize > 0L) totalAppSize else appMeta.size,
+                detailedSizes = if (detailedSizes.isNotEmpty()) detailedSizes else appMeta.detailedSizes
+            )
+        }
+        val updatedCustomDirs = if (customDirSizes.isNotEmpty()) {
+            metadata.customDirectories.mapValues { (dirPath, dirMeta) ->
+                val calculatedSize = customDirSizes[dirPath]
+                if (calculatedSize != null && calculatedSize > 0L) {
+                    dirMeta.copy(size = calculatedSize)
+                } else {
+                    dirMeta
+                }
+            }
+        } else {
+            metadata.customDirectories
+        }
+        return metadata.copy(apps = updatedApps, customDirectories = updatedCustomDirs)
     }
 
     suspend fun dump(
@@ -505,9 +730,4 @@ data class SnapshotInfo(
     val time: String,
     val paths: List<String>,
     val tags: List<String>
-)
-
-data class ResticNodeInfo(
-    val path: String,
-    val size: Long
 )

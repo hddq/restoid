@@ -32,7 +32,7 @@ data class RestoidMetadata(
  * @param grantedRuntimePermissions A list of dangerous/runtime permissions that were granted
  * for this app at backup time (e.g., camera, location).
  * @param detailedSizes A map detailing the specific sizes of backed up components (e.g. "apk" to bytes)
- * obtained from the Android API (StorageStatsManager), if available.
+ * calculated from the restic snapshot.
  */
 @Serializable
 data class AppMetadata(

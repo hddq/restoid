@@ -232,65 +232,20 @@ class BackupOperationRunner(
                 if (!metadataDir.exists()) metadataDir.mkdirs()
                 val destFile = File(metadataDir, "$snapshotId.json")
 
-                var finalMetadata = metadata
-                val lsResult = resticRepository.lsWithSizes(
-                    currentRepoPath,
-                    currentPassword,
-                    snapshotId!!,
-                    repositoryEnvironment,
-                    repositoryResticOptions
-                )
-                if (lsResult.isSuccess) {
-                    val nodes = lsResult.getOrNull() ?: emptyList()
-                    val currentUserId = getCurrentUserId()
-                    val appInfoMap = selectedApps.associateBy { it.packageName }
+                val apkDirByPackage = selectedApps.mapNotNull { app ->
+                    val apkDir = app.apkPaths.firstOrNull()?.let { File(it).parentFile?.absolutePath }
+                    if (apkDir != null) app.packageName to apkDir else null
+                }.toMap()
 
-                    val updatedApps = metadata.apps.mapValues { (packageName, appMeta) ->
-                        val appInfo = appInfoMap[packageName]
-                        val apkPrefix = appInfo?.apkPaths?.firstOrNull()?.let { File(it).parentFile?.absolutePath }
-                        val dataPrefix = "/data/user/$currentUserId/$packageName"
-                        val userDePrefix = "/data/user_de/$currentUserId/$packageName"
-                        val extDataPrefix = "/storage/emulated/$currentUserId/Android/data/$packageName"
-                        val obbPrefix = "/storage/emulated/$currentUserId/Android/obb/$packageName"
-                        val mediaPrefix = "/storage/emulated/$currentUserId/Android/media/$packageName"
-
-                        var apkSize = 0L
-                        var dataSize = 0L
-                        var userDeSize = 0L
-                        var extDataSize = 0L
-                        var obbSize = 0L
-                        var mediaSize = 0L
-
-                        for (node in nodes) {
-                            val path = node.path
-                            val s = node.size
-                            when {
-                                apkPrefix != null && path.startsWith(apkPrefix) -> apkSize += s
-                                path.startsWith(dataPrefix) -> dataSize += s
-                                path.startsWith(userDePrefix) -> userDeSize += s
-                                path.startsWith(extDataPrefix) -> extDataSize += s
-                                path.startsWith(obbPrefix) -> obbSize += s
-                                path.startsWith(mediaPrefix) -> mediaSize += s
-                            }
-                        }
-
-                        val detailedSizes = mutableMapOf<String, Long>()
-                        if (apkSize > 0) detailedSizes["apk"] = apkSize
-                        if (dataSize > 0) detailedSizes["data"] = dataSize
-                        if (userDeSize > 0) detailedSizes["user_de"] = userDeSize
-                        if (extDataSize > 0) detailedSizes["external_data"] = extDataSize
-                        if (obbSize > 0) detailedSizes["obb"] = obbSize
-                        if (mediaSize > 0) detailedSizes["media"] = mediaSize
-
-                        val totalAppSize = apkSize + dataSize + userDeSize + extDataSize + obbSize + mediaSize
-
-                        appMeta.copy(
-                            size = if (totalAppSize > 0) totalAppSize else appMeta.size,
-                            detailedSizes = detailedSizes
-                        )
-                    }
-                    finalMetadata = metadata.copy(apps = updatedApps)
-                }
+                val finalMetadata = resticRepository.populateMetadataSizes(
+                    repoPath = currentRepoPath,
+                    password = currentPassword,
+                    snapshotId = snapshotId!!,
+                    metadata = metadata,
+                    apkDirByPackage = apkDirByPackage,
+                    environmentVariables = repositoryEnvironment,
+                    resticOptions = repositoryResticOptions
+                ).getOrDefault(metadata)
 
                 val jsonPretty = Json { prettyPrint = true }
                 destFile.writeText(jsonPretty.encodeToString(finalMetadata))
@@ -421,8 +376,7 @@ class BackupOperationRunner(
                 val existing = Shell.cmd("[ -e '$shellPath' ]").exec().isSuccess
                 if (existing) {
                     pathsToBackup.add(shellPath)
-                    val size = getDirectorySize(listOf(shellPath))
-                    customDirectoryMetadataMap[shellPath] = CustomDirectoryMetadata(size = size)
+                    customDirectoryMetadataMap[shellPath] = CustomDirectoryMetadata(size = 0L)
                 }
             }
         }
@@ -550,18 +504,5 @@ class BackupOperationRunner(
             if (backupTypes.obb) add("/storage/emulated/$currentUserId/Android/obb/${app.packageName}")
             if (backupTypes.media) add("/storage/emulated/$currentUserId/Android/media/${app.packageName}")
         }
-    }
-
-    private fun getDirectorySize(paths: List<String>): Long {
-        if (paths.isEmpty()) return 0L
-        val command = "du -sb ${paths.joinToString(" ") { "'$it'" }}"
-        val result = Shell.cmd(command).exec()
-        var totalSize = 0L
-        if (result.isSuccess) {
-            result.out.forEach { line ->
-                totalSize += line.trim().split("\\s+".toRegex()).firstOrNull()?.toLongOrNull() ?: 0L
-            }
-        }
-        return totalSize
     }
 }
