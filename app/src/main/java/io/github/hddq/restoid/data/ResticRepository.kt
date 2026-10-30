@@ -234,7 +234,7 @@ class ResticRepository(
         val customDirSizes = mutableMapOf<String, Long>()
         val otherFileSizes = mutableListOf<Pair<String, Long>>()
 
-        val callback = object : CallbackList<String>() {
+        val callback = object : CallbackList<String>(Runnable::run) {
             override fun onAddElement(line: String) {
                 val trimmed = line.trim()
                 if (!trimmed.startsWith("{")) return
