@@ -132,6 +132,48 @@ class ResticRepository(
         }
     }
 
+    suspend fun lsWithSizes(
+        repoPath: String,
+        password: String,
+        snapshotId: String,
+        environmentVariables: Map<String, String> = emptyMap(),
+        resticOptions: Map<String, String> = emptyMap()
+    ): Result<List<ResticNodeInfo>> {
+        return withContext(Dispatchers.IO) {
+            val result = executor.execute(
+                repoPath = repoPath,
+                password = password,
+                command = "ls --json $snapshotId",
+                failureMessage = context.getString(R.string.restic_failure_load_snapshots),
+                environmentVariables = environmentVariables,
+                resticOptions = resticOptions
+            )
+
+            result.map { output ->
+                output.lines().mapNotNull { line ->
+                    val trimmed = line.trim()
+                    if (trimmed.startsWith("{")) {
+                        try {
+                            val jsonObj = org.json.JSONObject(trimmed)
+                            val path = jsonObj.optString("path")
+                            val size = jsonObj.optLong("size", 0L)
+                            val type = jsonObj.optString("type")
+                            if (path.isNotEmpty() && type == "file" && size > 0) {
+                                ResticNodeInfo(path, size)
+                            } else {
+                                null
+                            }
+                        } catch (e: Exception) {
+                            null
+                        }
+                    } else {
+                        null
+                    }
+                }
+            }
+        }
+    }
+
     suspend fun dump(
         repoPath: String,
         password: String,
@@ -463,4 +505,9 @@ data class SnapshotInfo(
     val time: String,
     val paths: List<String>,
     val tags: List<String>
+)
+
+data class ResticNodeInfo(
+    val path: String,
+    val size: Long
 )

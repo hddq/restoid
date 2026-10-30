@@ -231,7 +231,69 @@ class BackupOperationRunner(
                 val metadataDir = File(context.filesDir, "metadata/$repositoryId")
                 if (!metadataDir.exists()) metadataDir.mkdirs()
                 val destFile = File(metadataDir, "$snapshotId.json")
-                restoidMetadataFile.copyTo(destFile, overwrite = true)
+
+                var finalMetadata = metadata
+                val lsResult = resticRepository.lsWithSizes(
+                    currentRepoPath,
+                    currentPassword,
+                    snapshotId!!,
+                    repositoryEnvironment,
+                    repositoryResticOptions
+                )
+                if (lsResult.isSuccess) {
+                    val nodes = lsResult.getOrNull() ?: emptyList()
+                    val currentUserId = getCurrentUserId()
+                    val appInfoMap = selectedApps.associateBy { it.packageName }
+
+                    val updatedApps = metadata.apps.mapValues { (packageName, appMeta) ->
+                        val appInfo = appInfoMap[packageName]
+                        val apkPrefix = appInfo?.apkPaths?.firstOrNull()?.let { File(it).parentFile?.absolutePath }
+                        val dataPrefix = "/data/user/$currentUserId/$packageName"
+                        val userDePrefix = "/data/user_de/$currentUserId/$packageName"
+                        val extDataPrefix = "/storage/emulated/$currentUserId/Android/data/$packageName"
+                        val obbPrefix = "/storage/emulated/$currentUserId/Android/obb/$packageName"
+                        val mediaPrefix = "/storage/emulated/$currentUserId/Android/media/$packageName"
+
+                        var apkSize = 0L
+                        var dataSize = 0L
+                        var userDeSize = 0L
+                        var extDataSize = 0L
+                        var obbSize = 0L
+                        var mediaSize = 0L
+
+                        for (node in nodes) {
+                            val path = node.path
+                            val s = node.size
+                            when {
+                                apkPrefix != null && path.startsWith(apkPrefix) -> apkSize += s
+                                path.startsWith(dataPrefix) -> dataSize += s
+                                path.startsWith(userDePrefix) -> userDeSize += s
+                                path.startsWith(extDataPrefix) -> extDataSize += s
+                                path.startsWith(obbPrefix) -> obbSize += s
+                                path.startsWith(mediaPrefix) -> mediaSize += s
+                            }
+                        }
+
+                        val detailedSizes = mutableMapOf<String, Long>()
+                        if (apkSize > 0) detailedSizes["apk"] = apkSize
+                        if (dataSize > 0) detailedSizes["data"] = dataSize
+                        if (userDeSize > 0) detailedSizes["user_de"] = userDeSize
+                        if (extDataSize > 0) detailedSizes["external_data"] = extDataSize
+                        if (obbSize > 0) detailedSizes["obb"] = obbSize
+                        if (mediaSize > 0) detailedSizes["media"] = mediaSize
+
+                        val totalAppSize = apkSize + dataSize + userDeSize + extDataSize + obbSize + mediaSize
+
+                        appMeta.copy(
+                            size = if (totalAppSize > 0) totalAppSize else appMeta.size,
+                            detailedSizes = detailedSizes
+                        )
+                    }
+                    finalMetadata = metadata.copy(apps = updatedApps)
+                }
+
+                val jsonPretty = Json { prettyPrint = true }
+                destFile.writeText(jsonPretty.encodeToString(finalMetadata))
             } catch (_: Exception) {
                 summary += "\n" + context.getString(R.string.backup_warning_metadata_not_saved)
             }
@@ -333,49 +395,19 @@ class BackupOperationRunner(
             }
 
             throwIfCancelled()
-            var size = 0L
-            val detailedSizes = mutableMapOf<String, Long>()
-            val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
-            val mode = appOps.unsafeCheckOpNoThrow(
-                android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
-                android.os.Process.myUid(),
-                context.packageName
-            )
-            val hasUsageStatsPermission = mode == android.app.AppOpsManager.MODE_ALLOWED
-
-            if (hasUsageStatsPermission) {
-                try {
-                    val storageStatsManager = context.getSystemService(android.app.usage.StorageStatsManager::class.java)
-                    val uuid = android.os.storage.StorageManager.UUID_DEFAULT
-                    val stats = storageStatsManager.queryStatsForPackage(uuid, app.packageName, android.os.Process.myUserHandle())
-                    if (effectiveBackupTypes.apk) {
-                        size += stats.appBytes
-                        detailedSizes["apk"] = stats.appBytes
-                    }
-                    if (effectiveBackupTypes.data || effectiveBackupTypes.deviceProtectedData || effectiveBackupTypes.externalData) {
-                        size += stats.dataBytes
-                        detailedSizes["data"] = stats.dataBytes
-                    }
-                } catch (e: Exception) {
-                    size = getDirectorySize(existingAppPaths)
-                }
-            } else {
-                size = getDirectorySize(existingAppPaths)
-            }
-
             val grantedRuntimePermissions = if (effectiveBackupTypes.permissions) {
                 appInfoRepository.getGrantedRuntimePermissions(app.packageName)
             } else {
                 emptyList()
             }
             appMetadataMap[app.packageName] = AppMetadata(
-                size = size,
+                size = 0L,
                 types = backupTypesList,
                 versionCode = app.versionCode,
                 versionName = app.versionName,
                 appName = app.name,
                 grantedRuntimePermissions = grantedRuntimePermissions,
-                detailedSizes = detailedSizes
+                detailedSizes = emptyMap()
             )
         }
         val customDirectoryMetadataMap = mutableMapOf<String, CustomDirectoryMetadata>()

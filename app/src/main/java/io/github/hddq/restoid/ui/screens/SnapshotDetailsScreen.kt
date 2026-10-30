@@ -245,6 +245,10 @@ fun BackedUpAppItem(detail: BackupDetail) {
                     val sizeKey = when (item) {
                         stringResource(R.string.backup_type_apk) -> "apk"
                         stringResource(R.string.backup_type_data) -> "data"
+                        stringResource(R.string.backup_type_device_protected_data) -> "user_de"
+                        stringResource(R.string.backup_type_external_data) -> "external_data"
+                        stringResource(R.string.backup_item_obb) -> "obb"
+                        stringResource(R.string.backup_item_media) -> "media"
                         else -> null
                     }
                     val size = sizeKey?.let { detail.detailedSizes[it] }
