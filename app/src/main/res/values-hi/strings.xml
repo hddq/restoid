@@ -485,4 +485,5 @@
     <string name="license_restic_url" translatable="false"></string>
     <string name="app_name" translatable="false"></string>
     <string name="license_restic_author" translatable="false"></string>
+    <string name="action_run_now">अभी चलाएं</string>
 </resources>
