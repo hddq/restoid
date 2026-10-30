@@ -480,4 +480,5 @@
     <string name="settings_system_permission_storage">Acceso al almacenamiento</string>
     <string name="settings_system_permission_local_network">Acceso a red local</string>
     <string name="local_network_permission_enabled">Acceso a red local concedido</string>
+    <string name="repo_supporting_sftp">Puerto personalizado: sftp://user@host:2222//srv/restic-repo (use una sola / después del puerto para una ruta relativa)</string>
 </resources>
