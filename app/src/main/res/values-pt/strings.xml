@@ -473,19 +473,4 @@
     <string name="settings_system_permission_storage">Acesso ao Armazenamento</string>
     <string name="settings_system_permission_local_network">Acesso à Rede Local</string>
     <string name="local_network_permission_enabled">Acesso à rede local concedido</string>
-    <string name="license_restic_license" translatable="false"></string>
-    <string name="placeholder_sftp_private_key" translatable="false"></string>
-    <string name="license_restoid_author" translatable="false"></string>
-    <string name="license_restoid_name" translatable="false"></string>
-    <string name="license_restic_name" translatable="false"></string>
-    <string name="license_restoid_url" translatable="false"></string>
-    <string name="repo_backend_s3" translatable="false"></string>
-    <string name="repo_hint_s3" translatable="false"></string>
-    <string name="repo_hint_rest" translatable="false"></string>
-    <string name="home_title" translatable="false"></string>
-    <string name="license_restic_url" translatable="false"></string>
-    <string name="progress_placeholder" translatable="false"></string>
-    <string name="app_name" translatable="false"></string>
-    <string name="repo_hint_sftp" translatable="false"></string>
-    <string name="license_restic_author" translatable="false"></string>
 </resources>

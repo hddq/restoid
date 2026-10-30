@@ -462,12 +462,4 @@
     <string name="action_run_now">立即运行</string>
     <string name="error_cannot_backup_repo_to_itself">无法将备份仓库本身添加为自定义备份目录。</string>
     <string name="title_custom_directories">自定义目录</string>
-    <string name="license_restic_license" translatable="false"></string>
-    <string name="license_restoid_author" translatable="false"></string>
-    <string name="license_restoid_name" translatable="false"></string>
-    <string name="license_restic_name" translatable="false"></string>
-    <string name="license_restoid_url" translatable="false"></string>
-    <string name="license_restic_url" translatable="false"></string>
-    <string name="app_name" translatable="false"></string>
-    <string name="license_restic_author" translatable="false"></string>
 </resources>
