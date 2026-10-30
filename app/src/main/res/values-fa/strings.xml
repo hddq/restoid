@@ -473,4 +473,5 @@
     <string name="error_unknown">خطای ناشناخته</string>
     <string name="section_conditions">شرایط</string>
     <string name="error_s3_credentials_not_found_for_repository">اعتبارنامه‌های S3 برای این مخزن یافت نشد.</string>
+    <string name="repo_supporting_sftp">پورت سفارشی: sftp://user@host:2222//srv/restic-repo (برای مسیر نسبی از یک / بعد از پورت استفاده کنید)</string>
 </resources>
