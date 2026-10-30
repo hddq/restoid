@@ -455,4 +455,5 @@
     <string name="settings_system_permission_storage">ストレージアクセス</string>
     <string name="settings_system_permission_local_network">ローカルネットワークアクセス</string>
     <string name="local_network_permission_enabled">ローカルネットワークアクセスを許可しました</string>
+    <string name="repo_supporting_sftp">カスタムポート: sftp://user@host:2222//srv/restic-repo (相対パスの場合はポートの後にスラッシュを1つ使用してください)</string>
 </resources>
