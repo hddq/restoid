@@ -480,4 +480,5 @@
     <string name="settings_system_permission_storage">Depolama Erişimi</string>
     <string name="settings_system_permission_local_network">Yerel Ağ Erişimi</string>
     <string name="local_network_permission_enabled">Yerel ağ erişimi verildi</string>
+    <string name="repo_supporting_sftp">Özel port: sftp://user@host:2222//srv/restic-repo (göreli yol için porttan sonra tek / kullanın)</string>
 </resources>
