@@ -236,6 +236,7 @@
     <string name="repo_backend_s3" translatable="false">Amazon S3 / MinIO</string>
 
     <string name="repo_hint_sftp" translatable="false">user@host:/srv/restic-repo</string>
+    <string name="repo_supporting_sftp">Custom port: sftp://user@host:2222//srv/restic-repo (use single / after port for relative path)</string>
     <string name="repo_hint_rest" translatable="false">http://host:8000/</string>
     <string name="repo_hint_s3" translatable="false">s3.us-east-1.amazonaws.com/bucket_name</string>
 

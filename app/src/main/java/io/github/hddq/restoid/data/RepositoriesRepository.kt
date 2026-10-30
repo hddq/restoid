@@ -1247,6 +1247,12 @@ class RepositoriesRepository(
     }
 
     private fun buildSftpEndpointLabel(path: String): String {
+        if (path.startsWith("sftp://")) {
+            val withoutScheme = path.removePrefix("sftp://")
+            val authority = withoutScheme.substringBefore('/')
+            return authority.substringAfterLast('@', authority).removeSuffix(":22")
+        }
+
         val withoutScheme = path.removePrefix("sftp:")
         val authority = withoutScheme.substringBefore(":/")
         val hostPort = authority.substringAfterLast('@', authority)
