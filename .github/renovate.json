@@ -3,6 +3,9 @@
   "extends": [
     "config:recommended"
   ],
+  "git-submodules": {
+    "enabled": true
+  },
   "customManagers": [
     {
       "customType": "regex",
