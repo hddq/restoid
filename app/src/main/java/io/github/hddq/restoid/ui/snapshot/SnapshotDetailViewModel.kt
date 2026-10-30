@@ -171,7 +171,7 @@ class SnapshotDetailsViewModel(
                 isSelected = true
             )
 
-            BackupDetail(finalAppInfo, items, appMeta.versionName, appMeta.versionCode, appMeta.size, isDowngrade, isInstalled)
+            BackupDetail(finalAppInfo, items, appMeta.versionName, appMeta.versionCode, appMeta.size, isDowngrade, isInstalled, appMeta.detailedSizes)
         }
 
         // SORTING: Size (High -> Low), then Name (A -> Z)

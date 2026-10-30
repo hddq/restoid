@@ -31,6 +31,8 @@ data class RestoidMetadata(
  * @param versionName The version name of the app at the time of backup.
  * @param grantedRuntimePermissions A list of dangerous/runtime permissions that were granted
  * for this app at backup time (e.g., camera, location).
+ * @param detailedSizes A map detailing the specific sizes of backed up components (e.g. "apk" to bytes)
+ * obtained from the Android API (StorageStatsManager), if available.
  */
 @Serializable
 data class AppMetadata(
@@ -39,5 +41,6 @@ data class AppMetadata(
     val versionCode: Long,
     val versionName: String,
     val appName: String? = null,
-    val grantedRuntimePermissions: List<String> = emptyList()
+    val grantedRuntimePermissions: List<String> = emptyList(),
+    val detailedSizes: Map<String, Long> = emptyMap()
 )

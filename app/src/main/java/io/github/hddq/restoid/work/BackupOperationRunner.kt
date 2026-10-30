@@ -334,6 +334,7 @@ class BackupOperationRunner(
 
             throwIfCancelled()
             var size = 0L
+            val detailedSizes = mutableMapOf<String, Long>()
             val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
             val mode = appOps.unsafeCheckOpNoThrow(
                 android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
@@ -349,9 +350,11 @@ class BackupOperationRunner(
                     val stats = storageStatsManager.queryStatsForPackage(uuid, app.packageName, android.os.Process.myUserHandle())
                     if (effectiveBackupTypes.apk) {
                         size += stats.appBytes
+                        detailedSizes["apk"] = stats.appBytes
                     }
                     if (effectiveBackupTypes.data || effectiveBackupTypes.deviceProtectedData || effectiveBackupTypes.externalData) {
                         size += stats.dataBytes
+                        detailedSizes["data"] = stats.dataBytes
                     }
                 } catch (e: Exception) {
                     size = getDirectorySize(existingAppPaths)
@@ -371,7 +374,8 @@ class BackupOperationRunner(
                 versionCode = app.versionCode,
                 versionName = app.versionName,
                 appName = app.name,
-                grantedRuntimePermissions = grantedRuntimePermissions
+                grantedRuntimePermissions = grantedRuntimePermissions,
+                detailedSizes = detailedSizes
             )
         }
         val customDirectoryMetadataMap = mutableMapOf<String, CustomDirectoryMetadata>()
