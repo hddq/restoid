@@ -933,7 +933,7 @@ class RepositoriesRepository(
                 ?.filter { it.tags.contains("restoid") && it.tags.contains("metadata") }
                 ?.maxByOrNull { it.time }
 
-            if (metadataSnapshot != null) {
+            val restoreOutcome = if (metadataSnapshot != null) {
                 val restoreResult = resticRepository.restore(
                     repoPath = repoPath,
                     password = password,
@@ -968,6 +968,53 @@ class RepositoriesRepository(
             } else {
                 Result.success(Unit) // No metadata to restore, which is fine
             }
+
+            if (restoreOutcome.isSuccess) {
+                val latestBackupSnapshot = snapshots
+                    ?.filter { it.tags.contains("restoid") && it.tags.contains("backup") }
+                    ?.maxByOrNull { it.time }
+
+                if (latestBackupSnapshot != null) {
+                    val repoMetadataDir = File(context.filesDir, "metadata/$repoId").also {
+                        if (!it.exists()) it.mkdirs()
+                    }
+                    val latestMetadataFile = File(repoMetadataDir, "${latestBackupSnapshot.id}.json")
+                    val jsonPretty = Json { prettyPrint = true; ignoreUnknownKeys = true }
+
+                    if (!latestMetadataFile.exists()) {
+                        resticRepository.recoverMetadataFromSnapshot(
+                            repoPath = repoPath,
+                            password = password,
+                            snapshotId = latestBackupSnapshot.id,
+                            environmentVariables = environmentVariables,
+                            resticOptions = resticOptions
+                        ).onSuccess { recovered ->
+                            latestMetadataFile.writeText(jsonPretty.encodeToString(io.github.hddq.restoid.model.RestoidMetadata.serializer(), recovered))
+                        }
+                    } else {
+                        runCatching {
+                            val existing = json.decodeFromString<io.github.hddq.restoid.model.RestoidMetadata>(latestMetadataFile.readText())
+                            val needsSizes = existing.apps.values.any {
+                                it.size == 0L && it.detailedSizes.isEmpty() && it.types.any { type -> type != "permissions" }
+                            } || existing.customDirectories.values.any { it.size == 0L }
+                            if (needsSizes) {
+                                resticRepository.populateMetadataSizes(
+                                    repoPath = repoPath,
+                                    password = password,
+                                    snapshotId = latestBackupSnapshot.id,
+                                    metadata = existing,
+                                    environmentVariables = environmentVariables,
+                                    resticOptions = resticOptions
+                                ).onSuccess { updated ->
+                                    latestMetadataFile.writeText(jsonPretty.encodeToString(io.github.hddq.restoid.model.RestoidMetadata.serializer(), updated))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            restoreOutcome
         } catch (e: Exception) {
             Log.e("RepoRepo", "Error during metadata restore", e)
             Result.failure(e)

@@ -231,7 +231,24 @@ class BackupOperationRunner(
                 val metadataDir = File(context.filesDir, "metadata/$repositoryId")
                 if (!metadataDir.exists()) metadataDir.mkdirs()
                 val destFile = File(metadataDir, "$snapshotId.json")
-                restoidMetadataFile.copyTo(destFile, overwrite = true)
+
+                val apkDirByPackage = selectedApps.mapNotNull { app ->
+                    val apkDir = app.apkPaths.firstOrNull()?.let { File(it).parentFile?.absolutePath }
+                    if (apkDir != null) app.packageName to apkDir else null
+                }.toMap()
+
+                val finalMetadata = resticRepository.populateMetadataSizes(
+                    repoPath = currentRepoPath,
+                    password = currentPassword,
+                    snapshotId = snapshotId!!,
+                    metadata = metadata,
+                    apkDirByPackage = apkDirByPackage,
+                    environmentVariables = repositoryEnvironment,
+                    resticOptions = repositoryResticOptions
+                ).getOrDefault(metadata)
+
+                val jsonPretty = Json { prettyPrint = true }
+                destFile.writeText(jsonPretty.encodeToString(finalMetadata))
             } catch (_: Exception) {
                 summary += "\n" + context.getString(R.string.backup_warning_metadata_not_saved)
             }
@@ -333,45 +350,19 @@ class BackupOperationRunner(
             }
 
             throwIfCancelled()
-            var size = 0L
-            val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
-            val mode = appOps.unsafeCheckOpNoThrow(
-                android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
-                android.os.Process.myUid(),
-                context.packageName
-            )
-            val hasUsageStatsPermission = mode == android.app.AppOpsManager.MODE_ALLOWED
-
-            if (hasUsageStatsPermission) {
-                try {
-                    val storageStatsManager = context.getSystemService(android.app.usage.StorageStatsManager::class.java)
-                    val uuid = android.os.storage.StorageManager.UUID_DEFAULT
-                    val stats = storageStatsManager.queryStatsForPackage(uuid, app.packageName, android.os.Process.myUserHandle())
-                    if (effectiveBackupTypes.apk) {
-                        size += stats.appBytes
-                    }
-                    if (effectiveBackupTypes.data || effectiveBackupTypes.deviceProtectedData || effectiveBackupTypes.externalData) {
-                        size += stats.dataBytes
-                    }
-                } catch (e: Exception) {
-                    size = getDirectorySize(existingAppPaths)
-                }
-            } else {
-                size = getDirectorySize(existingAppPaths)
-            }
-
             val grantedRuntimePermissions = if (effectiveBackupTypes.permissions) {
                 appInfoRepository.getGrantedRuntimePermissions(app.packageName)
             } else {
                 emptyList()
             }
             appMetadataMap[app.packageName] = AppMetadata(
-                size = size,
+                size = 0L,
                 types = backupTypesList,
                 versionCode = app.versionCode,
                 versionName = app.versionName,
                 appName = app.name,
-                grantedRuntimePermissions = grantedRuntimePermissions
+                grantedRuntimePermissions = grantedRuntimePermissions,
+                detailedSizes = emptyMap()
             )
         }
         val customDirectoryMetadataMap = mutableMapOf<String, CustomDirectoryMetadata>()
@@ -385,8 +376,7 @@ class BackupOperationRunner(
                 val existing = Shell.cmd("[ -e '$shellPath' ]").exec().isSuccess
                 if (existing) {
                     pathsToBackup.add(shellPath)
-                    val size = getDirectorySize(listOf(shellPath))
-                    customDirectoryMetadataMap[shellPath] = CustomDirectoryMetadata(size = size)
+                    customDirectoryMetadataMap[shellPath] = CustomDirectoryMetadata(size = 0L)
                 }
             }
         }
@@ -514,18 +504,5 @@ class BackupOperationRunner(
             if (backupTypes.obb) add("/storage/emulated/$currentUserId/Android/obb/${app.packageName}")
             if (backupTypes.media) add("/storage/emulated/$currentUserId/Android/media/${app.packageName}")
         }
-    }
-
-    private fun getDirectorySize(paths: List<String>): Long {
-        if (paths.isEmpty()) return 0L
-        val command = "du -sb ${paths.joinToString(" ") { "'$it'" }}"
-        val result = Shell.cmd(command).exec()
-        var totalSize = 0L
-        if (result.isSuccess) {
-            result.out.forEach { line ->
-                totalSize += line.trim().split("\\s+".toRegex()).firstOrNull()?.toLongOrNull() ?: 0L
-            }
-        }
-        return totalSize
     }
 }

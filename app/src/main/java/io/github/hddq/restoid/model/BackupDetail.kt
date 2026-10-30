@@ -19,5 +19,6 @@ data class BackupDetail(
     val versionCode: Long? = null,
     val backupSize: Long? = null,
     val isDowngrade: Boolean,
-    val isInstalled: Boolean
+    val isInstalled: Boolean,
+    val detailedSizes: Map<String, Long> = emptyMap()
 )

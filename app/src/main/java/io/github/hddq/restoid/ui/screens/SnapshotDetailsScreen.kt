@@ -242,7 +242,22 @@ fun BackedUpAppItem(detail: BackupDetail) {
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 detail.backedUpItems.forEach { item ->
-                    SuggestionChip(onClick = {}, label = { Text(item, style = MaterialTheme.typography.labelSmall) })
+                    val sizeKey = when (item) {
+                        stringResource(R.string.backup_type_apk) -> "apk"
+                        stringResource(R.string.backup_type_data) -> "data"
+                        stringResource(R.string.backup_type_device_protected_data) -> "user_de"
+                        stringResource(R.string.backup_type_external_data) -> "external_data"
+                        stringResource(R.string.backup_item_obb) -> "obb"
+                        stringResource(R.string.backup_item_media) -> "media"
+                        else -> null
+                    }
+                    val size = sizeKey?.let { detail.detailedSizes[it] }
+                    val labelText = if (size != null) {
+                        "$item (${Formatter.formatShortFileSize(context, size)})"
+                    } else {
+                        item
+                    }
+                    SuggestionChip(onClick = {}, label = { Text(labelText, style = MaterialTheme.typography.labelSmall) })
                 }
             }
         }
@@ -284,7 +299,7 @@ fun BackedUpCustomDirItem(path: String, metadata: io.github.hddq.restoid.model.C
         Spacer(Modifier.width(16.dp))
         Column {
             Text(path.substringAfterLast("/").ifEmpty { path }, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-            val sizeInfo = metadata.size?.let { Formatter.formatShortFileSize(context, it) } ?: stringResource(R.string.not_available)
+            val sizeInfo = Formatter.formatShortFileSize(context, metadata.size)
             Text(
                 stringResource(R.string.progress_size) + ": " + sizeInfo + " • " + path,
                 style = MaterialTheme.typography.bodySmall,
