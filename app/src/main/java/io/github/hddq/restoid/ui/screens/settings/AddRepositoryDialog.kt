@@ -157,6 +157,11 @@ fun AddRepositoryDialog(
                         )
                     },
                     placeholder = { Text(pathPlaceholder) },
+                    supportingText = if (uiState.backendType == RepositoryBackendType.SFTP) {
+                        { Text(stringResource(R.string.repo_supporting_sftp)) }
+                    } else {
+                        null
+                    },
                     singleLine = true,
                     readOnly = uiState.backendType == RepositoryBackendType.LOCAL,
                     isError = uiState.state is AddRepositoryState.Error,
