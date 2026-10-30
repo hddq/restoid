@@ -527,4 +527,5 @@
     <string name="storage_permission_disabled">يتطلب الوصول لجميع الملفات</string>
     <string name="settings_system_permission_local_network">الوصول إلى الشبكة المحلية</string>
     <string name="action_run_now">تشغيل الآن</string>
+    <string name="repo_supporting_sftp">منفذ مخصص: sftp://user@host:2222//srv/restic-repo (استخدم شرطة مائلة واحدة / بعد المنفذ للمسار النسبي)</string>
 </resources>
