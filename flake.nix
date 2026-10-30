@@ -21,8 +21,8 @@
       ndkVersion = if ndkVersionMatch != null then builtins.head ndkVersionMatch else "29.0.14206865";
       goArchive = pkgs.fetchurl {
         url = "https://go.dev/dl/go${goVersion}.linux-amd64.tar.gz";
-        # renovate: datasource=custom.go-official depName=go versioning=semver currentValue=1.26.5
-        hash = "sha256:5c2c3b16caefa1d968a94c1daca04a7ca301a496d9b086e17ad77bb81393f053";
+        # renovate: datasource=custom.go-official depName=go versioning=semver currentValue=1.27.3
+        hash = "sha256:65efbc80fdc1fa2cd2631cad5b481777a68e8725f34e89f50fc6ac714e379b40";
       };
       goOfficial = pkgs.stdenvNoCC.mkDerivation {
         pname = "go-official";
