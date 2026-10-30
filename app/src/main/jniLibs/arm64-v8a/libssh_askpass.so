@@ -1,0 +1,10 @@
+#!/system/bin/sh
+if [ -n "$RESTOID_SSH_KEY_PASSPHRASE" ]; then
+  printf '%s\n' "$RESTOID_SSH_KEY_PASSPHRASE"
+  exit 0
+fi
+if [ -n "$SSHPASS" ]; then
+  printf '%s\n' "$SSHPASS"
+  exit 0
+fi
+exit 1
