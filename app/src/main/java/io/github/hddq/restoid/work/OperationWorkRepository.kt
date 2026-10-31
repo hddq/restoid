@@ -94,11 +94,17 @@ class OperationWorkRepository(
     }
 
     fun forceStopCurrentOperation() {
-        runtimeRepository.forceClear()
         repositoryScope.launch {
-            workManager.cancelUniqueWork(OperationWorkContract.UNIQUE_WORK_NAME)
-            workManager.cancelAllWorkByTag(OperationWorkContract.TAG_HEAVY_OPERATION)
-            runCatching { Shell.getCachedShell()?.close() }
+            enqueueMutex.withLock {
+                runCatching {
+                    workManager.cancelUniqueWork(OperationWorkContract.UNIQUE_WORK_NAME).result.get()
+                }
+                runCatching {
+                    workManager.cancelAllWorkByTag(OperationWorkContract.TAG_HEAVY_OPERATION).result.get()
+                }
+                runCatching { Shell.getCachedShell()?.close() }
+                runtimeRepository.forceClear()
+            }
         }
     }
 

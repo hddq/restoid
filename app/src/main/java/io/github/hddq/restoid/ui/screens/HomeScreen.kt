@@ -37,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -92,6 +93,14 @@ fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
     var showForceStopDialog by remember { mutableStateOf(false) }
+    val activeOp = uiState.activeOperation
+    val isOperationActive = activeOp.isRunning || activeOp.stopRequested
+
+    LaunchedEffect(isOperationActive) {
+        if (!isOperationActive) {
+            showForceStopDialog = false
+        }
+    }
 
     Column(
         modifier = modifier
@@ -113,8 +122,7 @@ fun HomeScreen(
         }
         Spacer(Modifier.height(24.dp))
 
-        val activeOp = uiState.activeOperation
-        if (activeOp.isRunning || activeOp.stopRequested) {
+        if (isOperationActive) {
             val opLabel = when (activeOp.operationType) {
                 OperationType.BACKUP -> stringResource(R.string.operation_backup)
                 OperationType.RUN_TASKS -> stringResource(R.string.operation_run_tasks)
@@ -333,7 +341,7 @@ fun HomeScreen(
         }
     }
 
-    if (showForceStopDialog) {
+    if (showForceStopDialog && isOperationActive) {
         AlertDialog(
             onDismissRequest = { showForceStopDialog = false },
             title = { Text(stringResource(R.string.dialog_force_stop_operation_title)) },
