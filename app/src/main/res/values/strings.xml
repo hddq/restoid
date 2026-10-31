@@ -90,6 +90,7 @@
     <string name="action_go">Go</string>
     <string name="title_custom_directories">Custom Directories</string>
     <string name="custom_directories_description">Select custom directories on your device to include in the backup.</string>
+    <string name="custom_directories_long_press_hint">Touch and hold an entry to open the menu and delete it.</string>
     <string name="custom_directories_typed_path_label">Folder path</string>
     <string name="custom_directories_typed_path_hint">e.g. /storage/emulated/0/Download</string>
     <string name="custom_directories_typed_path_invalid">Enter a valid absolute folder path.</string>

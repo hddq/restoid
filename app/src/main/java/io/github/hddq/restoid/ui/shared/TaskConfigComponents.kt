@@ -1,8 +1,10 @@
 package io.github.hddq.restoid.ui.shared
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -14,8 +16,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -686,14 +691,17 @@ fun buildCustomDirectoriesSubtitle(directories: List<io.github.hddq.restoid.mode
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CustomDirectoriesConfigScreen(
     customDirectories: List<io.github.hddq.restoid.model.CustomDirectory>,
     onAddDirectory: (String) -> Unit,
     onToggleDirectory: (String) -> Unit,
+    onRemoveDirectory: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showFolderPicker by remember { mutableStateOf(false) }
+    var menuExpandedForUri by remember { mutableStateOf<String?>(null) }
 
     androidx.compose.foundation.lazy.LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -701,68 +709,106 @@ fun CustomDirectoriesConfigScreen(
         verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)
     ) {
         item {
-            androidx.compose.material3.Text(
-                text = androidx.compose.ui.res.stringResource(io.github.hddq.restoid.R.string.custom_directories_description),
-                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
-                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = stringResource(R.string.custom_directories_description),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                if (customDirectories.isNotEmpty()) {
+                    Text(
+                        text = stringResource(R.string.custom_directories_long_press_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
 
         if (customDirectories.isNotEmpty()) {
             item {
-                androidx.compose.material3.Card(
+                Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainer)
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
                 ) {
-                    androidx.compose.foundation.layout.Column {
+                    Column {
                         customDirectories.forEachIndexed { index, customDir ->
                             val resolvedPath = io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(customDir.uri)
                             val displayPath = resolvedPath ?: runCatching {
                                 android.net.Uri.parse(customDir.uri).lastPathSegment
                             }.getOrNull() ?: customDir.uri
-                            androidx.compose.foundation.layout.Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onToggleDirectory(customDir.uri) }
-                                    .padding(vertical = 12.dp, horizontal = 16.dp),
-                                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                            ) {
-                                androidx.compose.foundation.layout.Column(modifier = Modifier.weight(1f)) {
-                                    val title = displayPath.substringAfterLast("/")
-                                    androidx.compose.material3.Text(
-                                        text = title.ifEmpty { displayPath },
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        style = androidx.compose.material3.MaterialTheme.typography.bodyLarge
-                                    )
-                                    androidx.compose.material3.Text(
-                                        text = displayPath,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
-                                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
+                            Box(modifier = Modifier.fillMaxWidth()) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .combinedClickable(
+                                            onClick = { onToggleDirectory(customDir.uri) },
+                                            onLongClick = { menuExpandedForUri = customDir.uri }
+                                        )
+                                        .padding(vertical = 12.dp, horizontal = 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        val title = displayPath.substringAfterLast("/")
+                                        Text(
+                                            text = title.ifEmpty { displayPath },
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            style = MaterialTheme.typography.bodyLarge
+                                        )
+                                        Text(
+                                            text = displayPath,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Switch(
+                                        checked = customDir.isSelected,
+                                        onCheckedChange = { onToggleDirectory(customDir.uri) },
+                                        thumbContent = if (customDir.isSelected) {
+                                            {
+                                                Icon(
+                                                    imageVector = Icons.Filled.Check,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                                )
+                                            }
+                                        } else {
+                                            null
+                                        }
                                     )
                                 }
-                                androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(16.dp))
-                                androidx.compose.material3.Switch(
-                                    checked = customDir.isSelected,
-                                    onCheckedChange = { onToggleDirectory(customDir.uri) },
-                                    thumbContent = if (customDir.isSelected) {
-                                        {
-                                            androidx.compose.material3.Icon(
-                                                imageVector = androidx.compose.material.icons.Icons.Filled.Check,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(androidx.compose.material3.SwitchDefaults.IconSize)
+
+                                DropdownMenu(
+                                    expanded = menuExpandedForUri == customDir.uri,
+                                    onDismissRequest = { menuExpandedForUri = null }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = stringResource(R.string.action_delete),
+                                                color = MaterialTheme.colorScheme.error
                                             )
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.error
+                                            )
+                                        },
+                                        onClick = {
+                                            menuExpandedForUri = null
+                                            onRemoveDirectory(customDir.uri)
                                         }
-                                    } else {
-                                        null
-                                    }
-                                )
+                                    )
+                                }
                             }
                             if (index < customDirectories.size - 1) {
-                                androidx.compose.material3.HorizontalDivider(color = androidx.compose.material3.MaterialTheme.colorScheme.background)
+                                HorizontalDivider(color = MaterialTheme.colorScheme.background)
                             }
                         }
                     }

@@ -317,6 +317,7 @@ class RunTasksViewModel(
 
     fun setCustomDirectoriesBackupEnabled(enabled: Boolean) {
         _uiState.update { it.copy(customDirectoriesBackupEnabled = enabled) }
+        preferencesRepository.saveCustomDirectoriesBackupEnabled(enabled)
     }
 
     fun addCustomDirectory(uriString: String) {
@@ -348,6 +349,7 @@ class RunTasksViewModel(
         _uiState.update { state ->
             state.copy(customDirectories = state.customDirectories + CustomDirectory(uriString))
         }
+        persistCustomDirectories()
     }
 
     fun toggleCustomDirectory(uriString: String) {
@@ -358,12 +360,21 @@ class RunTasksViewModel(
                 }
             )
         }
+        persistCustomDirectories()
     }
 
     fun removeCustomDirectory(uriString: String) {
         _uiState.update { state ->
             state.copy(customDirectories = state.customDirectories.filter { it.uri != uriString })
         }
+        persistCustomDirectories()
+    }
+
+    private fun persistCustomDirectories() {
+        val current = _uiState.value.customDirectories
+        val allCustomDirs = current.map { it.uri }.toSet()
+        val selectedCustomDirs = current.filter { it.isSelected }.map { it.uri }.toSet()
+        preferencesRepository.saveCustomDirectories(allCustomDirs, selectedCustomDirs)
     }
 
     fun setUnlockRepo(value: Boolean) = _uiState.update { it.copy(maintenance = it.maintenance.copy(unlockRepo = value)) }
