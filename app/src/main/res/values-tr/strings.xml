@@ -481,4 +481,10 @@
     <string name="settings_system_permission_local_network">Yerel Ağ Erişimi</string>
     <string name="local_network_permission_enabled">Yerel ağ erişimi verildi</string>
     <string name="repo_supporting_sftp">Özel port: sftp://user@host:2222//srv/restic-repo (göreli yol için porttan sonra tek / kullanın)</string>
+    <string name="home_operation_running_title">%1$s işlemi devam ediyor</string>
+    <string name="home_operation_running_default_title">İşlem devam ediyor</string>
+    <string name="home_operation_running_tap_hint">Durumu görmek için dokunun</string>
+    <string name="action_force_stop">Zorla durdur</string>
+    <string name="dialog_force_stop_operation_title">İşlem zorla durdurulsun mu?</string>
+    <string name="dialog_force_stop_operation_message">Mevcut işlemi zorla durdurmak istiyor musunuz? Tamamlanmamış işler iptal edilecek ve işlem durumu sıfırlanacaktır.</string>
 </resources>
