@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
@@ -84,7 +85,6 @@ data class OperationProgress(
     val totalDuration: Double = 0.0
 )
 
-
 /**
  * A generalized composable to display the progress and final summary of
  * a backup or restore operation.
@@ -113,15 +113,14 @@ fun ProgressScreenContent(
             label = "ProgressOrFinish",
             transitionSpec = {
                 fadeIn(animationSpec = tween(300, 150)) togetherWith
-                        fadeOut(animationSpec = tween(150))
+                    fadeOut(animationSpec = tween(150))
             }
         ) { isFinished ->
             if (isFinished) {
-                // Finished State
                 var startAnimation by remember { mutableStateOf(false) }
 
                 LaunchedEffect(Unit) {
-                    delay(200) // A small delay to let the screen transition in
+                    delay(200)
                     startAnimation = true
                 }
 
@@ -154,6 +153,7 @@ fun ProgressScreenContent(
                     )
                     Spacer(Modifier.height(12.dp))
                     Card(
+                        shape = RoundedCornerShape(24.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceContainer
                         )
@@ -169,6 +169,7 @@ fun ProgressScreenContent(
                     Spacer(Modifier.height(32.dp))
                     Button(
                         onClick = onDone,
+                        shape = RoundedCornerShape(20.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(50.dp)
@@ -176,9 +177,7 @@ fun ProgressScreenContent(
                         Text(stringResource(R.string.action_done))
                     }
                 }
-
             } else {
-                // In-Progress State
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
@@ -191,12 +190,12 @@ fun ProgressScreenContent(
 
                     Card(
                         modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(24.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceContainer
                         )
                     ) {
                         Column(Modifier.padding(16.dp)) {
-                            // Overall Progress
                             Text(stringResource(R.string.progress_overall), style = MaterialTheme.typography.labelMedium)
                             Spacer(Modifier.height(8.dp))
                             LinearProgressIndicator(
@@ -208,7 +207,6 @@ fun ProgressScreenContent(
                             )
                             Spacer(Modifier.height(20.dp))
 
-                            // Stage Progress
                             Text(stringResource(R.string.progress_stage), style = MaterialTheme.typography.labelMedium)
                             Spacer(Modifier.height(8.dp))
                             LinearProgressIndicator(
@@ -220,8 +218,6 @@ fun ProgressScreenContent(
                             )
                             Spacer(Modifier.height(24.dp))
 
-
-                            // Stats Row
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceAround
@@ -231,7 +227,6 @@ fun ProgressScreenContent(
                                     label = stringResource(R.string.progress_items),
                                     value = "${progress.filesProcessed}/${progress.totalFiles}"
                                 )
-                                // Only show size if it's relevant (not 0)
                                 if (progress.totalBytes > 0) {
                                     ProgressStat(
                                         label = stringResource(R.string.progress_size),
@@ -246,7 +241,6 @@ fun ProgressScreenContent(
                             }
                             Spacer(Modifier.height(16.dp))
 
-                            // Current File Text (only show for backup as restore is app-based)
                             if (operationType == stringResource(R.string.operation_backup) && progress.currentFile.isNotBlank()) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
@@ -259,7 +253,7 @@ fun ProgressScreenContent(
                                         label = "CurrentFileAnimation",
                                         transitionSpec = {
                                             slideInVertically { height -> height } togetherWith
-                                                    slideOutVertically { height -> -height }
+                                                slideOutVertically { height -> -height }
                                         }
                                     ) { targetFile ->
                                         Text(

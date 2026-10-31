@@ -7,49 +7,26 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Switch
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.clickable
-import android.content.Context
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Row
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.SwitchDefaults
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Icon
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import io.github.hddq.restoid.R
-import io.github.hddq.restoid.model.AppInfo
-import io.github.hddq.restoid.ui.shared.*
+import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
+import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
+import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
+import io.github.hddq.restoid.ui.shared.TaskRow
+import io.github.hddq.restoid.ui.shared.buildBackupSubtitle
+import io.github.hddq.restoid.ui.shared.buildCheckSubtitle
+import io.github.hddq.restoid.ui.shared.buildCustomDirectoriesSubtitle
+import io.github.hddq.restoid.ui.shared.buildForgetSubtitle
 
 @Composable
 fun RunTasksScreen(
@@ -86,59 +63,47 @@ fun RunTasksScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            Column {
-                Text(
-                    text = context.getString(R.string.operation_backup),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-                ) {
-                    val rootState by viewModel.rootState.collectAsState()
-                    val hasRoot = rootState == io.github.hddq.restoid.data.RootState.Granted
-                    
-                    TaskRow(
-                        title = context.getString(R.string.run_tasks_applications),
-                        subtitle = if (hasRoot) buildBackupSubtitle(uiState.apps, uiState.appBackupTypes, uiState.backupTypes, context) else context.getString(R.string.root_access_denied),
-                        checked = if (hasRoot) uiState.backupEnabled else false,
-                        onCheckedChange = viewModel::setBackupEnabled,
-                        onNavigate = if (hasRoot) onNavigateToBackupConfig else null,
-                        enabled = hasRoot
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    TaskRow(
-                        title = context.getString(R.string.run_tasks_custom_directories),
-                        subtitle = buildCustomDirectoriesSubtitle(uiState.customDirectories, context),
-                        checked = uiState.customDirectoriesBackupEnabled,
-                        onCheckedChange = viewModel::setCustomDirectoriesBackupEnabled,
-                        onNavigate = onNavigateToCustomDirectoriesConfig
-                    )
+            val rootState by viewModel.rootState.collectAsState()
+            val hasRoot = rootState == io.github.hddq.restoid.data.RootState.Granted
+
+            Column(modifier = Modifier.fillMaxWidth()) {
+                ExpressiveSectionHeader(title = context.getString(R.string.operation_backup))
+                ExpressiveCardGroup {
+                    ExpressiveSegmentedSurface(index = 0, count = 2) {
+                        TaskRow(
+                            title = context.getString(R.string.run_tasks_applications),
+                            subtitle = if (hasRoot) buildBackupSubtitle(uiState.apps, uiState.appBackupTypes, uiState.backupTypes, context) else context.getString(R.string.root_access_denied),
+                            checked = if (hasRoot) uiState.backupEnabled else false,
+                            onCheckedChange = viewModel::setBackupEnabled,
+                            onNavigate = if (hasRoot) onNavigateToBackupConfig else null,
+                            enabled = hasRoot
+                        )
+                    }
+                    ExpressiveSegmentedSurface(index = 1, count = 2) {
+                        TaskRow(
+                            title = context.getString(R.string.run_tasks_custom_directories),
+                            subtitle = buildCustomDirectoriesSubtitle(uiState.customDirectories, context),
+                            checked = uiState.customDirectoriesBackupEnabled,
+                            onCheckedChange = viewModel::setCustomDirectoriesBackupEnabled,
+                            onNavigate = onNavigateToCustomDirectoriesConfig
+                        )
+                    }
                 }
             }
         }
 
         item {
-            Column {
-                Text(
-                    text = context.getString(R.string.operation_maintenance),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-                ) {
-                    Column {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                ExpressiveSectionHeader(title = context.getString(R.string.operation_maintenance))
+                ExpressiveCardGroup {
+                    ExpressiveSegmentedSurface(index = 0, count = 4) {
                         TaskRow(
                             title = context.getString(R.string.maintenance_task_unlock_repository),
                             checked = uiState.maintenance.unlockRepo,
                             onCheckedChange = viewModel::setUnlockRepo
                         )
-                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                    }
+                    ExpressiveSegmentedSurface(index = 1, count = 4) {
                         TaskRow(
                             title = context.getString(R.string.run_tasks_forget_snapshots),
                             subtitle = buildForgetSubtitle(uiState.maintenance, context),
@@ -146,13 +111,15 @@ fun RunTasksScreen(
                             onCheckedChange = viewModel::setForgetSnapshots,
                             onNavigate = onNavigateToForgetConfig
                         )
-                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                    }
+                    ExpressiveSegmentedSurface(index = 2, count = 4) {
                         TaskRow(
                             title = context.getString(R.string.maintenance_task_prune_repository),
                             checked = uiState.maintenance.pruneRepo,
                             onCheckedChange = viewModel::setPruneRepo
                         )
-                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                    }
+                    ExpressiveSegmentedSurface(index = 3, count = 4) {
                         TaskRow(
                             title = context.getString(R.string.run_tasks_check_integrity),
                             subtitle = buildCheckSubtitle(uiState.maintenance, context),
@@ -223,8 +190,6 @@ fun CheckConfigScreen(
         modifier = modifier
     )
 }
-
-
 
 @Composable
 fun CustomDirectoriesConfigScreen(

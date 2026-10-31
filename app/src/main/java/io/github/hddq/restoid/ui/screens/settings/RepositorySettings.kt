@@ -9,9 +9,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
@@ -26,6 +23,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.ResticState
+import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
+import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
+import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
 import io.github.hddq.restoid.ui.screens.settings.components.SelectableRepositoryRow
 import io.github.hddq.restoid.ui.settings.SettingsViewModel
 
@@ -35,46 +35,38 @@ fun RepositorySettings(viewModel: SettingsViewModel) {
     val repositories by viewModel.repositories.collectAsStateWithLifecycle()
     val selectedRepository by viewModel.selectedRepository.collectAsStateWithLifecycle()
 
-    Column {
-        Text(
-            text = stringResource(R.string.backup_repositories_title),
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 8.dp)
-        )
+    Column(modifier = Modifier.fillMaxWidth()) {
+        ExpressiveSectionHeader(title = stringResource(R.string.backup_repositories_title))
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer
-            )
-        ) {
-            if (resticState is ResticState.Installed) {
-                if (repositories.isEmpty()) {
+        if (resticState is ResticState.Installed) {
+            if (repositories.isEmpty()) {
+                ExpressiveSegmentedSurface(index = 0, count = 1) {
                     Text(
                         stringResource(R.string.no_repositories_configured),
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                     )
-                } else {
-                    Column {
-                        repositories.forEachIndexed { index, repo ->
-                            val repoKey = viewModel.repositoryKey(repo)
+                }
+            } else {
+                ExpressiveCardGroup {
+                    repositories.forEachIndexed { index, repo ->
+                        val repoKey = viewModel.repositoryKey(repo)
+                        ExpressiveSegmentedSurface(
+                            index = index,
+                            count = repositories.size
+                        ) {
                             SelectableRepositoryRow(
                                 repo = repo,
                                 isSelected = repoKey == selectedRepository,
                                 onSelected = { viewModel.selectRepository(repoKey) },
                                 viewModel = viewModel
                             )
-                            if (index < repositories.size - 1) {
-                                HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                            }
                         }
                     }
                 }
-            } else {
+            }
+        } else {
+            ExpressiveSegmentedSurface(index = 0, count = 1) {
                 Row(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -87,7 +79,7 @@ fun RepositorySettings(viewModel: SettingsViewModel) {
                     )
                     Text(
                         stringResource(R.string.install_restic_manage_repositories),
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
             }

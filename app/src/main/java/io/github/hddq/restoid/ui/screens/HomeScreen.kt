@@ -14,13 +14,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -28,7 +31,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -58,6 +60,9 @@ import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.OperationType
 import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.model.AppInfo
+import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
+import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
+import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
 import io.github.hddq.restoid.ui.components.PasswordDialog
 import io.github.hddq.restoid.ui.components.SshPrivateKeyField
 import io.github.hddq.restoid.ui.components.UsernamePasswordDialog
@@ -105,23 +110,8 @@ fun HomeScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 16.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        // Header Section
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(R.string.home_title),
-                style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold,
-            )
-        }
-        Spacer(Modifier.height(24.dp))
-
         if (isOperationActive) {
             val opLabel = when (activeOp.operationType) {
                 OperationType.BACKUP -> stringResource(R.string.operation_backup)
@@ -141,7 +131,9 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 16.dp)
+                    .clip(RoundedCornerShape(24.dp))
                     .clickable(onClick = onOpenOperationProgress),
+                shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.secondaryContainer
                 )
@@ -223,7 +215,9 @@ fun HomeScreen(
                         }
                     }
                     uiState.isLoading -> {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
                     }
                     uiState.error != null -> {
                         val errorMessage = uiState.error
@@ -241,28 +235,24 @@ fun HomeScreen(
                                         Text(stringResource(R.string.action_enter_password_again))
                                     }
                                 }
-
                                 HomeAuthFailure.SFTP_PASSWORD -> {
                                     Spacer(Modifier.height(12.dp))
                                     Button(onClick = onRetrySftpPasswordEntry) {
                                         Text(stringResource(R.string.action_enter_sftp_password_again))
                                     }
                                 }
-
                                 HomeAuthFailure.REST_CREDENTIALS -> {
                                     Spacer(Modifier.height(12.dp))
                                     Button(onClick = onRetryRestCredentialsEntry) {
                                         Text(stringResource(R.string.action_enter_rest_credentials_again))
                                     }
                                 }
-
                                 HomeAuthFailure.S3_CREDENTIALS -> {
                                     Spacer(Modifier.height(12.dp))
                                     Button(onClick = onRetryS3CredentialsEntry) {
                                         Text(stringResource(R.string.action_enter_s3_credentials_again))
                                     }
                                 }
-
                                 null -> Unit
                             }
                         }
@@ -281,19 +271,16 @@ fun HomeScreen(
                                         Text(stringResource(R.string.action_open_repository))
                                     }
                                 }
-
                                 HomeCredentialPrompt.SFTP_PASSWORD -> {
                                     Button(onClick = onRetrySftpPasswordEntry) {
                                         Text(stringResource(R.string.action_open_sftp))
                                     }
                                 }
-
                                 HomeCredentialPrompt.REST_CREDENTIALS -> {
                                     Button(onClick = onRetryRestCredentialsEntry) {
                                         Text(stringResource(R.string.action_open_rest))
                                     }
                                 }
-
                                 HomeCredentialPrompt.S3_CREDENTIALS -> {
                                     Button(onClick = onRetryS3CredentialsEntry) {
                                         Text(stringResource(R.string.action_open_s3))
@@ -313,22 +300,25 @@ fun HomeScreen(
                     }
                     else -> {
                         Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                            Text(
-                                text = pluralStringResource(
+                            ExpressiveSectionHeader(
+                                title = pluralStringResource(
                                     R.plurals.snapshots_count,
                                     uiState.snapshotsWithMetadata.size,
                                     uiState.snapshotsWithMetadata.size
-                                ),
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(bottom = 8.dp)
+                                )
                             )
-                            Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
-                                Column {
-                                    val snapshots = uiState.snapshotsWithMetadata.sortedByDescending { it.snapshotInfo.time }
-                                    snapshots.forEachIndexed { index, item ->
-                                        SnapshotItem(snapshotWithMetadata = item, apps = uiState.appInfoMap[item.snapshotInfo.id], onClick = { onSnapshotClick(item.snapshotInfo.id) })
-                                        if (index < snapshots.size - 1) HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                            val snapshots = uiState.snapshotsWithMetadata.sortedByDescending { it.snapshotInfo.time }
+                            ExpressiveCardGroup {
+                                snapshots.forEachIndexed { index, item ->
+                                    ExpressiveSegmentedSurface(
+                                        index = index,
+                                        count = snapshots.size
+                                    ) {
+                                        SnapshotItem(
+                                            snapshotWithMetadata = item,
+                                            apps = uiState.appInfoMap[item.snapshotInfo.id],
+                                            onClick = { onSnapshotClick(item.snapshotInfo.id) }
+                                        )
                                     }
                                 }
                             }
@@ -497,16 +487,20 @@ fun HomeScreen(
 }
 
 @Composable
-private fun SnapshotItem(snapshotWithMetadata: SnapshotWithMetadata, apps: List<AppInfo>?, onClick: () -> Unit) {
+private fun SnapshotItem(
+    snapshotWithMetadata: SnapshotWithMetadata,
+    apps: List<AppInfo>?,
+    onClick: () -> Unit
+) {
     val snapshot = snapshotWithMetadata.snapshotInfo
     val context = androidx.compose.ui.platform.LocalContext.current
-    
+
     val timeText = remember(snapshot.time, context) {
         try {
             val instant = java.time.Instant.parse(snapshot.time)
             val now = java.time.Instant.now()
             val duration = java.time.Duration.between(instant, now)
-            
+
             val relativeTime = when {
                 duration.toMinutes() < 1 -> context.getString(R.string.time_just_now)
                 duration.toHours() < 1 -> {
@@ -537,18 +531,43 @@ private fun SnapshotItem(snapshotWithMetadata: SnapshotWithMetadata, apps: List<
     }
 
     Column(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(text = snapshot.id.take(8), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
-            Text(text = timeText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = snapshot.id.take(8),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.Monospace
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = timeText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
         }
 
         val appCount = snapshotWithMetadata.metadata?.apps?.size ?: 0
         val customDirCount = snapshotWithMetadata.metadata?.customDirectories?.size ?: 0
         val totalCount = appCount + customDirCount
-        
+
         if (totalCount > 0) {
             Text(
                 pluralStringResource(R.plurals.backed_up_items_count, totalCount, totalCount),
@@ -559,7 +578,7 @@ private fun SnapshotItem(snapshotWithMetadata: SnapshotWithMetadata, apps: List<
                 val spacing = 8.dp
                 val itemWidthWithSpacing = iconSize + spacing
                 val maxIconsPossible = ((maxWidth + spacing) / itemWidthWithSpacing).toInt().coerceAtLeast(1)
-                
+
                 val customDirSlot = if (customDirCount > 0) 1 else 0
                 val availableSlotsForApps = (maxIconsPossible - customDirSlot).coerceAtLeast(0)
                 val showCounter = appCount > availableSlotsForApps
@@ -568,12 +587,27 @@ private fun SnapshotItem(snapshotWithMetadata: SnapshotWithMetadata, apps: List<
                 Row(horizontalArrangement = Arrangement.spacedBy(spacing), verticalAlignment = Alignment.CenterVertically) {
                     if (apps != null && apps.isNotEmpty() && appCount > 0) {
                         apps.take(limit).forEach { app ->
-                            Image(painter = rememberAsyncImagePainter(model = app.icon), contentDescription = app.name, modifier = Modifier.size(iconSize))
+                            Image(
+                                painter = rememberAsyncImagePainter(model = app.icon),
+                                contentDescription = app.name,
+                                modifier = Modifier.size(iconSize)
+                            )
                         }
                         val realMoreCount = appCount - limit
-                        if(realMoreCount > 0) {
-                            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(iconSize).clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer)) {
-                                Text(text = "+$realMoreCount", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp), color = MaterialTheme.colorScheme.onSecondaryContainer, fontWeight = FontWeight.Bold)
+                        if (realMoreCount > 0) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(iconSize)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.secondaryContainer)
+                            ) {
+                                Text(
+                                    text = "+$realMoreCount",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
                         }
                     }

@@ -2,7 +2,6 @@ package io.github.hddq.restoid.ui.screens.settings
 
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,9 +11,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Translate
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -26,6 +22,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.hddq.restoid.R
+import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
+import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
+import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
 
 @Composable
 fun AboutSettings(onNavigateToLicenses: () -> Unit) {
@@ -43,21 +42,10 @@ fun AboutSettings(onNavigateToLicenses: () -> Unit) {
     val githubIntent = remember { Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/hddq/restoid")) }
     val weblateIntent = remember { Intent(Intent.ACTION_VIEW, Uri.parse("https://hosted.weblate.org/projects/restoid/")) }
 
-
-    Column {
-        Text(
-            text = stringResource(R.string.about_title),
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer
-            )
-        ) {
-            Column {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        ExpressiveSectionHeader(title = stringResource(R.string.about_title))
+        ExpressiveCardGroup {
+            ExpressiveSegmentedSurface(index = 0, count = 3) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -72,9 +60,9 @@ fun AboutSettings(onNavigateToLicenses: () -> Unit) {
                     )
                     Text(stringResource(R.string.open_source_licenses), style = MaterialTheme.typography.bodyLarge)
                 }
+            }
 
-                HorizontalDivider(color = MaterialTheme.colorScheme.background)
-
+            ExpressiveSegmentedSurface(index = 1, count = 3) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -89,9 +77,9 @@ fun AboutSettings(onNavigateToLicenses: () -> Unit) {
                     )
                     Text(stringResource(R.string.translate), style = MaterialTheme.typography.bodyLarge)
                 }
+            }
 
-                HorizontalDivider(color = MaterialTheme.colorScheme.background)
-
+            ExpressiveSegmentedSurface(index = 2, count = 3) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()

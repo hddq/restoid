@@ -1,21 +1,43 @@
 package io.github.hddq.restoid.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material3.*
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -25,18 +47,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
-import android.widget.Toast
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.RestoidApplication
-import io.github.hddq.restoid.Screen
 import io.github.hddq.restoid.model.BackupDetail
-import io.github.hddq.restoid.ui.restore.RestoreUiEvent
+import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
+import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
+import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
 import io.github.hddq.restoid.ui.restore.RestoreTypes
+import io.github.hddq.restoid.ui.restore.RestoreUiEvent
 import io.github.hddq.restoid.ui.restore.RestoreViewModel
-import io.github.hddq.restoid.ui.restore.RestoreViewModelFactory
 import io.github.hddq.restoid.ui.shared.TaskRow
 
 @Composable
@@ -53,7 +73,7 @@ fun RestoreScreen(
     val allowDowngrade by viewModel.allowDowngrade.collectAsState()
     val operationBlocked by viewModel.operationBlocked.collectAsState()
     val customDirectories by viewModel.customDirectories.collectAsState()
-    
+
     val restoreAppsEnabled by viewModel.restoreAppsEnabled.collectAsState()
     val restoreCustomDirectoriesEnabled by viewModel.restoreCustomDirectoriesEnabled.collectAsState()
     val restoreTypes by viewModel.restoreTypes.collectAsState()
@@ -82,43 +102,37 @@ fun RestoreScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            Column {
-                Text(
-                    text = stringResource(R.string.operation_restore),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-                ) {
-                    val rootState by viewModel.rootState.collectAsState()
-                    val hasRoot = rootState == io.github.hddq.restoid.data.RootState.Granted
-                    val selectableBackupDetails = backupDetails.filter { allowDowngrade || !it.isDowngrade }
-                    
-                    TaskRow(
-                        title = stringResource(R.string.run_tasks_applications),
-                        subtitle = if (hasRoot) buildSelectedRestoreTypesSummary(selectableBackupDetails, appRestoreTypes, restoreTypes, context) else stringResource(R.string.root_access_denied),
-                        checked = if (hasRoot) restoreAppsEnabled else false,
-                        onCheckedChange = viewModel::setRestoreAppsEnabled,
-                        onNavigate = if (hasRoot) onNavigateToAppsConfig else null,
-                        enabled = hasRoot
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    
-                    val customDirsList = customDirectories.map { io.github.hddq.restoid.model.CustomDirectory(it.key, it.value) }
-                    TaskRow(
-                        title = stringResource(R.string.run_tasks_custom_directories),
-                        subtitle = io.github.hddq.restoid.ui.shared.buildCustomDirectoriesSubtitle(customDirsList, context),
-                        checked = restoreCustomDirectoriesEnabled,
-                        onCheckedChange = viewModel::setRestoreCustomDirectoriesEnabled,
-                        onNavigate = onNavigateToCustomDirectoriesConfig
-                    )
+            val rootState by viewModel.rootState.collectAsState()
+            val hasRoot = rootState == io.github.hddq.restoid.data.RootState.Granted
+            val selectableBackupDetails = backupDetails.filter { allowDowngrade || !it.isDowngrade }
+            val customDirsList = customDirectories.map { io.github.hddq.restoid.model.CustomDirectory(it.key, it.value) }
+
+            Column(modifier = Modifier.fillMaxWidth()) {
+                ExpressiveSectionHeader(title = stringResource(R.string.operation_restore))
+                ExpressiveCardGroup {
+                    ExpressiveSegmentedSurface(index = 0, count = 2) {
+                        TaskRow(
+                            title = stringResource(R.string.run_tasks_applications),
+                            subtitle = if (hasRoot) buildSelectedRestoreTypesSummary(selectableBackupDetails, appRestoreTypes, restoreTypes, context) else stringResource(R.string.root_access_denied),
+                            checked = if (hasRoot) restoreAppsEnabled else false,
+                            onCheckedChange = viewModel::setRestoreAppsEnabled,
+                            onNavigate = if (hasRoot) onNavigateToAppsConfig else null,
+                            enabled = hasRoot
+                        )
+                    }
+                    ExpressiveSegmentedSurface(index = 1, count = 2) {
+                        TaskRow(
+                            title = stringResource(R.string.run_tasks_custom_directories),
+                            subtitle = io.github.hddq.restoid.ui.shared.buildCustomDirectoriesSubtitle(customDirsList, context),
+                            checked = restoreCustomDirectoriesEnabled,
+                            onCheckedChange = viewModel::setRestoreCustomDirectoriesEnabled,
+                            onNavigate = onNavigateToCustomDirectoriesConfig
+                        )
+                    }
                 }
             }
         }
-        
+
         if (isLoading) {
             item {
                 Box(
@@ -152,32 +166,22 @@ fun RestoreAppsConfigScreen(
         }
         return
     }
-    
+
     val selectableBackupDetails = backupDetails.filter { allowDowngrade || !it.isDowngrade }
     val isAllSelected = selectableBackupDetails.isNotEmpty() && selectableBackupDetails.all { it.appInfo.isSelected }
     var selectedAppPackageName by remember { mutableStateOf<String?>(null) }
     var showBulkRestoreTypesSheet by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    
+
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 88.dp, top = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
-        item {
-            Column {
-                Text(
-                    text = stringResource(R.string.restore_options_title),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer
-                    )
-                ) {
+        item(key = "options_section") {
+            Column(modifier = Modifier.padding(bottom = 14.dp)) {
+                ExpressiveSectionHeader(title = stringResource(R.string.restore_options_title))
+                ExpressiveSegmentedSurface(index = 0, count = 1) {
                     TaskRow(
                         title = stringResource(R.string.allow_downgrade),
                         checked = allowDowngrade,
@@ -188,52 +192,39 @@ fun RestoreAppsConfigScreen(
         }
 
         if (backupDetails.isEmpty() && !isLoading) {
-            item {
+            item(key = "empty") {
                 Text(
                     stringResource(R.string.no_app_data_found_in_snapshot),
                     modifier = Modifier.padding(16.dp)
                 )
             }
         } else {
-            item {
-                Column {
-                    Text(
-                        text = stringResource(R.string.apps_to_restore_title),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(bottom = 8.dp)
+            val totalAppRows = backupDetails.size + 1
+            item(key = "apps_header") {
+                ExpressiveSectionHeader(title = stringResource(R.string.apps_to_restore_title))
+            }
+            item(key = "apps_select_all") {
+                ExpressiveSegmentedSurface(index = 0, count = totalAppRows) {
+                    io.github.hddq.restoid.ui.shared.SelectAllListItem(
+                        isChecked = isAllSelected,
+                        subtitle = buildSelectedRestoreTypesSummary(selectableBackupDetails, appRestoreTypes, restoreTypes, context),
+                        onClick = { showBulkRestoreTypesSheet = true },
+                        onToggle = viewModel::toggleAllRestoreSelection
                     )
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-                    ) {
-                        Column {
-                            io.github.hddq.restoid.ui.shared.SelectAllListItem(
-                            isChecked = isAllSelected,
-                            subtitle = buildSelectedRestoreTypesSummary(selectableBackupDetails, appRestoreTypes, restoreTypes, context),
-                            onClick = { showBulkRestoreTypesSheet = true },
-                            onToggle = viewModel::toggleAllRestoreSelection
-                        )
-
-                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
-
-                        backupDetails.forEachIndexed { index, detail ->
-                            RestoreAppListItem(
-                                detail = detail,
-                                allowDowngrade = allowDowngrade,
-                                restoreTypes = appRestoreTypes[detail.appInfo.packageName] ?: restoreTypes,
-                                onClick = { selectedAppPackageName = detail.appInfo.packageName },
-                                onToggle = { viewModel.toggleRestoreAppSelection(detail.appInfo.packageName) }
-                            )
-                            if (index < backupDetails.size - 1) {
-                                HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                            }
-                        }
-                    }
+                }
+            }
+            itemsIndexed(backupDetails, key = { _, detail -> detail.appInfo.packageName }) { index, detail ->
+                ExpressiveSegmentedSurface(index = index + 1, count = totalAppRows) {
+                    RestoreAppListItem(
+                        detail = detail,
+                        allowDowngrade = allowDowngrade,
+                        restoreTypes = appRestoreTypes[detail.appInfo.packageName] ?: restoreTypes,
+                        onClick = { selectedAppPackageName = detail.appInfo.packageName },
+                        onToggle = { viewModel.toggleRestoreAppSelection(detail.appInfo.packageName) }
+                    )
                 }
             }
         }
-    }
     }
 
     if (showBulkRestoreTypesSheet) {
@@ -280,32 +271,26 @@ fun RestoreCustomDirectoriesConfigScreen(
             }
         } else {
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-                ) {
-                    Column {
-                        val isAllCustomDirsSelected = customDirectoriesList.all { it.second }
-                        val selectedCount = customDirectoriesList.count { it.second }
-                        
+                val isAllCustomDirsSelected = customDirectoriesList.all { it.second }
+                val selectedCount = customDirectoriesList.count { it.second }
+                val totalRows = customDirectoriesList.size + 1
+
+                ExpressiveCardGroup {
+                    ExpressiveSegmentedSurface(index = 0, count = totalRows) {
                         io.github.hddq.restoid.ui.shared.SelectAllListItem(
                             isChecked = isAllCustomDirsSelected,
                             subtitle = if (selectedCount > 0) "$selectedCount selected" else "None selected",
                             onClick = null,
                             onToggle = viewModel::toggleAllCustomDirectoriesSelection
                         )
-
-                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
-
-                        customDirectoriesList.forEachIndexed { index, (path, isSelected) ->
+                    }
+                    customDirectoriesList.forEachIndexed { index, (path, isSelected) ->
+                        ExpressiveSegmentedSurface(index = index + 1, count = totalRows) {
                             RestoreCustomDirListItem(
                                 path = path,
                                 isSelected = isSelected,
                                 onToggle = { viewModel.toggleCustomDirectory(path) }
                             )
-                            if (index < customDirectoriesList.size - 1) {
-                                HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                            }
                         }
                     }
                 }
@@ -315,7 +300,12 @@ fun RestoreCustomDirectoriesConfigScreen(
 }
 
 @Composable
-fun RestoreTypeToggle(label: String, description: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+fun RestoreTypeToggle(
+    label: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -473,11 +463,8 @@ private fun RestoreTypesBottomSheet(
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(bottom = 12.dp)
             )
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-            ) {
-                Column {
+            ExpressiveCardGroup {
+                ExpressiveSegmentedSurface(index = 0, count = 7) {
                     RestoreTypeToggle(
                         label = stringResource(R.string.backup_type_apk),
                         description = stringResource(R.string.backup_type_apk_desc),
@@ -485,7 +472,8 @@ private fun RestoreTypesBottomSheet(
                     ) {
                         onRestoreTypesChange(restoreTypes.copy(apk = it))
                     }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                }
+                ExpressiveSegmentedSurface(index = 1, count = 7) {
                     RestoreTypeToggle(
                         label = stringResource(R.string.backup_type_data),
                         description = stringResource(R.string.backup_type_data_desc),
@@ -493,7 +481,8 @@ private fun RestoreTypesBottomSheet(
                     ) {
                         onRestoreTypesChange(restoreTypes.copy(data = it))
                     }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                }
+                ExpressiveSegmentedSurface(index = 2, count = 7) {
                     RestoreTypeToggle(
                         label = stringResource(R.string.backup_type_device_protected_data),
                         description = stringResource(R.string.backup_type_device_protected_data_desc),
@@ -501,7 +490,8 @@ private fun RestoreTypesBottomSheet(
                     ) {
                         onRestoreTypesChange(restoreTypes.copy(deviceProtectedData = it))
                     }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                }
+                ExpressiveSegmentedSurface(index = 3, count = 7) {
                     RestoreTypeToggle(
                         label = stringResource(R.string.backup_type_external_data),
                         description = stringResource(R.string.backup_type_external_data_desc),
@@ -509,7 +499,8 @@ private fun RestoreTypesBottomSheet(
                     ) {
                         onRestoreTypesChange(restoreTypes.copy(externalData = it))
                     }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                }
+                ExpressiveSegmentedSurface(index = 4, count = 7) {
                     RestoreTypeToggle(
                         label = stringResource(R.string.backup_type_obb_data),
                         description = stringResource(R.string.backup_type_obb_data_desc),
@@ -517,7 +508,8 @@ private fun RestoreTypesBottomSheet(
                     ) {
                         onRestoreTypesChange(restoreTypes.copy(obb = it))
                     }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                }
+                ExpressiveSegmentedSurface(index = 5, count = 7) {
                     RestoreTypeToggle(
                         label = stringResource(R.string.backup_type_media_data),
                         description = stringResource(R.string.backup_type_media_data_desc),
@@ -525,7 +517,8 @@ private fun RestoreTypesBottomSheet(
                     ) {
                         onRestoreTypesChange(restoreTypes.copy(media = it))
                     }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                }
+                ExpressiveSegmentedSurface(index = 6, count = 7) {
                     RestoreTypeToggle(
                         label = stringResource(R.string.backup_type_permissions),
                         description = stringResource(R.string.backup_type_permissions_desc),
