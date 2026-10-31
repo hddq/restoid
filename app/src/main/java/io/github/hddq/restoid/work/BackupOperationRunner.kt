@@ -368,16 +368,30 @@ class BackupOperationRunner(
         val customDirectoryMetadataMap = mutableMapOf<String, CustomDirectoryMetadata>()
         customDirectories.forEach { dirUriStr ->
             throwIfCancelled()
-            val uri = android.net.Uri.parse(dirUriStr)
-            val realPath = io.github.hddq.restoid.util.StorageUtils.getPathFromTreeUri(uri)
-            if (realPath != null) {
+            if (io.github.hddq.restoid.util.StorageUtils.isFileUri(dirUriStr)) {
+                // Typed direct path: bypasses SAF entirely.
+                val rawPath = io.github.hddq.restoid.util.StorageUtils.pathFromFileUri(dirUriStr)
+                    ?: throw IllegalStateException(context.getString(R.string.custom_directories_unresolvable, dirUriStr))
+                // Resolve path for shell in case it's on an external SD card
+                val shellPath = io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(rawPath)
+                val existing = Shell.cmd("[ -e ${shellQuote(shellPath)} ]").exec().isSuccess
+                if (!existing) {
+                    throw IllegalStateException(context.getString(R.string.custom_directory_not_found, rawPath))
+                }
+                pathsToBackup.add(shellPath)
+                customDirectoryMetadataMap[shellPath] = CustomDirectoryMetadata(size = 0L)
+            } else {
+                val uri = android.net.Uri.parse(dirUriStr)
+                val realPath = io.github.hddq.restoid.util.StorageUtils.getPathFromTreeUri(uri)
+                    ?: throw IllegalStateException(context.getString(R.string.custom_directories_unresolvable, dirUriStr))
                 // Resolve path for shell in case it's on an external SD card
                 val shellPath = io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(realPath)
-                val existing = Shell.cmd("[ -e '$shellPath' ]").exec().isSuccess
-                if (existing) {
-                    pathsToBackup.add(shellPath)
-                    customDirectoryMetadataMap[shellPath] = CustomDirectoryMetadata(size = 0L)
+                val existing = Shell.cmd("[ -e ${shellQuote(shellPath)} ]").exec().isSuccess
+                if (!existing) {
+                    throw IllegalStateException(context.getString(R.string.custom_directory_not_found, realPath))
                 }
+                pathsToBackup.add(shellPath)
+                customDirectoryMetadataMap[shellPath] = CustomDirectoryMetadata(size = 0L)
             }
         }
         val metadata = RestoidMetadata(apps = appMetadataMap, customDirectories = customDirectoryMetadataMap)
@@ -393,6 +407,14 @@ class BackupOperationRunner(
                 isFinished = true,
                 error = context.getString(R.string.error_no_items_selected),
                 finalSummary = context.getString(R.string.summary_no_items_selected)
+            )
+        }
+
+        if (request.customDirectories.isNotEmpty() && !hasAllFilesAccess()) {
+            return OperationProgress(
+                isFinished = true,
+                error = context.getString(R.string.error_all_files_access_required),
+                finalSummary = context.getString(R.string.summary_all_files_access_required)
             )
         }
 
@@ -480,6 +502,16 @@ class BackupOperationRunner(
         }
 
         return null
+    }
+
+    private fun hasAllFilesAccess(): Boolean {
+        // Environment.isExternalStorageManager() only exists on API 30+; below
+        // that the legacy storage model (requestLegacyExternalStorage) applies.
+        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            android.os.Environment.isExternalStorageManager()
+        } else {
+            true
+        }
     }
 
     private fun getCurrentUserId(): Int {

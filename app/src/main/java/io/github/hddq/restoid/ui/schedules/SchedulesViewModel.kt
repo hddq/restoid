@@ -285,16 +285,42 @@ class SchedulesViewModel(
     }
 
     fun addCustomDirectory(uriString: String) {
+        if (io.github.hddq.restoid.util.StorageUtils.isFileUri(uriString)) {
+            val path = io.github.hddq.restoid.util.StorageUtils.pathFromFileUri(uriString)
+            val dir = path?.let { java.io.File(it) }
+            if (dir == null || !dir.isDirectory) {
+                android.widget.Toast.makeText(
+                    application,
+                    application.getString(io.github.hddq.restoid.R.string.custom_directories_typed_path_not_found, path ?: uriString),
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+                return
+            }
+        }
+
+        val newKey = io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryKey(uriString)
+        if (_addEditState.value.customDirectories.any { io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryKey(it.uri) == newKey }) {
+            android.widget.Toast.makeText(
+                application,
+                application.getString(io.github.hddq.restoid.R.string.custom_directories_already_added),
+                android.widget.Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+
         val repoKey = _uiState.value.selectedRepoKey
         val repository = repoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
-        
+
         if (repository != null && repository.backendType == io.github.hddq.restoid.data.RepositoryBackendType.LOCAL) {
             val repoUri = android.net.Uri.parse(repository.path)
-            val customDirUri = android.net.Uri.parse(uriString)
             val repoPath = io.github.hddq.restoid.util.StorageUtils.getPathFromTreeUri(repoUri) ?: repository.path
-            val customDirPath = io.github.hddq.restoid.util.StorageUtils.getPathFromTreeUri(customDirUri) ?: uriString
-            
-            if (repoPath == customDirPath) {
+            val repoCanonical = try {
+                java.io.File(repoPath).canonicalPath
+            } catch (_: Exception) {
+                repoPath
+            }
+
+            if (repoCanonical == newKey) {
                 android.widget.Toast.makeText(
                     application,
                     application.getString(io.github.hddq.restoid.R.string.error_cannot_backup_repo_to_itself),
