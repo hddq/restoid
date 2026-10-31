@@ -1,10 +1,13 @@
 package io.github.hddq.restoid.ui.schedules
 
 import android.app.Application
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.AppInfoRepository
 import io.github.hddq.restoid.data.RepositoriesRepository
+import io.github.hddq.restoid.data.RepositoryBackendType
 import io.github.hddq.restoid.data.ScheduleRepository
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.Schedule
@@ -12,6 +15,7 @@ import io.github.hddq.restoid.model.TriggerConditions
 import io.github.hddq.restoid.model.MaintenanceConfig
 import io.github.hddq.restoid.ui.shared.BackupTypes
 import io.github.hddq.restoid.ui.shared.toUiModel
+import io.github.hddq.restoid.util.StorageUtils
 import io.github.hddq.restoid.work.RunTasksConfig
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -285,31 +289,33 @@ class SchedulesViewModel(
     }
 
     fun addCustomDirectory(uriString: String) {
+        val newKey = StorageUtils.resolveCustomDirectoryKey(uriString)
+        if (_addEditState.value.customDirectories.any { StorageUtils.resolveCustomDirectoryKey(it.uri) == newKey }) {
+            Toast.makeText(
+                application,
+                application.getString(R.string.custom_directories_already_added),
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+
         val repoKey = _uiState.value.selectedRepoKey
         val repository = repoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
-        
-        if (repository != null && repository.backendType == io.github.hddq.restoid.data.RepositoryBackendType.LOCAL) {
-            val repoUri = android.net.Uri.parse(repository.path)
-            val customDirUri = android.net.Uri.parse(uriString)
-            val repoPath = io.github.hddq.restoid.util.StorageUtils.getPathFromTreeUri(repoUri) ?: repository.path
-            val customDirPath = io.github.hddq.restoid.util.StorageUtils.getPathFromTreeUri(customDirUri) ?: uriString
-            
-            if (repoPath == customDirPath) {
-                android.widget.Toast.makeText(
+
+        if (repository != null && repository.backendType == RepositoryBackendType.LOCAL) {
+            val repoCanonicalKey = StorageUtils.resolveCustomDirectoryKey(repository.path)
+            if (repoCanonicalKey == newKey) {
+                Toast.makeText(
                     application,
-                    application.getString(io.github.hddq.restoid.R.string.error_cannot_backup_repo_to_itself),
-                    android.widget.Toast.LENGTH_LONG
+                    application.getString(R.string.error_cannot_backup_repo_to_itself),
+                    Toast.LENGTH_LONG
                 ).show()
                 return
             }
         }
 
         _addEditState.update { state ->
-            if (state.customDirectories.none { it.uri == uriString }) {
-                state.copy(customDirectories = state.customDirectories + io.github.hddq.restoid.model.CustomDirectory(uriString))
-            } else {
-                state
-            }
+            state.copy(customDirectories = state.customDirectories + io.github.hddq.restoid.model.CustomDirectory(uriString))
         }
     }
 

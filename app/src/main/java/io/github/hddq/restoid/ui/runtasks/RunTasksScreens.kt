@@ -236,6 +236,7 @@ fun CustomDirectoriesConfigScreen(
         customDirectories = uiState.customDirectories,
         onAddDirectory = viewModel::addCustomDirectory,
         onToggleDirectory = viewModel::toggleCustomDirectory,
+        onRemoveDirectory = viewModel::removeCustomDirectory,
         modifier = modifier
     )
 }

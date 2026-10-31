@@ -628,6 +628,7 @@ fun ScheduleCustomDirectoriesConfigScreen(
         customDirectories = state.customDirectories,
         onAddDirectory = viewModel::addCustomDirectory,
         onToggleDirectory = viewModel::toggleCustomDirectory,
+        onRemoveDirectory = viewModel::removeCustomDirectory,
         modifier = modifier
     )
 }

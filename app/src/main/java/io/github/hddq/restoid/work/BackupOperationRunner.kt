@@ -419,17 +419,16 @@ class BackupOperationRunner(
         val customDirectoryMetadataMap = mutableMapOf<String, CustomDirectoryMetadata>()
         customDirectories.forEach { dirUriStr ->
             throwIfCancelled()
-            val uri = android.net.Uri.parse(dirUriStr)
-            val realPath = io.github.hddq.restoid.util.StorageUtils.getPathFromTreeUri(uri)
-            if (realPath != null) {
-                // Resolve path for shell in case it's on an external SD card
-                val shellPath = io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(realPath)
-                val existing = Shell.cmd("[ -e ${shellQuote(shellPath)} ]").exec().isSuccess
-                if (existing) {
-                    pathsToBackup.add(shellPath)
-                    customDirectoryMetadataMap[shellPath] = CustomDirectoryMetadata(size = 0L)
-                }
+            val realPath = io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(dirUriStr)
+                ?: throw IllegalStateException(context.getString(R.string.custom_directories_unresolvable, dirUriStr))
+            // Resolve path for shell in case it's on an external SD card or USB drive
+            val shellPath = io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(realPath)
+            val existing = Shell.cmd("[ -e ${shellQuote(shellPath)} ]").exec().isSuccess
+            if (!existing) {
+                throw IllegalStateException(context.getString(R.string.custom_directory_not_found, realPath))
             }
+            pathsToBackup.add(shellPath)
+            customDirectoryMetadataMap[shellPath] = CustomDirectoryMetadata(size = 0L)
         }
         val metadata = RestoidMetadata(apps = appMetadataMap, customDirectories = customDirectoryMetadataMap)
         return Triple(pathsToBackup, excludePatterns, metadata)
@@ -444,6 +443,14 @@ class BackupOperationRunner(
                 isFinished = true,
                 error = context.getString(R.string.error_no_items_selected),
                 finalSummary = context.getString(R.string.summary_no_items_selected)
+            )
+        }
+
+        if (request.customDirectories.isNotEmpty() && !Shell.getShell().isRoot && !hasAllFilesAccess()) {
+            return OperationProgress(
+                isFinished = true,
+                error = context.getString(R.string.error_all_files_access_required),
+                finalSummary = context.getString(R.string.summary_all_files_access_required)
             )
         }
 
@@ -531,6 +538,14 @@ class BackupOperationRunner(
         }
 
         return null
+    }
+
+    private fun hasAllFilesAccess(): Boolean {
+        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            android.os.Environment.isExternalStorageManager()
+        } else {
+            true
+        }
     }
 
     private fun getCurrentUserId(): Int {

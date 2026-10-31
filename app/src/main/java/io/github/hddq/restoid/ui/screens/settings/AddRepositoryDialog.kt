@@ -163,7 +163,6 @@ fun AddRepositoryDialog(
                         null
                     },
                     singleLine = true,
-                    readOnly = uiState.backendType == RepositoryBackendType.LOCAL,
                     isError = uiState.state is AddRepositoryState.Error,
                     trailingIcon = {
                         if (uiState.backendType == RepositoryBackendType.LOCAL) {
