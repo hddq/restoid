@@ -347,7 +347,8 @@ class RestoreOperationRunner(
                     
                     // sourcePath is tempRestoreDir + path (since path is absolute e.g. /sdcard/X3, it will be tempRestoreDir/sdcard/X3)
                     val sourcePath = File(tempRestoreDir, path.drop(1)).absolutePath
-                    val targetFile = File(path)
+                    val targetPath = io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(path)
+                    val targetFile = File(targetPath)
                     val parent = targetFile.parentFile
                     
                     if (parent != null) {
@@ -355,17 +356,17 @@ class RestoreOperationRunner(
                     }
                     
                     if (Shell.cmd("[ -e ${shellQuote(sourcePath)} ]").exec().isSuccess) {
-                        Shell.cmd("rm -rf ${shellQuote(path)}").exec()
-                        val copyResult = Shell.cmd("cp -R ${shellQuote(sourcePath)} ${shellQuote(path)}").exec()
+                        Shell.cmd("rm -rf ${shellQuote(targetPath)}").exec()
+                        val copyResult = Shell.cmd("cp -R ${shellQuote(sourcePath)} ${shellQuote(targetPath)}").exec()
                         if (!copyResult.isSuccess) {
                             processSuccess = false
                             failureDetails.add(context.getString(R.string.restore_failure_custom_directory, path))
                         } else {
-                            if (path.startsWith("/storage/") || path.startsWith("/sdcard/")) {
+                            if (Shell.getShell().isRoot && (targetPath.startsWith("/storage/") || targetPath.startsWith("/sdcard/"))) {
                                 val ownerResult = Shell.cmd("stat -c '%u:%g' ${shellQuote(parent?.absolutePath ?: "/sdcard")}").exec()
                                 val owner = ownerResult.out.firstOrNull()?.trim()
                                 if (owner != null && owner.isNotEmpty()) {
-                                    Shell.cmd("chown -R $owner ${shellQuote(path)}").exec()
+                                    Shell.cmd("chown -R $owner ${shellQuote(targetPath)}").exec()
                                 }
                             }
                         }

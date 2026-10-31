@@ -13,58 +13,87 @@ object StorageUtils {
      * Handles both Primary storage and External SD cards/USB drives.
      */
     fun getPathFromTreeUri(treeUri: Uri): String? {
-        if (treeUri.authority != "com.android.externalstorage.documents") {
+        val authority = treeUri.authority ?: return null
+        val host = authority.substringAfter('@')
+        if (host != "com.android.externalstorage.documents") {
             return null
         }
+        val userIdFromAuthority = authority.substringBefore('@', "").takeIf { it.isNotEmpty() && it.all(Char::isDigit) }
 
         val docId = DocumentsContract.getTreeDocumentId(treeUri)
-        val split = docId.split(":")
+        val split = docId.split(":", limit = 2)
         if (split.size > 1) {
             val type = split[0]
-            val path = split[1]
-            return if (type == "primary") {
-                "${Environment.getExternalStorageDirectory()}/$path"
+            val path = split[1].trimStart('/')
+            val basePath = if (type == "primary") {
+                if (userIdFromAuthority != null) {
+                    "/storage/emulated/$userIdFromAuthority"
+                } else {
+                    Environment.getExternalStorageDirectory().absolutePath.trimEnd('/')
+                }
             } else {
                 // Handle SD cards and USB drives where type is the UUID
-                "/storage/$type/$path"
+                "/storage/$type"
             }
+            return if (path.isEmpty()) basePath else "$basePath/$path"
         }
         return null
     }
 
     /**
      * Dynamically resolves a user-space path (e.g., /storage/UUID/...) to a root-space mount path
-     * (e.g., /mnt/media_rw/UUID/...).
+     * (e.g., /mnt/media_rw/UUID/...) when running in a root shell.
      *
-     * This is necessary because Shell.FLAG_MOUNT_MASTER places the shell in the global namespace,
-     * where user-specific FUSE/SDCardFS mounts often don't exist or are inaccessible.
+     * This is necessary for root shells because Shell.FLAG_MOUNT_MASTER places the root shell in the
+     * global namespace, where user-specific FUSE/SDCardFS mounts under /storage/UUID may be inaccessible.
+     * In rootless mode, the shell runs in the app's user namespace where /storage/UUID is accessible
+     * directly via FUSE and /mnt/media_rw is blocked by permissions.
      */
     fun resolvePathForShell(inputPath: String): String {
-        // Pattern to match /storage/UUID/...
-        val uuidPattern = Regex("^/storage/([A-Fa-f0-9-]+)(/.*)?$")
-        val match = uuidPattern.find(inputPath)
+        val externalUuidPattern = Regex("^/(?:storage|mnt/media_rw)/([A-Fa-f0-9-]+)(/.*)?$")
+        val match = externalUuidPattern.find(inputPath)
 
         if (match != null) {
             val uuid = match.groupValues[1]
             val relativePath = match.groupValues[2]
+            val isRoot = Shell.getShell().isRoot
 
-            // 1. Check /proc/mounts to find where this UUID is actually mounted
+            // 1. In rootless mode, prefer /storage/<UUID> if mounted (e.g. SD cards via FUSE),
+            //    since /storage has full getattr permissions for untrusted_app.
+            if (!isRoot) {
+                val storageBase = "/storage/$uuid"
+                val storageCandidate = "$storageBase$relativePath"
+                if (Shell.cmd("[ -e ${shellQuote(storageCandidate)} ] || [ -d ${shellQuote(storageBase)} ]").exec().isSuccess) {
+                    return storageCandidate
+                }
+            }
+
+            // 2. Check /proc/mounts to find an accessible mount point for this UUID
+            //    (e.g. /mnt/media_rw/<UUID> for root shells or USB OTG drives in rootless mode).
             val mounts = Shell.cmd("cat /proc/mounts").exec().out
-            val mountPoint = mounts
+            val mountPoints = mounts
                 .map { it.split("\\s+".toRegex()) }
                 .filter { it.size >= 2 }
                 .map { it[1] } // Mount point is the second field
-                .find { it.endsWith("/$uuid") }
+                .filter { it.endsWith("/$uuid") }
+                .distinct()
 
-            if (mountPoint != null) {
-                return "$mountPoint$relativePath"
+            val accessibleMount = mountPoints.firstOrNull { mountPoint ->
+                Shell.cmd("[ -e ${shellQuote("$mountPoint$relativePath")} ] || [ -d ${shellQuote(mountPoint)} ]").exec().isSuccess
+            } ?: mountPoints.firstOrNull()
+
+            if (accessibleMount != null) {
+                return "$accessibleMount$relativePath"
             }
 
-            // 2. Fallback: Check specific common locations like /mnt/media_rw
+            // 3. Fallback: Check /mnt/media_rw/<UUID> and /storage/<UUID>
             val mediaRwPath = "/mnt/media_rw/$uuid"
-            // Check using shell because Java might not have permission to see /mnt/media_rw
-            if (Shell.cmd("[ -d '$mediaRwPath' ]").exec().isSuccess) {
+            if (Shell.cmd("[ -d ${shellQuote(mediaRwPath)} ]").exec().isSuccess) {
                 return "$mediaRwPath$relativePath"
+            }
+            val storagePath = "/storage/$uuid"
+            if (Shell.cmd("[ -d ${shellQuote(storagePath)} ]").exec().isSuccess) {
+                return "$storagePath$relativePath"
             }
         }
 

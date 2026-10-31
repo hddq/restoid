@@ -56,6 +56,7 @@ class BackupOperationRunner(
         var fileList: File? = null
         var passwordFile: File? = null
         var restoidMetadataFile: File? = null
+        var stagingRoot: File? = null
         var isSuccess = false
         var summary = ""
         var finalSummaryProgress: OperationProgress? = null
@@ -141,8 +142,39 @@ class BackupOperationRunner(
             emitStageProgress(stage2Title, 0f, (currentStage - 1f) / totalStages)
             throwIfCancelled()
 
+            val mediaRwRegex = Regex("^/mnt/media_rw/([A-Fa-f0-9-]+)(?:/(.*))?$")
+            val effectivePathsToBackup = if (!Shell.getShell().isRoot && pathsToBackup.any { mediaRwRegex.matches(it) }) {
+                val root = File(context.cacheDir, "restic-staging")
+                Shell.cmd("rm -rf ${shellQuote(root.absolutePath)}").exec()
+                val mediaRwDir = File(root, "mnt/media_rw").also { it.mkdirs() }
+                stagingRoot = root
+                val linkedUuids = mutableSetOf<String>()
+                pathsToBackup.distinct().flatMap { path ->
+                    val match = mediaRwRegex.matchEntire(path)
+                    if (match != null) {
+                        val uuid = match.groupValues[1]
+                        val subPath = match.groupValues[2].trim('/')
+                        if (linkedUuids.add(uuid)) {
+                            val linkTarget = "/mnt/media_rw/$uuid"
+                            val linkFile = File(mediaRwDir, uuid)
+                            android.system.Os.symlink(linkTarget, linkFile.absolutePath)
+                        }
+                        if (subPath.isNotEmpty()) {
+                            listOf("mnt/media_rw/$uuid/$subPath")
+                        } else {
+                            val entries = File("/mnt/media_rw/$uuid").list().orEmpty()
+                            entries.map { entry -> "mnt/media_rw/$uuid/$entry" }
+                        }
+                    } else {
+                        listOf(path)
+                    }
+                }
+            } else {
+                pathsToBackup.distinct()
+            }
+
             fileList = File.createTempFile("restic-files-", ".txt", context.cacheDir)
-            fileList.writeText(pathsToBackup.distinct().joinToString("\n"))
+            fileList.writeText(effectivePathsToBackup.distinct().joinToString("\n"))
 
             passwordFile = File.createTempFile("restic-pass", ".tmp", context.cacheDir)
             passwordFile.writeText(password)
@@ -154,6 +186,9 @@ class BackupOperationRunner(
             val resticOptionFlags = buildResticOptionFlags(repositoryResticOptions)
 
             val command = buildString {
+                stagingRoot?.let { root ->
+                    append("cd ").append(shellQuote(root.absolutePath)).append(" && ")
+                }
                 if (envPrefix.isNotEmpty()) append(envPrefix).append(' ')
                 append("RESTIC_PASSWORD_FILE=").append(shellQuote(passwordFile.absolutePath)).append(' ')
                 append("RESTIC_CACHE_DIR=").append(shellQuote(File(context.cacheDir, if (com.topjohnwu.superuser.Shell.getShell().isRoot) "restic" else "restic-user").absolutePath)).append(' ')
@@ -162,7 +197,7 @@ class BackupOperationRunner(
                 if (resticOptionFlags.isNotEmpty()) append(resticOptionFlags).append(' ')
                 append("-r ")
                 append(shellQuote(currentRepoPath)).append(' ')
-                append("backup --files-from ")
+                append("backup --files-from-verbatim ")
                 append(shellQuote(fileList.absolutePath))
                 append(" --json --verbose=2 ")
                 append(tagFlags)
@@ -172,20 +207,24 @@ class BackupOperationRunner(
 
             val errorMessages = mutableListOf<String>()
             var isOnlySafeErrors = true
-            val stdoutCallback = object : CallbackList<String>() {
-                override fun onAddElement(line: String) {
-                    try {
-                        val json = org.json.JSONObject(line)
-                        if (json.optString("message_type") == "error") {
-                            val item = json.optString("item")
-                            val message = json.optJSONObject("error")?.optString("message") ?: ""
-                            val isSafe = item == "/data/user/0" && message.contains("user.serial")
-                            if (!isSafe) {
-                                isOnlySafeErrors = false
-                                errorMessages.add("Error in $item: $message")
-                            }
+            fun parseErrorJsonLine(line: String) {
+                try {
+                    val json = org.json.JSONObject(line)
+                    if (json.optString("message_type") == "error") {
+                        val item = json.optString("item")
+                        val message = json.optJSONObject("error")?.optString("message") ?: ""
+                        val isSafe = item == "/data/user/0" && message.contains("user.serial")
+                        if (!isSafe) {
+                            isOnlySafeErrors = false
+                            errorMessages.add("Error in $item: $message")
                         }
-                    } catch (e: Exception) {}
+                    }
+                } catch (_: Exception) {}
+            }
+
+            val stdoutCallback = object : CallbackList<String>(Runnable::run) {
+                override fun onAddElement(line: String) {
+                    parseErrorJsonLine(line)
 
                     ResticOutputParser.parse(line, context)?.let { progressUpdate ->
                         if (progressUpdate.isFinished) {
@@ -203,7 +242,13 @@ class BackupOperationRunner(
                 }
             }
             val stderr = mutableListOf<String>()
-            val result = Shell.cmd(command).to(stdoutCallback, stderr).exec()
+            val stderrCallback = object : CallbackList<String>(Runnable::run) {
+                override fun onAddElement(line: String) {
+                    stderr.add(line)
+                    parseErrorJsonLine(line)
+                }
+            }
+            val result = Shell.cmd(command).to(stdoutCallback, stderrCallback).exec()
             throwIfCancelled()
 
             val isResticSuccess = result.isSuccess || (result.code == 3 && isOnlySafeErrors)
@@ -283,6 +328,9 @@ class BackupOperationRunner(
             fileList?.delete()
             passwordFile?.delete()
             restoidMetadataFile?.delete()
+            stagingRoot?.let { root ->
+                Shell.cmd("rm -rf ${shellQuote(root.absolutePath)}").exec()
+            }
         }
 
         val finalProgress = progressState.copy(
@@ -338,7 +386,7 @@ class BackupOperationRunner(
                 if (effectiveBackupTypes.permissions) add("permissions")
             }
             val appPaths = generateFilePathsForApp(app, effectiveBackupTypes)
-            val existingAppPaths = appPaths.filter { Shell.cmd("[ -e '$it' ]").exec().isSuccess }
+            val existingAppPaths = appPaths.filter { Shell.cmd("[ -e ${shellQuote(it)} ]").exec().isSuccess }
             pathsToBackup.addAll(existingAppPaths)
 
             if (effectiveBackupTypes.data) {
@@ -373,7 +421,7 @@ class BackupOperationRunner(
             if (realPath != null) {
                 // Resolve path for shell in case it's on an external SD card
                 val shellPath = io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(realPath)
-                val existing = Shell.cmd("[ -e '$shellPath' ]").exec().isSuccess
+                val existing = Shell.cmd("[ -e ${shellQuote(shellPath)} ]").exec().isSuccess
                 if (existing) {
                     pathsToBackup.add(shellPath)
                     customDirectoryMetadataMap[shellPath] = CustomDirectoryMetadata(size = 0L)
