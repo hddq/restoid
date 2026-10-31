@@ -162,7 +162,8 @@ class BackupOperationRunner(
                         if (subPath.isNotEmpty()) {
                             listOf("mnt/media_rw/$uuid/$subPath")
                         } else {
-                            val entries = File("/mnt/media_rw/$uuid").list().orEmpty()
+                            val entries = File("/mnt/media_rw/$uuid").list()
+                                ?: throw IllegalStateException("Failed to read directory contents of /mnt/media_rw/$uuid")
                             entries.map { entry -> "mnt/media_rw/$uuid/$entry" }
                         }
                     } else {
@@ -173,8 +174,10 @@ class BackupOperationRunner(
                 pathsToBackup.distinct()
             }
 
-            fileList = File.createTempFile("restic-files-", ".txt", context.cacheDir)
-            fileList.writeText(effectivePathsToBackup.distinct().joinToString("\n"))
+            fileList = File.createTempFile("restic-files-", ".raw", context.cacheDir)
+            fileList.writeText(
+                effectivePathsToBackup.distinct().joinToString(separator = "\u0000", postfix = "\u0000")
+            )
 
             passwordFile = File.createTempFile("restic-pass", ".tmp", context.cacheDir)
             passwordFile.writeText(password)
@@ -197,7 +200,7 @@ class BackupOperationRunner(
                 if (resticOptionFlags.isNotEmpty()) append(resticOptionFlags).append(' ')
                 append("-r ")
                 append(shellQuote(currentRepoPath)).append(' ')
-                append("backup --files-from-verbatim ")
+                append("backup --files-from-raw ")
                 append(shellQuote(fileList.absolutePath))
                 append(" --json --verbose=2 ")
                 append(tagFlags)
