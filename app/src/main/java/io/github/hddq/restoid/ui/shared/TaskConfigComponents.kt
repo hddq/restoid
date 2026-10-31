@@ -693,18 +693,7 @@ fun CustomDirectoriesConfigScreen(
     onToggleDirectory: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val launcher = androidx.activity.compose.rememberLauncherForActivityResult(
-        androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()
-    ) { uri ->
-        if (uri != null) {
-            context.contentResolver.takePersistableUriPermission(
-                uri,
-                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
-            )
-            onAddDirectory(uri.toString())
-        }
-    }
+    var showFolderPicker by remember { mutableStateOf(false) }
 
     androidx.compose.foundation.lazy.LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -728,9 +717,10 @@ fun CustomDirectoriesConfigScreen(
                 ) {
                     androidx.compose.foundation.layout.Column {
                         customDirectories.forEachIndexed { index, customDir ->
-                            val uri = android.net.Uri.parse(customDir.uri)
-                            val realPath = io.github.hddq.restoid.util.StorageUtils.getPathFromTreeUri(uri)
-                            val displayPath = realPath ?: (uri.lastPathSegment ?: customDir.uri)
+                            val resolvedPath = io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(customDir.uri)
+                            val displayPath = resolvedPath ?: runCatching {
+                                android.net.Uri.parse(customDir.uri).lastPathSegment
+                            }.getOrNull() ?: customDir.uri
                             androidx.compose.foundation.layout.Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -782,7 +772,7 @@ fun CustomDirectoriesConfigScreen(
 
         item {
             FilledTonalButton(
-                onClick = { launcher.launch(null) },
+                onClick = { showFolderPicker = true },
                 shape = androidx.compose.material3.MaterialTheme.shapes.extraLarge,
                 modifier = Modifier.padding(top = 4.dp)
             ) {
@@ -794,5 +784,15 @@ fun CustomDirectoriesConfigScreen(
                 androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(io.github.hddq.restoid.R.string.action_add_directory))
             }
         }
+    }
+
+    if (showFolderPicker) {
+        io.github.hddq.restoid.ui.components.FolderPickerSheet(
+            onSelectPath = { selectedPath ->
+                showFolderPicker = false
+                onAddDirectory(selectedPath)
+            },
+            onDismissRequest = { showFolderPicker = false }
+        )
     }
 }

@@ -11,6 +11,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -59,22 +62,7 @@ fun SettingsScreen(
         }
     }
 
-    val directoryPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocumentTree(),
-        onResult = { uri ->
-            uri?.let {
-                try {
-                    val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-                    context.contentResolver.takePersistableUriPermission(it, takeFlags)
-                    StorageUtils.getPathFromTreeUri(it)?.let { path ->
-                        viewModel.onNewRepoPathChanged(path)
-                    }
-                } catch (e: SecurityException) {
-                    e.printStackTrace()
-                }
-            }
-        }
-    )
+    var showRepoFolderPicker by remember { mutableStateOf(false) }
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
@@ -118,7 +106,18 @@ fun SettingsScreen(
             onEnvironmentVariablesChange = { viewModel.onNewRepoEnvironmentVariablesChanged(it) },
             onSavePasswordChange = { viewModel.onSavePasswordChanged(it) },
             onConfirm = { viewModel.addRepository() },
-            onSelectPath = { directoryPickerLauncher.launch(null) }
+            onSelectPath = { showRepoFolderPicker = true }
+        )
+    }
+
+    if (showRepoFolderPicker) {
+        io.github.hddq.restoid.ui.components.FolderPickerSheet(
+            initialPath = addRepoUiState.path.takeIf { it.isNotBlank() },
+            onSelectPath = { path ->
+                showRepoFolderPicker = false
+                viewModel.onNewRepoPathChanged(path)
+            },
+            onDismissRequest = { showRepoFolderPicker = false }
         )
     }
 
