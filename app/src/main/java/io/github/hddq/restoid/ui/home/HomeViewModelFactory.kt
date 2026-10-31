@@ -8,6 +8,7 @@ import io.github.hddq.restoid.data.MetadataRepository
 import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.ResticBinaryManager
 import io.github.hddq.restoid.data.ResticRepository
+import io.github.hddq.restoid.work.OperationWorkRepository
 
 class HomeViewModelFactory(
     private val context: Context,
@@ -15,12 +16,21 @@ class HomeViewModelFactory(
     private val resticBinaryManager: ResticBinaryManager, // Injected
     private val resticRepository: ResticRepository,
     private val appInfoRepository: AppInfoRepository,
-    private val metadataRepository: MetadataRepository
+    private val metadataRepository: MetadataRepository,
+    private val operationWorkRepository: OperationWorkRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(HomeViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return HomeViewModel(context, repositoriesRepository, resticBinaryManager, resticRepository, appInfoRepository, metadataRepository) as T
+            return HomeViewModel(
+                context,
+                repositoriesRepository,
+                resticBinaryManager,
+                resticRepository,
+                appInfoRepository,
+                metadataRepository,
+                operationWorkRepository
+            ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

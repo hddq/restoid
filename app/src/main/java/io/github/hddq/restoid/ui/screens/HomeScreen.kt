@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
 import io.github.hddq.restoid.R
+import io.github.hddq.restoid.data.OperationType
 import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.ui.components.PasswordDialog
@@ -86,8 +87,12 @@ fun HomeScreen(
     onDismissSftpPasswordDialog: () -> Unit,
     onDismissRestCredentialsDialog: () -> Unit,
     onDismissS3CredentialsDialog: () -> Unit,
+    onOpenOperationProgress: () -> Unit = {},
+    onForceStopOperation: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    var showForceStopDialog by remember { mutableStateOf(false) }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -107,6 +112,81 @@ fun HomeScreen(
             )
         }
         Spacer(Modifier.height(24.dp))
+
+        val activeOp = uiState.activeOperation
+        if (activeOp.isRunning || activeOp.stopRequested) {
+            val opLabel = when (activeOp.operationType) {
+                OperationType.BACKUP -> stringResource(R.string.operation_backup)
+                OperationType.RUN_TASKS -> stringResource(R.string.operation_run_tasks)
+                OperationType.RESTORE -> stringResource(R.string.operation_restore)
+                OperationType.MAINTENANCE -> stringResource(R.string.operation_maintenance)
+                null -> null
+            }
+            val cardTitle = if (opLabel != null) {
+                stringResource(R.string.home_operation_running_title, opLabel)
+            } else {
+                stringResource(R.string.home_operation_running_default_title)
+            }
+            val stageSubtitle = activeOp.progress.stageTitle.takeIf { it.isNotBlank() }
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+                    .clickable(onClick = onOpenOperationProgress),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        Column {
+                            Text(
+                                text = cardTitle,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            if (stageSubtitle != null) {
+                                Text(
+                                    text = stageSubtitle,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                                )
+                            }
+                            Text(
+                                text = stringResource(R.string.home_operation_running_tap_hint),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                    TextButton(
+                        onClick = { showForceStopDialog = true }
+                    ) {
+                        Text(
+                            text = stringResource(R.string.action_force_stop),
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            }
+        }
 
         // Refreshable Content Area
         PullToRefreshBox(
@@ -251,6 +331,32 @@ fun HomeScreen(
                 }
             }
         }
+    }
+
+    if (showForceStopDialog) {
+        AlertDialog(
+            onDismissRequest = { showForceStopDialog = false },
+            title = { Text(stringResource(R.string.dialog_force_stop_operation_title)) },
+            text = { Text(stringResource(R.string.dialog_force_stop_operation_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showForceStopDialog = false
+                        onForceStopOperation()
+                    }
+                ) {
+                    Text(
+                        text = stringResource(R.string.action_force_stop),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showForceStopDialog = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
     }
 
     if (uiState.showPasswordDialogFor != null) {

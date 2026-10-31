@@ -256,7 +256,7 @@ class MainActivity : FragmentActivity() {
                 val currentDestination = navBackStackEntry?.destination
                 val showBottomBar = currentDestination?.route in listOf(Screen.Home.route, SchedulesRoutes.Main, Screen.Settings.route)
                 val homeViewModel: HomeViewModel = viewModel(
-                    factory = HomeViewModelFactory(app, app.repositoriesRepository, app.resticBinaryManager, app.resticRepository, app.appInfoRepository, app.metadataRepository)
+                    factory = HomeViewModelFactory(app, app.repositoriesRepository, app.resticBinaryManager, app.resticRepository, app.appInfoRepository, app.metadataRepository, app.operationWorkRepository)
                 )
                 val homeUiState by homeViewModel.uiState.collectAsState()
                 val appBarActions = remember { mutableStateOf<(@Composable RowScope.() -> Unit)?>(null) }
@@ -456,7 +456,13 @@ class MainActivity : FragmentActivity() {
                                 onDismissPasswordDialog = { homeViewModel.onDismissPasswordDialog() },
                                 onDismissSftpPasswordDialog = { homeViewModel.onDismissSftpPasswordDialog() },
                                 onDismissRestCredentialsDialog = { homeViewModel.onDismissRestCredentialsDialog() },
-                                onDismissS3CredentialsDialog = { homeViewModel.onDismissS3CredentialsDialog() }
+                                onDismissS3CredentialsDialog = { homeViewModel.onDismissS3CredentialsDialog() },
+                                onOpenOperationProgress = {
+                                    navController.navigate(Screen.OperationProgress.route) {
+                                        launchSingleTop = true
+                                    }
+                                },
+                                onForceStopOperation = { homeViewModel.forceStopOperation() }
                             )
                         }
                         composable(Screen.Settings.route) {

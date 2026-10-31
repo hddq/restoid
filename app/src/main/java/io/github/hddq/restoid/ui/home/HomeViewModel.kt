@@ -6,6 +6,7 @@ import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.AppInfoRepository
 import io.github.hddq.restoid.data.LocalRepository
 import io.github.hddq.restoid.data.MetadataRepository
+import io.github.hddq.restoid.data.OperationRuntimeState
 import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.RepositoryBackendType
 import io.github.hddq.restoid.data.ResticBinaryManager
@@ -14,6 +15,7 @@ import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.RestoidMetadata
+import io.github.hddq.restoid.work.OperationWorkRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -58,7 +60,8 @@ data class HomeUiState(
     val isSftpKeyPassphraseRequired: Boolean = false,
     val showRestCredentialsDialogFor: String? = null,
     val showS3CredentialsDialogFor: String? = null,
-    val isRepoReady: Boolean = false
+    val isRepoReady: Boolean = false,
+    val activeOperation: OperationRuntimeState = OperationRuntimeState()
 )
 
 class HomeViewModel(
@@ -67,7 +70,8 @@ class HomeViewModel(
     private val resticBinaryManager: ResticBinaryManager, // Use Manager for state
     private val resticRepository: ResticRepository,
     private val appInfoRepository: AppInfoRepository,
-    private val metadataRepository: MetadataRepository
+    private val metadataRepository: MetadataRepository,
+    private val operationWorkRepository: OperationWorkRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -79,6 +83,12 @@ class HomeViewModel(
         viewModelScope.launch {
             repositoriesRepository.loadRepositories()
             resticBinaryManager.checkResticStatus()
+        }
+
+        viewModelScope.launch {
+            operationWorkRepository.operationState.collect { operationState ->
+                _uiState.update { it.copy(activeOperation = operationState) }
+            }
         }
 
         combine(
@@ -833,5 +843,9 @@ class HomeViewModel(
                 openPrompt = null
             )
         }
+    }
+
+    fun forceStopOperation() {
+        operationWorkRepository.forceStopCurrentOperation()
     }
 }

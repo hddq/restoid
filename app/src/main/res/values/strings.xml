@@ -435,6 +435,12 @@
     <string name="operation_interrupted">Operation was interrupted.</string>
     <string name="dialog_stop_operation_title">Stop operation?</string>
     <string name="dialog_stop_operation_message">Do you want to stop the current operation? Any unfinished work will be canceled.</string>
+    <string name="home_operation_running_title">%1$s in progress</string>
+    <string name="home_operation_running_default_title">Operation in progress</string>
+    <string name="home_operation_running_tap_hint">Tap to view progress</string>
+    <string name="action_force_stop">Force stop</string>
+    <string name="dialog_force_stop_operation_title">Force stop operation?</string>
+    <string name="dialog_force_stop_operation_message">Do you want to force stop the current operation? Any unfinished work will be canceled and the operation state will be reset.</string>
 
     <string name="repo_error_exists">Repository already exists.</string>
     <string name="repo_error_binary_not_ready">Restic binary not ready.</string>
