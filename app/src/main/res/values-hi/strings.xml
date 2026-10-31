@@ -469,4 +469,5 @@
         <item quantity="one">सफलतापूर्वक प्रोसेस किए गए आइटम: %1$d।</item>
         <item quantity="other">सफलतापूर्वक संसाधित %1$d आइटम।</item>
     </plurals>
+    <string name="action_run_now">अभी चलाएं</string>
 </resources>

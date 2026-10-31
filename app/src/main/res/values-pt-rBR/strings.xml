@@ -480,4 +480,11 @@
     <string name="settings_system_permission_storage">Acesso ao Armazenamento</string>
     <string name="settings_system_permission_local_network">Acesso à Rede Local</string>
     <string name="local_network_permission_enabled">Acesso à rede local concedido</string>
+    <string name="repo_supporting_sftp">Porta personalizada: sftp://user@host:2222//srv/restic-repo (use uma única / após a porta para caminho relativo)</string>
+    <string name="home_operation_running_title">%1$s em andamento</string>
+    <string name="home_operation_running_default_title">Operação em andamento</string>
+    <string name="home_operation_running_tap_hint">Toque para ver o progresso</string>
+    <string name="action_force_stop">Forçar parada</string>
+    <string name="dialog_force_stop_operation_title">Forçar parada da operação?</string>
+    <string name="dialog_force_stop_operation_message">Deseja forçar a parada da operação atual? Qualquer trabalho inacabado será cancelado e o estado da operação será redefinido.</string>
 </resources>

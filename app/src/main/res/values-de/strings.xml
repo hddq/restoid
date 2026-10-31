@@ -480,4 +480,11 @@
     <string name="settings_system_permission_storage">Speicherzugriff</string>
     <string name="settings_system_permission_local_network">Zugriff auf lokales Netzwerk</string>
     <string name="local_network_permission_enabled">Zugriff auf lokales Netzwerk gewährt</string>
+    <string name="repo_supporting_sftp">Benutzerdefinierter Port: sftp://user@host:2222//srv/restic-repo (verwenden Sie einen einzelnen / nach dem Port für relative Pfade)</string>
+    <string name="home_operation_running_title">%1$s wird ausgeführt</string>
+    <string name="home_operation_running_default_title">Vorgang wird ausgeführt</string>
+    <string name="home_operation_running_tap_hint">Tippen, um den Fortschritt anzuzeigen</string>
+    <string name="action_force_stop">Zwangsweise beenden</string>
+    <string name="dialog_force_stop_operation_title">Vorgang zwangsweise beenden?</string>
+    <string name="dialog_force_stop_operation_message">Möchten Sie den aktuellen Vorgang zwangsweise beenden? Alle nicht abgeschlossenen Arbeiten werden abgebrochen und der Vorgangsstatus zurückgesetzt.</string>
 </resources>

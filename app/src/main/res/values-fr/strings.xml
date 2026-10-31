@@ -442,12 +442,12 @@
     <string name="custom_directories_description">Sélectionnez les répertoires personnalisés de votre appareil à inclure dans la sauvegarde.</string>
     <string name="error_cannot_backup_repo_to_itself">Impossible d\'ajouter le dépôt lui-même en tant que répertoire de sauvegarde personnalisé.</string>
     <plurals name="backed_up_items_count">
-        <item quantity="one">Sauvegardé (%1$d) :</item>
-        <item quantity="other">Sauvegardé (%1$d) :</item>
+        <item quantity="one">Sauvegardé (%1$d) :</item>
+        <item quantity="other">Sauvegardé (%1$d) :</item>
     </plurals>
     <plurals name="custom_directories_count">
-        <item quantity="one">Répertoires personnalisés (%1$d) :</item>
-        <item quantity="other">Répertoires personnalisés (%1$d) :</item>
+        <item quantity="one">Répertoires personnalisés (%1$d) :</item>
+        <item quantity="other">Répertoires personnalisés (%1$d) :</item>
     </plurals>
     <plurals name="snapshot_backed_up_custom_directories_count">
         <item quantity="one">Répertoires personnalisés sauvegardés (%1$d)</item>
@@ -480,4 +480,5 @@
     <string name="settings_system_permission_storage">Accès au stockage</string>
     <string name="settings_system_permission_local_network">Accès au réseau local</string>
     <string name="local_network_permission_enabled">Accès au réseau local accordé</string>
+    <string name="repo_supporting_sftp">Port personnalisé : sftp://user@host:2222//srv/restic-repo (utilisez un seul / après le port pour un chemin relatif)</string>
 </resources>

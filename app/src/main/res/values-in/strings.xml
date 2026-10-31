@@ -462,4 +462,5 @@
     <string name="settings_system_permission_storage">Akses Penyimpanan</string>
     <string name="settings_system_permission_local_network">Akses Jaringan Lokal</string>
     <string name="local_network_permission_enabled">Akses jaringan lokal diberikan</string>
+    <string name="repo_supporting_sftp">Port kustom: sftp://user@host:2222//srv/restic-repo (gunakan satu / setelah port untuk path relatif)</string>
 </resources>
