@@ -487,4 +487,24 @@
     <string name="action_force_stop">Zorla durdur</string>
     <string name="dialog_force_stop_operation_title">İşlem zorla durdurulsun mu?</string>
     <string name="dialog_force_stop_operation_message">Mevcut işlemi zorla durdurmak istiyor musunuz? Tamamlanmamış işler iptal edilecek ve işlem durumu sıfırlanacaktır.</string>
+    <string name="folder_browser_select_this_folder">Bu klasörü seç</string>
+    <string name="folder_browser_show_hidden">Gizli klasörleri göster</string>
+    <string name="folder_browser_cannot_list">Bu klasör listelenemiyor.</string>
+    <string name="folder_browser_empty">Alt klasör yok.</string>
+    <string name="folder_browser_up">Üst klasöre git</string>
+    <string name="folder_browser_roots_title">Depolama konumları</string>
+    <string name="folder_browser_internal_storage">Dahili Depolama</string>
+    <string name="folder_browser_edit_path">Yolu manuel gir</string>
+    <string name="folder_browser_new_folder_name">Klasör adı</string>
+    <string name="folder_browser_create_failed">Klasör oluşturulamadı.</string>
+    <string name="action_create">Oluştur</string>
+    <string name="action_go">Git</string>
+    <string name="custom_directories_long_press_hint">Menüyü açmak ve silmek için bir girişe dokunup basılı tutun.</string>
+    <string name="custom_directories_typed_path_label">Klasör yolu</string>
+    <string name="custom_directories_typed_path_hint">örn. /storage/emulated/0/Download</string>
+    <string name="custom_directories_typed_path_not_found">Klasör mevcut değil: %1$s</string>
+    <string name="custom_directories_already_added">Bu dizin zaten listede.</string>
+    <string name="custom_directories_unresolvable">Özel dizin çözülemedi: %1$s</string>
+    <string name="error_all_files_access_required">Özel dizinleri yedeklemek için tüm dosyalara erişim gereklidir.</string>
+    <string name="summary_all_files_access_required">Tüm dosyalara erişim izni verin ve tekrar deneyin.</string>
 </resources>
