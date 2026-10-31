@@ -5,35 +5,35 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.SelectAll
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -42,29 +42,30 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import coil.compose.rememberAsyncImagePainter
-import io.github.hddq.restoid.R
-import io.github.hddq.restoid.model.AppInfo
-import kotlin.math.roundToInt
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import coil.compose.rememberAsyncImagePainter
+import io.github.hddq.restoid.R
+import io.github.hddq.restoid.model.AppInfo
+import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
+import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
+import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
+import kotlin.math.roundToInt
+
 @Composable
 fun TaskRow(
     title: String,
@@ -170,7 +171,12 @@ fun PolicySlider(
 }
 
 @Composable
-fun BackupTypeToggle(label: String, description: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+fun BackupTypeToggle(
+    label: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -374,11 +380,8 @@ fun BackupTypesBottomSheet(
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(bottom = 12.dp)
             )
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-            ) {
-                Column {
+            ExpressiveCardGroup {
+                ExpressiveSegmentedSurface(index = 0, count = 7) {
                     BackupTypeToggle(
                         label = stringResource(R.string.backup_type_apk),
                         description = stringResource(R.string.backup_type_apk_desc),
@@ -386,7 +389,8 @@ fun BackupTypesBottomSheet(
                     ) {
                         onBackupTypesChange(backupTypes.copy(apk = it))
                     }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                }
+                ExpressiveSegmentedSurface(index = 1, count = 7) {
                     BackupTypeToggle(
                         label = stringResource(R.string.backup_type_data),
                         description = stringResource(R.string.backup_type_data_desc),
@@ -394,7 +398,8 @@ fun BackupTypesBottomSheet(
                     ) {
                         onBackupTypesChange(backupTypes.copy(data = it))
                     }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                }
+                ExpressiveSegmentedSurface(index = 2, count = 7) {
                     BackupTypeToggle(
                         label = stringResource(R.string.backup_type_device_protected_data),
                         description = stringResource(R.string.backup_type_device_protected_data_desc),
@@ -402,7 +407,8 @@ fun BackupTypesBottomSheet(
                     ) {
                         onBackupTypesChange(backupTypes.copy(deviceProtectedData = it))
                     }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                }
+                ExpressiveSegmentedSurface(index = 3, count = 7) {
                     BackupTypeToggle(
                         label = stringResource(R.string.backup_type_external_data),
                         description = stringResource(R.string.backup_type_external_data_desc),
@@ -410,7 +416,8 @@ fun BackupTypesBottomSheet(
                     ) {
                         onBackupTypesChange(backupTypes.copy(externalData = it))
                     }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                }
+                ExpressiveSegmentedSurface(index = 4, count = 7) {
                     BackupTypeToggle(
                         label = stringResource(R.string.backup_type_obb_data),
                         description = stringResource(R.string.backup_type_obb_data_desc),
@@ -418,7 +425,8 @@ fun BackupTypesBottomSheet(
                     ) {
                         onBackupTypesChange(backupTypes.copy(obb = it))
                     }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                }
+                ExpressiveSegmentedSurface(index = 5, count = 7) {
                     BackupTypeToggle(
                         label = stringResource(R.string.backup_type_media_data),
                         description = stringResource(R.string.backup_type_media_data_desc),
@@ -426,7 +434,8 @@ fun BackupTypesBottomSheet(
                     ) {
                         onBackupTypesChange(backupTypes.copy(media = it))
                     }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                }
+                ExpressiveSegmentedSurface(index = 6, count = 7) {
                     BackupTypeToggle(
                         label = stringResource(R.string.backup_type_permissions),
                         description = stringResource(R.string.backup_type_permissions_desc),
@@ -456,6 +465,7 @@ fun BackupConfigScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     var selectedAppPackageName by remember { mutableStateOf<String?>(null) }
     var showBulkBackupTypesSheet by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -472,7 +482,7 @@ fun BackupConfigScreen(
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp, top = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         if (isLoadingApps) {
             item {
@@ -486,41 +496,30 @@ fun BackupConfigScreen(
                 }
             }
         } else {
-            item {
-                Column {
-                    Text(
-                        text = stringResource(R.string.apps_title),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(bottom = 8.dp)
+            val totalRows = apps.size + 1
+            item(key = "header") {
+                ExpressiveSectionHeader(title = stringResource(R.string.apps_title))
+            }
+            item(key = "select_all") {
+                val isAllSelected = apps.isNotEmpty() && apps.all { it.isSelected }
+                ExpressiveSegmentedSurface(index = 0, count = totalRows) {
+                    SelectAllListItem(
+                        isChecked = isAllSelected,
+                        subtitle = buildSelectedBackupTypesSummary(apps, appBackupTypes, backupTypes, context),
+                        onClick = { showBulkBackupTypesSheet = true },
+                        onToggle = onToggleAllApps
                     )
                 }
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-                ) {
-                    Column {
-                        val isAllSelected = apps.isNotEmpty() && apps.all { it.isSelected }
-                        SelectAllListItem(
-                            isChecked = isAllSelected,
-                            subtitle = buildSelectedBackupTypesSummary(apps, appBackupTypes, backupTypes, LocalContext.current),
-                            onClick = { showBulkBackupTypesSheet = true },
-                            onToggle = onToggleAllApps
-                        )
-                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                        apps.forEachIndexed { index, app ->
-                            val currentAppBackupTypes = appBackupTypes[app.packageName] ?: backupTypes
-                            AppListItem(
-                                app = app,
-                                subtitle = buildBackupTypesSummary(currentAppBackupTypes, LocalContext.current),
-                                onClick = { selectedAppPackageName = app.packageName },
-                                onToggle = { onToggleAppSelection(app.packageName) }
-                            )
-                            if (index < apps.size - 1) {
-                                HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                            }
-                        }
-                    }
+            }
+            itemsIndexed(apps, key = { _, app -> app.packageName }) { index, app ->
+                val currentAppBackupTypes = appBackupTypes[app.packageName] ?: backupTypes
+                ExpressiveSegmentedSurface(index = index + 1, count = totalRows) {
+                    AppListItem(
+                        app = app,
+                        subtitle = buildBackupTypesSummary(currentAppBackupTypes, context),
+                        onClick = { selectedAppPackageName = app.packageName },
+                        onToggle = { onToggleAppSelection(app.packageName) }
+                    )
                 }
             }
         }
@@ -563,17 +562,17 @@ fun ForgetConfigScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-            ) {
-                Column {
+            ExpressiveCardGroup {
+                ExpressiveSegmentedSurface(index = 0, count = 4) {
                     PolicySlider(stringResource(R.string.maintenance_keep_last), maintenance.keepLast, 0..20, onKeepLastChange)
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                }
+                ExpressiveSegmentedSurface(index = 1, count = 4) {
                     PolicySlider(stringResource(R.string.maintenance_keep_daily), maintenance.keepDaily, 0..30, onKeepDailyChange)
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                }
+                ExpressiveSegmentedSurface(index = 2, count = 4) {
                     PolicySlider(stringResource(R.string.maintenance_keep_weekly), maintenance.keepWeekly, 0..12, onKeepWeeklyChange)
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                }
+                ExpressiveSegmentedSurface(index = 3, count = 4) {
                     PolicySlider(stringResource(R.string.maintenance_keep_monthly), maintenance.keepMonthly, 0..24, onKeepMonthlyChange)
                 }
             }
@@ -592,10 +591,7 @@ fun CheckConfigScreen(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp, top = 8.dp)
     ) {
         item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-            ) {
+            ExpressiveSegmentedSurface(index = 0, count = 1) {
                 TaskRow(
                     title = stringResource(R.string.maintenance_read_all_data),
                     subtitle = stringResource(R.string.run_tasks_check_read_all_data_description),
@@ -703,10 +699,10 @@ fun CustomDirectoriesConfigScreen(
     var showFolderPicker by remember { mutableStateOf(false) }
     var menuExpandedForUri by remember { mutableStateOf<String?>(null) }
 
-    androidx.compose.foundation.lazy.LazyColumn(
+    LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp, top = 8.dp),
-        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp, top = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -727,16 +723,17 @@ fun CustomDirectoriesConfigScreen(
 
         if (customDirectories.isNotEmpty()) {
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-                ) {
-                    Column {
-                        customDirectories.forEachIndexed { index, customDir ->
-                            val resolvedPath = io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(customDir.uri)
-                            val displayPath = resolvedPath ?: runCatching {
-                                android.net.Uri.parse(customDir.uri).lastPathSegment
-                            }.getOrNull() ?: customDir.uri
+                ExpressiveCardGroup {
+                    customDirectories.forEachIndexed { index, customDir ->
+                        val resolvedPath = io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(customDir.uri)
+                        val displayPath = resolvedPath ?: runCatching {
+                            android.net.Uri.parse(customDir.uri).lastPathSegment
+                        }.getOrNull() ?: customDir.uri
+
+                        ExpressiveSegmentedSurface(
+                            index = index,
+                            count = customDirectories.size
+                        ) {
                             Box(modifier = Modifier.fillMaxWidth()) {
                                 Row(
                                     modifier = Modifier
@@ -807,9 +804,6 @@ fun CustomDirectoriesConfigScreen(
                                     )
                                 }
                             }
-                            if (index < customDirectories.size - 1) {
-                                HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                            }
                         }
                     }
                 }
@@ -819,15 +813,15 @@ fun CustomDirectoriesConfigScreen(
         item {
             FilledTonalButton(
                 onClick = { showFolderPicker = true },
-                shape = androidx.compose.material3.MaterialTheme.shapes.extraLarge,
+                shape = MaterialTheme.shapes.extraLarge,
                 modifier = Modifier.padding(top = 4.dp)
             ) {
-                androidx.compose.material3.Icon(
-                    imageVector = androidx.compose.material.icons.Icons.Default.Add,
+                Icon(
+                    imageVector = Icons.Default.Add,
                     contentDescription = null
                 )
-                androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(8.dp))
-                androidx.compose.material3.Text(androidx.compose.ui.res.stringResource(io.github.hddq.restoid.R.string.action_add_directory))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(stringResource(R.string.action_add_directory))
             }
         }
     }

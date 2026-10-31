@@ -2,14 +2,43 @@ package io.github.hddq.restoid.ui.screens
 
 import android.text.format.Formatter
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -21,15 +50,16 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
+import io.github.hddq.restoid.LocalAppBarActions
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.RestoidApplication
 import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.model.BackupDetail
+import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
+import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
 import io.github.hddq.restoid.ui.snapshot.ForgetResult
 import io.github.hddq.restoid.ui.snapshot.SnapshotDetailsViewModel
 import io.github.hddq.restoid.ui.snapshot.SnapshotDetailsViewModelFactory
-
-import io.github.hddq.restoid.LocalAppBarActions
 
 @Composable
 fun SnapshotDetailsScreen(
@@ -101,75 +131,62 @@ fun SnapshotDetailsScreen(
             isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             error != null -> Text(stringResource(R.string.error_with_message, error ?: ""), color = MaterialTheme.colorScheme.error)
             snapshot != null -> {
+                val customDirs = metadata?.customDirectories ?: emptyMap()
+                val dirsList = customDirs.toList()
+
                 LazyColumn(
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(bottom = 88.dp, top = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    item {
-                        SnapshotDetailsHeader(snapshot = snapshot!!)
+                    item(key = "header") {
+                        SnapshotDetailsHeader(
+                            snapshot = snapshot!!,
+                            modifier = Modifier.padding(bottom = 14.dp)
+                        )
                     }
-                    val customDirs = metadata?.customDirectories ?: emptyMap()
                     if (backupDetails.isNotEmpty()) {
-                        item {
-                            Text(
-                                pluralStringResource(
+                        item(key = "apps_header") {
+                            ExpressiveSectionHeader(
+                                title = pluralStringResource(
                                     R.plurals.snapshot_backed_up_apps_count,
                                     backupDetails.size,
                                     backupDetails.size
-                                ),
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(bottom = 8.dp)
-                            )
-                            Card(
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                                 )
+                            )
+                        }
+                        itemsIndexed(backupDetails, key = { _, detail -> "app_${detail.appInfo.packageName}" }) { index, detail ->
+                            ExpressiveSegmentedSurface(
+                                index = index,
+                                count = backupDetails.size
                             ) {
-                                Column {
-                                    backupDetails.forEachIndexed { index, detail ->
-                                        BackedUpAppItem(detail = detail)
-                                        if (index < backupDetails.size - 1) {
-                                            HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                                        }
-                                    }
-                                }
+                                BackedUpAppItem(detail = detail)
                             }
                         }
                     }
-                    if (customDirs.isNotEmpty()) {
-                        item {
-                            Text(
-                                pluralStringResource(
+                    if (dirsList.isNotEmpty()) {
+                        item(key = "dirs_header") {
+                            ExpressiveSectionHeader(
+                                title = pluralStringResource(
                                     R.plurals.snapshot_backed_up_custom_directories_count,
-                                    customDirs.size,
-                                    customDirs.size
+                                    dirsList.size,
+                                    dirsList.size
                                 ),
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(top = if (backupDetails.isNotEmpty()) 16.dp else 0.dp, bottom = 8.dp)
+                                modifier = Modifier.padding(top = if (backupDetails.isNotEmpty()) 14.dp else 0.dp)
                             )
-                            Card(
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                                )
+                        }
+                        itemsIndexed(dirsList, key = { _, (path, _) -> "dir_$path" }) { index, (path, dirMetadata) ->
+                            ExpressiveSegmentedSurface(
+                                index = index,
+                                count = dirsList.size
                             ) {
-                                Column {
-                                    val dirsList = customDirs.toList()
-                                    dirsList.forEachIndexed { index, (path, dirMetadata) ->
-                                        BackedUpCustomDirItem(path = path, metadata = dirMetadata)
-                                        if (index < dirsList.size - 1) {
-                                            HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                                        }
-                                    }
-                                }
+                                BackedUpCustomDirItem(path = path, metadata = dirMetadata)
                             }
                         }
                     }
-                    
+
                     if (backupDetails.isEmpty() && customDirs.isEmpty() && !isLoading) {
-                        item {
+                        item(key = "empty_metadata") {
                             if (metadata == null) {
                                 Text(
                                     stringResource(R.string.metadata_missing_or_corrupted),
@@ -200,16 +217,29 @@ fun SnapshotDetailsScreen(
 }
 
 @Composable
-fun SnapshotDetailsHeader(snapshot: SnapshotInfo) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        )
+fun SnapshotDetailsHeader(
+    snapshot: SnapshotInfo,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(stringResource(R.string.snapshot_id, snapshot.id), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
-            Text(stringResource(R.string.snapshot_time, snapshot.time), style = MaterialTheme.typography.bodyMedium)
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                stringResource(R.string.snapshot_id, snapshot.id),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.Monospace
+            )
+            Text(
+                stringResource(R.string.snapshot_time, snapshot.time),
+                style = MaterialTheme.typography.bodyMedium
+            )
         }
     }
 }

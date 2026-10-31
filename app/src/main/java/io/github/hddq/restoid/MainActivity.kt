@@ -9,16 +9,25 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -29,6 +38,9 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
@@ -272,61 +284,100 @@ class MainActivity : FragmentActivity() {
 
                 CompositionLocalProvider(LocalAppBarActions provides appBarActions) {
                     Scaffold(
+                    containerColor = MaterialTheme.colorScheme.background,
                     topBar = {
-                        if (!showBottomBar) {
-                            TopAppBar(
-                                title = {
-                                    val titleRes = when {
-                                        currentDestination?.route == RunTasksRoutes.Main -> R.string.topbar_tasks
-                                        currentDestination?.route == RunTasksRoutes.BackupConfig -> R.string.topbar_backup_config
-                                        currentDestination?.route == RunTasksRoutes.CustomDirectoriesConfig -> R.string.title_custom_directories
-                                        currentDestination?.route == RunTasksRoutes.ForgetConfig -> R.string.topbar_forget_config
-                                        currentDestination?.route == RunTasksRoutes.CheckConfig -> R.string.topbar_check_config
-                                        currentDestination?.route == SchedulesRoutes.Main -> R.string.topbar_schedules
-                                        currentDestination?.route == SchedulesRoutes.AddEdit -> {
-                                            val entry = navBackStackEntry ?: return@TopAppBar
-                                            val parentEntry = try { navController.getBackStackEntry(Screen.Schedules.route) } catch (e: Exception) { entry }
-                                            val vm: SchedulesViewModel = viewModel(viewModelStoreOwner = parentEntry, factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository))
-                                            val state by vm.addEditState.collectAsState()
-                                            if (state.id == null) R.string.topbar_add_schedule else R.string.topbar_edit_schedule
-                                        }
-                                        currentDestination?.route == SchedulesRoutes.BackupConfig -> R.string.topbar_backup_config
-                                        currentDestination?.route == SchedulesRoutes.ForgetConfig -> R.string.topbar_forget_config
-                                        currentDestination?.route == SchedulesRoutes.CheckConfig -> R.string.topbar_check_config
-                                        currentDestination?.route == Screen.OperationProgress.route -> R.string.topbar_operation_progress
-                                        currentDestination?.route == Screen.Licenses.route -> R.string.topbar_open_source_licenses
-                                        currentDestination?.route?.startsWith(Screen.SnapshotDetails.route) == true -> R.string.topbar_snapshot_details
-                                        currentDestination?.route?.startsWith(Screen.Restore.route) == true -> R.string.topbar_restore_snapshot
-                                        else -> null
+                        TopAppBar(
+                            colors = TopAppBarDefaults.topAppBarColors(
+                                containerColor = MaterialTheme.colorScheme.background,
+                                scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer
+                            ),
+                            title = {
+                                val titleRes = when {
+                                    currentDestination?.route == Screen.Home.route -> R.string.home_title
+                                    currentDestination?.route == SchedulesRoutes.Main -> R.string.topbar_schedules
+                                    currentDestination?.route == Screen.Settings.route -> R.string.screen_settings
+                                    currentDestination?.route == RunTasksRoutes.Main -> R.string.topbar_tasks
+                                    currentDestination?.route == RunTasksRoutes.BackupConfig -> R.string.topbar_backup_config
+                                    currentDestination?.route == RunTasksRoutes.CustomDirectoriesConfig -> R.string.title_custom_directories
+                                    currentDestination?.route == RunTasksRoutes.ForgetConfig -> R.string.topbar_forget_config
+                                    currentDestination?.route == RunTasksRoutes.CheckConfig -> R.string.topbar_check_config
+                                    currentDestination?.route == SchedulesRoutes.AddEdit -> {
+                                        val entry = navBackStackEntry ?: return@TopAppBar
+                                        val parentEntry = try { navController.getBackStackEntry(Screen.Schedules.route) } catch (e: Exception) { entry }
+                                        val vm: SchedulesViewModel = viewModel(viewModelStoreOwner = parentEntry, factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository))
+                                        val state by vm.addEditState.collectAsState()
+                                        if (state.id == null) R.string.topbar_add_schedule else R.string.topbar_edit_schedule
                                     }
-                                    titleRes?.let { Text(stringResource(it)) }
-                                },
-                                navigationIcon = {
+                                    currentDestination?.route == SchedulesRoutes.BackupConfig -> R.string.topbar_backup_config
+                                    currentDestination?.route == SchedulesRoutes.CustomDirectoriesConfig -> R.string.title_custom_directories
+                                    currentDestination?.route == SchedulesRoutes.ForgetConfig -> R.string.topbar_forget_config
+                                    currentDestination?.route == SchedulesRoutes.CheckConfig -> R.string.topbar_check_config
+                                    currentDestination?.route == Screen.OperationProgress.route -> R.string.topbar_operation_progress
+                                    currentDestination?.route == Screen.Licenses.route -> R.string.topbar_open_source_licenses
+                                    currentDestination?.route == io.github.hddq.restoid.ui.restore.RestoreRoutes.AppsConfig -> R.string.apps_to_restore_title
+                                    currentDestination?.route == io.github.hddq.restoid.ui.restore.RestoreRoutes.CustomDirectoriesConfig -> R.string.title_custom_directories
+                                    currentDestination?.route?.startsWith(Screen.SnapshotDetails.route) == true -> R.string.topbar_snapshot_details
+                                    currentDestination?.route?.startsWith(Screen.Restore.route) == true -> R.string.topbar_restore_snapshot
+                                    else -> null
+                                }
+                                titleRes?.let {
+                                    Text(
+                                        text = stringResource(it),
+                                        style = if (showBottomBar) {
+                                            MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold)
+                                        } else {
+                                            MaterialTheme.typography.titleLarge
+                                        },
+                                        color = if (currentDestination?.route == Screen.Home.route) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurface
+                                        }
+                                    )
+                                }
+                            },
+                            navigationIcon = {
+                                if (!showBottomBar) {
                                     IconButton(onClick = {
                                         this@MainActivity.onBackPressedDispatcher.onBackPressed()
                                     }) {
                                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                                     }
-                                },
-                                actions = {
+                                }
+                            },
+                            actions = {
+                                if (!showBottomBar) {
                                     appBarActions.value?.invoke(this)
                                 }
-                            )
-                        }
+                            }
+                        )
                     },
                     bottomBar = {
                         if (showBottomBar) {
                             val items = listOf(
-                                Screen.Home to Icons.Default.Home,
-                                Screen.Schedules to Icons.Default.Schedule,
-                                Screen.Settings to Icons.Default.Settings
+                                Triple(Screen.Home, Icons.Filled.Home, Icons.Outlined.Home),
+                                Triple(Screen.Schedules, Icons.Filled.Schedule, Icons.Outlined.Schedule),
+                                Triple(Screen.Settings, Icons.Filled.Settings, Icons.Outlined.Settings)
                             )
-                            NavigationBar {
-                                items.forEach { (screen, icon) ->
+                            NavigationBar(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainer
+                            ) {
+                                items.forEach { (screen, selectedIcon, unselectedIcon) ->
+                                    val selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
                                     NavigationBarItem(
-                                        icon = { Icon(icon, contentDescription = null) },
-                                        label = { Text(stringResource(screen.titleRes)) },
-                                        selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+                                        icon = {
+                                            Icon(
+                                                imageVector = if (selected) selectedIcon else unselectedIcon,
+                                                contentDescription = null
+                                            )
+                                        },
+                                        label = {
+                                            Text(
+                                                text = stringResource(screen.titleRes),
+                                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+                                            )
+                                        },
+                                        selected = selected,
                                         onClick = {
                                             navController.navigate(screen.route) {
                                                 popUpTo(navController.graph.findStartDestination().id) { saveState = true }
@@ -343,12 +394,13 @@ class MainActivity : FragmentActivity() {
                         when (currentDestination?.route) {
                             Screen.Home.route -> {
                                 val isRepoReady = homeUiState.isRepoReady
-                                 ExtendedFloatingActionButton(
+                                ExtendedFloatingActionButton(
                                     text = { Text(stringResource(R.string.screen_tasks)) },
                                     icon = { Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.screen_tasks)) },
                                     onClick = { if (isRepoReady) { navController.navigate(Screen.RunTasks.route) } },
-                                    containerColor = if (isRepoReady) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                                    contentColor = if (isRepoReady) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                    shape = RoundedCornerShape(20.dp),
+                                    containerColor = if (isRepoReady) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                                    contentColor = if (isRepoReady) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
                                 )
                             }
                             RunTasksRoutes.Main -> {
@@ -372,6 +424,7 @@ class MainActivity : FragmentActivity() {
                                 if (!uiState.isRunning) {
                                     ExtendedFloatingActionButton(
                                         onClick = { viewModel.run() },
+                                        shape = RoundedCornerShape(20.dp),
                                         icon = { Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.fab_run_tasks)) },
                                         text = { Text(stringResource(R.string.fab_run_tasks)) }
                                     )
@@ -381,6 +434,7 @@ class MainActivity : FragmentActivity() {
                                 ExtendedFloatingActionButton(
                                     text = { Text(stringResource(R.string.fab_restore)) },
                                     icon = { Icon(Icons.Default.Restore, contentDescription = stringResource(R.string.topbar_restore_snapshot)) },
+                                    shape = RoundedCornerShape(20.dp),
                                     onClick = { navController.navigate("${Screen.Restore.route}/${navBackStackEntry?.arguments?.getString("snapshotId")}") }
                                 )
                             }
@@ -407,6 +461,7 @@ class MainActivity : FragmentActivity() {
                                 if (!isRestoring) {
                                     ExtendedFloatingActionButton(
                                         onClick = { viewModel.startRestore() },
+                                        shape = RoundedCornerShape(20.dp),
                                         icon = { Icon(Icons.Default.Restore, contentDescription = stringResource(R.string.fab_start_restore)) },
                                         text = { Text(stringResource(R.string.fab_start_restore)) }
                                     )
@@ -425,6 +480,7 @@ class MainActivity : FragmentActivity() {
                                 if (!state.isSaving) {
                                     ExtendedFloatingActionButton(
                                         onClick = { viewModel.saveSchedule() },
+                                        shape = RoundedCornerShape(20.dp),
                                         icon = { Icon(Icons.Default.Check, contentDescription = stringResource(R.string.action_save)) },
                                         text = { Text(stringResource(R.string.action_save)) }
                                     )

@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -28,17 +29,13 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
-import io.github.hddq.restoid.LocalAppBarActions
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
@@ -63,16 +60,17 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import io.github.hddq.restoid.LocalAppBarActions
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.model.Schedule
-import io.github.hddq.restoid.ui.shared.*
-import io.github.hddq.restoid.ui.shared.AppListItem
-import io.github.hddq.restoid.ui.shared.BackupTypesBottomSheet
-import io.github.hddq.restoid.ui.shared.BackupTypeToggle
-import io.github.hddq.restoid.ui.shared.BackupTypes
-import io.github.hddq.restoid.ui.shared.PolicySlider
-import io.github.hddq.restoid.ui.shared.SelectAllListItem
+import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
+import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
+import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
 import io.github.hddq.restoid.ui.shared.TaskRow
+import io.github.hddq.restoid.ui.shared.buildBackupSubtitle
+import io.github.hddq.restoid.ui.shared.buildCheckSubtitle
+import io.github.hddq.restoid.ui.shared.buildCustomDirectoriesSubtitle
+import io.github.hddq.restoid.ui.shared.buildForgetSubtitle
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -117,13 +115,13 @@ fun SchedulesScreen(
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp)
             ) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-                ) {
-                    Column {
-                        val schedules = uiState.schedules
-                        schedules.forEachIndexed { index, schedule ->
+                val schedules = uiState.schedules
+                ExpressiveCardGroup {
+                    schedules.forEachIndexed { index, schedule ->
+                        ExpressiveSegmentedSurface(
+                            index = index,
+                            count = schedules.size
+                        ) {
                             ScheduleItem(
                                 schedule = schedule,
                                 onEdit = {
@@ -134,9 +132,6 @@ fun SchedulesScreen(
                                 onToggleEnabled = { viewModel.toggleScheduleEnabled(schedule) },
                                 onRunNow = { viewModel.runNow(schedule) }
                             )
-                            if (index < schedules.size - 1) {
-                                HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                            }
                         }
                     }
                 }
@@ -155,11 +150,12 @@ fun SchedulesScreen(
             },
             icon = { Icon(Icons.Default.Add, contentDescription = null) },
             text = { Text(stringResource(R.string.fab_add_schedule)) },
+            shape = RoundedCornerShape(20.dp),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(16.dp),
-            containerColor = if (isRepoSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = if (isRepoSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+            containerColor = if (isRepoSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+            contentColor = if (isRepoSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
         )
     }
 
@@ -186,6 +182,7 @@ fun SchedulesScreen(
         )
     }
 }
+
 @Composable
 fun AddEditScheduleScreen(
     viewModel: SchedulesViewModel,
@@ -237,23 +234,14 @@ fun AddEditScheduleScreen(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 88.dp, top = 16.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 88.dp, top = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-
         item {
-            Column {
-                Text(
-                    text = stringResource(R.string.section_general),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-                ) {
-                    Column {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                ExpressiveSectionHeader(title = stringResource(R.string.section_general))
+                ExpressiveCardGroup {
+                    ExpressiveSegmentedSurface(index = 0, count = 2) {
                         OutlinedTextField(
                             value = state.name,
                             onValueChange = viewModel::setName,
@@ -263,9 +251,9 @@ fun AddEditScheduleScreen(
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 12.dp)
                         )
+                    }
 
-                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
-
+                    ExpressiveSegmentedSurface(index = 1, count = 2) {
                         Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                             val isError = intervalText.toIntOrNull()?.let { it !in 1..720 } ?: true
                             Text(
@@ -311,7 +299,7 @@ fun AddEditScheduleScreen(
                                     )
                                 }
                             }
-                            
+
                             if (state.id != null) {
                                 Spacer(Modifier.height(16.dp))
                                 val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
@@ -340,30 +328,24 @@ fun AddEditScheduleScreen(
         }
 
         item {
-            Column {
-                Text(
-                    text = stringResource(R.string.section_conditions),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-                ) {
-                    Column {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                ExpressiveSectionHeader(title = stringResource(R.string.section_conditions))
+                ExpressiveCardGroup {
+                    ExpressiveSegmentedSurface(index = 0, count = 3) {
                         TaskRow(
                             title = stringResource(R.string.condition_battery_not_low),
                             checked = state.triggerConditions.requireBatteryNotLow,
                             onCheckedChange = viewModel::setRequireBatteryNotLow
                         )
-                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                    }
+                    ExpressiveSegmentedSurface(index = 1, count = 3) {
                         TaskRow(
                             title = stringResource(R.string.condition_charging),
                             checked = state.triggerConditions.requireCharging,
                             onCheckedChange = viewModel::setRequireCharging
                         )
-                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                    }
+                    ExpressiveSegmentedSurface(index = 2, count = 3) {
                         TaskRow(
                             title = stringResource(R.string.condition_unmetered_network),
                             checked = state.triggerConditions.requireUnmeteredNetwork,
@@ -375,59 +357,47 @@ fun AddEditScheduleScreen(
         }
 
         item {
-            Column {
-                Text(
-                    text = stringResource(R.string.operation_backup),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-                ) {
-                    val rootState by viewModel.rootState.collectAsState()
-                    val hasRoot = rootState == io.github.hddq.restoid.data.RootState.Granted
-                    
-                    TaskRow(
-                        title = stringResource(R.string.run_tasks_applications),
-                        subtitle = if (hasRoot) buildBackupSubtitle(state.apps, state.appBackupTypes, state.backupTypes, context) else stringResource(R.string.root_access_denied),
-                        checked = if (hasRoot) state.backupEnabled else false,
-                        onCheckedChange = viewModel::setBackupEnabled,
-                        onNavigate = if (hasRoot) onNavigateToBackupConfig else null,
-                        enabled = hasRoot
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.background)
-                    TaskRow(
-                        title = stringResource(R.string.run_tasks_custom_directories),
-                        subtitle = buildCustomDirectoriesSubtitle(state.customDirectories, context),
-                        checked = state.customDirectoriesBackupEnabled,
-                        onCheckedChange = viewModel::setCustomDirectoriesBackupEnabled,
-                        onNavigate = onNavigateToCustomDirectoriesConfig
-                    )
+            val rootState by viewModel.rootState.collectAsState()
+            val hasRoot = rootState == io.github.hddq.restoid.data.RootState.Granted
+
+            Column(modifier = Modifier.fillMaxWidth()) {
+                ExpressiveSectionHeader(title = stringResource(R.string.operation_backup))
+                ExpressiveCardGroup {
+                    ExpressiveSegmentedSurface(index = 0, count = 2) {
+                        TaskRow(
+                            title = stringResource(R.string.run_tasks_applications),
+                            subtitle = if (hasRoot) buildBackupSubtitle(state.apps, state.appBackupTypes, state.backupTypes, context) else stringResource(R.string.root_access_denied),
+                            checked = if (hasRoot) state.backupEnabled else false,
+                            onCheckedChange = viewModel::setBackupEnabled,
+                            onNavigate = if (hasRoot) onNavigateToBackupConfig else null,
+                            enabled = hasRoot
+                        )
+                    }
+                    ExpressiveSegmentedSurface(index = 1, count = 2) {
+                        TaskRow(
+                            title = stringResource(R.string.run_tasks_custom_directories),
+                            subtitle = buildCustomDirectoriesSubtitle(state.customDirectories, context),
+                            checked = state.customDirectoriesBackupEnabled,
+                            onCheckedChange = viewModel::setCustomDirectoriesBackupEnabled,
+                            onNavigate = onNavigateToCustomDirectoriesConfig
+                        )
+                    }
                 }
             }
         }
 
         item {
-            Column {
-                Text(
-                    text = stringResource(R.string.operation_maintenance),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-                ) {
-                    Column {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                ExpressiveSectionHeader(title = stringResource(R.string.operation_maintenance))
+                ExpressiveCardGroup {
+                    ExpressiveSegmentedSurface(index = 0, count = 4) {
                         TaskRow(
                             title = stringResource(R.string.maintenance_task_unlock_repository),
                             checked = state.maintenance.unlockRepo,
                             onCheckedChange = viewModel::setUnlockRepo
                         )
-                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                    }
+                    ExpressiveSegmentedSurface(index = 1, count = 4) {
                         TaskRow(
                             title = stringResource(R.string.run_tasks_forget_snapshots),
                             subtitle = buildForgetSubtitle(state.maintenance, context),
@@ -435,13 +405,15 @@ fun AddEditScheduleScreen(
                             onCheckedChange = viewModel::setForgetSnapshots,
                             onNavigate = onNavigateToForgetConfig
                         )
-                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                    }
+                    ExpressiveSegmentedSurface(index = 2, count = 4) {
                         TaskRow(
                             title = stringResource(R.string.maintenance_task_prune_repository),
                             checked = state.maintenance.pruneRepo,
                             onCheckedChange = viewModel::setPruneRepo
                         )
-                        HorizontalDivider(color = MaterialTheme.colorScheme.background)
+                    }
+                    ExpressiveSegmentedSurface(index = 3, count = 4) {
                         TaskRow(
                             title = stringResource(R.string.run_tasks_check_integrity),
                             subtitle = buildCheckSubtitle(state.maintenance, context),
@@ -561,7 +533,7 @@ private fun ScheduleItem(
                 text = schedule.name,
                 style = MaterialTheme.typography.bodyLarge
             )
-            
+
             val lastRunText = if (schedule.lastRunTimestamp != null) {
                 val relativeTime = android.text.format.DateUtils.getRelativeTimeSpanString(
                     schedule.lastRunTimestamp,
@@ -573,7 +545,7 @@ private fun ScheduleItem(
             } else {
                 stringResource(R.string.schedule_never_run)
             }
-            
+
             Text(
                 text = stringResource(R.string.schedule_interval_label) + ": ${schedule.intervalHours}h\n" + lastRunText,
                 style = MaterialTheme.typography.bodySmall,
@@ -616,7 +588,6 @@ private fun ScheduleItem(
         )
     }
 }
-
 
 @Composable
 fun ScheduleCustomDirectoriesConfigScreen(
