@@ -52,18 +52,18 @@ object StorageUtils {
      * Normalizes a user-typed or browsed path (or `file://` URI) into a clean absolute filesystem path.
      * Returns null if the input is blank, relative, or a `content://` URI.
      */
-    fun normalizeDirectoryPath(raw: String): String? {
-        val trimmed = raw.trim()
-        if (trimmed.isEmpty() || trimmed.startsWith("content://")) return null
+    fun normalizeDirectoryPath(raw: String, trimWhitespace: Boolean = true): String? {
+        val candidate = if (trimWhitespace) raw.trim() else raw
+        if (candidate.isBlank() || candidate.startsWith("content://")) return null
 
-        val extractedPath = if (trimmed.startsWith("file://")) {
-            runCatching { URI(trimmed).path }.getOrNull()
+        val extractedPath = if (candidate.startsWith("file://")) {
+            runCatching { URI(candidate).path }.getOrNull()
                 ?.takeIf { it.isNotEmpty() }
-                ?: runCatching { Uri.parse(trimmed).path }.getOrNull()
+                ?: runCatching { Uri.parse(candidate).path }.getOrNull()
                     ?.takeIf { it.isNotEmpty() }
-                ?: trimmed.removePrefix("file://")
+                ?: candidate.removePrefix("file://")
         } else {
-            trimmed
+            candidate
         }
 
         if (!extractedPath.startsWith("/")) return null
@@ -73,15 +73,14 @@ object StorageUtils {
 
     /**
      * Resolves any stored custom directory entry (direct path, `file://` URI, or legacy `content://` SAF Tree URI)
-     * into a normalized filesystem path.
+     * into a normalized filesystem path without stripping significant trailing spaces from directory names.
      */
     fun resolveCustomDirectoryPath(entry: String): String? {
-        val trimmed = entry.trim()
-        if (trimmed.isEmpty()) return null
-        if (trimmed.startsWith("content://")) {
-            return runCatching { getPathFromTreeUri(Uri.parse(trimmed)) }.getOrNull()
+        if (entry.isBlank()) return null
+        if (entry.startsWith("content://")) {
+            return runCatching { getPathFromTreeUri(Uri.parse(entry)) }.getOrNull()
         }
-        return normalizeDirectoryPath(trimmed)
+        return normalizeDirectoryPath(entry, trimWhitespace = false)
     }
 
     /**
@@ -89,7 +88,7 @@ object StorageUtils {
      * (whether added via SAF URI, `file://`, or direct path) are deduplicated accurately.
      */
     fun resolveCustomDirectoryKey(entry: String): String {
-        val resolvedPath = resolveCustomDirectoryPath(entry) ?: return entry.trim()
+        val resolvedPath = resolveCustomDirectoryPath(entry) ?: return entry
         return runCatching { File(resolvedPath).canonicalPath }.getOrDefault(resolvedPath)
     }
 
