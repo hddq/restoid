@@ -517,4 +517,10 @@
     <string name="settings_system_permission_local_network">Доступ к локальной сети</string>
     <string name="local_network_permission_enabled">Доступ к локальной сети предоставлен</string>
     <string name="repo_supporting_sftp">Пользовательский порт: sftp://user@host:2222//srv/restic-repo (используйте один / после порта для относительного пути)</string>
+    <string name="home_operation_running_title">%1$s: выполняется</string>
+    <string name="home_operation_running_default_title">Выполняется операция</string>
+    <string name="home_operation_running_tap_hint">Нажмите, чтобы увидеть ход выполнения</string>
+    <string name="action_force_stop">Принудительно остановить</string>
+    <string name="dialog_force_stop_operation_title">Принудительно остановить?</string>
+    <string name="dialog_force_stop_operation_message">Принудительно остановить текущую операцию? Все незавершенные задачи будут отменены, а состояние операции сброшено.</string>
 </resources>
