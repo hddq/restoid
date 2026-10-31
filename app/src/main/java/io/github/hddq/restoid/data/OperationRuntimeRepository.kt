@@ -81,9 +81,13 @@ class OperationRuntimeRepository(context: Context) {
         updateState(OperationRuntimeState())
     }
 
+    fun forceClear() {
+        updateState(OperationRuntimeState())
+    }
+
     fun clearStaleRunningState() {
         val current = _state.value
-        if (!current.isRunning) return
+        if (!current.isRunning && !current.stopRequested) return
         val interruptedSummary = appContext.getString(R.string.operation_interrupted)
         updateState(
             current.copy(

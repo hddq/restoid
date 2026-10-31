@@ -75,8 +75,7 @@ class OperationWorkRepository(
     fun cancelCurrentOperation() {
         val current = runtimeRepository.state.value
         val operationType = current.operationType ?: return
-        if (!current.isRunning) return
-        if (current.stopRequested) return
+        if (!current.isRunning && !current.stopRequested) return
 
         runtimeRepository.markStopRequested(
             operationType,
@@ -91,6 +90,21 @@ class OperationWorkRepository(
             workManager.cancelAllWorkByTag(OperationWorkContract.TAG_HEAVY_OPERATION)
             runCatching { Shell.getCachedShell()?.close() }
             finalizeCancellationIfNeeded(operationType)
+        }
+    }
+
+    fun forceStopCurrentOperation() {
+        repositoryScope.launch {
+            enqueueMutex.withLock {
+                runCatching {
+                    workManager.cancelUniqueWork(OperationWorkContract.UNIQUE_WORK_NAME).result.get()
+                }
+                runCatching {
+                    workManager.cancelAllWorkByTag(OperationWorkContract.TAG_HEAVY_OPERATION).result.get()
+                }
+                runCatching { Shell.getCachedShell()?.close() }
+                runtimeRepository.forceClear()
+            }
         }
     }
 
