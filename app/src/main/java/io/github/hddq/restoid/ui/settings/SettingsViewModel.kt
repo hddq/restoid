@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.hddq.restoid.data.*
 import io.github.hddq.restoid.R
+import io.github.hddq.restoid.util.SftpRepositorySpec
 import io.github.hddq.restoid.util.isValidEnvironmentVariableName
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
@@ -20,6 +21,10 @@ data class AddRepoUiState(
     val backendType: RepositoryBackendType = RepositoryBackendType.LOCAL,
     val path: String = "",
     val password: String = "",
+    val sftpHost: String = "",
+    val sftpPort: String = "",
+    val sftpUsername: String = "",
+    val sftpPath: String = "",
     val sftpPassword: String = "",
     val sftpKey: String = "",
     val sftpKeyPassphrase: String = "",
@@ -277,6 +282,10 @@ class SettingsViewModel(
             if (it.backendType == backendType) it else it.copy(
                 backendType = backendType,
                 path = "",
+                sftpHost = "",
+                sftpPort = "",
+                sftpUsername = "",
+                sftpPath = "",
                 sftpPassword = "",
                 sftpKey = "",
                 sftpKeyPassphrase = "",
@@ -300,6 +309,28 @@ class SettingsViewModel(
     fun onNewRepoPasswordChanged(password: String) {
         pendingSftpTrustRequest = null
         _addRepoUiState.update { it.copy(password = password, sftpServerTrustInfo = null) }
+    }
+
+    fun onNewRepoSftpHostChanged(host: String) {
+        pendingSftpTrustRequest = null
+        _addRepoUiState.update { it.copy(sftpHost = host, sftpServerTrustInfo = null, state = AddRepositoryState.Idle) }
+    }
+
+    fun onNewRepoSftpPortChanged(port: String) {
+        pendingSftpTrustRequest = null
+        _addRepoUiState.update {
+            it.copy(sftpPort = port.filter(Char::isDigit).take(5), sftpServerTrustInfo = null, state = AddRepositoryState.Idle)
+        }
+    }
+
+    fun onNewRepoSftpUsernameChanged(username: String) {
+        pendingSftpTrustRequest = null
+        _addRepoUiState.update { it.copy(sftpUsername = username, sftpServerTrustInfo = null, state = AddRepositoryState.Idle) }
+    }
+
+    fun onNewRepoSftpPathChanged(path: String) {
+        pendingSftpTrustRequest = null
+        _addRepoUiState.update { it.copy(sftpPath = path, sftpServerTrustInfo = null, state = AddRepositoryState.Idle) }
     }
 
     fun onNewRepoSftpPasswordChanged(password: String) {
@@ -404,7 +435,6 @@ class SettingsViewModel(
             return
         }
 
-        val path = addRepoUiState.value.path.trim()
         val password = addRepoUiState.value.password
         val sftpPassword = addRepoUiState.value.sftpPassword
         val sftpKey = addRepoUiState.value.sftpKey
@@ -417,6 +447,25 @@ class SettingsViewModel(
         val savePassword = addRepoUiState.value.savePassword
         val backendType = addRepoUiState.value.backendType
         val envParseResult = parseEnvironmentVariables(addRepoUiState.value.environmentVariablesRaw)
+
+        val path = if (backendType == RepositoryBackendType.SFTP) {
+            val current = addRepoUiState.value
+            when (val specResult = SftpRepositorySpec.build(current.sftpHost, current.sftpPort, current.sftpUsername, current.sftpPath)) {
+                is SftpRepositorySpec.Result.Success -> specResult.spec
+                is SftpRepositorySpec.Result.Failure -> {
+                    val messageRes = when (specResult.error) {
+                        SftpRepositorySpec.Error.MISSING_HOST -> R.string.error_sftp_host_empty
+                        SftpRepositorySpec.Error.MISSING_USER -> R.string.error_sftp_username_empty
+                        SftpRepositorySpec.Error.MISSING_PATH -> R.string.error_sftp_path_empty
+                        SftpRepositorySpec.Error.INVALID_PORT -> R.string.error_sftp_port_invalid
+                    }
+                    _addRepoUiState.update { it.copy(state = AddRepositoryState.Error(context.getString(messageRes))) }
+                    return
+                }
+            }
+        } else {
+            addRepoUiState.value.path.trim()
+        }
 
         if (path.isBlank() || password.isBlank()) {
             _addRepoUiState.update { it.copy(state = AddRepositoryState.Error(context.getString(R.string.settings_error_path_password_empty))) }
