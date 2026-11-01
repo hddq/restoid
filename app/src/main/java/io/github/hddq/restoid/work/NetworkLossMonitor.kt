@@ -80,6 +80,15 @@ class NetworkLossMonitor(
     @Volatile
     private var poller: Job? = null
 
+    /**
+     * Guards [timer] transitions. Evaluations arrive from both
+     * ConnectivityManager callback threads and the poller coroutine, so the
+     * check-and-create / cancel sequences must be atomic; @Volatile alone
+     * does not make them safe (two threads could both see null and launch,
+     * leaking a timer that later aborts a new outage early).
+     */
+    private val lock = Any()
+
     private val callback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) = evaluate()
         override fun onLost(network: Network) = evaluate()
@@ -108,10 +117,12 @@ class NetworkLossMonitor(
     }
 
     fun stop() {
-        timer?.cancel()
-        timer = null
-        poller?.cancel()
-        poller = null
+        synchronized(lock) {
+            timer?.cancel()
+            timer = null
+            poller?.cancel()
+            poller = null
+        }
         runCatching {
             connectivityManager.unregisterNetworkCallback(callback)
         }
@@ -126,36 +137,40 @@ class NetworkLossMonitor(
 
     private fun evaluate() {
         if (!backendIsRemote) return
+        // Read state outside the lock (binder calls); only the timer
+        // transitions below need to be atomic.
         val (hasInternet, isUnmetered) = currentState()
         android.util.Log.d(TAG, "evaluate: hasInternet=$hasInternet isUnmetered=$isUnmetered requireUnmetered=$requireUnmetered")
         val violated = !hasInternet || (requireUnmetered && !isUnmetered)
-        if (!violated) {
-            // Blip over (or never violated): stand down so a later outage gets a full grace period.
-            timer?.cancel()
-            timer = null
-            return
-        }
-        // Still violated. If a grace countdown is already running, let it finish —
-        // re-evaluations (polls, repeat callbacks) must not restart it or the
-        // grace period could never elapse during a sustained outage.
-        if (timer != null) return
-        android.util.Log.w(TAG, "violation detected, starting ${gracePeriodMs}ms grace timer")
-        timer = scope.launch {
-            delay(gracePeriodMs)
-            val (stillHasInternet, stillUnmetered) = currentState()
-            if (shouldAbortNetworkRun(
-                    backendIsRemote = true,
-                    hasInternet = stillHasInternet,
-                    isUnmetered = stillUnmetered,
-                    requireUnmetered = requireUnmetered,
-                    downDurationMs = gracePeriodMs,
-                    gracePeriodMs = gracePeriodMs
-                )
-            ) {
-                android.util.Log.w(TAG, "sustained violation, requesting stop")
-                onSustainedViolation()
+        synchronized(lock) {
+            if (!violated) {
+                // Blip over (or never violated): stand down so a later outage gets a full grace period.
+                timer?.cancel()
+                timer = null
+                return
             }
-            timer = null
+            // Still violated. If a grace countdown is already running, let it finish —
+            // re-evaluations (polls, repeat callbacks) must not restart it or the
+            // grace period could never elapse during a sustained outage.
+            if (timer != null) return
+            android.util.Log.w(TAG, "violation detected, starting ${gracePeriodMs}ms grace timer")
+            timer = scope.launch {
+                delay(gracePeriodMs)
+                val (stillHasInternet, stillUnmetered) = currentState()
+                if (shouldAbortNetworkRun(
+                        backendIsRemote = true,
+                        hasInternet = stillHasInternet,
+                        isUnmetered = stillUnmetered,
+                        requireUnmetered = requireUnmetered,
+                        downDurationMs = gracePeriodMs,
+                        gracePeriodMs = gracePeriodMs
+                    )
+                ) {
+                    android.util.Log.w(TAG, "sustained violation, requesting stop")
+                    onSustainedViolation()
+                }
+                synchronized(lock) { timer = null }
+            }
         }
     }
 
