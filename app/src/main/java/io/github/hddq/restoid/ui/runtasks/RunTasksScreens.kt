@@ -8,6 +8,13 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Apps
+import androidx.compose.material.icons.outlined.AutoDelete
+import androidx.compose.material.icons.outlined.CleaningServices
+import androidx.compose.material.icons.outlined.FactCheck
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -73,6 +80,7 @@ fun RunTasksScreen(
                         TaskRow(
                             title = context.getString(R.string.run_tasks_applications),
                             subtitle = if (hasRoot) buildBackupSubtitle(uiState.apps, uiState.appBackupTypes, uiState.backupTypes, context) else context.getString(R.string.root_access_denied),
+                            icon = Icons.Outlined.Apps,
                             checked = if (hasRoot) uiState.backupEnabled else false,
                             onCheckedChange = viewModel::setBackupEnabled,
                             onNavigate = if (hasRoot) onNavigateToBackupConfig else null,
@@ -83,6 +91,7 @@ fun RunTasksScreen(
                         TaskRow(
                             title = context.getString(R.string.run_tasks_custom_directories),
                             subtitle = buildCustomDirectoriesSubtitle(uiState.customDirectories, context),
+                            icon = Icons.Outlined.Folder,
                             checked = uiState.customDirectoriesBackupEnabled,
                             onCheckedChange = viewModel::setCustomDirectoriesBackupEnabled,
                             onNavigate = onNavigateToCustomDirectoriesConfig
@@ -99,6 +108,7 @@ fun RunTasksScreen(
                     ExpressiveSegmentedSurface(index = 0, count = 4) {
                         TaskRow(
                             title = context.getString(R.string.maintenance_task_unlock_repository),
+                            icon = Icons.Outlined.LockOpen,
                             checked = uiState.maintenance.unlockRepo,
                             onCheckedChange = viewModel::setUnlockRepo
                         )
@@ -107,6 +117,7 @@ fun RunTasksScreen(
                         TaskRow(
                             title = context.getString(R.string.run_tasks_forget_snapshots),
                             subtitle = buildForgetSubtitle(uiState.maintenance, context),
+                            icon = Icons.Outlined.AutoDelete,
                             checked = uiState.maintenance.forgetSnapshots,
                             onCheckedChange = viewModel::setForgetSnapshots,
                             onNavigate = onNavigateToForgetConfig
@@ -115,6 +126,7 @@ fun RunTasksScreen(
                     ExpressiveSegmentedSurface(index = 2, count = 4) {
                         TaskRow(
                             title = context.getString(R.string.maintenance_task_prune_repository),
+                            icon = Icons.Outlined.CleaningServices,
                             checked = uiState.maintenance.pruneRepo,
                             onCheckedChange = viewModel::setPruneRepo
                         )
@@ -123,6 +135,7 @@ fun RunTasksScreen(
                         TaskRow(
                             title = context.getString(R.string.run_tasks_check_integrity),
                             subtitle = buildCheckSubtitle(uiState.maintenance, context),
+                            icon = Icons.Outlined.FactCheck,
                             checked = uiState.maintenance.checkRepo,
                             onCheckedChange = viewModel::setCheckRepo,
                             onNavigate = onNavigateToCheckConfig

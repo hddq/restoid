@@ -13,8 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -65,7 +65,7 @@ fun SystemSettings(
                     RootState.Denied -> RootRequestRow(
                         text = stringResource(R.string.root_access_denied),
                         buttonText = stringResource(R.string.action_try_again),
-                        icon = Icons.Default.Error,
+                        icon = Icons.Outlined.ErrorOutline,
                         onClick = { viewModel.requestRootAccess() }
                     )
                     RootState.Checking -> {
@@ -82,7 +82,7 @@ fun SystemSettings(
                     }
                     RootState.Granted -> RootStatusRow(
                         text = stringResource(R.string.root_access_granted),
-                        icon = Icons.Default.CheckCircle
+                        icon = Icons.Outlined.CheckCircle
                     )
                 }
             }
@@ -171,7 +171,7 @@ private fun StoragePermissionRow(
             modifier = Modifier.weight(1f)
         ) {
             Icon(
-                imageVector = if (granted) Icons.Default.CheckCircle else Icons.Default.Error,
+                imageVector = if (granted) Icons.Outlined.CheckCircle else Icons.Outlined.ErrorOutline,
                 contentDescription = null,
                 modifier = Modifier.padding(end = 16.dp),
                 tint = if (granted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
@@ -218,7 +218,7 @@ private fun BatteryOptimizationRow(
             modifier = Modifier.weight(1f)
         ) {
             Icon(
-                imageVector = if (disabled) Icons.Default.CheckCircle else Icons.Default.Error,
+                imageVector = if (disabled) Icons.Outlined.CheckCircle else Icons.Outlined.ErrorOutline,
                 contentDescription = null,
                 modifier = Modifier.padding(end = 16.dp),
                 tint = if (disabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
@@ -268,7 +268,7 @@ private fun LocalNetworkPermissionRow(
             modifier = Modifier.weight(1f)
         ) {
             Icon(
-                imageVector = if (granted) Icons.Default.CheckCircle else Icons.Default.Error,
+                imageVector = if (granted) Icons.Outlined.CheckCircle else Icons.Outlined.ErrorOutline,
                 contentDescription = null,
                 modifier = Modifier.padding(end = 16.dp),
                 tint = if (granted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error

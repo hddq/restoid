@@ -24,11 +24,23 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Apps
+import androidx.compose.material.icons.outlined.AutoDelete
+import androidx.compose.material.icons.outlined.Battery5Bar
+import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.CleaningServices
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.EventRepeat
+import androidx.compose.material.icons.outlined.FactCheck
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Label
+import androidx.compose.material.icons.outlined.LockOpen
+import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Update
+import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -148,7 +160,7 @@ fun SchedulesScreen(
                     onNavigateToAddEditSchedule()
                 }
             },
-            icon = { Icon(Icons.Default.Add, contentDescription = null) },
+            icon = { Icon(Icons.Outlined.Add, contentDescription = null) },
             text = { Text(stringResource(R.string.fab_add_schedule)) },
             shape = RoundedCornerShape(20.dp),
             modifier = Modifier
@@ -207,14 +219,14 @@ fun AddEditScheduleScreen(
             appBarActions.value = {
                 IconButton(onClick = { viewModel.runCurrentScheduleNow() }) {
                     Icon(
-                        Icons.Default.PlayArrow,
+                        Icons.Outlined.PlayArrow,
                         contentDescription = stringResource(R.string.action_run_now),
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
                 IconButton(onClick = { viewModel.onDeleteScheduleClick() }) {
                     Icon(
-                        Icons.Default.Delete,
+                        Icons.Outlined.Delete,
                         contentDescription = stringResource(R.string.action_delete),
                         tint = MaterialTheme.colorScheme.error
                     )
@@ -246,6 +258,12 @@ fun AddEditScheduleScreen(
                             value = state.name,
                             onValueChange = viewModel::setName,
                             label = { Text(stringResource(R.string.schedule_name_label)) },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.Label,
+                                    contentDescription = null
+                                )
+                            },
                             singleLine = true,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -268,6 +286,12 @@ fun AddEditScheduleScreen(
                                     intervalText.toIntOrNull()?.let { parsed ->
                                         if (parsed in 1..720) viewModel.setIntervalHours(parsed)
                                     }
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Update,
+                                        contentDescription = null
+                                    )
                                 },
                                 suffix = { Text(stringResource(R.string.unit_hours)) },
                                 isError = isError,
@@ -334,6 +358,7 @@ fun AddEditScheduleScreen(
                     ExpressiveSegmentedSurface(index = 0, count = 3) {
                         TaskRow(
                             title = stringResource(R.string.condition_battery_not_low),
+                            icon = Icons.Outlined.Battery5Bar,
                             checked = state.triggerConditions.requireBatteryNotLow,
                             onCheckedChange = viewModel::setRequireBatteryNotLow
                         )
@@ -341,6 +366,7 @@ fun AddEditScheduleScreen(
                     ExpressiveSegmentedSurface(index = 1, count = 3) {
                         TaskRow(
                             title = stringResource(R.string.condition_charging),
+                            icon = Icons.Outlined.Bolt,
                             checked = state.triggerConditions.requireCharging,
                             onCheckedChange = viewModel::setRequireCharging
                         )
@@ -348,6 +374,7 @@ fun AddEditScheduleScreen(
                     ExpressiveSegmentedSurface(index = 2, count = 3) {
                         TaskRow(
                             title = stringResource(R.string.condition_unmetered_network),
+                            icon = Icons.Outlined.Wifi,
                             checked = state.triggerConditions.requireUnmeteredNetwork,
                             onCheckedChange = viewModel::setRequireUnmeteredNetwork
                         )
@@ -367,6 +394,7 @@ fun AddEditScheduleScreen(
                         TaskRow(
                             title = stringResource(R.string.run_tasks_applications),
                             subtitle = if (hasRoot) buildBackupSubtitle(state.apps, state.appBackupTypes, state.backupTypes, context) else stringResource(R.string.root_access_denied),
+                            icon = Icons.Outlined.Apps,
                             checked = if (hasRoot) state.backupEnabled else false,
                             onCheckedChange = viewModel::setBackupEnabled,
                             onNavigate = if (hasRoot) onNavigateToBackupConfig else null,
@@ -377,6 +405,7 @@ fun AddEditScheduleScreen(
                         TaskRow(
                             title = stringResource(R.string.run_tasks_custom_directories),
                             subtitle = buildCustomDirectoriesSubtitle(state.customDirectories, context),
+                            icon = Icons.Outlined.Folder,
                             checked = state.customDirectoriesBackupEnabled,
                             onCheckedChange = viewModel::setCustomDirectoriesBackupEnabled,
                             onNavigate = onNavigateToCustomDirectoriesConfig
@@ -393,6 +422,7 @@ fun AddEditScheduleScreen(
                     ExpressiveSegmentedSurface(index = 0, count = 4) {
                         TaskRow(
                             title = stringResource(R.string.maintenance_task_unlock_repository),
+                            icon = Icons.Outlined.LockOpen,
                             checked = state.maintenance.unlockRepo,
                             onCheckedChange = viewModel::setUnlockRepo
                         )
@@ -401,6 +431,7 @@ fun AddEditScheduleScreen(
                         TaskRow(
                             title = stringResource(R.string.run_tasks_forget_snapshots),
                             subtitle = buildForgetSubtitle(state.maintenance, context),
+                            icon = Icons.Outlined.AutoDelete,
                             checked = state.maintenance.forgetSnapshots,
                             onCheckedChange = viewModel::setForgetSnapshots,
                             onNavigate = onNavigateToForgetConfig
@@ -409,6 +440,7 @@ fun AddEditScheduleScreen(
                     ExpressiveSegmentedSurface(index = 2, count = 4) {
                         TaskRow(
                             title = stringResource(R.string.maintenance_task_prune_repository),
+                            icon = Icons.Outlined.CleaningServices,
                             checked = state.maintenance.pruneRepo,
                             onCheckedChange = viewModel::setPruneRepo
                         )
@@ -417,6 +449,7 @@ fun AddEditScheduleScreen(
                         TaskRow(
                             title = stringResource(R.string.run_tasks_check_integrity),
                             subtitle = buildCheckSubtitle(state.maintenance, context),
+                            icon = Icons.Outlined.FactCheck,
                             checked = state.maintenance.checkRepo,
                             onCheckedChange = viewModel::setCheckRepo,
                             onNavigate = onNavigateToCheckConfig
@@ -528,6 +561,12 @@ private fun ScheduleItem(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        Icon(
+            imageVector = Icons.Outlined.EventRepeat,
+            contentDescription = null,
+            tint = if (schedule.isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(end = 16.dp)
+        )
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = schedule.name,
@@ -557,7 +596,7 @@ private fun ScheduleItem(
 
         Spacer(Modifier.width(12.dp))
         Icon(
-            imageVector = Icons.Default.ChevronRight,
+            imageVector = Icons.Outlined.ChevronRight,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )

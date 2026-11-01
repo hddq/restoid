@@ -20,10 +20,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -408,7 +408,7 @@ fun HomeScreen(
                                 singleLine = true,
                                 visualTransformation = if (passphraseVisible) VisualTransformation.None else PasswordVisualTransformation(),
                                 trailingIcon = {
-                                    val image = if (passphraseVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
+                                    val image = if (passphraseVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility
                                     val description = if (passphraseVisible) stringResource(R.string.cd_hide_password) else stringResource(R.string.cd_show_password)
                                     IconButton(onClick = { passphraseVisible = !passphraseVisible }) {
                                         Icon(imageVector = image, contentDescription = description)
@@ -556,7 +556,7 @@ private fun SnapshotItem(
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Icon(
-                    imageVector = Icons.Default.ChevronRight,
+                    imageVector = Icons.Outlined.ChevronRight,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(18.dp)

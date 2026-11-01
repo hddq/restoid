@@ -17,15 +17,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -341,7 +340,7 @@ class MainActivity : FragmentActivity() {
                                     IconButton(onClick = {
                                         this@MainActivity.onBackPressedDispatcher.onBackPressed()
                                     }) {
-                                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
+                                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                                     }
                                 }
                             },
@@ -396,7 +395,7 @@ class MainActivity : FragmentActivity() {
                                 val isRepoReady = homeUiState.isRepoReady
                                 ExtendedFloatingActionButton(
                                     text = { Text(stringResource(R.string.screen_tasks)) },
-                                    icon = { Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.screen_tasks)) },
+                                    icon = { Icon(Icons.Outlined.PlayArrow, contentDescription = stringResource(R.string.screen_tasks)) },
                                     onClick = { if (isRepoReady) { navController.navigate(Screen.RunTasks.route) } },
                                     shape = RoundedCornerShape(20.dp),
                                     containerColor = if (isRepoReady) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -425,7 +424,7 @@ class MainActivity : FragmentActivity() {
                                     ExtendedFloatingActionButton(
                                         onClick = { viewModel.run() },
                                         shape = RoundedCornerShape(20.dp),
-                                        icon = { Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.fab_run_tasks)) },
+                                        icon = { Icon(Icons.Outlined.PlayArrow, contentDescription = stringResource(R.string.fab_run_tasks)) },
                                         text = { Text(stringResource(R.string.fab_run_tasks)) }
                                     )
                                 }
@@ -433,7 +432,7 @@ class MainActivity : FragmentActivity() {
                             Screen.SnapshotDetails.route + "/{snapshotId}" -> {
                                 ExtendedFloatingActionButton(
                                     text = { Text(stringResource(R.string.fab_restore)) },
-                                    icon = { Icon(Icons.Default.Restore, contentDescription = stringResource(R.string.topbar_restore_snapshot)) },
+                                    icon = { Icon(Icons.Outlined.Restore, contentDescription = stringResource(R.string.topbar_restore_snapshot)) },
                                     shape = RoundedCornerShape(20.dp),
                                     onClick = { navController.navigate("${Screen.Restore.route}/${navBackStackEntry?.arguments?.getString("snapshotId")}") }
                                 )
@@ -462,7 +461,7 @@ class MainActivity : FragmentActivity() {
                                     ExtendedFloatingActionButton(
                                         onClick = { viewModel.startRestore() },
                                         shape = RoundedCornerShape(20.dp),
-                                        icon = { Icon(Icons.Default.Restore, contentDescription = stringResource(R.string.fab_start_restore)) },
+                                        icon = { Icon(Icons.Outlined.Restore, contentDescription = stringResource(R.string.fab_start_restore)) },
                                         text = { Text(stringResource(R.string.fab_start_restore)) }
                                     )
                                 }
@@ -481,7 +480,7 @@ class MainActivity : FragmentActivity() {
                                     ExtendedFloatingActionButton(
                                         onClick = { viewModel.saveSchedule() },
                                         shape = RoundedCornerShape(20.dp),
-                                        icon = { Icon(Icons.Default.Check, contentDescription = stringResource(R.string.action_save)) },
+                                        icon = { Icon(Icons.Outlined.Check, contentDescription = stringResource(R.string.action_save)) },
                                         text = { Text(stringResource(R.string.action_save)) }
                                     )
                                 }

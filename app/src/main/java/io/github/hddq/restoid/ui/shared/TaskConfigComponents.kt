@@ -24,11 +24,25 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.SelectAll
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Android
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.DateRange
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.Inventory2
+import androidx.compose.material.icons.outlined.Key
+import androidx.compose.material.icons.outlined.ManageSearch
+import androidx.compose.material.icons.outlined.PermMedia
+import androidx.compose.material.icons.outlined.SdCard
+import androidx.compose.material.icons.outlined.SelectAll
+import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.outlined.Today
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -70,6 +84,7 @@ import kotlin.math.roundToInt
 fun TaskRow(
     title: String,
     subtitle: String? = null,
+    icon: ImageVector? = null,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     onNavigate: (() -> Unit)? = null,
@@ -86,6 +101,15 @@ fun TaskRow(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(end = 16.dp)
+            )
+        }
+
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
@@ -105,7 +129,7 @@ fun TaskRow(
         if (onNavigate != null) {
             Spacer(Modifier.width(12.dp))
             Icon(
-                imageVector = Icons.Default.ChevronRight,
+                imageVector = Icons.Outlined.ChevronRight,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -144,6 +168,7 @@ fun PolicySlider(
     label: String,
     value: Int,
     range: IntRange,
+    icon: ImageVector? = null,
     onValueChange: (Int) -> Unit
 ) {
     val isDiscrete = (range.last - range.first) <= 30
@@ -151,9 +176,23 @@ fun PolicySlider(
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(label, style = MaterialTheme.typography.bodyLarge)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                if (icon != null) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = if (value > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(end = 12.dp)
+                    )
+                }
+                Text(label, style = MaterialTheme.typography.bodyLarge)
+            }
             Text(
                 text = value.toString(),
                 style = MaterialTheme.typography.bodyLarge,
@@ -174,6 +213,7 @@ fun PolicySlider(
 fun BackupTypeToggle(
     label: String,
     description: String,
+    icon: ImageVector? = null,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
@@ -184,6 +224,14 @@ fun BackupTypeToggle(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(end = 16.dp)
+            )
+        }
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = label,
@@ -229,7 +277,7 @@ fun SelectAllListItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            imageVector = Icons.Default.SelectAll,
+            imageVector = Icons.Outlined.SelectAll,
             contentDescription = null,
             modifier = Modifier
                 .size(48.dp)
@@ -257,7 +305,7 @@ fun SelectAllListItem(
         if (onClick != null) {
             Spacer(Modifier.width(12.dp))
             Icon(
-                imageVector = Icons.Default.ChevronRight,
+                imageVector = Icons.Outlined.ChevronRight,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -329,7 +377,7 @@ fun AppListItem(
         }
         Spacer(Modifier.width(12.dp))
         Icon(
-            imageVector = Icons.Default.ChevronRight,
+            imageVector = Icons.Outlined.ChevronRight,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -385,6 +433,7 @@ fun BackupTypesBottomSheet(
                     BackupTypeToggle(
                         label = stringResource(R.string.backup_type_apk),
                         description = stringResource(R.string.backup_type_apk_desc),
+                        icon = Icons.Outlined.Android,
                         checked = backupTypes.apk
                     ) {
                         onBackupTypesChange(backupTypes.copy(apk = it))
@@ -394,6 +443,7 @@ fun BackupTypesBottomSheet(
                     BackupTypeToggle(
                         label = stringResource(R.string.backup_type_data),
                         description = stringResource(R.string.backup_type_data_desc),
+                        icon = Icons.Outlined.Storage,
                         checked = backupTypes.data
                     ) {
                         onBackupTypesChange(backupTypes.copy(data = it))
@@ -403,6 +453,7 @@ fun BackupTypesBottomSheet(
                     BackupTypeToggle(
                         label = stringResource(R.string.backup_type_device_protected_data),
                         description = stringResource(R.string.backup_type_device_protected_data_desc),
+                        icon = Icons.Outlined.Shield,
                         checked = backupTypes.deviceProtectedData
                     ) {
                         onBackupTypesChange(backupTypes.copy(deviceProtectedData = it))
@@ -412,6 +463,7 @@ fun BackupTypesBottomSheet(
                     BackupTypeToggle(
                         label = stringResource(R.string.backup_type_external_data),
                         description = stringResource(R.string.backup_type_external_data_desc),
+                        icon = Icons.Outlined.SdCard,
                         checked = backupTypes.externalData
                     ) {
                         onBackupTypesChange(backupTypes.copy(externalData = it))
@@ -421,6 +473,7 @@ fun BackupTypesBottomSheet(
                     BackupTypeToggle(
                         label = stringResource(R.string.backup_type_obb_data),
                         description = stringResource(R.string.backup_type_obb_data_desc),
+                        icon = Icons.Outlined.Inventory2,
                         checked = backupTypes.obb
                     ) {
                         onBackupTypesChange(backupTypes.copy(obb = it))
@@ -430,6 +483,7 @@ fun BackupTypesBottomSheet(
                     BackupTypeToggle(
                         label = stringResource(R.string.backup_type_media_data),
                         description = stringResource(R.string.backup_type_media_data_desc),
+                        icon = Icons.Outlined.PermMedia,
                         checked = backupTypes.media
                     ) {
                         onBackupTypesChange(backupTypes.copy(media = it))
@@ -439,6 +493,7 @@ fun BackupTypesBottomSheet(
                     BackupTypeToggle(
                         label = stringResource(R.string.backup_type_permissions),
                         description = stringResource(R.string.backup_type_permissions_desc),
+                        icon = Icons.Outlined.Key,
                         checked = backupTypes.permissions
                     ) {
                         onBackupTypesChange(backupTypes.copy(permissions = it))
@@ -564,16 +619,40 @@ fun ForgetConfigScreen(
         item {
             ExpressiveCardGroup {
                 ExpressiveSegmentedSurface(index = 0, count = 4) {
-                    PolicySlider(stringResource(R.string.maintenance_keep_last), maintenance.keepLast, 0..20, onKeepLastChange)
+                    PolicySlider(
+                        label = stringResource(R.string.maintenance_keep_last),
+                        value = maintenance.keepLast,
+                        range = 0..20,
+                        icon = Icons.Outlined.History,
+                        onValueChange = onKeepLastChange
+                    )
                 }
                 ExpressiveSegmentedSurface(index = 1, count = 4) {
-                    PolicySlider(stringResource(R.string.maintenance_keep_daily), maintenance.keepDaily, 0..30, onKeepDailyChange)
+                    PolicySlider(
+                        label = stringResource(R.string.maintenance_keep_daily),
+                        value = maintenance.keepDaily,
+                        range = 0..30,
+                        icon = Icons.Outlined.Today,
+                        onValueChange = onKeepDailyChange
+                    )
                 }
                 ExpressiveSegmentedSurface(index = 2, count = 4) {
-                    PolicySlider(stringResource(R.string.maintenance_keep_weekly), maintenance.keepWeekly, 0..12, onKeepWeeklyChange)
+                    PolicySlider(
+                        label = stringResource(R.string.maintenance_keep_weekly),
+                        value = maintenance.keepWeekly,
+                        range = 0..12,
+                        icon = Icons.Outlined.DateRange,
+                        onValueChange = onKeepWeeklyChange
+                    )
                 }
                 ExpressiveSegmentedSurface(index = 3, count = 4) {
-                    PolicySlider(stringResource(R.string.maintenance_keep_monthly), maintenance.keepMonthly, 0..24, onKeepMonthlyChange)
+                    PolicySlider(
+                        label = stringResource(R.string.maintenance_keep_monthly),
+                        value = maintenance.keepMonthly,
+                        range = 0..24,
+                        icon = Icons.Outlined.CalendarMonth,
+                        onValueChange = onKeepMonthlyChange
+                    )
                 }
             }
         }
@@ -595,6 +674,7 @@ fun CheckConfigScreen(
                 TaskRow(
                     title = stringResource(R.string.maintenance_read_all_data),
                     subtitle = stringResource(R.string.run_tasks_check_read_all_data_description),
+                    icon = Icons.Outlined.ManageSearch,
                     checked = maintenance.readData,
                     onCheckedChange = onReadDataChange
                 )
@@ -745,6 +825,12 @@ fun CustomDirectoriesConfigScreen(
                                         .padding(vertical = 12.dp, horizontal = 16.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Folder,
+                                        contentDescription = null,
+                                        tint = if (customDir.isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(end = 16.dp)
+                                    )
                                     Column(modifier = Modifier.weight(1f)) {
                                         val title = displayPath.substringAfterLast("/")
                                         Text(
@@ -792,7 +878,7 @@ fun CustomDirectoriesConfigScreen(
                                         },
                                         leadingIcon = {
                                             Icon(
-                                                imageVector = Icons.Default.Delete,
+                                                imageVector = Icons.Outlined.Delete,
                                                 contentDescription = null,
                                                 tint = MaterialTheme.colorScheme.error
                                             )
@@ -817,7 +903,7 @@ fun CustomDirectoriesConfigScreen(
                 modifier = Modifier.padding(top = 4.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Add,
+                    imageVector = Icons.Outlined.Add,
                     contentDescription = null
                 )
                 Spacer(modifier = Modifier.width(8.dp))

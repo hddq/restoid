@@ -20,8 +20,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -92,7 +92,7 @@ fun SnapshotDetailsScreen(
         appBarActions.value = {
             IconButton(onClick = { viewModel.onForgetSnapshot() }) {
                 Icon(
-                    Icons.Default.Delete,
+                    Icons.Outlined.Delete,
                     contentDescription = stringResource(R.string.cd_forget_snapshot),
                     tint = MaterialTheme.colorScheme.error
                 )
@@ -321,9 +321,8 @@ fun BackedUpCustomDirItem(path: String, metadata: io.github.hddq.restoid.model.C
     val context = LocalContext.current
     Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(
-            Icons.Default.Folder,
+            Icons.Outlined.Folder,
             contentDescription = null,
-            modifier = Modifier.size(40.dp),
             tint = MaterialTheme.colorScheme.primary
         )
         Spacer(Modifier.width(16.dp))
