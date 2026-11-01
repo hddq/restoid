@@ -187,8 +187,7 @@ class SchedulesViewModel(
         }
     }
 
-    fun hasChanges(): Boolean {
-        val current = _addEditState.value
+    fun hasChanges(current: AddEditScheduleUiState = _addEditState.value): Boolean {
         val initial = initialState ?: return false
 
         return current.name != initial.name ||
