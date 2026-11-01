@@ -42,10 +42,30 @@ class HeavyOperationWorker(
         val notifier = WorkerProgressNotifier(operationType)
         val shouldStop = { isStopped || app.operationRuntimeRepository.state.value.stopRequested }
 
+        // Aborts remote-backend runs when the network drops or turns metered
+        // (when unmetered was required) for longer than the grace period.
+        // Restic retries failed backend operations for up to 15 minutes each
+        // with no off switch, so without this a dead link burns CPU/radio
+        // indefinitely. Local backends are exempt by design.
+        val lossMonitor = NetworkLossMonitor(applicationContext) {
+            val state = app.operationRuntimeRepository.state.value
+            if (!state.isRunning || state.operationType != operationType || state.stopRequested) {
+                return@NetworkLossMonitor
+            }
+            app.operationRuntimeRepository.markStopRequested(operationType, state.progress)
+            runCatching { com.topjohnwu.superuser.Shell.getCachedShell()?.close() }
+        }
+        fun armLossMonitor(repositoryKey: String?, requireUnmetered: Boolean) {
+            val repository = repositoryKey?.let { app.repositoriesRepository.getRepositoryByKey(it) }
+            lossMonitor.configure(isRemoteBackend(repository?.backendType), requireUnmetered)
+            lossMonitor.start()
+        }
+
         val runResult = try {
             when (operationType) {
                 OperationType.BACKUP -> {
                     val request = app.operationRequestStore.loadBackupRequest(requestId)
+                    armLossMonitor(request.repositoryKey, request.requireUnmeteredNetwork)
                     val runner = BackupOperationRunner(
                         context = applicationContext,
                         repositoriesRepository = app.repositoriesRepository,
@@ -60,6 +80,7 @@ class HeavyOperationWorker(
                 OperationType.RUN_TASKS -> {
                     val request = app.operationRequestStore.loadRunTasksRequest(requestId)
                     scheduleName = request.scheduleName
+                    armLossMonitor(request.repositoryKey, request.requireUnmeteredNetwork)
                     val runner = RunTasksOperationRunner(
                         context = applicationContext,
                         repositoriesRepository = app.repositoriesRepository,
@@ -73,6 +94,7 @@ class HeavyOperationWorker(
 
                 OperationType.RESTORE -> {
                     val request = app.operationRequestStore.loadRestoreRequest(requestId)
+                    armLossMonitor(request.repositoryKey, requireUnmetered = false)
                     val runner = RestoreOperationRunner(
                         context = applicationContext,
                         repositoriesRepository = app.repositoriesRepository,
@@ -86,6 +108,7 @@ class HeavyOperationWorker(
 
                 OperationType.MAINTENANCE -> {
                     val request = app.operationRequestStore.loadMaintenanceRequest(requestId)
+                    armLossMonitor(request.repositoryKey, requireUnmetered = false)
                     val runner = MaintenanceOperationRunner(
                         context = applicationContext,
                         repositoriesRepository = app.repositoriesRepository,
@@ -109,6 +132,7 @@ class HeavyOperationWorker(
                 OperationRunResult(success = false, progress = failedProgress)
             }
         } finally {
+            lossMonitor.stop()
             app.operationRequestStore.deleteRequest(requestId)
         }
 

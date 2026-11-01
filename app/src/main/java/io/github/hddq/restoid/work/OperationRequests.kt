@@ -36,7 +36,8 @@ data class BackupWorkRequest(
     val backupTypes: BackupTypeSelection,
     val selectedPackageNames: List<String>,
     val appBackupTypes: Map<String, BackupTypeSelection> = emptyMap(),
-    val customDirectories: List<String> = emptyList()
+    val customDirectories: List<String> = emptyList(),
+    val requireUnmeteredNetwork: Boolean = false
 )
 
 @Serializable
@@ -99,5 +100,6 @@ data class RunTasksWorkRequest(
     val keepDaily: Int,
     val keepWeekly: Int,
     val keepMonthly: Int,
-    val scheduleName: String? = null
+    val scheduleName: String? = null,
+    val requireUnmeteredNetwork: Boolean = false
 )
