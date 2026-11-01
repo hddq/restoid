@@ -24,8 +24,18 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.outlined.Android
+import androidx.compose.material.icons.outlined.Apps
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.Inventory2
+import androidx.compose.material.icons.outlined.Key
+import androidx.compose.material.icons.outlined.PermMedia
+import androidx.compose.material.icons.outlined.SdCard
+import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -114,6 +124,7 @@ fun RestoreScreen(
                         TaskRow(
                             title = stringResource(R.string.run_tasks_applications),
                             subtitle = if (hasRoot) buildSelectedRestoreTypesSummary(selectableBackupDetails, appRestoreTypes, restoreTypes, context) else stringResource(R.string.root_access_denied),
+                            icon = Icons.Outlined.Apps,
                             checked = if (hasRoot) restoreAppsEnabled else false,
                             onCheckedChange = viewModel::setRestoreAppsEnabled,
                             onNavigate = if (hasRoot) onNavigateToAppsConfig else null,
@@ -124,6 +135,7 @@ fun RestoreScreen(
                         TaskRow(
                             title = stringResource(R.string.run_tasks_custom_directories),
                             subtitle = io.github.hddq.restoid.ui.shared.buildCustomDirectoriesSubtitle(customDirsList, context),
+                            icon = Icons.Outlined.Folder,
                             checked = restoreCustomDirectoriesEnabled,
                             onCheckedChange = viewModel::setRestoreCustomDirectoriesEnabled,
                             onNavigate = onNavigateToCustomDirectoriesConfig
@@ -184,6 +196,7 @@ fun RestoreAppsConfigScreen(
                 ExpressiveSegmentedSurface(index = 0, count = 1) {
                     TaskRow(
                         title = stringResource(R.string.allow_downgrade),
+                        icon = Icons.Outlined.History,
                         checked = allowDowngrade,
                         onCheckedChange = viewModel::setAllowDowngrade
                     )
@@ -303,6 +316,7 @@ fun RestoreCustomDirectoriesConfigScreen(
 fun RestoreTypeToggle(
     label: String,
     description: String,
+    icon: ImageVector? = null,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
@@ -313,6 +327,14 @@ fun RestoreTypeToggle(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(end = 16.dp)
+            )
+        }
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = label,
@@ -411,7 +433,7 @@ private fun RestoreAppListItem(
         }
         Spacer(Modifier.width(12.dp))
         Icon(
-            imageVector = Icons.Default.ChevronRight,
+            imageVector = Icons.Outlined.ChevronRight,
             contentDescription = null,
             tint = if (isEnabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
         )
@@ -468,6 +490,7 @@ private fun RestoreTypesBottomSheet(
                     RestoreTypeToggle(
                         label = stringResource(R.string.backup_type_apk),
                         description = stringResource(R.string.backup_type_apk_desc),
+                        icon = Icons.Outlined.Android,
                         checked = restoreTypes.apk
                     ) {
                         onRestoreTypesChange(restoreTypes.copy(apk = it))
@@ -477,6 +500,7 @@ private fun RestoreTypesBottomSheet(
                     RestoreTypeToggle(
                         label = stringResource(R.string.backup_type_data),
                         description = stringResource(R.string.backup_type_data_desc),
+                        icon = Icons.Outlined.Storage,
                         checked = restoreTypes.data
                     ) {
                         onRestoreTypesChange(restoreTypes.copy(data = it))
@@ -486,6 +510,7 @@ private fun RestoreTypesBottomSheet(
                     RestoreTypeToggle(
                         label = stringResource(R.string.backup_type_device_protected_data),
                         description = stringResource(R.string.backup_type_device_protected_data_desc),
+                        icon = Icons.Outlined.Shield,
                         checked = restoreTypes.deviceProtectedData
                     ) {
                         onRestoreTypesChange(restoreTypes.copy(deviceProtectedData = it))
@@ -495,6 +520,7 @@ private fun RestoreTypesBottomSheet(
                     RestoreTypeToggle(
                         label = stringResource(R.string.backup_type_external_data),
                         description = stringResource(R.string.backup_type_external_data_desc),
+                        icon = Icons.Outlined.SdCard,
                         checked = restoreTypes.externalData
                     ) {
                         onRestoreTypesChange(restoreTypes.copy(externalData = it))
@@ -504,6 +530,7 @@ private fun RestoreTypesBottomSheet(
                     RestoreTypeToggle(
                         label = stringResource(R.string.backup_type_obb_data),
                         description = stringResource(R.string.backup_type_obb_data_desc),
+                        icon = Icons.Outlined.Inventory2,
                         checked = restoreTypes.obb
                     ) {
                         onRestoreTypesChange(restoreTypes.copy(obb = it))
@@ -513,6 +540,7 @@ private fun RestoreTypesBottomSheet(
                     RestoreTypeToggle(
                         label = stringResource(R.string.backup_type_media_data),
                         description = stringResource(R.string.backup_type_media_data_desc),
+                        icon = Icons.Outlined.PermMedia,
                         checked = restoreTypes.media
                     ) {
                         onRestoreTypesChange(restoreTypes.copy(media = it))
@@ -522,6 +550,7 @@ private fun RestoreTypesBottomSheet(
                     RestoreTypeToggle(
                         label = stringResource(R.string.backup_type_permissions),
                         description = stringResource(R.string.backup_type_permissions_desc),
+                        icon = Icons.Outlined.Key,
                         checked = restoreTypes.permissions
                     ) {
                         onRestoreTypesChange(restoreTypes.copy(permissions = it))
@@ -589,10 +618,9 @@ private fun RestoreCustomDirListItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            Icons.Default.Folder,
+            Icons.Outlined.Folder,
             contentDescription = null,
-            modifier = Modifier.size(40.dp),
-            tint = MaterialTheme.colorScheme.primary
+            tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {

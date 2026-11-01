@@ -15,11 +15,15 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material.icons.outlined.Key
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.LockReset
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -77,14 +81,14 @@ fun NotificationPermissionRow(
             modifier = Modifier.weight(1f)
         ) {
             val icon = when (state) {
-                NotificationPermissionState.Granted -> Icons.Default.CheckCircle
-                NotificationPermissionState.Denied -> Icons.Default.Error
-                NotificationPermissionState.NotRequested -> Icons.Default.Notifications
+                NotificationPermissionState.Granted -> Icons.Outlined.CheckCircle
+                NotificationPermissionState.Denied -> Icons.Outlined.ErrorOutline
+                NotificationPermissionState.NotRequested -> Icons.Outlined.Notifications
             }
             val iconColor = when (state) {
                 NotificationPermissionState.Granted -> MaterialTheme.colorScheme.primary
                 NotificationPermissionState.Denied -> MaterialTheme.colorScheme.error
-                NotificationPermissionState.NotRequested -> LocalContentColor.current
+                NotificationPermissionState.NotRequested -> MaterialTheme.colorScheme.onSurfaceVariant
             }
             Icon(
                 imageVector = icon,
@@ -126,8 +130,9 @@ fun AppUnlockOnStartRow(
             modifier = Modifier.weight(1f)
         ) {
             Icon(
-                imageVector = Icons.Default.Lock,
+                imageVector = Icons.Outlined.Lock,
                 contentDescription = null,
+                tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(end = 16.dp)
             )
             Text(text = stringResource(R.string.require_app_unlock_on_start))
@@ -278,14 +283,21 @@ fun SelectableRepositoryRow(
 
         Box {
             IconButton(onClick = { showMenu = true }) {
-                Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.cd_more_options))
+                Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.cd_more_options))
             }
             DropdownMenu(
                 expanded = showMenu,
                 onDismissRequest = { showMenu = false }
             ) {
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.action_delete)) },
+                    text = { Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Outlined.Delete,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    },
                     onClick = {
                         viewModel.deleteRepository(repoKey)
                         showMenu = false
@@ -293,6 +305,12 @@ fun SelectableRepositoryRow(
                 )
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_restore_metadata)) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Outlined.Restore,
+                            contentDescription = null
+                        )
+                    },
                     onClick = {
                         viewModel.restoreMetadata(repoKey)
                         showMenu = false
@@ -311,6 +329,12 @@ fun SelectableRepositoryRow(
                                     }
                                 )
                             },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.Key,
+                                    contentDescription = null
+                                )
+                            },
                             onClick = {
                                 if (repo.sftpKeyAuthRequired) viewModel.forgetSftpKey(repoKey) else viewModel.forgetSftpPassword(repoKey)
                                 showMenu = false
@@ -327,6 +351,12 @@ fun SelectableRepositoryRow(
                                     }
                                 )
                             },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.Key,
+                                    contentDescription = null
+                                )
+                            },
                             onClick = {
                                 showSaveSftpCredentialsDialog = true
                                 showMenu = false
@@ -338,6 +368,12 @@ fun SelectableRepositoryRow(
                     if (viewModel.hasStoredRestCredentials(repoKey)) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.action_forget_rest_credentials)) },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.Key,
+                                    contentDescription = null
+                                )
+                            },
                             onClick = {
                                 viewModel.forgetRestCredentials(repoKey)
                                 showMenu = false
@@ -346,6 +382,12 @@ fun SelectableRepositoryRow(
                     } else {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.action_save_rest_credentials)) },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.Key,
+                                    contentDescription = null
+                                )
+                            },
                             onClick = {
                                 showSaveRestCredentialsDialog = true
                                 showMenu = false
@@ -357,6 +399,12 @@ fun SelectableRepositoryRow(
                     if (viewModel.hasStoredS3Credentials(repoKey)) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.action_forget_s3_credentials)) },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.Key,
+                                    contentDescription = null
+                                )
+                            },
                             onClick = {
                                 viewModel.forgetS3Credentials(repoKey)
                                 showMenu = false
@@ -365,6 +413,12 @@ fun SelectableRepositoryRow(
                     } else {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.action_save_s3_credentials)) },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Outlined.Key,
+                                    contentDescription = null
+                                )
+                            },
                             onClick = {
                                 showSaveS3CredentialsDialog = true
                                 showMenu = false
@@ -375,6 +429,12 @@ fun SelectableRepositoryRow(
                 if (viewModel.hasStoredRepositoryPassword(repoKey)) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_forget_password)) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Outlined.Key,
+                                contentDescription = null
+                            )
+                        },
                         onClick = {
                             viewModel.forgetPassword(repoKey)
                             showMenu = false
@@ -383,6 +443,12 @@ fun SelectableRepositoryRow(
                 } else {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_save_password)) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Outlined.Key,
+                                contentDescription = null
+                            )
+                        },
                         onClick = {
                             showSavePasswordDialog = true
                             showMenu = false
@@ -391,6 +457,12 @@ fun SelectableRepositoryRow(
                 }
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_change_password)) },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Outlined.LockReset,
+                            contentDescription = null
+                        )
+                    },
                     onClick = {
                         showChangePasswordDialog = true
                         showMenu = false
@@ -420,16 +492,16 @@ fun ResticDependencyRow(state: ResticState) {
 
                 when (targetState) {
                     is ResticState.Installed -> {
-                        icon = Icons.Default.CheckCircle
+                        icon = Icons.Outlined.CheckCircle
                         iconColor = MaterialTheme.colorScheme.primary
                     }
                     is ResticState.Error -> {
-                        icon = Icons.Default.Error
+                        icon = Icons.Outlined.ErrorOutline
                         iconColor = MaterialTheme.colorScheme.error
                     }
                     ResticState.Idle -> {
-                        icon = Icons.Default.CheckCircle
-                        iconColor = LocalContentColor.current
+                        icon = Icons.Outlined.CheckCircle
+                        iconColor = MaterialTheme.colorScheme.onSurfaceVariant
                     }
                 }
 

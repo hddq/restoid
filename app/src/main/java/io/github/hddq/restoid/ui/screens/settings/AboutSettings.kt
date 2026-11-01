@@ -8,9 +8,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Notes
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.automirrored.outlined.Notes
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Translate
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -54,8 +54,9 @@ fun AboutSettings(onNavigateToLicenses: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Notes,
+                        imageVector = Icons.AutoMirrored.Outlined.Notes,
                         contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(end = 16.dp)
                     )
                     Text(stringResource(R.string.open_source_licenses), style = MaterialTheme.typography.bodyLarge)
@@ -71,8 +72,9 @@ fun AboutSettings(onNavigateToLicenses: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Translate,
+                        imageVector = Icons.Outlined.Translate,
                         contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(end = 16.dp)
                     )
                     Text(stringResource(R.string.translate), style = MaterialTheme.typography.bodyLarge)
@@ -88,8 +90,9 @@ fun AboutSettings(onNavigateToLicenses: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Info,
+                        imageVector = Icons.Outlined.Info,
                         contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(end = 16.dp)
                     )
                     Column {

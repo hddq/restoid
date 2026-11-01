@@ -7,8 +7,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
@@ -72,7 +72,7 @@ fun RepositorySettings(viewModel: SettingsViewModel) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        Icons.Default.Info,
+                        Icons.Outlined.Info,
                         contentDescription = null,
                         modifier = Modifier.padding(end = 8.dp),
                         tint = LocalContentColor.current.copy(alpha = 0.6f)
@@ -92,7 +92,7 @@ fun RepositorySettings(viewModel: SettingsViewModel) {
                 shape = MaterialTheme.shapes.extraLarge
             ) {
                 Icon(
-                    imageVector = Icons.Default.Add,
+                    imageVector = Icons.Outlined.Add,
                     contentDescription = null
                 )
                 Spacer(modifier = Modifier.width(8.dp))

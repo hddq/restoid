@@ -30,12 +30,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.CreateNewFolder
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.SdStorage
-import androidx.compose.material.icons.filled.Smartphone
+import androidx.compose.material.icons.outlined.ArrowUpward
+import androidx.compose.material.icons.outlined.CreateNewFolder
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.SdStorage
+import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -271,7 +271,7 @@ fun FolderPickerSheet(
                             }
                         ) {
                             Icon(
-                                imageVector = Icons.Default.CreateNewFolder,
+                                imageVector = Icons.Outlined.CreateNewFolder,
                                 contentDescription = stringResource(R.string.folder_browser_new_folder),
                                 tint = MaterialTheme.colorScheme.primary
                             )
@@ -291,7 +291,7 @@ fun FolderPickerSheet(
                         }
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Edit,
+                            imageVector = Icons.Outlined.Edit,
                             contentDescription = stringResource(R.string.folder_browser_edit_path),
                             tint = MaterialTheme.colorScheme.primary
                         )
@@ -404,7 +404,7 @@ fun FolderPickerSheet(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = Icons.Default.ArrowUpward,
+                            imageVector = Icons.Outlined.ArrowUpward,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary
                         )
@@ -485,9 +485,9 @@ fun FolderPickerSheet(
                                     ) {
                                         Icon(
                                             imageVector = if (volume.isPrimary) {
-                                                Icons.Default.Smartphone
+                                                Icons.Outlined.Smartphone
                                             } else {
-                                                Icons.Default.SdStorage
+                                                Icons.Outlined.SdStorage
                                             },
                                             contentDescription = null,
                                             tint = MaterialTheme.colorScheme.primary
@@ -545,7 +545,7 @@ fun FolderPickerSheet(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Default.Folder,
+                                            imageVector = Icons.Outlined.Folder,
                                             contentDescription = null,
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
