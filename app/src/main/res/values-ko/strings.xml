@@ -154,7 +154,6 @@
     <string name="repo_backend_sftp">SFTP (SSH)</string>
     <string name="repo_backend_rest">HTTP REST 서버</string>
     <string name="repo_backend_s3" translatable="false">Amazon S3 / MinIO</string>
-    <string name="repo_hint_sftp" translatable="false">user@host:/srv/restic-repo</string>
     <string name="repo_hint_rest" translatable="false">http://host:8000/</string>
     <string name="repo_hint_s3" translatable="false">s3.us-east-1.amazonaws.com/bucket_name</string>
     <string name="label_path">경로</string>
@@ -462,5 +461,4 @@
     <string name="action_run_now">지금 실행</string>
     <string name="error_cannot_backup_repo_to_itself">저장소 자체를 백업할 사용자 지정 디렉터리로 추가할 수 없습니다.</string>
     <string name="title_custom_directories">사용자 지정 디렉터리</string>
-    <string name="repo_supporting_sftp">사용자 지정 포트: sftp://user@host:2222//srv/restic-repo (상대 경로를 위해 포트 뒤에 / 하나를 사용하세요)</string>
 </resources>

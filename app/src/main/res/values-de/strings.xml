@@ -157,7 +157,6 @@
     <string name="repo_backend_sftp">SFTP (SSH)</string>
     <string name="repo_backend_rest">HTTP REST Server</string>
     <string name="repo_backend_s3" translatable="false">Amazon S3 / MinIO</string>
-    <string name="repo_hint_sftp" translatable="false">user@host:/srv/restic-repo</string>
     <string name="repo_hint_rest" translatable="false">http://host:8000/</string>
     <string name="repo_hint_s3" translatable="false">s3.us-east-1.amazonaws.com/bucket_name</string>
     <string name="label_path">Pfad</string>
@@ -480,7 +479,6 @@
     <string name="settings_system_permission_storage">Speicherzugriff</string>
     <string name="settings_system_permission_local_network">Zugriff auf lokales Netzwerk</string>
     <string name="local_network_permission_enabled">Zugriff auf lokales Netzwerk gewährt</string>
-    <string name="repo_supporting_sftp">Benutzerdefinierter Port: sftp://user@host:2222//srv/restic-repo (verwenden Sie einen einzelnen / nach dem Port für relative Pfade)</string>
     <string name="home_operation_running_title">%1$s wird ausgeführt</string>
     <string name="home_operation_running_default_title">Vorgang wird ausgeführt</string>
     <string name="home_operation_running_tap_hint">Tippen, um den Fortschritt anzuzeigen</string>
