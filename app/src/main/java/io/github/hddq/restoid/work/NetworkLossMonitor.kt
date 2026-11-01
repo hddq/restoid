@@ -57,16 +57,55 @@ fun isRemoteBackend(backendType: RepositoryBackendType?): Boolean {
  * Restic retries failed backend operations for up to 15 minutes each with no
  * off switch, so without this a dead or downgraded link burns CPU, radio,
  * and (on mobile data) the user's allowance indefinitely.
+ *
+ * The primary constructor takes its collaborators as parameters so the
+ * timer/polling behavior is unit testable with virtual time; production
+ * callers use the secondary constructor, which wires the real
+ * ConnectivityManager.
  */
 class NetworkLossMonitor(
-    context: Context,
+    private val stateProvider: () -> Pair<Boolean, Boolean>,
+    private val registerCallback: ((ConnectivityManager.NetworkCallback) -> Unit)? = null,
+    private val unregisterCallback: ((ConnectivityManager.NetworkCallback) -> Unit)? = null,
     private val gracePeriodMs: Long = NETWORK_LOSS_GRACE_PERIOD_MS,
+    private val pollIntervalMs: Long = NETWORK_LOSS_POLL_INTERVAL_MS,
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
     private val onSustainedViolation: () -> Unit
 ) {
-    private val appContext = context.applicationContext
-    private val connectivityManager =
-        appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    constructor(
+        context: Context,
+        gracePeriodMs: Long = NETWORK_LOSS_GRACE_PERIOD_MS,
+        onSustainedViolation: () -> Unit
+    ) : this(
+        stateProvider = { productionState(context.applicationContext) },
+        registerCallback = { callback ->
+            connectivityManagerOf(context.applicationContext).registerDefaultNetworkCallback(callback)
+        },
+        unregisterCallback = { callback ->
+            connectivityManagerOf(context.applicationContext).unregisterNetworkCallback(callback)
+        },
+        gracePeriodMs = gracePeriodMs,
+        onSustainedViolation = onSustainedViolation
+    )
+
+    companion object {
+        private fun connectivityManagerOf(context: Context) =
+            context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
+        private fun productionState(appContext: Context): Pair<Boolean, Boolean> {
+            val connectivityManager = connectivityManagerOf(appContext)
+            val network = connectivityManager.activeNetwork ?: return false to false
+            val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false to false
+            // Require only INTERNET, not VALIDATED: a Wi-Fi network without
+            // upstream internet still advertises INTERNET, and LAN backends
+            // (e.g. nas.local) stay reachable. VALIDATED would false-positive
+            // on those links and abort working backups. Full disconnects still
+            // read as down via activeNetwork == null above.
+            val hasInternet = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            val isUnmetered = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+            return hasInternet to isUnmetered
+        }
+    }
 
     @Volatile
     var backendIsRemote: Boolean = false
@@ -79,6 +118,11 @@ class NetworkLossMonitor(
 
     @Volatile
     private var poller: Job? = null
+
+    /** Set once the violation has been reported; cleared on recovery so the
+     * next outage earns its own full grace period instead of re-firing. */
+    @Volatile
+    private var fired = false
 
     /**
      * Guards [timer] transitions. Evaluations arrive from both
@@ -98,10 +142,13 @@ class NetworkLossMonitor(
 
     fun start() {
         android.util.Log.d(TAG, "start: backendIsRemote=$backendIsRemote requireUnmetered=$requireUnmetered")
-        runCatching {
-            connectivityManager.registerDefaultNetworkCallback(callback)
-        }.onFailure {
-            android.util.Log.w(TAG, "registerDefaultNetworkCallback failed", it)
+        val register = registerCallback
+        if (register != null) {
+            runCatching {
+                register(callback)
+            }.onFailure {
+                android.util.Log.w(TAG, "registerDefaultNetworkCallback failed", it)
+            }
         }
         // Poll as well as listening: teardown events can be missed or coalesced
         // (observed on emulator airplane toggles), and polling also covers
@@ -109,7 +156,7 @@ class NetworkLossMonitor(
         poller?.cancel()
         poller = scope.launch {
             while (true) {
-                delay(NETWORK_LOSS_POLL_INTERVAL_MS)
+                delay(pollIntervalMs)
                 evaluate()
             }
         }
@@ -123,8 +170,11 @@ class NetworkLossMonitor(
             poller?.cancel()
             poller = null
         }
-        runCatching {
-            connectivityManager.unregisterNetworkCallback(callback)
+        val unregister = unregisterCallback
+        if (unregister != null) {
+            runCatching {
+                unregister(callback)
+            }
         }
         scope.cancel()
     }
@@ -135,11 +185,11 @@ class NetworkLossMonitor(
         evaluate()
     }
 
-    private fun evaluate() {
+    internal fun evaluate() {
         if (!backendIsRemote) return
         // Read state outside the lock (binder calls); only the timer
         // transitions below need to be atomic.
-        val (hasInternet, isUnmetered) = currentState()
+        val (hasInternet, isUnmetered) = stateProvider()
         android.util.Log.d(TAG, "evaluate: hasInternet=$hasInternet isUnmetered=$isUnmetered requireUnmetered=$requireUnmetered")
         val violated = !hasInternet || (requireUnmetered && !isUnmetered)
         synchronized(lock) {
@@ -147,17 +197,20 @@ class NetworkLossMonitor(
                 // Blip over (or never violated): stand down so a later outage gets a full grace period.
                 timer?.cancel()
                 timer = null
+                fired = false
                 return
             }
-            // Still violated. If a grace countdown is already running, let it finish —
-            // re-evaluations (polls, repeat callbacks) must not restart it or the
+            // Still violated. If a grace countdown is already running, or this
+            // outage was already reported, let things be: re-evaluations
+            // (polls, repeat callbacks) must not restart the countdown or the
             // grace period could never elapse during a sustained outage.
-            if (timer != null) return
+            if (timer != null || fired) return
             android.util.Log.w(TAG, "violation detected, starting ${gracePeriodMs}ms grace timer")
             timer = scope.launch {
                 delay(gracePeriodMs)
-                val (stillHasInternet, stillUnmetered) = currentState()
-                if (shouldAbortNetworkRun(
+                val (stillHasInternet, stillUnmetered) = stateProvider()
+                val shouldFire = synchronized(lock) {
+                    val abort = !fired && shouldAbortNetworkRun(
                         backendIsRemote = true,
                         hasInternet = stillHasInternet,
                         isUnmetered = stillUnmetered,
@@ -165,26 +218,16 @@ class NetworkLossMonitor(
                         downDurationMs = gracePeriodMs,
                         gracePeriodMs = gracePeriodMs
                     )
-                ) {
+                    if (abort) fired = true
+                    timer = null
+                    abort
+                }
+                if (shouldFire) {
                     android.util.Log.w(TAG, "sustained violation, requesting stop")
                     onSustainedViolation()
                 }
-                synchronized(lock) { timer = null }
             }
         }
-    }
-
-    private fun currentState(): Pair<Boolean, Boolean> {
-        val network = connectivityManager.activeNetwork ?: return false to false
-        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false to false
-        // Require only INTERNET, not VALIDATED: a Wi-Fi network without
-        // upstream internet still advertises INTERNET, and LAN backends
-        // (e.g. nas.local) stay reachable. VALIDATED would false-positive
-        // on those links and abort working backups. Full disconnects still
-        // read as down via activeNetwork == null above.
-        val hasInternet = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-        val isUnmetered = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
-        return hasInternet to isUnmetered
     }
 }
 

@@ -105,6 +105,11 @@ android {
             versionNameSuffix = "-debug"
         }
     }
+    testOptions {
+        // android.util.Log (used for abort diagnostics) returns defaults
+        // instead of throwing in plain JVM unit tests.
+        unitTests.isReturnDefaultValues = true
+    }
     dependenciesInfo {
         includeInApk = false
         includeInBundle = false
@@ -175,6 +180,7 @@ dependencies {
     implementation(libs.aboutlibraries.compose)
 
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
