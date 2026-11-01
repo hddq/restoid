@@ -319,7 +319,7 @@ class SettingsViewModel(
     fun onNewRepoSftpPortChanged(port: String) {
         pendingSftpTrustRequest = null
         _addRepoUiState.update {
-            it.copy(sftpPort = port.filter(Char::isDigit).take(5), sftpServerTrustInfo = null, state = AddRepositoryState.Idle)
+            it.copy(sftpPort = port, sftpServerTrustInfo = null, state = AddRepositoryState.Idle)
         }
     }
 

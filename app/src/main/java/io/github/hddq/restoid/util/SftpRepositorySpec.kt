@@ -103,7 +103,7 @@ object SftpRepositorySpec {
             normalizedPath.startsWith("~/") -> normalizedPath.removePrefix("~/").trimStart('/')
             else -> normalizedPath
         }
-        if (normalizedPath.isEmpty() || normalizedPath == "/") return Result.Failure(Error.MISSING_PATH)
+        if (normalizedPath.isEmpty()) return Result.Failure(Error.MISSING_PATH)
 
         val isIpv6 = normalizedHost.startsWith("[")
         val useUrlForm = isIpv6 || (portNumber != null && portNumber != DEFAULT_PORT)

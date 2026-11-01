@@ -27,6 +27,7 @@ import io.github.hddq.restoid.data.RepositoryBackendType
 import io.github.hddq.restoid.ui.components.SshPrivateKeyField
 import io.github.hddq.restoid.ui.settings.AddRepoUiState
 import io.github.hddq.restoid.ui.settings.SftpAuthMethod
+import io.github.hddq.restoid.util.SftpRepositorySpec
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,9 +71,17 @@ fun AddRepositoryDialog(
         uiState.backendType == RepositoryBackendType.SFTP &&
             uiState.sftpAuthMethod == SftpAuthMethod.KEY && uiState.sftpKey.isBlank()
             
+    val hasSftpSpec = uiState.backendType == RepositoryBackendType.SFTP &&
+        SftpRepositorySpec.build(
+            host = uiState.sftpHost,
+            port = "",
+            user = uiState.sftpUsername,
+            path = uiState.sftpPath
+        ) is SftpRepositorySpec.Result.Success
+
     val canConfirm = !isBusy &&
         (if (uiState.backendType == RepositoryBackendType.SFTP) {
-            uiState.sftpHost.isNotBlank() && uiState.sftpUsername.isNotBlank() && uiState.sftpPath.isNotBlank()
+            hasSftpSpec
         } else {
             uiState.path.isNotBlank()
         }) &&

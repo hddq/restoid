@@ -27,6 +27,13 @@ class SftpRepositorySpecTest {
     }
 
     @Test
+    fun rootPath_isAllowed() {
+        assertEquals(ok("sftp:me@nas:/"), spec("nas", user = "me", path = "/"))
+        assertEquals(ok("sftp://me@nas:2222//"), spec("nas", port = "2222", user = "me", path = "/"))
+        assertEquals(ok("sftp://me@nas:2222//"), spec("sftp://me@nas:2222//"))
+    }
+
+    @Test
     fun tildePath_isRelativeToHome() {
         assertEquals(ok("sftp:me@nas:backups/repo"), spec("nas", user = "me", path = "~/backups/repo"))
         assertEquals(ok("sftp://me@nas:2222/repo"), spec("nas", port = "2222", user = "me", path = "~/repo"))
