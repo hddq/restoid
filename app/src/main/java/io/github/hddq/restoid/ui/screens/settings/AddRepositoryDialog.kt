@@ -3,6 +3,7 @@ package io.github.hddq.restoid.ui.screens.settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FolderOpen
@@ -14,6 +15,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -23,6 +27,7 @@ import io.github.hddq.restoid.data.RepositoryBackendType
 import io.github.hddq.restoid.ui.components.SshPrivateKeyField
 import io.github.hddq.restoid.ui.settings.AddRepoUiState
 import io.github.hddq.restoid.ui.settings.SftpAuthMethod
+import io.github.hddq.restoid.util.SftpRepositorySpec
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,6 +36,10 @@ fun AddRepositoryDialog(
     onDismiss: () -> Unit,
     onBackendTypeChange: (RepositoryBackendType) -> Unit,
     onPathChange: (String) -> Unit,
+    onSftpHostChange: (String) -> Unit,
+    onSftpPortChange: (String) -> Unit,
+    onSftpUsernameChange: (String) -> Unit,
+    onSftpPathChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onSftpPasswordChange: (String) -> Unit,
     onSftpKeyChange: (String) -> Unit,
@@ -62,8 +71,20 @@ fun AddRepositoryDialog(
         uiState.backendType == RepositoryBackendType.SFTP &&
             uiState.sftpAuthMethod == SftpAuthMethod.KEY && uiState.sftpKey.isBlank()
             
+    val hasSftpSpec = uiState.backendType == RepositoryBackendType.SFTP &&
+        SftpRepositorySpec.build(
+            host = uiState.sftpHost,
+            port = "",
+            user = uiState.sftpUsername,
+            path = uiState.sftpPath
+        ) is SftpRepositorySpec.Result.Success
+
     val canConfirm = !isBusy &&
-        uiState.path.isNotBlank() &&
+        (if (uiState.backendType == RepositoryBackendType.SFTP) {
+            hasSftpSpec
+        } else {
+            uiState.path.isNotBlank()
+        }) &&
         uiState.password.isNotBlank() &&
         !hasIncompleteRestCredentials &&
         !hasIncompleteS3Credentials &&
@@ -85,7 +106,7 @@ fun AddRepositoryDialog(
 
     val pathPlaceholder = when (uiState.backendType) {
         RepositoryBackendType.LOCAL -> stringResource(R.string.placeholder_select_directory)
-        RepositoryBackendType.SFTP -> stringResource(R.string.repo_hint_sftp)
+        RepositoryBackendType.SFTP -> ""
         RepositoryBackendType.REST -> stringResource(R.string.repo_hint_rest)
         RepositoryBackendType.S3 -> stringResource(R.string.repo_hint_s3)
     }
@@ -144,36 +165,90 @@ fun AddRepositoryDialog(
                     }
                 }
 
-                OutlinedTextField(
-                    value = uiState.path,
-                    onValueChange = onPathChange,
-                    label = {
-                        Text(
-                            if (uiState.backendType == RepositoryBackendType.LOCAL) {
-                                stringResource(R.string.label_path)
-                            } else {
-                                stringResource(R.string.label_repository_specification)
-                            }
+                if (uiState.backendType == RepositoryBackendType.SFTP) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = uiState.sftpHost,
+                            onValueChange = onSftpHostChange,
+                            label = { Text(stringResource(R.string.label_sftp_host)) },
+                            placeholder = { Text(stringResource(R.string.placeholder_sftp_host)) },
+                            singleLine = true,
+                            isError = uiState.state is AddRepositoryState.Error,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next),
+                            modifier = Modifier.weight(1f),
+                            enabled = !isBusy
                         )
-                    },
-                    placeholder = { Text(pathPlaceholder) },
-                    supportingText = if (uiState.backendType == RepositoryBackendType.SFTP) {
-                        { Text(stringResource(R.string.repo_supporting_sftp)) }
-                    } else {
-                        null
-                    },
-                    singleLine = true,
-                    isError = uiState.state is AddRepositoryState.Error,
-                    trailingIcon = {
-                        if (uiState.backendType == RepositoryBackendType.LOCAL) {
-                            IconButton(onClick = onSelectPath, enabled = !isBusy) {
-                                Icon(Icons.Default.FolderOpen, contentDescription = stringResource(R.string.cd_select_folder))
+                        OutlinedTextField(
+                            value = uiState.sftpPort,
+                            onValueChange = onSftpPortChange,
+                            label = { Text(stringResource(R.string.label_sftp_port)) },
+                            placeholder = { Text(stringResource(R.string.placeholder_sftp_port)) },
+                            singleLine = true,
+                            isError = uiState.state is AddRepositoryState.Error,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
+                            modifier = Modifier.width(96.dp),
+                            enabled = !isBusy
+                        )
+                    }
+
+                    OutlinedTextField(
+                        value = uiState.sftpUsername,
+                        onValueChange = onSftpUsernameChange,
+                        label = { Text(stringResource(R.string.label_sftp_username)) },
+                        singleLine = true,
+                        isError = uiState.state is AddRepositoryState.Error,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Ascii,
+                            autoCorrectEnabled = false,
+                            capitalization = KeyboardCapitalization.None,
+                            imeAction = ImeAction.Next
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isBusy
+                    )
+
+                    OutlinedTextField(
+                        value = uiState.sftpPath,
+                        onValueChange = onSftpPathChange,
+                        label = { Text(stringResource(R.string.label_sftp_repository_path)) },
+                        placeholder = { Text(stringResource(R.string.placeholder_sftp_repository_path)) },
+                        supportingText = { Text(stringResource(R.string.repo_supporting_sftp_path)) },
+                        singleLine = true,
+                        isError = uiState.state is AddRepositoryState.Error,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next),
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isBusy
+                    )
+                } else {
+                    OutlinedTextField(
+                        value = uiState.path,
+                        onValueChange = onPathChange,
+                        label = {
+                            Text(
+                                if (uiState.backendType == RepositoryBackendType.LOCAL) {
+                                    stringResource(R.string.label_path)
+                                } else {
+                                    stringResource(R.string.label_repository_specification)
+                                }
+                            )
+                        },
+                        placeholder = { Text(pathPlaceholder) },
+                        singleLine = true,
+                        isError = uiState.state is AddRepositoryState.Error,
+                        trailingIcon = {
+                            if (uiState.backendType == RepositoryBackendType.LOCAL) {
+                                IconButton(onClick = onSelectPath, enabled = !isBusy) {
+                                    Icon(Icons.Default.FolderOpen, contentDescription = stringResource(R.string.cd_select_folder))
+                                }
                             }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !isBusy
-                )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isBusy
+                    )
+                }
 
                 OutlinedTextField(
                     value = uiState.password,

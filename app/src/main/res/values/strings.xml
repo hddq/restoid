@@ -259,8 +259,18 @@
     <string name="repo_backend_rest">HTTP REST server</string>
     <string name="repo_backend_s3" translatable="false">Amazon S3 / MinIO</string>
 
-    <string name="repo_hint_sftp" translatable="false">user@host:/srv/restic-repo</string>
-    <string name="repo_supporting_sftp">Custom port: sftp://user@host:2222//srv/restic-repo (use single / after port for relative path)</string>
+    <string name="label_sftp_host">Host</string>
+    <string name="label_sftp_port">Port</string>
+    <string name="label_sftp_username">Username</string>
+    <string name="label_sftp_repository_path">Repository path</string>
+    <string name="placeholder_sftp_host" translatable="false">nas.local</string>
+    <string name="placeholder_sftp_port" translatable="false">22</string>
+    <string name="placeholder_sftp_repository_path" translatable="false">/srv/restic-repo</string>
+    <string name="repo_supporting_sftp_path">Absolute (/srv/restic-repo) or relative to your home directory (restic-repo)</string>
+    <string name="error_sftp_host_empty">Host cannot be empty</string>
+    <string name="error_sftp_username_empty">Username cannot be empty</string>
+    <string name="error_sftp_path_empty">Repository path cannot be empty</string>
+    <string name="error_sftp_port_invalid">Port must be a number between 1 and 65535</string>
     <string name="repo_hint_rest" translatable="false">http://host:8000/</string>
     <string name="repo_hint_s3" translatable="false">s3.us-east-1.amazonaws.com/bucket_name</string>
 
