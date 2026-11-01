@@ -19,7 +19,10 @@ import kotlinx.coroutines.launch
  * testable without Android networking.
  *
  * @param backendIsRemote true for SFTP/REST/S3 repositories; local runs never abort.
- * @param hasInternet true when the active network is usable (validated internet access).
+ * @param hasInternet true when there is a usable network (active network with
+ *   internet capability, which includes LAN-only links without public
+ *   internet access). Deliberately NOT gated on VALIDATED, so backups to
+ *   LAN hosts (e.g. nas.local over Wi-Fi without upstream) are unaffected.
  * @param isUnmetered true when the active network is unmetered.
  * @param requireUnmetered true when the run must stay on unmetered networks.
  * @param downDurationMs how long the current violation has persisted.
@@ -159,8 +162,12 @@ class NetworkLossMonitor(
     private fun currentState(): Pair<Boolean, Boolean> {
         val network = connectivityManager.activeNetwork ?: return false to false
         val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false to false
-        val hasInternet = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+        // Require only INTERNET, not VALIDATED: a Wi-Fi network without
+        // upstream internet still advertises INTERNET, and LAN backends
+        // (e.g. nas.local) stay reachable. VALIDATED would false-positive
+        // on those links and abort working backups. Full disconnects still
+        // read as down via activeNetwork == null above.
+        val hasInternet = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
         val isUnmetered = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
         return hasInternet to isUnmetered
     }
