@@ -53,6 +53,7 @@ class RepositoriesRepository(
         // Timeout for S3 repo existence check — restic retries indefinitely when bucket is missing
         private const val S3_CHECK_TIMEOUT_SECONDS = 5
         private const val SSH_KEY_PASSPHRASE_ENV = "RESTOID_SSH_KEY_PASSPHRASE"
+        private const val MAX_INITIALIZATION_ERROR_LENGTH = 2000
     }
 
     private val prefs = context.getSharedPreferences("repositories", Context.MODE_PRIVATE)
@@ -388,7 +389,7 @@ class RepositoriesRepository(
             val passwordFile = File.createTempFile("restic-pass", ".tmp", context.cacheDir)
             val tempSftpKeyFile = if (sftpKeyAuthRequired && sftpKey.isNotBlank()) {
                 val keyFile = File.createTempFile("sftp-key", ".tmp", context.cacheDir)
-                keyFile.writeText(sftpKey)
+                keyFile.writeText(sftpKey.trimEnd() + "\n")
                 keyFile.setReadable(false, false)
                 keyFile.setWritable(false, false)
                 keyFile.setExecutable(false, false)
@@ -572,7 +573,7 @@ class RepositoriesRepository(
 
             val tempSftpKeyFile = if (backendType == RepositoryBackendType.SFTP && sftpKeyAuthRequired && sftpKey.isNotBlank()) {
                 val keyFile = File.createTempFile("sftp-key", ".tmp", context.cacheDir)
-                keyFile.writeText(sftpKey)
+                keyFile.writeText(sftpKey.trimEnd() + "\n")
                 keyFile.setReadable(false, false)
                 keyFile.setWritable(false, false)
                 keyFile.setExecutable(false, false)
@@ -715,6 +716,7 @@ class RepositoriesRepository(
                                 password,
                                 resticRepository,
                                 executionEnvironmentVariables,
+                                executionResticOptions,
                                 savePassword,
                                 wasEmpty,
                                 sftpPassword,
@@ -754,6 +756,7 @@ class RepositoriesRepository(
                                 password,
                                 resticRepository,
                                 executionEnvironmentVariables,
+                                executionResticOptions,
                                 savePassword,
                                 wasEmpty,
                                 sftpPassword,
@@ -794,6 +797,7 @@ class RepositoriesRepository(
                             password,
                             resticRepository,
                             executionEnvironmentVariables,
+                            executionResticOptions,
                             savePassword,
                             wasEmpty,
                             sftpPassword,
@@ -813,13 +817,14 @@ class RepositoriesRepository(
                             isMissingS3Bucket = timedOut || bucketMissing
                         }
 
-                        val initResult = Shell.cmd(buildString {
+                        val initCommand = buildString {
                             if (envPrefix.isNotEmpty()) append(envPrefix).append(' ')
                             append("RESTIC_PASSWORD_FILE=").append(shellQuote(passwordFile.absolutePath)).append(' ')
                             append(shellQuote(resticPath)).append(' ')
                             if (resticOptionFlags.isNotEmpty()) append(resticOptionFlags).append(' ')
                             append("-r ").append(shellQuote(resolvedPath)).append(" init")
-                        }).exec()
+                        }
+                        val (initResult, initErrorOutput) = execShellWithCapturedError(initCommand)
 
                         if (initResult.isSuccess) {
                             handleSuccessfulRepoAdd(
@@ -827,6 +832,7 @@ class RepositoriesRepository(
                                 password,
                                 resticRepository,
                                 executionEnvironmentVariables,
+                                executionResticOptions,
                                 savePassword,
                                 wasEmpty,
                                 sftpPassword,
@@ -841,7 +847,9 @@ class RepositoriesRepository(
                             if (isMissingS3Bucket) {
                                 AddRepositoryState.Error(context.getString(R.string.repo_error_s3_bucket_not_found))
                             } else {
-                                AddRepositoryState.Error(context.getString(R.string.repo_error_failed_initialize))
+                                AddRepositoryState.Error(
+                                    formatInitializationError(initResult.code, initErrorOutput)
+                                )
                             }
                         }
                     }
@@ -858,6 +866,7 @@ class RepositoriesRepository(
         password: String,
         resticRepository: ResticRepository,
         executionEnvironmentVariables: Map<String, String>,
+        executionResticOptions: Map<String, String>,
         savePassword: Boolean,
         wasEmpty: Boolean,
         sftpPassword: String,
@@ -872,7 +881,7 @@ class RepositoriesRepository(
             repo.path,
             password,
             executionEnvironmentVariables,
-            repo.resticOptions
+            executionResticOptions
         )
         if (configResult.isSuccess) {
             val repoId = configResult.getOrNull()?.id
@@ -884,7 +893,7 @@ class RepositoriesRepository(
                     password,
                     resticRepository,
                     executionEnvironmentVariables,
-                    repo.resticOptions
+                    executionResticOptions
                 )
                 if (restoreResult.isFailure) {
                     metadataRestoreSuccess = false
@@ -1091,6 +1100,13 @@ class RepositoriesRepository(
         return result to errorOutput
     }
 
+    private fun formatInitializationError(exitCode: Int, errorOutput: String): String {
+        val header = context.getString(R.string.repo_error_failed_initialize)
+        val details = errorOutput.trim().take(MAX_INITIALIZATION_ERROR_LENGTH)
+        val diagnostic = details.ifBlank { "Restic exited with code $exitCode and returned no error details." }
+        return "$header (exit code $exitCode)\n\n$diagnostic"
+    }
+
     private fun saveRepository(repository: LocalRepository) {
         val currentJsonSet = prefs.getStringSet(REPOS_KEY, emptySet())?.toMutableSet() ?: mutableSetOf()
         val repoJson = json.encodeToString(repository)
@@ -1204,7 +1220,7 @@ class RepositoriesRepository(
                 throw IllegalStateException(context.getString(R.string.repo_error_sftp_key_storage_failed))
             }
 
-            keyFile.writeText(sftpKey)
+            keyFile.writeText(sftpKey.trimEnd() + "\n")
 
             keysDir.setExecutable(true, true)
             keysDir.setReadable(true, true)

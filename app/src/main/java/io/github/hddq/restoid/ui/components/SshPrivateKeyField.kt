@@ -81,6 +81,6 @@ private fun readPrivateKeyText(context: Context, uri: Uri): Result<String> {
 
         imported.trimEnd().ifBlank {
             throw IllegalStateException(context.getString(R.string.error_sftp_key_file_empty))
-        }
+        } + "\n"
     }
 }

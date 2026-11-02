@@ -32,6 +32,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowUpward
 import androidx.compose.material.icons.outlined.CreateNewFolder
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.SdStorage
@@ -70,6 +71,7 @@ import androidx.compose.ui.unit.dp
 import com.topjohnwu.superuser.Shell
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.util.StorageUtils
+import io.github.hddq.restoid.util.StorageEntryItem
 import io.github.hddq.restoid.util.StorageVolumeItem
 import io.github.hddq.restoid.util.shellQuote
 import kotlinx.coroutines.Dispatchers
@@ -81,7 +83,7 @@ import java.io.File
 private data class FolderBrowserViewState(
     val atRoots: Boolean,
     val path: String,
-    val entries: List<String>?,
+    val entries: List<StorageEntryItem>?,
     val isLoading: Boolean,
     val depth: Int
 )
@@ -90,6 +92,8 @@ private data class FolderBrowserViewState(
 @Composable
 fun FolderPickerSheet(
     initialPath: String? = null,
+    allowSystemPaths: Boolean = false,
+    allowFiles: Boolean = false,
     onSelectPath: (String) -> Unit,
     onDismissRequest: () -> Unit
 ) {
@@ -134,7 +138,13 @@ fun FolderPickerSheet(
 
     LaunchedEffect(Unit) {
         val loadedVolumes = withContext(Dispatchers.IO) {
-            StorageUtils.listStorageVolumes()
+            StorageUtils.listStorageVolumes().let { volumes ->
+                if (allowSystemPaths && runCatching { Shell.getShell().isRoot }.getOrDefault(false)) {
+                    listOf(StorageVolumeItem(path = "/", name = "", isPrimary = false)) + volumes
+                } else {
+                    volumes
+                }
+            }
         }
         storageVolumes = loadedVolumes
         if (normalizedInitial == null) {
@@ -171,7 +181,7 @@ fun FolderPickerSheet(
         }
 
         val loadedEntries = withContext(Dispatchers.IO) {
-            StorageUtils.listChildDirectories(targetPath, showHidden)
+            StorageUtils.listChildEntries(targetPath, showHidden, allowFiles)
         }
         loadingJob.cancel()
 
@@ -193,15 +203,22 @@ fun FolderPickerSheet(
             manualPathError = invalidPathMsg
         } else {
             scope.launch {
-                val exists = withContext(Dispatchers.IO) {
-                    File(normalized).isDirectory ||
-                        runCatching {
-                            Shell.getShell().isRoot &&
-                                Shell.cmd("[ -d ${shellQuote(normalized)} ]").exec().isSuccess
-                        }.getOrDefault(false)
+                val pathType = withContext(Dispatchers.IO) {
+                    val isRoot = runCatching { Shell.getShell().isRoot }.getOrDefault(false)
+                    val isDirectory = File(normalized).isDirectory ||
+                        (isRoot && Shell.cmd("[ -d ${shellQuote(normalized)} ]").exec().isSuccess)
+                    val isFile = allowFiles && (File(normalized).isFile ||
+                        (isRoot && Shell.cmd("[ -f ${shellQuote(normalized)} ]").exec().isSuccess))
+                    when {
+                        isDirectory -> "directory"
+                        isFile -> "file"
+                        else -> null
+                    }
                 }
-                if (!exists) {
+                if (pathType == null) {
                     manualPathError = notFoundTemplate.format(normalized)
+                } else if (pathType == "file") {
+                    onSelectPath(normalized)
                 } else {
                     manualPathError = null
                     targetPath = normalized
@@ -346,7 +363,9 @@ fun FolderPickerSheet(
                             .padding(vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val showHiddenLabel = stringResource(R.string.folder_browser_show_hidden)
+                        val showHiddenLabel = stringResource(
+                            if (allowFiles) R.string.folder_browser_show_hidden_items else R.string.folder_browser_show_hidden
+                        )
                         Text(
                             text = showHiddenLabel,
                             style = MaterialTheme.typography.bodyMedium,
@@ -470,6 +489,8 @@ fun FolderPickerSheet(
                                 itemsIndexed(storageVolumes, key = { _, item -> item.path }) { index, volume ->
                                     val title = if (volume.isPrimary) {
                                         stringResource(R.string.folder_browser_internal_storage)
+                                    } else if (volume.path == "/") {
+                                        stringResource(R.string.folder_browser_system_root)
                                     } else {
                                         stringResource(R.string.folder_browser_external_storage, volume.name)
                                     }
@@ -484,11 +505,11 @@ fun FolderPickerSheet(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Icon(
-                                            imageVector = if (volume.isPrimary) {
-                                                Icons.Outlined.Smartphone
-                                            } else {
-                                                Icons.Outlined.SdStorage
-                                            },
+                            imageVector = when {
+                                volume.isPrimary -> Icons.Outlined.Smartphone
+                                volume.path == "/" -> Icons.Outlined.Folder
+                                else -> Icons.Outlined.SdStorage
+                            },
                                             contentDescription = null,
                                             tint = MaterialTheme.colorScheme.primary
                                         )
@@ -524,7 +545,9 @@ fun FolderPickerSheet(
 
                         state.entries.isEmpty() -> {
                             Text(
-                                text = stringResource(R.string.folder_browser_empty),
+                                text = stringResource(
+                                    if (allowFiles) R.string.folder_browser_empty_items else R.string.folder_browser_empty
+                                ),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(vertical = 24.dp)
@@ -534,24 +557,29 @@ fun FolderPickerSheet(
                         else -> {
                             val currentEntries = state.entries
                             LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                                itemsIndexed(currentEntries, key = { _, name -> name }) { index, name ->
+                                itemsIndexed(currentEntries, key = { _, entry -> entry.name }) { index, entry ->
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .clickable {
-                                                targetPath = File(state.path, name).absolutePath
+                                                val childPath = File(state.path, entry.name).absolutePath
+                                                if (entry.isDirectory) {
+                                                    targetPath = childPath
+                                                } else {
+                                                    onSelectPath(childPath)
+                                                }
                                             }
                                             .padding(vertical = 12.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Outlined.Folder,
+                                            imageVector = if (entry.isDirectory) Icons.Outlined.Folder else Icons.Outlined.Description,
                                             contentDescription = null,
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                         Spacer(modifier = Modifier.width(16.dp))
                                         Text(
-                                            text = name,
+                                            text = entry.name,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis,
                                             style = MaterialTheme.typography.bodyLarge,

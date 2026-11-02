@@ -13,6 +13,11 @@ data class StorageVolumeItem(
     val isPrimary: Boolean
 )
 
+data class StorageEntryItem(
+    val name: String,
+    val isDirectory: Boolean
+)
+
 object StorageUtils {
 
     /**
@@ -122,6 +127,41 @@ object StorageUtils {
         return result.out
             .filter { it.isNotBlank() && (showHidden || !it.startsWith(".")) }
             .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it })
+    }
+
+    /**
+     * Lists child directories and, when requested, regular files inside [path].
+     * Root shell fallback supports paths hidden from the app process.
+     */
+    fun listChildEntries(path: String, showHidden: Boolean, includeFiles: Boolean): List<StorageEntryItem>? {
+        val dir = File(path)
+        val directChildren = runCatching { dir.listFiles() }.getOrNull()
+        if (directChildren != null) {
+            return directChildren
+                .filter {
+                    (it.isDirectory || (includeFiles && it.isFile)) &&
+                        (showHidden || !it.name.startsWith("."))
+                }
+                .map { StorageEntryItem(it.name, it.isDirectory) }
+                .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
+        }
+
+        val isRoot = runCatching { Shell.getShell().isRoot }.getOrDefault(false)
+        if (!isRoot || !Shell.cmd("[ -d ${shellQuote(path)} ]").exec().isSuccess) return null
+
+        val directoryNames = listChildDirectories(path, showHidden) ?: return null
+        val fileNames = if (includeFiles) {
+            val result = Shell.cmd(
+                "find ${shellQuote(path)} -mindepth 1 -maxdepth 1 \\( -type f -o -type l \\) -exec basename {} \\;"
+            ).exec()
+            if (!result.isSuccess) return null
+            result.out.filter { it.isNotBlank() && (showHidden || !it.startsWith(".")) }
+        } else {
+            emptyList()
+        }
+
+        return (directoryNames.map { StorageEntryItem(it, true) } + fileNames.map { StorageEntryItem(it, false) })
+            .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
     }
 
     /**

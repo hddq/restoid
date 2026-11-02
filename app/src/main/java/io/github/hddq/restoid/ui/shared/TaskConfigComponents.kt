@@ -914,6 +914,8 @@ fun CustomDirectoriesConfigScreen(
 
     if (showFolderPicker) {
         io.github.hddq.restoid.ui.components.FolderPickerSheet(
+            allowSystemPaths = true,
+            allowFiles = true,
             onSelectPath = { selectedPath ->
                 showFolderPicker = false
                 onAddDirectory(selectedPath)
