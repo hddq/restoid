@@ -147,15 +147,13 @@ object StorageUtils {
         val checkDir = Shell.cmd("[ -d ${shellQuote(path)} ]").exec().isSuccess
         if (!checkDir) return null
 
-        val findCmd = buildString {
-            append("find -H ").append(shellQuote(path))
-            append(" -mindepth 1 -maxdepth 1 \\( -type d -o \\( -type l -exec test -d {} \\; \\) \\) -exec basename {} \\;")
-        }
+        val findCmd = """find -H ${shellQuote(path)} -mindepth 1 -maxdepth 1 \( -type d -o \( -type l -exec test -d {} \; \) \) -exec sh -c 'name=${'$'}{1##*/}; printf "%s" "${'$'}name" | od -An -tx1 | tr -d " \n"; printf "\n"' sh {} \;"""
         val result = Shell.cmd(findCmd).exec()
         if (!result.isSuccess) return null
 
         return result.out
-            .filter { it.isNotBlank() && (showHidden || !it.startsWith(".")) }
+            .mapNotNull(::decodeHexFilename)
+            .filter { showHidden || !it.startsWith(".") }
             .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it })
     }
 
@@ -182,17 +180,32 @@ object StorageUtils {
         val directoryNames = listChildDirectories(path, showHidden) ?: return null
         val fileNames = if (includeFiles) {
             val result = Shell.cmd(
-                "find -H ${shellQuote(path)} -mindepth 1 -maxdepth 1 \\( -type f -o \\( -type l -exec test -f {} \\; \\) \\) -exec basename {} \\;"
+                """find -H ${shellQuote(path)} -mindepth 1 -maxdepth 1 \( -type f -o \( -type l -exec test -f {} \; \) \) -exec sh -c 'name=${'$'}{1##*/}; printf "%s" "${'$'}name" | od -An -tx1 | tr -d " \n"; printf "\n"' sh {} \;"""
             ).exec()
             if (!result.isSuccess) return null
             val dirSet = directoryNames.toSet()
-            result.out.filter { it.isNotBlank() && it !in dirSet && (showHidden || !it.startsWith(".")) }
+            result.out
+                .mapNotNull(::decodeHexFilename)
+                .filter { it !in dirSet && (showHidden || !it.startsWith(".")) }
         } else {
             emptyList()
         }
 
         return (directoryNames.map { StorageEntryItem(it, true) } + fileNames.map { StorageEntryItem(it, false) })
             .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
+    }
+
+    /** Decodes the ASCII hex records emitted by the root-shell find commands. */
+    private fun decodeHexFilename(value: String): String? {
+        if (value.length % 2 != 0) return null
+        return runCatching {
+            ByteArray(value.length / 2) { index ->
+                val high = Character.digit(value[index * 2], 16)
+                val low = Character.digit(value[index * 2 + 1], 16)
+                require(high >= 0 && low >= 0)
+                ((high shl 4) or low).toByte()
+            }.toString(Charsets.UTF_8)
+        }.getOrNull()
     }
 
     /**

@@ -323,6 +323,10 @@ fun ConfirmForgetDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
 @Composable
 fun BackedUpCustomDirItem(path: String, metadata: io.github.hddq.restoid.model.CustomDirectoryMetadata) {
     val context = LocalContext.current
+    metadata.isDirectory?.let { isDirectory ->
+        BackedUpCustomDirItemContent(path, metadata, isDirectory, context)
+        return
+    }
     val initialIsDir = io.github.hddq.restoid.util.StorageUtils.isDirectoryFast(path)
     val isDirectory by produceState(
         initialValue = initialIsDir ?: true,
@@ -334,6 +338,16 @@ fun BackedUpCustomDirItem(path: String, metadata: io.github.hddq.restoid.model.C
             }
         }
     }
+    BackedUpCustomDirItemContent(path, metadata, isDirectory, context)
+}
+
+@Composable
+private fun BackedUpCustomDirItemContent(
+    path: String,
+    metadata: io.github.hddq.restoid.model.CustomDirectoryMetadata,
+    isDirectory: Boolean,
+    context: android.content.Context
+) {
     Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(
             if (isDirectory) Icons.Outlined.Folder else Icons.Outlined.Description,

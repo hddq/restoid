@@ -272,6 +272,7 @@ fun RestoreCustomDirectoriesConfigScreen(
     modifier: Modifier = Modifier
 ) {
     val customDirectories by viewModel.customDirectories.collectAsState()
+    val customDirectoryMetadata by viewModel.customDirectoryMetadata.collectAsState()
     val customDirectoriesList = customDirectories.toList()
 
     LazyColumn(
@@ -305,6 +306,7 @@ fun RestoreCustomDirectoriesConfigScreen(
                         ExpressiveSegmentedSurface(index = index + 1, count = totalRows) {
                             RestoreCustomDirListItem(
                                 path = path,
+                                savedIsDirectory = customDirectoryMetadata[path]?.isDirectory,
                                 isSelected = isSelected,
                                 onToggle = { viewModel.toggleCustomDirectory(path) }
                             )
@@ -611,9 +613,14 @@ private fun selectedBulkRestoreTypes(
 @Composable
 private fun RestoreCustomDirListItem(
     path: String,
+    savedIsDirectory: Boolean?,
     isSelected: Boolean,
     onToggle: () -> Unit
 ) {
+    savedIsDirectory?.let { isDirectory ->
+        RestoreCustomDirListItemContent(path, isDirectory, isSelected, onToggle)
+        return
+    }
     val initialIsDir = io.github.hddq.restoid.util.StorageUtils.isDirectoryFast(path)
     val isDirectory by produceState(
         initialValue = initialIsDir ?: true,
@@ -625,6 +632,16 @@ private fun RestoreCustomDirListItem(
             }
         }
     }
+    RestoreCustomDirListItemContent(path, isDirectory, isSelected, onToggle)
+}
+
+@Composable
+private fun RestoreCustomDirListItemContent(
+    path: String,
+    isDirectory: Boolean,
+    isSelected: Boolean,
+    onToggle: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()

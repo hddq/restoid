@@ -61,6 +61,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.Dispatchers
@@ -809,6 +810,7 @@ fun CustomDirectoriesConfigScreen(
             item {
                 ExpressiveCardGroup {
                     customDirectories.forEachIndexed { index, customDir ->
+                        key(customDir.uri) {
                         val resolvedPath = io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(customDir.uri)
                         val displayPath = resolvedPath ?: runCatching {
                             android.net.Uri.parse(customDir.uri).lastPathSegment
@@ -905,6 +907,7 @@ fun CustomDirectoriesConfigScreen(
                                     )
                                 }
                             }
+                        }
                         }
                     }
                 }
