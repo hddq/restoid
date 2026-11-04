@@ -53,7 +53,8 @@ class ScheduleWorker(
             keepDaily = schedule.config.keepDaily,
             keepWeekly = schedule.config.keepWeekly,
             keepMonthly = schedule.config.keepMonthly,
-            scheduleName = schedule.name
+            scheduleName = schedule.name,
+            requireUnmeteredNetwork = schedule.triggerConditions.requireUnmeteredNetwork
         )
         val enqueued = app.operationWorkRepository.enqueueRunTasks(workRequest)
         if (!enqueued) {

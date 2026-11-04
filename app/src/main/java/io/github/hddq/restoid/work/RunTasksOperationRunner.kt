@@ -100,7 +100,8 @@ class RunTasksOperationRunner(
                     backupTypes = request.backupTypes,
                     selectedPackageNames = request.selectedPackageNames,
                     appBackupTypes = request.appBackupTypes,
-                    customDirectories = request.customDirectories
+                    customDirectories = request.customDirectories,
+                    requireUnmeteredNetwork = request.requireUnmeteredNetwork
                 )
 
                 val result = backupRunner.run(
