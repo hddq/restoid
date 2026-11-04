@@ -15,6 +15,7 @@ import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.BackupDetail
+import io.github.hddq.restoid.model.CustomDirectoryMetadata
 import io.github.hddq.restoid.model.RestoidMetadata
 import io.github.hddq.restoid.ui.shared.OperationProgress
 import io.github.hddq.restoid.work.OperationWorkRepository
@@ -98,6 +99,9 @@ class RestoreViewModel(
 
     private val _customDirectories = MutableStateFlow<Map<String, Boolean>>(emptyMap())
     val customDirectories = _customDirectories.asStateFlow()
+
+    private val _customDirectoryMetadata = MutableStateFlow<Map<String, CustomDirectoryMetadata>>(emptyMap())
+    val customDirectoryMetadata = _customDirectoryMetadata.asStateFlow()
 
     private val _isLoading = MutableStateFlow(true)
     val isLoading = _isLoading.asStateFlow()
@@ -275,7 +279,8 @@ class RestoreViewModel(
             _appRestoreTypes.value = emptyMap()
         }
 
-        _customDirectories.value = metadata?.customDirectories?.mapValues { true } ?: emptyMap()
+        _customDirectoryMetadata.value = metadata?.customDirectories ?: emptyMap()
+        _customDirectories.value = _customDirectoryMetadata.value.mapValues { true }
         if (_customDirectories.value.isNotEmpty()) {
             _restoreCustomDirectoriesEnabled.value = true
         }

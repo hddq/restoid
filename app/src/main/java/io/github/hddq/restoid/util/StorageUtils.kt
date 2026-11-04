@@ -13,6 +13,11 @@ data class StorageVolumeItem(
     val isPrimary: Boolean
 )
 
+data class StorageEntryItem(
+    val name: String,
+    val isDirectory: Boolean
+)
+
 object StorageUtils {
 
     /**
@@ -93,6 +98,36 @@ object StorageUtils {
     }
 
     /**
+     * Fast non-blocking check whether [pathOrUri] is a directory or file.
+     * Returns true if definitely a directory, false if definitely a file,
+     * or null if the path cannot be determined by standard File APIs (e.g. root-only path).
+     */
+    fun isDirectoryFast(pathOrUri: String): Boolean? {
+        val path = resolveCustomDirectoryPath(pathOrUri) ?: pathOrUri
+        val file = File(path)
+        if (file.isDirectory) return true
+        if (file.isFile) return false
+        return null
+    }
+
+    /**
+     * Determines whether [pathOrUri] points to a directory (as opposed to a file).
+     * Uses standard File checks first, then root shell if needed.
+     */
+    fun isDirectoryPath(pathOrUri: String): Boolean {
+        isDirectoryFast(pathOrUri)?.let { return it }
+        val path = resolveCustomDirectoryPath(pathOrUri) ?: pathOrUri
+        val isRoot = runCatching { Shell.getShell().isRoot }.getOrDefault(false)
+        if (isRoot) {
+            val checkDir = runCatching { Shell.cmd("[ -d ${shellQuote(path)} ]").exec().isSuccess }.getOrDefault(false)
+            if (checkDir) return true
+            val checkFile = runCatching { Shell.cmd("[ -f ${shellQuote(path)} ]").exec().isSuccess }.getOrDefault(false)
+            if (checkFile) return false
+        }
+        return !File(path).name.contains(".")
+    }
+
+    /**
      * Lists child directory names inside [path], sorted case-insensitively.
      * Returns null when the directory does not exist or cannot be listed.
      */
@@ -112,16 +147,65 @@ object StorageUtils {
         val checkDir = Shell.cmd("[ -d ${shellQuote(path)} ]").exec().isSuccess
         if (!checkDir) return null
 
-        val findCmd = buildString {
-            append("find ").append(shellQuote(path))
-            append(" -mindepth 1 -maxdepth 1 -type d -exec basename {} \\;")
-        }
+        val findCmd = """find -H ${shellQuote(path)} -mindepth 1 -maxdepth 1 \( -type d -o \( -type l -exec test -d {} \; \) \) -exec sh -c 'name=${'$'}{1##*/}; printf "%s" "${'$'}name" | od -v -An -tx1 | tr -d " \n"; printf "\n"' sh {} \;"""
         val result = Shell.cmd(findCmd).exec()
         if (!result.isSuccess) return null
 
         return result.out
-            .filter { it.isNotBlank() && (showHidden || !it.startsWith(".")) }
+            .mapNotNull(::decodeHexFilename)
+            .filter { showHidden || !it.startsWith(".") }
             .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it })
+    }
+
+    /**
+     * Lists child directories and, when requested, regular files inside [path].
+     * Root shell fallback supports paths hidden from the app process.
+     */
+    fun listChildEntries(path: String, showHidden: Boolean, includeFiles: Boolean): List<StorageEntryItem>? {
+        val dir = File(path)
+        val directChildren = runCatching { dir.listFiles() }.getOrNull()
+        if (directChildren != null) {
+            return directChildren
+                .filter {
+                    (it.isDirectory || (includeFiles && it.isFile)) &&
+                        (showHidden || !it.name.startsWith("."))
+                }
+                .map { StorageEntryItem(it.name, it.isDirectory) }
+                .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
+        }
+
+        val isRoot = runCatching { Shell.getShell().isRoot }.getOrDefault(false)
+        if (!isRoot || !Shell.cmd("[ -d ${shellQuote(path)} ]").exec().isSuccess) return null
+
+        val directoryNames = listChildDirectories(path, showHidden) ?: return null
+        val fileNames = if (includeFiles) {
+            val result = Shell.cmd(
+                """find -H ${shellQuote(path)} -mindepth 1 -maxdepth 1 \( -type f -o \( -type l -exec test -f {} \; \) \) -exec sh -c 'name=${'$'}{1##*/}; printf "%s" "${'$'}name" | od -v -An -tx1 | tr -d " \n"; printf "\n"' sh {} \;"""
+            ).exec()
+            if (!result.isSuccess) return null
+            val dirSet = directoryNames.toSet()
+            result.out
+                .mapNotNull(::decodeHexFilename)
+                .filter { it !in dirSet && (showHidden || !it.startsWith(".")) }
+        } else {
+            emptyList()
+        }
+
+        return (directoryNames.map { StorageEntryItem(it, true) } + fileNames.map { StorageEntryItem(it, false) })
+            .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
+    }
+
+    /** Decodes the ASCII hex records emitted by the root-shell find commands. */
+    private fun decodeHexFilename(value: String): String? {
+        if (value.length % 2 != 0) return null
+        return runCatching {
+            ByteArray(value.length / 2) { index ->
+                val high = Character.digit(value[index * 2], 16)
+                val low = Character.digit(value[index * 2 + 1], 16)
+                require(high >= 0 && low >= 0)
+                ((high shl 4) or low).toByte()
+            }.toString(Charsets.UTF_8)
+        }.getOrNull()
     }
 
     /**

@@ -428,7 +428,10 @@ class BackupOperationRunner(
                 throw IllegalStateException(context.getString(R.string.custom_directory_not_found, realPath))
             }
             pathsToBackup.add(shellPath)
-            customDirectoryMetadataMap[shellPath] = CustomDirectoryMetadata(size = 0L)
+            customDirectoryMetadataMap[shellPath] = CustomDirectoryMetadata(
+                size = 0L,
+                isDirectory = Shell.cmd("[ -d ${shellQuote(shellPath)} ]").exec().isSuccess
+            )
         }
         val metadata = RestoidMetadata(apps = appMetadataMap, customDirectories = customDirectoryMetadataMap)
         return Triple(pathsToBackup, excludePatterns, metadata)

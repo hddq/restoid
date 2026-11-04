@@ -357,7 +357,10 @@ class RestoreOperationRunner(
                     
                     if (Shell.cmd("[ -e ${shellQuote(sourcePath)} ]").exec().isSuccess) {
                         Shell.cmd("rm -rf ${shellQuote(targetPath)}").exec()
-                        val copyResult = Shell.cmd("cp -R ${shellQuote(sourcePath)} ${shellQuote(targetPath)}").exec()
+                        // The restic staging directory contains the saved mode and owner. Preserve
+                        // them when copying it into a protected destination instead of creating
+                        // root-owned, default-mode files with cp -R.
+                        val copyResult = Shell.cmd("cp -a ${shellQuote(sourcePath)} ${shellQuote(targetPath)}").exec()
                         if (!copyResult.isSuccess) {
                             processSuccess = false
                             failureDetails.add(context.getString(R.string.restore_failure_custom_directory, path))

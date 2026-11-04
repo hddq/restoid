@@ -4,7 +4,9 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class CustomDirectoryMetadata(
-    val size: Long
+    val size: Long,
+    /** Null for snapshots made before the item type was recorded. */
+    val isDirectory: Boolean? = null
 )
 
 /**

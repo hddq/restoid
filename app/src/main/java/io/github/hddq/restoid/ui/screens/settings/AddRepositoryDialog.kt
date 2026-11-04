@@ -74,7 +74,7 @@ fun AddRepositoryDialog(
     val hasSftpSpec = uiState.backendType == RepositoryBackendType.SFTP &&
         SftpRepositorySpec.build(
             host = uiState.sftpHost,
-            port = "",
+            port = uiState.sftpPort,
             user = uiState.sftpUsername,
             path = uiState.sftpPath
         ) is SftpRepositorySpec.Result.Success
@@ -254,6 +254,7 @@ fun AddRepositoryDialog(
                     value = uiState.password,
                     onValueChange = onPasswordChange,
                     label = { Text(stringResource(R.string.label_repository_password)) },
+                    supportingText = { Text(stringResource(R.string.repository_password_explanation)) },
                     singleLine = true,
                     visualTransformation = if (repositoryPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {

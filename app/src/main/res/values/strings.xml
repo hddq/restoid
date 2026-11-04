@@ -70,17 +70,20 @@
 
     <string name="home_title" translatable="false">Restoid</string>
     <string name="run_tasks_applications">Applications</string>
-    <string name="run_tasks_custom_directories">Custom Directories</string>
-    <string name="run_tasks_custom_directories_subtitle_none">No directories selected</string>
-    <string name="run_tasks_custom_directories_subtitle_count">%1$d directories selected</string>
-    <string name="action_add_directory">Add Directory</string>
-    <string name="folder_browser_select_this_folder">Select this folder</string>
+    <string name="run_tasks_custom_directories">Custom Files and Folders</string>
+    <string name="run_tasks_custom_directories_subtitle_none">No files or folders selected</string>
+    <string name="run_tasks_custom_directories_subtitle_count">%1$d paths selected</string>
+    <string name="action_add_directory">Add File or Folder</string>
+    <string name="folder_browser_select_this_folder">Select this path</string>
     <string name="folder_browser_show_hidden">Show hidden folders</string>
+    <string name="folder_browser_show_hidden_items">Show hidden files and folders</string>
     <string name="folder_browser_cannot_list">Cannot list this folder.</string>
     <string name="folder_browser_empty">No subfolders.</string>
+    <string name="folder_browser_empty_items">No files or folders.</string>
     <string name="folder_browser_up">Up to parent folder</string>
     <string name="folder_browser_roots_title">Storage locations</string>
     <string name="folder_browser_internal_storage">Internal Storage</string>
+    <string name="folder_browser_system_root">System root (/)</string>
     <string name="folder_browser_external_storage">External Storage (%1$s)</string>
     <string name="folder_browser_edit_path">Enter path manually</string>
     <string name="folder_browser_new_folder">New folder</string>
@@ -88,11 +91,11 @@
     <string name="folder_browser_create_failed">Could not create folder.</string>
     <string name="action_create">Create</string>
     <string name="action_go">Go</string>
-    <string name="title_custom_directories">Custom Directories</string>
-    <string name="custom_directories_description">Select custom directories on your device to include in the backup.</string>
+    <string name="title_custom_directories">Custom Files and Folders</string>
+    <string name="custom_directories_description">Select files or folders on your device to include in the backup.</string>
     <string name="custom_directories_long_press_hint">Touch and hold an entry to open the menu and delete it.</string>
-    <string name="custom_directories_typed_path_label">Folder path</string>
-    <string name="custom_directories_typed_path_hint">e.g. /storage/emulated/0/Download</string>
+    <string name="custom_directories_typed_path_label">File or folder path</string>
+    <string name="custom_directories_typed_path_hint">e.g. /storage/emulated/0/Download or /system/build.prop</string>
     <string name="custom_directories_typed_path_invalid">Enter a valid absolute folder path.</string>
     <string name="custom_directories_typed_path_not_found">Folder does not exist: %1$s</string>
     <string name="custom_directory_not_found">Custom directory not found: %1$s</string>
@@ -198,7 +201,8 @@
     <string name="dialog_forget_snapshot_message">This will remove the snapshot entry. The actual data will only be deleted after running a prune. Are you sure?</string>
 
     <string name="label_password">Password</string>
-    <string name="label_repository_password">Repository password</string>
+    <string name="label_repository_password">Backup encryption password</string>
+    <string name="repository_password_explanation">Required to encrypt and restore this Restic repository. Different from your SFTP login. Keep it safe: if you lose it, you cannot restore your backups.</string>
     <string name="label_rest_username">REST username</string>
     <string name="label_rest_password">REST password</string>
     <string name="label_s3_access_key_id">S3 access key ID</string>
