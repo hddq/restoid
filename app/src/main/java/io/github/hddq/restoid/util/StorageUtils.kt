@@ -118,7 +118,7 @@ object StorageUtils {
         if (!checkDir) return null
 
         val findCmd = buildString {
-            append("find ").append(shellQuote(path))
+            append("find -H ").append(shellQuote(path))
             append(" -mindepth 1 -maxdepth 1 \\( -type d -o \\( -type l -exec test -d {} \\; \\) \\) -exec basename {} \\;")
         }
         val result = Shell.cmd(findCmd).exec()
@@ -152,7 +152,7 @@ object StorageUtils {
         val directoryNames = listChildDirectories(path, showHidden) ?: return null
         val fileNames = if (includeFiles) {
             val result = Shell.cmd(
-                "find ${shellQuote(path)} -mindepth 1 -maxdepth 1 \\( -type f -o \\( -type l -exec test -f {} \\; \\) \\) -exec basename {} \\;"
+                "find -H ${shellQuote(path)} -mindepth 1 -maxdepth 1 \\( -type f -o \\( -type l -exec test -f {} \\; \\) \\) -exec basename {} \\;"
             ).exec()
             if (!result.isSuccess) return null
             val dirSet = directoryNames.toSet()
