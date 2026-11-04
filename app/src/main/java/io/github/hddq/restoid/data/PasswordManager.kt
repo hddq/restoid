@@ -33,7 +33,14 @@ class PasswordManager(private val context: Context) {
         if (temp != null) return temp
         
         val encrypted = prefs.getString(repositoryPath, null) ?: return null
-        return CryptoHelper.decrypt(encrypted)
+        val decrypted = CryptoHelper.decrypt(encrypted)
+        if (decrypted == null) {
+            // Cannot decrypt stored password (e.g. keystore changed after backup restore).
+            // Clean up corrupt preference so hasPassword/hasStoredPassword won't report false positives.
+            prefs.edit().remove(repositoryPath).apply()
+            return null
+        }
+        return decrypted
     }
 
     fun removePassword(repositoryPath: String) {
@@ -45,11 +52,19 @@ class PasswordManager(private val context: Context) {
     }
 
     fun hasPassword(repositoryPath: String): Boolean {
-        return temporaryPasswords.containsKey(repositoryPath) || prefs.contains(repositoryPath)
+        if (temporaryPasswords.containsKey(repositoryPath)) return true
+        return hasStoredPassword(repositoryPath)
     }
 
     fun hasStoredPassword(repositoryPath: String): Boolean {
-        return prefs.contains(repositoryPath)
+        if (!prefs.contains(repositoryPath)) return false
+        val encrypted = prefs.getString(repositoryPath, null) ?: return false
+        val decrypted = CryptoHelper.decrypt(encrypted)
+        if (decrypted == null) {
+            prefs.edit().remove(repositoryPath).apply()
+            return false
+        }
+        return true
     }
 
     fun removeStoredPassword(repositoryPath: String) {

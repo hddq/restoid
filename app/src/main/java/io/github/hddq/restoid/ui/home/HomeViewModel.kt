@@ -337,7 +337,8 @@ class HomeViewModel(
                 return@launch
             }
 
-            if (!repositoriesRepository.hasRepositoryPassword(repoKey)) {
+            val password = repositoriesRepository.getRepositoryPassword(repoKey)
+            if (password == null) {
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -352,8 +353,6 @@ class HomeViewModel(
                 }
                 return@launch
             }
-
-            val password = repositoriesRepository.getRepositoryPassword(repoKey)!!
             val result = resticRepository.getSnapshots(repoPath, password, environmentVariables, resticOptions)
             if (result.isFailure) {
                 val rawMessage = result.exceptionOrNull()?.message ?: context.getString(R.string.error_unknown)
@@ -448,7 +447,8 @@ class HomeViewModel(
             return
         }
 
-        if (!repositoriesRepository.hasRepositoryPassword(repoKey)) {
+        val initialPassword = repositoriesRepository.getRepositoryPassword(repoKey)
+        if (initialPassword == null) {
             _uiState.update {
                 it.copy(
                     isRefreshing = false,
@@ -467,7 +467,22 @@ class HomeViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isRefreshing = true, error = null, authFailure = null, openPrompt = null) }
             try {
-                val password = repositoriesRepository.getRepositoryPassword(repoKey)!!
+                val password = repositoriesRepository.getRepositoryPassword(repoKey)
+                if (password == null) {
+                    _uiState.update {
+                        it.copy(
+                            isRefreshing = false,
+                            error = null,
+                            authFailure = null,
+                            openPrompt = null,
+                            showPasswordDialogFor = repoKey,
+                            showSftpPasswordDialogFor = null,
+                            showRestCredentialsDialogFor = null,
+                            showS3CredentialsDialogFor = null
+                        )
+                    }
+                    return@launch
+                }
                 val result = resticRepository.getSnapshots(repoPath, password, environmentVariables, resticOptions)
                 if (result.isFailure) {
                     val rawMessage = result.exceptionOrNull()?.message ?: context.getString(R.string.error_unknown)

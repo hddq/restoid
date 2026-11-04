@@ -18,7 +18,11 @@ object CryptoHelper {
     private val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
 
     private fun getSecretKey(): SecretKey {
-        return (keyStore.getEntry(KEY_ALIAS, null) as? KeyStore.SecretKeyEntry)?.secretKey ?: generateSecretKey()
+        return try {
+            (keyStore.getEntry(KEY_ALIAS, null) as? KeyStore.SecretKeyEntry)?.secretKey ?: generateSecretKey()
+        } catch (_: Exception) {
+            generateSecretKey()
+        }
     }
 
     private fun generateSecretKey(): SecretKey {
@@ -39,8 +43,17 @@ object CryptoHelper {
      * the IV and the ciphertext separated by [IV_SEPARATOR].
      */
     fun encrypt(plainText: String): String {
+        return try {
+            encryptWithKey(plainText, getSecretKey())
+        } catch (_: Exception) {
+            val freshKey = generateSecretKey()
+            encryptWithKey(plainText, freshKey)
+        }
+    }
+
+    private fun encryptWithKey(plainText: String, secretKey: SecretKey): String {
         val cipher = Cipher.getInstance(TRANSFORMATION)
-        cipher.init(Cipher.ENCRYPT_MODE, getSecretKey())
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey)
         val iv = cipher.iv
         val encrypted = cipher.doFinal(plainText.toByteArray(Charsets.UTF_8))
         
