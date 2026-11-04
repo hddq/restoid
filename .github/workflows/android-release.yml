@@ -138,6 +138,26 @@ jobs:
           set -euo pipefail
           (cd release-assets && sha256sum *.apk > SHA256SUMS.txt)
 
+      - name: Collect release mapping
+        run: |
+          set -euo pipefail
+          mapfile -t mappings < <(find app/build/outputs/mapping/release -type f -name 'mapping.txt')
+          if [ ${#mappings[@]} -eq 0 ]; then
+            mapfile -t mappings < <(find app/build -type f -name 'mapping.txt')
+          fi
+          if [ ${#mappings[@]} -eq 0 ]; then
+            echo "No mapping.txt file found."
+            exit 1
+          fi
+          echo "Found mapping file: ${mappings[0]}"
+          cp "${mappings[0]}" release-assets/mapping.txt
+
+      - name: Upload release mapping artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-mapping
+          path: release-assets/mapping.txt
+
       - name: Grab latest Fastlane changelog
         id: changelog
         run: |
@@ -156,6 +176,7 @@ jobs:
           files: |
             ${{ steps.collect_apks.outputs.files }}
             release-assets/SHA256SUMS.txt
+            release-assets/mapping.txt
 
       - name: Build F-Droid repo index
         env:
