@@ -46,7 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.hddq.restoid.R
 
-private const val RESTIC_DOCS_URL = "https://restic.readthedocs.io/en/latest/060_forget.html"
+private const val RESTIC_DOCS_URL = "https://restic.readthedocs.io/en/stable/"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
