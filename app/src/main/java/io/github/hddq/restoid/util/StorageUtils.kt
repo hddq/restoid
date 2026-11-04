@@ -147,7 +147,7 @@ object StorageUtils {
         val checkDir = Shell.cmd("[ -d ${shellQuote(path)} ]").exec().isSuccess
         if (!checkDir) return null
 
-        val findCmd = """find -H ${shellQuote(path)} -mindepth 1 -maxdepth 1 \( -type d -o \( -type l -exec test -d {} \; \) \) -exec sh -c 'name=${'$'}{1##*/}; printf "%s" "${'$'}name" | od -An -tx1 | tr -d " \n"; printf "\n"' sh {} \;"""
+        val findCmd = """find -H ${shellQuote(path)} -mindepth 1 -maxdepth 1 \( -type d -o \( -type l -exec test -d {} \; \) \) -exec sh -c 'name=${'$'}{1##*/}; printf "%s" "${'$'}name" | od -v -An -tx1 | tr -d " \n"; printf "\n"' sh {} \;"""
         val result = Shell.cmd(findCmd).exec()
         if (!result.isSuccess) return null
 
@@ -180,7 +180,7 @@ object StorageUtils {
         val directoryNames = listChildDirectories(path, showHidden) ?: return null
         val fileNames = if (includeFiles) {
             val result = Shell.cmd(
-                """find -H ${shellQuote(path)} -mindepth 1 -maxdepth 1 \( -type f -o \( -type l -exec test -f {} \; \) \) -exec sh -c 'name=${'$'}{1##*/}; printf "%s" "${'$'}name" | od -An -tx1 | tr -d " \n"; printf "\n"' sh {} \;"""
+                """find -H ${shellQuote(path)} -mindepth 1 -maxdepth 1 \( -type f -o \( -type l -exec test -f {} \; \) \) -exec sh -c 'name=${'$'}{1##*/}; printf "%s" "${'$'}name" | od -v -An -tx1 | tr -d " \n"; printf "\n"' sh {} \;"""
             ).exec()
             if (!result.isSuccess) return null
             val dirSet = directoryNames.toSet()
