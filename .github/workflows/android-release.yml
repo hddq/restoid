@@ -59,6 +59,20 @@ jobs:
       - name: Set up Gradle cache
         uses: gradle/actions/setup-gradle@v6
 
+      - name: Run unit tests
+        run: |
+          set -euo pipefail
+          ./gradlew --no-daemon test
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-unit-test-results
+          path: |
+            app/build/reports/tests/
+            app/build/test-results/
+
       - name: Validate signing secrets
         env:
           ANDROID_SIGNING_KEYSTORE_BASE64: ${{ secrets.ANDROID_SIGNING_KEYSTORE_BASE64 }}
@@ -90,7 +104,7 @@ jobs:
           ANDROID_SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_SIGNING_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          ./gradlew --no-daemon clean assembleRelease
+          ./gradlew --no-daemon assembleRelease
 
       - name: Collect release APKs
         id: collect_apks

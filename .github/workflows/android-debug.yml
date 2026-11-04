@@ -58,10 +58,24 @@ jobs:
       - name: Set up Gradle cache
         uses: gradle/actions/setup-gradle@v6
 
+      - name: Run unit tests
+        run: |
+          set -euo pipefail
+          ./gradlew --no-daemon test
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: unit-test-results
+          path: |
+            app/build/reports/tests/
+            app/build/test-results/
+
       - name: Build debug APKs
         run: |
           set -euo pipefail
-          ./gradlew --no-daemon clean assembleDebug
+          ./gradlew --no-daemon assembleDebug
 
       - name: Upload debug APKs
         uses: actions/upload-artifact@v7
