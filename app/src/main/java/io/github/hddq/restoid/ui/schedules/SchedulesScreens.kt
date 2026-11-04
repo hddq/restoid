@@ -36,6 +36,7 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.EventRepeat
 import androidx.compose.material.icons.outlined.FactCheck
 import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Label
 import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.PlayArrow
@@ -78,6 +79,7 @@ import io.github.hddq.restoid.model.Schedule
 import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
 import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
+import io.github.hddq.restoid.ui.components.TasksGuideBottomSheet
 import io.github.hddq.restoid.ui.shared.TaskRow
 import io.github.hddq.restoid.ui.shared.buildBackupSubtitle
 import io.github.hddq.restoid.ui.shared.buildCheckSubtitle
@@ -209,6 +211,7 @@ fun AddEditScheduleScreen(
     val context = LocalContext.current
     var intervalText by remember(state.intervalHours) { mutableStateOf(state.intervalHours.toString()) }
     val appBarActions = LocalAppBarActions.current
+    var showGuideSheet by remember { mutableStateOf(false) }
 
     val hasUnsavedChanges = remember(state) { viewModel.hasChanges(state) }
 
@@ -217,8 +220,14 @@ fun AddEditScheduleScreen(
     }
 
     DisposableEffect(state.id) {
-        if (state.id != null) {
-            appBarActions.value = {
+        appBarActions.value = {
+            IconButton(onClick = { showGuideSheet = true }) {
+                Icon(
+                    Icons.AutoMirrored.Outlined.HelpOutline,
+                    contentDescription = stringResource(R.string.cd_help)
+                )
+            }
+            if (state.id != null) {
                 IconButton(onClick = { viewModel.runCurrentScheduleNow() }) {
                     Icon(
                         Icons.Outlined.PlayArrow,
@@ -499,6 +508,10 @@ fun AddEditScheduleScreen(
                 }
             }
         )
+    }
+
+    if (showGuideSheet) {
+        TasksGuideBottomSheet(onDismissRequest = { showGuideSheet = false })
     }
 }
 

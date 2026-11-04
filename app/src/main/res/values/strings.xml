@@ -569,4 +569,25 @@
     <string name="cd_copy_license">Copy License</string>
     <string name="repo_warning_metadata_restore_failed_title">Metadata Restoration Failed</string>
     <string name="repo_warning_metadata_restore_failed">The repository was added successfully, but restoring its metadata (schedules, detailed backups info) failed. This usually means the metadata snapshot is missing or the repository is locked. To try again, open Settings → Repositories, tap the repo menu, and choose “Restore metadata”.</string>
+
+    <!-- Tasks & Maintenance Guide -->
+    <string name="cd_help">Help</string>
+    <string name="tasks_guide_title">Tasks &amp; Maintenance Guide</string>
+    <string name="tasks_guide_subtitle">Learn what each backup and maintenance task does and how they work together.</string>
+    <string name="tasks_guide_unlock_title">Unlock repository</string>
+    <string name="tasks_guide_unlock_desc">Removes stale locks left behind when a previous backup or task was unexpectedly interrupted (e.g. app closed, device restarted, or connection dropped). This allows future tasks to proceed safely.</string>
+    <string name="tasks_guide_forget_title">Forget snapshots</string>
+    <string name="tasks_guide_forget_desc">Applies your retention policy (e.g. keep last N daily, weekly, or monthly snapshots) and removes old snapshot records from repository history. Note: This only dereferences the snapshots; it does not delete raw data chunks yet.</string>
+    <string name="tasks_guide_prune_title">Prune repository</string>
+    <string name="tasks_guide_prune_desc">Scans the repository for data chunks no longer referenced by any remaining snapshot, permanently deletes them, and repacks packs to actually reclaim disk space. Prune is resource-intensive and is best run periodically (e.g. weekly or monthly).</string>
+    <string name="tasks_guide_check_title">Check integrity</string>
+    <string name="tasks_guide_check_desc">Checks repository structure and indexes. By default, stored file contents are not read. Enable Read all data in the Check Integrity settings to also verify the data packs.</string>
+    <string name="tasks_guide_forget_vs_prune_title">Forget vs. Prune: What is the difference?</string>
+    <string name="tasks_guide_forget_vs_prune_desc">Think of Forget as removing catalog cards from a library index, and Prune as actually removing the unneeded books from the building. You run Forget first to choose what to delete, and Prune afterward to actually free up storage space.</string>
+    <string name="tasks_guide_apps_title">Applications</string>
+    <string name="tasks_guide_apps_desc">Backs up installed apps, including APKs, app data, device-protected data, and external storage data.</string>
+    <string name="tasks_guide_files_title">Files &amp; Folders</string>
+    <string name="tasks_guide_files_desc">Backs up custom files and directories selected from device storage.</string>
+    <string name="tasks_guide_docs_button">Official Restic Documentation</string>
+    <string name="no_browser_available">No browser found to open link. URL copied to clipboard.</string>
 </resources>
