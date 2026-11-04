@@ -9,26 +9,35 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.AutoDelete
 import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.FactCheck
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.LockOpen
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import io.github.hddq.restoid.LocalAppBarActions
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
 import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
+import io.github.hddq.restoid.ui.components.TasksGuideBottomSheet
 import io.github.hddq.restoid.ui.shared.TaskRow
 import io.github.hddq.restoid.ui.shared.buildBackupSubtitle
 import io.github.hddq.restoid.ui.shared.buildCheckSubtitle
@@ -48,6 +57,22 @@ fun RunTasksScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     val operationBlocked by viewModel.operationBlocked.collectAsState()
+    val appBarActions = LocalAppBarActions.current
+    var showGuideSheet by remember { mutableStateOf(false) }
+
+    DisposableEffect(Unit) {
+        appBarActions.value = {
+            IconButton(onClick = { showGuideSheet = true }) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.HelpOutline,
+                    contentDescription = stringResource(R.string.cd_help)
+                )
+            }
+        }
+        onDispose {
+            appBarActions.value = null
+        }
+    }
 
     LaunchedEffect(operationBlocked) {
         if (operationBlocked) {
@@ -144,6 +169,10 @@ fun RunTasksScreen(
                 }
             }
         }
+    }
+
+    if (showGuideSheet) {
+        TasksGuideBottomSheet(onDismissRequest = { showGuideSheet = false })
     }
 }
 
