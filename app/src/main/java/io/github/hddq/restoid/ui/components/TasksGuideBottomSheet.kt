@@ -1,7 +1,12 @@
 package io.github.hddq.restoid.ui.components
 
+import android.content.ActivityNotFoundException
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -41,6 +46,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.hddq.restoid.R
 
+private const val RESTIC_DOCS_URL = "https://restic.readthedocs.io/en/latest/060_forget.html"
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TasksGuideBottomSheet(
@@ -49,7 +56,7 @@ fun TasksGuideBottomSheet(
 ) {
     val context = LocalContext.current
     val resticDocsIntent = remember {
-        Intent(Intent.ACTION_VIEW, Uri.parse("https://restic.readthedocs.io/en/latest/060_forget.html"))
+        Intent(Intent.ACTION_VIEW, Uri.parse(RESTIC_DOCS_URL))
     }
 
     ModalBottomSheet(
@@ -168,7 +175,15 @@ fun TasksGuideBottomSheet(
             Spacer(modifier = Modifier.height(20.dp))
 
             FilledTonalButton(
-                onClick = { context.startActivity(resticDocsIntent) },
+                onClick = {
+                    try {
+                        context.startActivity(resticDocsIntent)
+                    } catch (_: ActivityNotFoundException) {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                        clipboard?.setPrimaryClip(ClipData.newPlainText("URL", RESTIC_DOCS_URL))
+                        Toast.makeText(context, context.getString(R.string.no_browser_available), Toast.LENGTH_SHORT).show()
+                    }
+                },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(
