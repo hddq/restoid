@@ -33,14 +33,19 @@ class PasswordManager(private val context: Context) {
         if (temp != null) return temp
         
         val encrypted = prefs.getString(repositoryPath, null) ?: return null
-        val decrypted = CryptoHelper.decrypt(encrypted)
-        if (decrypted == null) {
-            // Cannot decrypt stored password (e.g. keystore changed after backup restore).
-            // Clean up corrupt preference so hasPassword/hasStoredPassword won't report false positives.
-            prefs.edit().remove(repositoryPath).apply()
-            return null
+        return when (val result = CryptoHelper.decryptDetailed(encrypted)) {
+            is CryptoHelper.DecryptionResult.Success -> result.value
+            is CryptoHelper.DecryptionResult.Invalid -> {
+                // Cannot decrypt stored password (e.g. keystore changed after backup restore or corrupted).
+                // Clean up confirmed invalid preference so hasPassword/hasStoredPassword won't report false positives.
+                prefs.edit().remove(repositoryPath).apply()
+                null
+            }
+            is CryptoHelper.DecryptionResult.FailedTemporarily -> {
+                // Temporary KeyStore / system error; do NOT delete the stored password, as it may be recoverable later.
+                null
+            }
         }
-        return decrypted
     }
 
     fun removePassword(repositoryPath: String) {
@@ -59,12 +64,18 @@ class PasswordManager(private val context: Context) {
     fun hasStoredPassword(repositoryPath: String): Boolean {
         if (!prefs.contains(repositoryPath)) return false
         val encrypted = prefs.getString(repositoryPath, null) ?: return false
-        val decrypted = CryptoHelper.decrypt(encrypted)
-        if (decrypted == null) {
-            prefs.edit().remove(repositoryPath).apply()
-            return false
+        return when (CryptoHelper.decryptDetailed(encrypted)) {
+            is CryptoHelper.DecryptionResult.Success -> true
+            is CryptoHelper.DecryptionResult.Invalid -> {
+                // Clean up confirmed invalid preference
+                prefs.edit().remove(repositoryPath).apply()
+                false
+            }
+            is CryptoHelper.DecryptionResult.FailedTemporarily -> {
+                // KeyStore is temporarily unavailable; do not delete the preference.
+                false
+            }
         }
-        return true
     }
 
     fun removeStoredPassword(repositoryPath: String) {

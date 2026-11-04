@@ -1,10 +1,16 @@
 package io.github.hddq.restoid.util
 
 import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyPermanentlyInvalidatedException
 import android.security.keystore.KeyProperties
 import android.util.Base64
 import java.security.KeyStore
+import java.security.UnrecoverableEntryException
+import java.security.UnrecoverableKeyException
+import javax.crypto.AEADBadTagException
+import javax.crypto.BadPaddingException
 import javax.crypto.Cipher
+import javax.crypto.IllegalBlockSizeException
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
@@ -15,12 +21,27 @@ object CryptoHelper {
     private const val TRANSFORMATION = "AES/GCM/NoPadding"
     private const val IV_SEPARATOR = "]"
 
+    sealed interface DecryptionResult {
+        data class Success(val value: String) : DecryptionResult
+        object Invalid : DecryptionResult
+        object FailedTemporarily : DecryptionResult
+    }
+
     private val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
 
     private fun getSecretKey(): SecretKey {
         return try {
-            (keyStore.getEntry(KEY_ALIAS, null) as? KeyStore.SecretKeyEntry)?.secretKey ?: generateSecretKey()
-        } catch (_: Exception) {
+            if (keyStore.containsAlias(KEY_ALIAS)) {
+                (keyStore.getEntry(KEY_ALIAS, null) as? KeyStore.SecretKeyEntry)?.secretKey
+                    ?: generateSecretKey()
+            } else {
+                generateSecretKey()
+            }
+        } catch (_: UnrecoverableKeyException) {
+            generateSecretKey()
+        } catch (_: UnrecoverableEntryException) {
+            generateSecretKey()
+        } catch (_: KeyPermanentlyInvalidatedException) {
             generateSecretKey()
         }
     }
@@ -41,11 +62,15 @@ object CryptoHelper {
     /**
      * Encrypts the [plainText] using AES-GCM and returns a Base64 encoded string containing
      * the IV and the ciphertext separated by [IV_SEPARATOR].
+     *
+     * Only regenerates the key if the existing key is confirmed permanently invalidated;
+     * temporary failures do not overwrite the key, preserving other stored credentials.
      */
     fun encrypt(plainText: String): String {
+        val secretKey = getSecretKey()
         return try {
-            encryptWithKey(plainText, getSecretKey())
-        } catch (_: Exception) {
+            encryptWithKey(plainText, secretKey)
+        } catch (_: KeyPermanentlyInvalidatedException) {
             val freshKey = generateSecretKey()
             encryptWithKey(plainText, freshKey)
         }
@@ -64,23 +89,67 @@ object CryptoHelper {
 
     /**
      * Decrypts the [cipherText] (expected to be in the format "IV]Ciphertext").
+     * Returns [DecryptionResult.Success] on success, [DecryptionResult.Invalid] when the data
+     * or key is permanently invalid/corrupted, or [DecryptionResult.FailedTemporarily] when
+     * a transient KeyStore error occurred.
+     */
+    fun decryptDetailed(cipherText: String): DecryptionResult {
+        val parts = cipherText.split(IV_SEPARATOR)
+        if (parts.size != 2) return DecryptionResult.Invalid
+        
+        val iv = try {
+            Base64.decode(parts[0], Base64.NO_WRAP)
+        } catch (_: IllegalArgumentException) {
+            return DecryptionResult.Invalid
+        }
+        
+        val encrypted = try {
+            Base64.decode(parts[1], Base64.NO_WRAP)
+        } catch (_: IllegalArgumentException) {
+            return DecryptionResult.Invalid
+        }
+        
+        val secretKey = try {
+            getSecretKey()
+        } catch (_: KeyPermanentlyInvalidatedException) {
+            return DecryptionResult.Invalid
+        } catch (_: UnrecoverableKeyException) {
+            return DecryptionResult.Invalid
+        } catch (_: UnrecoverableEntryException) {
+            return DecryptionResult.Invalid
+        } catch (_: Exception) {
+            return DecryptionResult.FailedTemporarily
+        }
+        
+        return try {
+            val cipher = Cipher.getInstance(TRANSFORMATION)
+            val spec = GCMParameterSpec(128, iv)
+            cipher.init(Cipher.DECRYPT_MODE, secretKey, spec)
+            val decryptedBytes = cipher.doFinal(encrypted)
+            DecryptionResult.Success(String(decryptedBytes, Charsets.UTF_8))
+        } catch (_: AEADBadTagException) {
+            // Authentication tag mismatch: encrypted with an older/different key or corrupted ciphertext.
+            DecryptionResult.Invalid
+        } catch (_: BadPaddingException) {
+            DecryptionResult.Invalid
+        } catch (_: IllegalBlockSizeException) {
+            DecryptionResult.Invalid
+        } catch (_: KeyPermanentlyInvalidatedException) {
+            DecryptionResult.Invalid
+        } catch (_: Exception) {
+            // Transient KeyStore or system failure; do not treat as permanently corrupt.
+            DecryptionResult.FailedTemporarily
+        }
+    }
+
+    /**
+     * Decrypts the [cipherText] (expected to be in the format "IV]Ciphertext").
      * Returns null if decryption fails.
      */
     fun decrypt(cipherText: String): String? {
-        return try {
-            val parts = cipherText.split(IV_SEPARATOR)
-            if (parts.size != 2) return null
-            
-            val iv = Base64.decode(parts[0], Base64.NO_WRAP)
-            val encrypted = Base64.decode(parts[1], Base64.NO_WRAP)
-            
-            val cipher = Cipher.getInstance(TRANSFORMATION)
-            val spec = GCMParameterSpec(128, iv)
-            cipher.init(Cipher.DECRYPT_MODE, getSecretKey(), spec)
-            
-            String(cipher.doFinal(encrypted), Charsets.UTF_8)
-        } catch (e: Exception) {
-            null
+        return when (val result = decryptDetailed(cipherText)) {
+            is DecryptionResult.Success -> result.value
+            else -> null
         }
     }
 }
