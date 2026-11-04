@@ -317,7 +317,7 @@ fun SelectableRepositoryRow(
                     }
                 )
                 if (repo.backendType == RepositoryBackendType.SFTP) {
-                    val hasCredentials = viewModel.hasStoredSftpCredentials(repoKey)
+                    val hasCredentials = viewModel.hasStoredSftpCredentialsEntry(repoKey)
                     if (hasCredentials) {
                         DropdownMenuItem(
                             text = {
@@ -365,7 +365,7 @@ fun SelectableRepositoryRow(
                     }
                 }
                 if (repo.backendType == RepositoryBackendType.REST) {
-                    if (viewModel.hasStoredRestCredentials(repoKey)) {
+                    if (viewModel.hasStoredRestCredentialsEntry(repoKey)) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.action_forget_rest_credentials)) },
                             leadingIcon = {
@@ -396,7 +396,7 @@ fun SelectableRepositoryRow(
                     }
                 }
                 if (repo.backendType == RepositoryBackendType.S3) {
-                    if (viewModel.hasStoredS3Credentials(repoKey)) {
+                    if (viewModel.hasStoredS3CredentialsEntry(repoKey)) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.action_forget_s3_credentials)) },
                             leadingIcon = {
@@ -426,7 +426,7 @@ fun SelectableRepositoryRow(
                         )
                     }
                 }
-                if (viewModel.hasStoredRepositoryPassword(repoKey)) {
+                if (viewModel.hasStoredRepositoryPasswordEntry(repoKey)) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_forget_password)) },
                         leadingIcon = {

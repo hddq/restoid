@@ -27,6 +27,7 @@ object CryptoHelper {
         object FailedTemporarily : DecryptionResult
     }
 
+    private val keyLock = Any()
     private val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
 
     private fun getSecretKey(): SecretKey {
@@ -60,14 +61,16 @@ object CryptoHelper {
      * the IV and the ciphertext separated by [IV_SEPARATOR].
      */
     fun encrypt(plainText: String): String {
-        return try {
-            encryptWithKey(plainText, getSecretKey())
-        } catch (_: KeyPermanentlyInvalidatedException) {
-            encryptWithKey(plainText, regenerateSecretKey())
-        } catch (_: UnrecoverableKeyException) {
-            encryptWithKey(plainText, regenerateSecretKey())
-        } catch (_: UnrecoverableEntryException) {
-            encryptWithKey(plainText, regenerateSecretKey())
+        return synchronized(keyLock) {
+            try {
+                encryptWithKey(plainText, getSecretKey())
+            } catch (_: KeyPermanentlyInvalidatedException) {
+                encryptWithKey(plainText, regenerateSecretKey())
+            } catch (_: UnrecoverableKeyException) {
+                encryptWithKey(plainText, regenerateSecretKey())
+            } catch (_: UnrecoverableEntryException) {
+                encryptWithKey(plainText, regenerateSecretKey())
+            }
         }
     }
 

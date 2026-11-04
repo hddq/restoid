@@ -170,6 +170,10 @@ class PasswordManager(private val context: Context) {
         return hasStoredPassword(sftpPasswordKey(repositoryKey))
     }
 
+    fun hasStoredSftpPasswordEntry(repositoryKey: String): Boolean {
+        return hasStoredPasswordEntry(sftpPasswordKey(repositoryKey))
+    }
+
     fun removeSftpPassword(repositoryKey: String) {
         removePassword(sftpPasswordKey(repositoryKey))
     }
@@ -196,6 +200,10 @@ class PasswordManager(private val context: Context) {
 
     fun hasStoredSftpKey(repositoryKey: String): Boolean {
         return hasStoredPassword(sftpKeyKey(repositoryKey))
+    }
+
+    fun hasStoredSftpKeyEntry(repositoryKey: String): Boolean {
+        return hasStoredPasswordEntry(sftpKeyKey(repositoryKey))
     }
 
     fun removeSftpKey(repositoryKey: String) {
@@ -226,6 +234,10 @@ class PasswordManager(private val context: Context) {
         return hasStoredPassword(sftpKeyPassphraseKey(repositoryKey))
     }
 
+    fun hasStoredSftpKeyPassphraseEntry(repositoryKey: String): Boolean {
+        return hasStoredPasswordEntry(sftpKeyPassphraseKey(repositoryKey))
+    }
+
     fun removeSftpKeyPassphrase(repositoryKey: String) {
         removePassword(sftpKeyPassphraseKey(repositoryKey))
     }
@@ -252,6 +264,10 @@ class PasswordManager(private val context: Context) {
 
     fun hasStoredRestUsername(repositoryKey: String): Boolean {
         return hasStoredPassword(restUsernameKey(repositoryKey))
+    }
+
+    fun hasStoredRestUsernameEntry(repositoryKey: String): Boolean {
+        return hasStoredPasswordEntry(restUsernameKey(repositoryKey))
     }
 
     fun removeRestUsername(repositoryKey: String) {
@@ -282,6 +298,10 @@ class PasswordManager(private val context: Context) {
         return hasStoredPassword(restPasswordKey(repositoryKey))
     }
 
+    fun hasStoredRestPasswordEntry(repositoryKey: String): Boolean {
+        return hasStoredPasswordEntry(restPasswordKey(repositoryKey))
+    }
+
     fun removeRestPassword(repositoryKey: String) {
         removePassword(restPasswordKey(repositoryKey))
     }
@@ -310,6 +330,10 @@ class PasswordManager(private val context: Context) {
         return hasStoredPassword(s3AccessKeyIdKey(repositoryKey))
     }
 
+    fun hasStoredS3AccessKeyIdEntry(repositoryKey: String): Boolean {
+        return hasStoredPasswordEntry(s3AccessKeyIdKey(repositoryKey))
+    }
+
     fun removeS3AccessKeyId(repositoryKey: String) {
         removePassword(s3AccessKeyIdKey(repositoryKey))
     }
@@ -336,6 +360,10 @@ class PasswordManager(private val context: Context) {
 
     fun hasStoredS3SecretAccessKey(repositoryKey: String): Boolean {
         return hasStoredPassword(s3SecretAccessKeyKey(repositoryKey))
+    }
+
+    fun hasStoredS3SecretAccessKeyEntry(repositoryKey: String): Boolean {
+        return hasStoredPasswordEntry(s3SecretAccessKeyKey(repositoryKey))
     }
 
     fun removeS3SecretAccessKey(repositoryKey: String) {
