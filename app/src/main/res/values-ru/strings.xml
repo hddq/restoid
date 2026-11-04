@@ -160,7 +160,6 @@
     <string name="repo_backend_sftp">SFTP (SSH)</string>
     <string name="repo_backend_rest">HTTP REST сервер</string>
     <string name="repo_backend_s3" translatable="false">Amazon S3 / MinIO</string>
-    <string name="repo_hint_sftp" translatable="false">user@host:/srv/restic-repo</string>
     <string name="repo_hint_rest" translatable="false">http://host:8000/</string>
     <string name="repo_hint_s3" translatable="false">s3.us-east-1.amazonaws.com/bucket_name</string>
     <string name="label_path">Путь</string>
@@ -516,4 +515,10 @@
     <string name="settings_system_permission_storage">Доступ к хранилищу</string>
     <string name="settings_system_permission_local_network">Доступ к локальной сети</string>
     <string name="local_network_permission_enabled">Доступ к локальной сети предоставлен</string>
+    <string name="home_operation_running_title">%1$s: выполняется</string>
+    <string name="home_operation_running_default_title">Выполняется операция</string>
+    <string name="home_operation_running_tap_hint">Нажмите, чтобы увидеть ход выполнения</string>
+    <string name="action_force_stop">Принудительно остановить</string>
+    <string name="dialog_force_stop_operation_title">Принудительно остановить?</string>
+    <string name="dialog_force_stop_operation_message">Принудительно остановить текущую операцию? Все незавершенные задачи будут отменены, а состояние операции сброшено.</string>
 </resources>

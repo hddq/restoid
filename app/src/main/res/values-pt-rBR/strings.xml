@@ -157,7 +157,6 @@
     <string name="repo_backend_sftp">SFTP (SSH)</string>
     <string name="repo_backend_rest">Servidor HTTP REST</string>
     <string name="repo_backend_s3" translatable="false">Amazon S3 / MinIO</string>
-    <string name="repo_hint_sftp" translatable="false">user@host:/srv/restic-repo</string>
     <string name="repo_hint_rest" translatable="false">http://host:8000/</string>
     <string name="repo_hint_s3" translatable="false">s3.us-east-1.amazonaws.com/nome_do_bucket</string>
     <string name="label_path">Caminho</string>
@@ -480,4 +479,10 @@
     <string name="settings_system_permission_storage">Acesso ao Armazenamento</string>
     <string name="settings_system_permission_local_network">Acesso à Rede Local</string>
     <string name="local_network_permission_enabled">Acesso à rede local concedido</string>
+    <string name="home_operation_running_title">%1$s em andamento</string>
+    <string name="home_operation_running_default_title">Operação em andamento</string>
+    <string name="home_operation_running_tap_hint">Toque para ver o progresso</string>
+    <string name="action_force_stop">Forçar parada</string>
+    <string name="dialog_force_stop_operation_title">Forçar parada da operação?</string>
+    <string name="dialog_force_stop_operation_message">Deseja forçar a parada da operação atual? Qualquer trabalho inacabado será cancelado e o estado da operação será redefinido.</string>
 </resources>
