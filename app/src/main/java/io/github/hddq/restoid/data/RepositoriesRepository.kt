@@ -127,6 +127,7 @@ class RepositoriesRepository(
     fun getRepositoryPassword(key: String): String? = passwordManager.getPassword(key)
     fun hasRepositoryPassword(key: String): Boolean = passwordManager.hasPassword(key)
     fun hasStoredRepositoryPassword(key: String): Boolean = passwordManager.hasStoredPassword(key)
+    fun hasStoredRepositoryPasswordEntry(key: String): Boolean = passwordManager.hasStoredPasswordEntry(key)
     fun saveRepositoryPasswordTemporary(key: String, password: String) = passwordManager.savePasswordTemporary(key, password)
     fun saveRepositoryPassword(key: String, password: String) = passwordManager.savePassword(key, password)
     fun forgetPassword(key: String) = passwordManager.removeStoredPassword(key)

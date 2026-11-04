@@ -6,6 +6,7 @@ import io.github.hddq.restoid.util.CryptoHelper
 
 class PasswordManager(private val context: Context) {
 
+    private val lock = Any()
     private val temporaryPasswords = mutableMapOf<String, String>()
 
     private val prefs: SharedPreferences = context.getSharedPreferences("repository_passwords_native", Context.MODE_PRIVATE)
@@ -16,29 +17,38 @@ class PasswordManager(private val context: Context) {
     }
 
     fun savePassword(repositoryPath: String, password: String) {
-        // Ensure temporary cache is in sync when saving permanently
-        temporaryPasswords[repositoryPath] = password
         val encrypted = CryptoHelper.encrypt(password)
-        prefs.edit()
-            .putString(repositoryPath, encrypted)
-            .apply()
+        synchronized(lock) {
+            temporaryPasswords[repositoryPath] = password
+            prefs.edit()
+                .putString(repositoryPath, encrypted)
+                .apply()
+        }
     }
 
     fun savePasswordTemporary(repositoryPath: String, password: String) {
-        temporaryPasswords[repositoryPath] = password
+        synchronized(lock) {
+            temporaryPasswords[repositoryPath] = password
+        }
     }
 
     fun getPassword(repositoryPath: String): String? {
-        val temp = temporaryPasswords[repositoryPath]
+        val (temp, encrypted) = synchronized(lock) {
+            temporaryPasswords[repositoryPath] to prefs.getString(repositoryPath, null)
+        }
         if (temp != null) return temp
+        if (encrypted == null) return null
         
-        val encrypted = prefs.getString(repositoryPath, null) ?: return null
         return when (val result = CryptoHelper.decryptDetailed(encrypted)) {
             is CryptoHelper.DecryptionResult.Success -> result.value
             is CryptoHelper.DecryptionResult.Invalid -> {
                 // Cannot decrypt stored password (e.g. keystore changed after backup restore or corrupted).
-                // Clean up confirmed invalid preference so hasPassword/hasStoredPassword won't report false positives.
-                prefs.edit().remove(repositoryPath).apply()
+                // Only clean up if the stored entry still matches the failed value to avoid deleting a concurrent user save.
+                synchronized(lock) {
+                    if (prefs.getString(repositoryPath, null) == encrypted) {
+                        prefs.edit().remove(repositoryPath).apply()
+                    }
+                }
                 null
             }
             is CryptoHelper.DecryptionResult.FailedTemporarily -> {
@@ -49,45 +59,66 @@ class PasswordManager(private val context: Context) {
     }
 
     fun removePassword(repositoryPath: String) {
-        // Also remove from temporary cache if it exists there
-        temporaryPasswords.remove(repositoryPath)
-        prefs.edit()
-            .remove(repositoryPath)
-            .apply()
+        synchronized(lock) {
+            temporaryPasswords.remove(repositoryPath)
+            prefs.edit()
+                .remove(repositoryPath)
+                .apply()
+        }
     }
 
     fun hasPassword(repositoryPath: String): Boolean {
-        if (temporaryPasswords.containsKey(repositoryPath)) return true
+        synchronized(lock) {
+            if (temporaryPasswords.containsKey(repositoryPath)) return true
+        }
         return hasStoredPassword(repositoryPath)
     }
 
+    /**
+     * Checks whether an encrypted entry exists in storage, regardless of whether decryption succeeds.
+     */
+    fun hasStoredPasswordEntry(repositoryPath: String): Boolean {
+        synchronized(lock) {
+            return prefs.contains(repositoryPath)
+        }
+    }
+
     fun hasStoredPassword(repositoryPath: String): Boolean {
-        if (!prefs.contains(repositoryPath)) return false
-        val encrypted = prefs.getString(repositoryPath, null) ?: return false
+        val encrypted = synchronized(lock) {
+            prefs.getString(repositoryPath, null)
+        } ?: return false
+
         return when (CryptoHelper.decryptDetailed(encrypted)) {
             is CryptoHelper.DecryptionResult.Success -> true
             is CryptoHelper.DecryptionResult.Invalid -> {
-                // Clean up confirmed invalid preference
-                prefs.edit().remove(repositoryPath).apply()
+                synchronized(lock) {
+                    if (prefs.getString(repositoryPath, null) == encrypted) {
+                        prefs.edit().remove(repositoryPath).apply()
+                    }
+                }
                 false
             }
             is CryptoHelper.DecryptionResult.FailedTemporarily -> {
-                // KeyStore is temporarily unavailable; do not delete the preference.
-                false
+                // The stored entry exists, but KeyStore failed temporarily.
+                // Report true so operations like updating changed credentials are not silently skipped.
+                true
             }
         }
     }
 
     fun removeStoredPassword(repositoryPath: String) {
-        // Also remove from temporary cache if it exists there
-        temporaryPasswords.remove(repositoryPath)
-        prefs.edit()
-            .remove(repositoryPath)
-            .apply()
+        synchronized(lock) {
+            temporaryPasswords.remove(repositoryPath)
+            prefs.edit()
+                .remove(repositoryPath)
+                .apply()
+        }
     }
 
     fun clearTemporaryPasswords() {
-        temporaryPasswords.clear()
+        synchronized(lock) {
+            temporaryPasswords.clear()
+        }
     }
 
     private fun sftpPasswordKey(repositoryKey: String): String {

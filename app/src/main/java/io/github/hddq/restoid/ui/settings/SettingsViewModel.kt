@@ -249,7 +249,7 @@ class SettingsViewModel(
                 repositoriesRepository.getExecutionResticOptions(key)
             )
             if (result.isSuccess) {
-                if (repositoriesRepository.hasStoredRepositoryPassword(key)) {
+                if (repositoriesRepository.hasStoredRepositoryPasswordEntry(key)) {
                     repositoriesRepository.saveRepositoryPassword(key, newPassword)
                 }
                 _changePasswordState.value = ChangePasswordState.Success

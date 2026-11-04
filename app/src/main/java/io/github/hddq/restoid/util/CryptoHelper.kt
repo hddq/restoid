@@ -62,18 +62,9 @@ object CryptoHelper {
     /**
      * Encrypts the [plainText] using AES-GCM and returns a Base64 encoded string containing
      * the IV and the ciphertext separated by [IV_SEPARATOR].
-     *
-     * Only regenerates the key if the existing key is confirmed permanently invalidated;
-     * temporary failures do not overwrite the key, preserving other stored credentials.
      */
     fun encrypt(plainText: String): String {
-        val secretKey = getSecretKey()
-        return try {
-            encryptWithKey(plainText, secretKey)
-        } catch (_: KeyPermanentlyInvalidatedException) {
-            val freshKey = generateSecretKey()
-            encryptWithKey(plainText, freshKey)
-        }
+        return encryptWithKey(plainText, getSecretKey())
     }
 
     private fun encryptWithKey(plainText: String, secretKey: SecretKey): String {
