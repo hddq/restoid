@@ -1,0 +1,8 @@
+* Active operation card on Home with live progress & force stop
+* Material 3 Expressive UI refresh and predictive back gestures
+* Built-in storage browser with system root (/) support
+* Custom backups can now include individual files
+* Fixed & simplified SFTP setup (dedicated fields, SSH keys, logs)
+* Accurate app backup sizes without Usage Stats permission
+* Auto-abort remote operations on sustained network loss
+* Refined Outlined icons and pure dark theme fixes
