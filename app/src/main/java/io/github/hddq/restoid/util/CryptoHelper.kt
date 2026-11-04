@@ -30,20 +30,16 @@ object CryptoHelper {
     private val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
 
     private fun getSecretKey(): SecretKey {
-        return try {
-            if (keyStore.containsAlias(KEY_ALIAS)) {
-                (keyStore.getEntry(KEY_ALIAS, null) as? KeyStore.SecretKeyEntry)?.secretKey
-                    ?: generateSecretKey()
-            } else {
-                generateSecretKey()
-            }
-        } catch (_: UnrecoverableKeyException) {
-            generateSecretKey()
-        } catch (_: UnrecoverableEntryException) {
-            generateSecretKey()
-        } catch (_: KeyPermanentlyInvalidatedException) {
-            generateSecretKey()
+        if (!keyStore.containsAlias(KEY_ALIAS)) {
+            return generateSecretKey()
         }
+        return (keyStore.getEntry(KEY_ALIAS, null) as? KeyStore.SecretKeyEntry)?.secretKey
+            ?: throw UnrecoverableKeyException("Stored key is not a secret key")
+    }
+
+    private fun regenerateSecretKey(): SecretKey {
+        keyStore.deleteEntry(KEY_ALIAS)
+        return generateSecretKey()
     }
 
     private fun generateSecretKey(): SecretKey {
@@ -64,7 +60,15 @@ object CryptoHelper {
      * the IV and the ciphertext separated by [IV_SEPARATOR].
      */
     fun encrypt(plainText: String): String {
-        return encryptWithKey(plainText, getSecretKey())
+        return try {
+            encryptWithKey(plainText, getSecretKey())
+        } catch (_: KeyPermanentlyInvalidatedException) {
+            encryptWithKey(plainText, regenerateSecretKey())
+        } catch (_: UnrecoverableKeyException) {
+            encryptWithKey(plainText, regenerateSecretKey())
+        } catch (_: UnrecoverableEntryException) {
+            encryptWithKey(plainText, regenerateSecretKey())
+        }
     }
 
     private fun encryptWithKey(plainText: String, secretKey: SecretKey): String {

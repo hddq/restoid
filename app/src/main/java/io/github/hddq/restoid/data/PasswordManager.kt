@@ -99,9 +99,10 @@ class PasswordManager(private val context: Context) {
                 false
             }
             is CryptoHelper.DecryptionResult.FailedTemporarily -> {
-                // The stored entry exists, but KeyStore failed temporarily.
-                // Report true so operations like updating changed credentials are not silently skipped.
-                true
+                // A stored entry is not an available credential while KeyStore is unavailable.
+                // Callers that only need to know whether an entry exists use
+                // hasStoredPasswordEntry() instead.
+                false
             }
         }
     }
