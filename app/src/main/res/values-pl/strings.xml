@@ -465,8 +465,8 @@
     <string name="repo_warning_metadata_restore_failed">Repozytorium zostało pomyślnie dodane, ale przywrócenie jego metadanych (harmonogramy, szczegółowe informacje o kopiach zapasowych) nie powiodło się. Zazwyczaj oznacza to, że migawka metadanych jest brakująca lub repozytorium jest zablokowane. Aby spróbować ponownie, otwórz Ustawienia → Repozytoria, dotknij menu repozytorium i wybierz „Przywróć metadane”.</string>
     <string name="screen_tasks">Zadania</string>
     <string name="topbar_tasks">Zadania</string>
-    <string name="run_tasks_custom_directories">Własne Foldery</string>
-    <string name="run_tasks_custom_directories_subtitle_none">Żaden katalog nie został wybrany</string>
+    <string name="run_tasks_custom_directories">Niestandardowe pliki i foldery</string>
+    <string name="run_tasks_custom_directories_subtitle_none">Nie wybrano plików ani folderów</string>
     <string name="storage_permission_enabled">Przyznano dostęp do wszystkich plików</string>
     <string name="storage_permission_disabled">Wymagany dostęp do wszystkich plików</string>
     <string name="storage_permission_description">Wymagane do tworzenia kopii zapasowych własnych katalogów bez dostępu root.</string>
@@ -513,7 +513,7 @@
     </plurals>
     <string name="action_run_now">Uruchom teraz</string>
     <string name="run_tasks_custom_directories_subtitle_count">%1$d katalogów wybranych</string>
-    <string name="action_add_directory">Dodaj Katalog</string>
+    <string name="action_add_directory">Dodaj plik lub folder</string>
     <string name="title_custom_directories">Własne Foldery</string>
     <plurals name="backed_up_items_count">
         <item quantity="one">Zarchiwizowano (%1$d):</item>
@@ -521,4 +521,7 @@
         <item quantity="many">Utworzono kopię zapasową (%1$d):</item>
         <item quantity="other">Utworzono kopię zapasową (%1$d):</item>
     </plurals>
+    <string name="folder_browser_select_this_folder">Wybierz tę ścieżkę</string>
+    <string name="folder_browser_show_hidden">Pokaż ukryte foldery</string>
+    <string name="folder_browser_show_hidden_items">Pokaż ukryte pliki i foldery</string>
 </resources>
