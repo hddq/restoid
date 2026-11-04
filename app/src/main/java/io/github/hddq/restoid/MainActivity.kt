@@ -5,10 +5,18 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Bundle
 import android.os.SystemClock
+import androidx.activity.BackEventCompat
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
@@ -16,6 +24,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.filled.Home
@@ -263,262 +272,196 @@ class MainActivity : FragmentActivity() {
                     }
 
                     val navController = rememberNavController()
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentDestination = navBackStackEntry?.destination
-                val showBottomBar = currentDestination?.route in listOf(Screen.Home.route, SchedulesRoutes.Main, Screen.Settings.route)
-                val homeViewModel: HomeViewModel = viewModel(
-                    factory = HomeViewModelFactory(app, app.repositoriesRepository, app.resticBinaryManager, app.resticRepository, app.appInfoRepository, app.metadataRepository, app.operationWorkRepository)
-                )
-                val homeUiState by homeViewModel.uiState.collectAsState()
-                val appBarActions = remember { mutableStateOf<(@Composable RowScope.() -> Unit)?>(null) }
+                    val topLevelRoutes = remember {
+                        setOf(Screen.Home.route, SchedulesRoutes.Main, Screen.Settings.route)
+                    }
+                    val homeViewModel: HomeViewModel = viewModel(
+                        factory = HomeViewModelFactory(app, app.repositoriesRepository, app.resticBinaryManager, app.resticRepository, app.appInfoRepository, app.metadataRepository, app.operationWorkRepository)
+                    )
+                    val homeUiState by homeViewModel.uiState.collectAsState()
 
-                if (openOperationProgressOnLaunch && isAppUnlocked) {
-                    androidx.compose.runtime.LaunchedEffect(openOperationProgressOnLaunch, isAppUnlocked) {
-                        navController.navigate(Screen.OperationProgress.route) {
+                    if (openOperationProgressOnLaunch && isAppUnlocked) {
+                        androidx.compose.runtime.LaunchedEffect(openOperationProgressOnLaunch, isAppUnlocked) {
+                            navController.navigate(Screen.OperationProgress.route) {
+                                launchSingleTop = true
+                            }
+                            openOperationProgressOnLaunch = false
+                        }
+                    }
+
+                    val standardEasing = remember { CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f) }
+                    val predictiveEasing = remember { CubicBezierEasing(0.4f, 0.0f, 0.2f, 1.0f) }
+                    val fadeOutEasing = remember { CubicBezierEasing(0.4f, 0.0f, 1.0f, 1.0f) }
+
+                    val navigateToTopLevel: (Screen) -> Unit = { screen ->
+                        navController.navigate(screen.route) {
+                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                             launchSingleTop = true
+                            restoreState = true
                         }
-                        openOperationProgressOnLaunch = false
                     }
-                }
 
-                CompositionLocalProvider(LocalAppBarActions provides appBarActions) {
-                    Scaffold(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    topBar = {
-                        TopAppBar(
-                            colors = TopAppBarDefaults.topAppBarColors(
-                                containerColor = MaterialTheme.colorScheme.background,
-                                scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer
-                            ),
-                            title = {
-                                val titleRes = when {
-                                    currentDestination?.route == Screen.Home.route -> R.string.home_title
-                                    currentDestination?.route == SchedulesRoutes.Main -> R.string.topbar_schedules
-                                    currentDestination?.route == Screen.Settings.route -> R.string.screen_settings
-                                    currentDestination?.route == RunTasksRoutes.Main -> R.string.topbar_tasks
-                                    currentDestination?.route == RunTasksRoutes.BackupConfig -> R.string.topbar_backup_config
-                                    currentDestination?.route == RunTasksRoutes.CustomDirectoriesConfig -> R.string.title_custom_directories
-                                    currentDestination?.route == RunTasksRoutes.ForgetConfig -> R.string.topbar_forget_config
-                                    currentDestination?.route == RunTasksRoutes.CheckConfig -> R.string.topbar_check_config
-                                    currentDestination?.route == SchedulesRoutes.AddEdit -> {
-                                        val entry = navBackStackEntry ?: return@TopAppBar
-                                        val parentEntry = try { navController.getBackStackEntry(Screen.Schedules.route) } catch (e: Exception) { entry }
-                                        val vm: SchedulesViewModel = viewModel(viewModelStoreOwner = parentEntry, factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository))
-                                        val state by vm.addEditState.collectAsState()
-                                        if (state.id == null) R.string.topbar_add_schedule else R.string.topbar_edit_schedule
-                                    }
-                                    currentDestination?.route == SchedulesRoutes.BackupConfig -> R.string.topbar_backup_config
-                                    currentDestination?.route == SchedulesRoutes.CustomDirectoriesConfig -> R.string.title_custom_directories
-                                    currentDestination?.route == SchedulesRoutes.ForgetConfig -> R.string.topbar_forget_config
-                                    currentDestination?.route == SchedulesRoutes.CheckConfig -> R.string.topbar_check_config
-                                    currentDestination?.route == Screen.OperationProgress.route -> R.string.topbar_operation_progress
-                                    currentDestination?.route == Screen.Licenses.route -> R.string.topbar_open_source_licenses
-                                    currentDestination?.route == io.github.hddq.restoid.ui.restore.RestoreRoutes.AppsConfig -> R.string.apps_to_restore_title
-                                    currentDestination?.route == io.github.hddq.restoid.ui.restore.RestoreRoutes.CustomDirectoriesConfig -> R.string.title_custom_directories
-                                    currentDestination?.route?.startsWith(Screen.SnapshotDetails.route) == true -> R.string.topbar_snapshot_details
-                                    currentDestination?.route?.startsWith(Screen.Restore.route) == true -> R.string.topbar_restore_snapshot
-                                    else -> null
-                                }
-                                titleRes?.let {
-                                    Text(
-                                        text = stringResource(it),
-                                        style = if (showBottomBar) {
-                                            MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold)
-                                        } else {
-                                            MaterialTheme.typography.titleLarge
-                                        },
-                                        color = if (currentDestination?.route == Screen.Home.route) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurface
-                                        }
-                                    )
-                                }
-                            },
-                            navigationIcon = {
-                                if (!showBottomBar) {
-                                    IconButton(onClick = {
-                                        this@MainActivity.onBackPressedDispatcher.onBackPressed()
-                                    }) {
-                                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.cd_back))
-                                    }
-                                }
-                            },
-                            actions = {
-                                if (!showBottomBar) {
-                                    appBarActions.value?.invoke(this)
-                                }
-                            }
-                        )
-                    },
-                    bottomBar = {
-                        if (showBottomBar) {
-                            val items = listOf(
-                                Triple(Screen.Home, Icons.Filled.Home, Icons.Outlined.Home),
-                                Triple(Screen.Schedules, Icons.Filled.Schedule, Icons.Outlined.Schedule),
-                                Triple(Screen.Settings, Icons.Filled.Settings, Icons.Outlined.Settings)
-                            )
-                            NavigationBar(
-                                containerColor = MaterialTheme.colorScheme.surfaceContainer
-                            ) {
-                                items.forEach { (screen, selectedIcon, unselectedIcon) ->
-                                    val selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
-                                    NavigationBarItem(
-                                        icon = {
-                                            Icon(
-                                                imageVector = if (selected) selectedIcon else unselectedIcon,
-                                                contentDescription = null
-                                            )
-                                        },
-                                        label = {
-                                            Text(
-                                                text = stringResource(screen.titleRes),
-                                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
-                                            )
-                                        },
-                                        selected = selected,
-                                        onClick = {
-                                            navController.navigate(screen.route) {
-                                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                                launchSingleTop = true
-                                                restoreState = true
-                                            }
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    },
-                    floatingActionButton = {
-                        when (currentDestination?.route) {
-                            Screen.Home.route -> {
-                                val isRepoReady = homeUiState.isRepoReady
-                                ExtendedFloatingActionButton(
-                                    text = { Text(stringResource(R.string.screen_tasks)) },
-                                    icon = { Icon(Icons.Outlined.PlayArrow, contentDescription = stringResource(R.string.screen_tasks)) },
-                                    onClick = { if (isRepoReady) { navController.navigate(Screen.RunTasks.route) } },
-                                    shape = RoundedCornerShape(20.dp),
-                                    containerColor = if (isRepoReady) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
-                                    contentColor = if (isRepoReady) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
-                                )
-                            }
-                            RunTasksRoutes.Main -> {
-                                val currentEntry = navBackStackEntry ?: return@Scaffold
-                                val parentEntry = remember(currentEntry) {
-                                    navController.getBackStackEntry(Screen.RunTasks.route)
-                                }
-                                val viewModel: RunTasksViewModel = viewModel(
-                                    viewModelStoreOwner = parentEntry,
-                                    factory = RunTasksViewModelFactory(
-                                        app,
-                                        app.rootRepository,
-                                        app.repositoriesRepository,
-                                        app.resticBinaryManager,
-                                        app.appInfoRepository,
-                                        app.preferencesRepository,
-                                        app.operationWorkRepository
-                                    )
-                                )
-                                val uiState by viewModel.uiState.collectAsState()
-                                if (!uiState.isRunning) {
-                                    ExtendedFloatingActionButton(
-                                        onClick = { viewModel.run() },
-                                        shape = RoundedCornerShape(20.dp),
-                                        icon = { Icon(Icons.Outlined.PlayArrow, contentDescription = stringResource(R.string.fab_run_tasks)) },
-                                        text = { Text(stringResource(R.string.fab_run_tasks)) }
-                                    )
-                                }
-                            }
-                            Screen.SnapshotDetails.route + "/{snapshotId}" -> {
-                                ExtendedFloatingActionButton(
-                                    text = { Text(stringResource(R.string.fab_restore)) },
-                                    icon = { Icon(Icons.Outlined.Restore, contentDescription = stringResource(R.string.topbar_restore_snapshot)) },
-                                    shape = RoundedCornerShape(20.dp),
-                                    onClick = { navController.navigate("${Screen.Restore.route}/${navBackStackEntry?.arguments?.getString("snapshotId")}") }
-                                )
-                            }
-                            Screen.Restore.route + "/{snapshotId}" -> {
-                                val parentEntry = remember(navBackStackEntry) {
-                                    navController.getBackStackEntry("restore_graph/{snapshotId}")
-                                }
-                                val viewModel: RestoreViewModel = viewModel(
-                                    viewModelStoreOwner = parentEntry,
-                                    factory = RestoreViewModelFactory(
-                                        app,
-                                        app.repositoriesRepository,
-                                        app.rootRepository,
-                                        app.resticBinaryManager,
-                                        app.resticRepository,
-                                        app.appInfoRepository,
-                                        app.metadataRepository,
-                                        app.preferencesRepository,
-                                        app.operationWorkRepository,
-                                        navBackStackEntry?.arguments?.getString("snapshotId") ?: ""
-                                    )
-                                )
-                                val isRestoring by viewModel.isRestoring.collectAsState()
-                                if (!isRestoring) {
-                                    ExtendedFloatingActionButton(
-                                        onClick = { viewModel.startRestore() },
-                                        shape = RoundedCornerShape(20.dp),
-                                        icon = { Icon(Icons.Outlined.Restore, contentDescription = stringResource(R.string.fab_start_restore)) },
-                                        text = { Text(stringResource(R.string.fab_start_restore)) }
-                                    )
-                                }
-                            }
-                            SchedulesRoutes.AddEdit -> {
-                                val currentEntry = navBackStackEntry ?: return@Scaffold
-                                val parentEntry = remember(currentEntry) {
-                                    navController.getBackStackEntry(Screen.Schedules.route)
-                                }
-                                val viewModel: SchedulesViewModel = viewModel(
-                                    viewModelStoreOwner = parentEntry,
-                                    factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository)
-                                )
-                                val state by viewModel.addEditState.collectAsState()
-                                if (!state.isSaving) {
-                                    ExtendedFloatingActionButton(
-                                        onClick = { viewModel.saveSchedule() },
-                                        shape = RoundedCornerShape(20.dp),
-                                        icon = { Icon(Icons.Outlined.Check, contentDescription = stringResource(R.string.action_save)) },
-                                        text = { Text(stringResource(R.string.action_save)) }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                ) { innerPadding ->
                     NavHost(
                         navController = navController,
                         startDestination = Screen.Home.route,
-                        modifier = Modifier.padding(innerPadding)
+                        modifier = Modifier.fillMaxSize(),
+                        enterTransition = {
+                            val isTabSwitch = initialState.destination.route in topLevelRoutes &&
+                                targetState.destination.route in topLevelRoutes
+                            if (isTabSwitch) {
+                                fadeIn(animationSpec = tween(200, easing = standardEasing))
+                            } else {
+                                slideIntoContainer(
+                                    towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                                    animationSpec = tween(320, easing = standardEasing),
+                                    initialOffset = { it / 4 }
+                                ) + scaleIn(
+                                    initialScale = 0.95f,
+                                    animationSpec = tween(320, easing = standardEasing)
+                                ) + fadeIn(animationSpec = tween(200, easing = standardEasing))
+                            }
+                        },
+                        exitTransition = {
+                            val isTabSwitch = initialState.destination.route in topLevelRoutes &&
+                                targetState.destination.route in topLevelRoutes
+                            if (isTabSwitch) {
+                                fadeOut(animationSpec = tween(1, delayMillis = 200))
+                            } else {
+                                slideOutOfContainer(
+                                    towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                                    animationSpec = tween(320, easing = standardEasing),
+                                    targetOffset = { it / 6 }
+                                ) + scaleOut(
+                                    targetScale = 0.95f,
+                                    animationSpec = tween(320, easing = standardEasing)
+                                ) + fadeOut(animationSpec = tween(1, delayMillis = 320))
+                            }
+                        },
+                        popEnterTransition = {
+                            val isTabSwitch = initialState.destination.route in topLevelRoutes &&
+                                targetState.destination.route in topLevelRoutes
+                            if (isTabSwitch) {
+                                fadeIn(animationSpec = tween(200, easing = standardEasing))
+                            } else {
+                                slideIntoContainer(
+                                    towards = AnimatedContentTransitionScope.SlideDirection.End,
+                                    animationSpec = tween(320, easing = predictiveEasing),
+                                    initialOffset = { it / 5 }
+                                ) + scaleIn(
+                                    initialScale = 0.94f,
+                                    animationSpec = tween(320, easing = predictiveEasing)
+                                ) + fadeIn(
+                                    initialAlpha = 0.6f,
+                                    animationSpec = tween(320, easing = predictiveEasing)
+                                )
+                            }
+                        },
+                        popExitTransition = {
+                            val isTabSwitch = initialState.destination.route in topLevelRoutes &&
+                                targetState.destination.route in topLevelRoutes
+                            if (isTabSwitch) {
+                                fadeOut(animationSpec = tween(1, delayMillis = 200))
+                            } else {
+                                scaleOut(
+                                    targetScale = 0.92f,
+                                    animationSpec = tween(320, easing = predictiveEasing)
+                                ) + slideOutOfContainer(
+                                    towards = AnimatedContentTransitionScope.SlideDirection.End,
+                                    animationSpec = tween(320, easing = predictiveEasing),
+                                    targetOffset = { it / 4 }
+                                ) + fadeOut(
+                                    animationSpec = tween(190, delayMillis = 130, easing = fadeOutEasing)
+                                )
+                            }
+                        },
+                        predictivePopEnterTransition = { swipeEdge ->
+                            val slideDirection = if (swipeEdge == BackEventCompat.EDGE_RIGHT) {
+                                AnimatedContentTransitionScope.SlideDirection.Left
+                            } else {
+                                AnimatedContentTransitionScope.SlideDirection.Right
+                            }
+                            slideIntoContainer(
+                                towards = slideDirection,
+                                animationSpec = tween(350, easing = predictiveEasing),
+                                initialOffset = { it / 5 }
+                            ) + scaleIn(
+                                initialScale = 0.94f,
+                                animationSpec = tween(350, easing = predictiveEasing)
+                            ) + fadeIn(
+                                initialAlpha = 0.6f,
+                                animationSpec = tween(350, easing = predictiveEasing)
+                            )
+                        },
+                        predictivePopExitTransition = { swipeEdge ->
+                            val slideDirection = if (swipeEdge == BackEventCompat.EDGE_RIGHT) {
+                                AnimatedContentTransitionScope.SlideDirection.Left
+                            } else {
+                                AnimatedContentTransitionScope.SlideDirection.Right
+                            }
+                            val pivotX = if (swipeEdge == BackEventCompat.EDGE_RIGHT) 0.25f else 0.75f
+                            scaleOut(
+                                targetScale = 0.92f,
+                                transformOrigin = TransformOrigin(pivotX, 0.5f),
+                                animationSpec = tween(350, easing = predictiveEasing)
+                            ) + slideOutOfContainer(
+                                towards = slideDirection,
+                                animationSpec = tween(350, easing = predictiveEasing),
+                                targetOffset = { it / 4 }
+                            ) + fadeOut(
+                                animationSpec = tween(210, delayMillis = 140, easing = fadeOutEasing)
+                            )
+                        }
                     ) {
                         composable(Screen.Home.route) {
-                            HomeScreen(
-                                onSnapshotClick = { snapshotId -> navController.navigate("${Screen.SnapshotDetails.route}/$snapshotId") },
-                                uiState = homeUiState,
-                                onRefresh = { homeViewModel.refreshSnapshots() },
-                                onPasswordEntered = { p, s -> homeViewModel.onPasswordEntered(p, s) },
-                                onSftpPasswordEntered = { keyOrPassword, passphrase, save ->
-                                    homeViewModel.onSftpPasswordEntered(keyOrPassword, passphrase, save)
+                            val isRepoReady = homeUiState.isRepoReady
+                            DestinationScaffold(
+                                titleRes = R.string.home_title,
+                                isTopLevel = true,
+                                isHome = true,
+                                onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() },
+                                bottomBar = {
+                                    RestoidBottomNavigationBar(
+                                        selectedScreen = Screen.Home,
+                                        onSelectScreen = navigateToTopLevel
+                                    )
                                 },
-                                onRestCredentialsEntered = { u, p, s -> homeViewModel.onRestCredentialsEntered(u, p, s) },
-                                onS3CredentialsEntered = { u, p, s -> homeViewModel.onS3CredentialsEntered(u, p, s) },
-                                onRetryRepositoryPasswordEntry = { homeViewModel.onRetryRepositoryPasswordEntry() },
-                                onRetrySftpPasswordEntry = { homeViewModel.onRetrySftpPasswordEntry() },
-                                onRetryRestCredentialsEntry = { homeViewModel.onRetryRestCredentialsEntry() },
-                                onRetryS3CredentialsEntry = { homeViewModel.onRetryS3CredentialsEntry() },
-                                onDismissPasswordDialog = { homeViewModel.onDismissPasswordDialog() },
-                                onDismissSftpPasswordDialog = { homeViewModel.onDismissSftpPasswordDialog() },
-                                onDismissRestCredentialsDialog = { homeViewModel.onDismissRestCredentialsDialog() },
-                                onDismissS3CredentialsDialog = { homeViewModel.onDismissS3CredentialsDialog() },
-                                onOpenOperationProgress = {
-                                    navController.navigate(Screen.OperationProgress.route) {
-                                        launchSingleTop = true
-                                    }
-                                },
-                                onForceStopOperation = { homeViewModel.forceStopOperation() }
-                            )
+                                floatingActionButton = {
+                                    ExtendedFloatingActionButton(
+                                        text = { Text(stringResource(R.string.screen_tasks)) },
+                                        icon = { Icon(Icons.Outlined.PlayArrow, contentDescription = stringResource(R.string.screen_tasks)) },
+                                        onClick = { if (isRepoReady) { navController.navigate(Screen.RunTasks.route) } },
+                                        shape = RoundedCornerShape(20.dp),
+                                        containerColor = if (isRepoReady) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                                        contentColor = if (isRepoReady) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+                                    )
+                                }
+                            ) {
+                                HomeScreen(
+                                    onSnapshotClick = { snapshotId -> navController.navigate("${Screen.SnapshotDetails.route}/$snapshotId") },
+                                    uiState = homeUiState,
+                                    onRefresh = { homeViewModel.refreshSnapshots() },
+                                    onPasswordEntered = { p, s -> homeViewModel.onPasswordEntered(p, s) },
+                                    onSftpPasswordEntered = { keyOrPassword, passphrase, save ->
+                                        homeViewModel.onSftpPasswordEntered(keyOrPassword, passphrase, save)
+                                    },
+                                    onRestCredentialsEntered = { u, p, s -> homeViewModel.onRestCredentialsEntered(u, p, s) },
+                                    onS3CredentialsEntered = { u, p, s -> homeViewModel.onS3CredentialsEntered(u, p, s) },
+                                    onRetryRepositoryPasswordEntry = { homeViewModel.onRetryRepositoryPasswordEntry() },
+                                    onRetrySftpPasswordEntry = { homeViewModel.onRetrySftpPasswordEntry() },
+                                    onRetryRestCredentialsEntry = { homeViewModel.onRetryRestCredentialsEntry() },
+                                    onRetryS3CredentialsEntry = { homeViewModel.onRetryS3CredentialsEntry() },
+                                    onDismissPasswordDialog = { homeViewModel.onDismissPasswordDialog() },
+                                    onDismissSftpPasswordDialog = { homeViewModel.onDismissSftpPasswordDialog() },
+                                    onDismissRestCredentialsDialog = { homeViewModel.onDismissRestCredentialsDialog() },
+                                    onDismissS3CredentialsDialog = { homeViewModel.onDismissS3CredentialsDialog() },
+                                    onOpenOperationProgress = {
+                                        navController.navigate(Screen.OperationProgress.route) {
+                                            launchSingleTop = true
+                                        }
+                                    },
+                                    onForceStopOperation = { homeViewModel.forceStopOperation() }
+                                )
+                            }
                         }
                         composable(Screen.Settings.route) {
                             val vm: SettingsViewModel = viewModel(
@@ -534,7 +477,19 @@ class MainActivity : FragmentActivity() {
                                     app.localNetworkPermissionRepository
                                 )
                             )
-                            SettingsScreen(viewModel = vm, onNavigateToLicenses = { navController.navigate(Screen.Licenses.route) })
+                            DestinationScaffold(
+                                titleRes = R.string.screen_settings,
+                                isTopLevel = true,
+                                onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() },
+                                bottomBar = {
+                                    RestoidBottomNavigationBar(
+                                        selectedScreen = Screen.Settings,
+                                        onSelectScreen = navigateToTopLevel
+                                    )
+                                }
+                            ) {
+                                SettingsScreen(viewModel = vm, onNavigateToLicenses = { navController.navigate(Screen.Licenses.route) })
+                            }
                         }
                         navigation(
                             startDestination = SchedulesRoutes.Main,
@@ -548,270 +503,527 @@ class MainActivity : FragmentActivity() {
                                     viewModelStoreOwner = parentEntry,
                                     factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository)
                                 )
-                                SchedulesScreen(
-                                    viewModel = vm,
-                                    onNavigateToAddEditSchedule = { navController.navigate(SchedulesRoutes.AddEdit) }
-                                )
-                            }
-                            composable(SchedulesRoutes.AddEdit) { backStackEntry ->
-                                val parentEntry = remember(backStackEntry) {
-                                    navController.getBackStackEntry(Screen.Schedules.route)
-                                }
-                                val vm: SchedulesViewModel = viewModel(
-                                    viewModelStoreOwner = parentEntry,
-                                    factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository)
-                                )
-                                AddEditScheduleScreen(
-                                    viewModel = vm,
-                                    onNavigateBack = { navController.navigateUp() },
-                                    onNavigateToBackupConfig = { navController.navigate(SchedulesRoutes.BackupConfig) },
-                                    onNavigateToCustomDirectoriesConfig = { navController.navigate(SchedulesRoutes.CustomDirectoriesConfig) },
-                                    onNavigateToForgetConfig = { navController.navigate(SchedulesRoutes.ForgetConfig) },
-                                    onNavigateToCheckConfig = { navController.navigate(SchedulesRoutes.CheckConfig) }
-                                )
-                            }
-                            composable(SchedulesRoutes.BackupConfig) { backStackEntry ->
-                                val parentEntry = remember(backStackEntry) {
-                                    navController.getBackStackEntry(Screen.Schedules.route)
-                                }
-                                val vm: SchedulesViewModel = viewModel(
-                                    viewModelStoreOwner = parentEntry,
-                                    factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository)
-                                )
-                                ScheduleBackupConfigScreen(viewModel = vm)
-                            }
-                            composable(SchedulesRoutes.ForgetConfig) { backStackEntry ->
-                                val parentEntry = remember(backStackEntry) {
-                                    navController.getBackStackEntry(Screen.Schedules.route)
-                                }
-                                val vm: SchedulesViewModel = viewModel(
-                                    viewModelStoreOwner = parentEntry,
-                                    factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository)
-                                )
-                                ScheduleForgetConfigScreen(viewModel = vm)
-                            }
-                            composable(SchedulesRoutes.CheckConfig) { backStackEntry ->
-                                val parentEntry = remember(backStackEntry) {
-                                    navController.getBackStackEntry(Screen.Schedules.route)
-                                }
-                                val vm: SchedulesViewModel = viewModel(
-                                    viewModelStoreOwner = parentEntry,
-                                    factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository)
-                                )
-                                ScheduleCheckConfigScreen(viewModel = vm)
-                            }
-                            composable(SchedulesRoutes.CustomDirectoriesConfig) { backStackEntry ->
-                                val parentEntry = remember(backStackEntry) {
-                                    navController.getBackStackEntry(Screen.Schedules.route)
-                                }
-                                val vm: SchedulesViewModel = viewModel(
-                                    viewModelStoreOwner = parentEntry,
-                                    factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository)
-                                )
-                                ScheduleCustomDirectoriesConfigScreen(viewModel = vm)
-                            }
-                        }
-                        navigation(
-                            startDestination = RunTasksRoutes.Main,
-                            route = Screen.RunTasks.route
-                        ) {
-                            composable(RunTasksRoutes.Main) { backStackEntry ->
-                                val parentEntry = remember(backStackEntry) {
-                                    navController.getBackStackEntry(Screen.RunTasks.route)
-                                }
-                                val vm: RunTasksViewModel = viewModel(
-                                    viewModelStoreOwner = parentEntry,
-                                    factory = RunTasksViewModelFactory(
-                                        app,
-                                        app.rootRepository,
-                                        app.repositoriesRepository,
-                                        app.resticBinaryManager,
-                                        app.appInfoRepository,
-                                        app.preferencesRepository,
-                                        app.operationWorkRepository
+                                DestinationScaffold(
+                                    titleRes = R.string.topbar_schedules,
+                                    isTopLevel = true,
+                                    onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() },
+                                    bottomBar = {
+                                        RestoidBottomNavigationBar(
+                                            selectedScreen = Screen.Schedules,
+                                            onSelectScreen = navigateToTopLevel
+                                        )
+                                    }
+                                ) {
+                                    SchedulesScreen(
+                                        viewModel = vm,
+                                        onNavigateToAddEditSchedule = { navController.navigate(SchedulesRoutes.AddEdit) }
                                     )
-                                )
-                                RunTasksScreen(
-                                    viewModel = vm,
-                                    onNavigateToOperationProgress = {
-                                        navController.navigate(Screen.OperationProgress.route) { launchSingleTop = true }
-                                    },
-                                    onNavigateToBackupConfig = { navController.navigate(RunTasksRoutes.BackupConfig) },
-                                    onNavigateToCustomDirectoriesConfig = { navController.navigate(RunTasksRoutes.CustomDirectoriesConfig) },
-                                    onNavigateToForgetConfig = { navController.navigate(RunTasksRoutes.ForgetConfig) },
-                                    onNavigateToCheckConfig = { navController.navigate(RunTasksRoutes.CheckConfig) }
-                                )
-                            }
-                            composable(RunTasksRoutes.BackupConfig) { backStackEntry ->
-                                val parentEntry = remember(backStackEntry) {
-                                    navController.getBackStackEntry(Screen.RunTasks.route)
                                 }
-                                val vm: RunTasksViewModel = viewModel(
-                                    viewModelStoreOwner = parentEntry,
-                                    factory = RunTasksViewModelFactory(
-                                        app,
-                                        app.rootRepository,
-                                        app.repositoriesRepository,
-                                        app.resticBinaryManager,
-                                        app.appInfoRepository,
-                                        app.preferencesRepository,
-                                        app.operationWorkRepository
-                                    )
-                                )
-                                BackupConfigScreen(viewModel = vm)
                             }
-                            composable(RunTasksRoutes.CustomDirectoriesConfig) { backStackEntry ->
-                                val parentEntry = remember(backStackEntry) {
-                                    navController.getBackStackEntry(Screen.RunTasks.route)
+                                composable(SchedulesRoutes.AddEdit) { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry(Screen.Schedules.route)
+                                    }
+                                    val vm: SchedulesViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository)
+                                    )
+                                    val state by vm.addEditState.collectAsState()
+                                    DestinationScaffold(
+                                        titleRes = if (state.id == null) R.string.topbar_add_schedule else R.string.topbar_edit_schedule,
+                                        isTopLevel = false,
+                                        onBack = { vm.onBackPress() },
+                                        floatingActionButton = {
+                                            if (!state.isSaving) {
+                                                ExtendedFloatingActionButton(
+                                                    onClick = { vm.saveSchedule() },
+                                                    shape = RoundedCornerShape(20.dp),
+                                                    icon = { Icon(Icons.Outlined.Check, contentDescription = stringResource(R.string.action_save)) },
+                                                    text = { Text(stringResource(R.string.action_save)) }
+                                                )
+                                            }
+                                        }
+                                    ) {
+                                        AddEditScheduleScreen(
+                                            viewModel = vm,
+                                            onNavigateBack = { navController.navigateUp() },
+                                            onNavigateToBackupConfig = { navController.navigate(SchedulesRoutes.BackupConfig) },
+                                            onNavigateToCustomDirectoriesConfig = { navController.navigate(SchedulesRoutes.CustomDirectoriesConfig) },
+                                            onNavigateToForgetConfig = { navController.navigate(SchedulesRoutes.ForgetConfig) },
+                                            onNavigateToCheckConfig = { navController.navigate(SchedulesRoutes.CheckConfig) }
+                                        )
+                                    }
                                 }
-                                val vm: RunTasksViewModel = viewModel(
-                                    viewModelStoreOwner = parentEntry,
-                                    factory = RunTasksViewModelFactory(
-                                        app,
-                                        app.rootRepository,
-                                        app.repositoriesRepository,
-                                        app.resticBinaryManager,
-                                        app.appInfoRepository,
-                                        app.preferencesRepository,
-                                        app.operationWorkRepository
+                                composable(SchedulesRoutes.BackupConfig) { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry(Screen.Schedules.route)
+                                    }
+                                    val vm: SchedulesViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository)
                                     )
-                                )
-                                CustomDirectoriesConfigScreen(viewModel = vm)
-                            }
-                            composable(RunTasksRoutes.ForgetConfig) { backStackEntry ->
-                                val parentEntry = remember(backStackEntry) {
-                                    navController.getBackStackEntry(Screen.RunTasks.route)
+                                    DestinationScaffold(
+                                        titleRes = R.string.topbar_backup_config,
+                                        isTopLevel = false,
+                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
+                                    ) {
+                                        ScheduleBackupConfigScreen(viewModel = vm)
+                                    }
                                 }
-                                val vm: RunTasksViewModel = viewModel(
-                                    viewModelStoreOwner = parentEntry,
-                                    factory = RunTasksViewModelFactory(
-                                        app,
-                                        app.rootRepository,
-                                        app.repositoriesRepository,
-                                        app.resticBinaryManager,
-                                        app.appInfoRepository,
-                                        app.preferencesRepository,
-                                        app.operationWorkRepository
+                                composable(SchedulesRoutes.ForgetConfig) { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry(Screen.Schedules.route)
+                                    }
+                                    val vm: SchedulesViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository)
                                     )
-                                )
-                                ForgetConfigScreen(viewModel = vm)
-                            }
-                            composable(RunTasksRoutes.CheckConfig) { backStackEntry ->
-                                val parentEntry = remember(backStackEntry) {
-                                    navController.getBackStackEntry(Screen.RunTasks.route)
+                                    DestinationScaffold(
+                                        titleRes = R.string.topbar_forget_config,
+                                        isTopLevel = false,
+                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
+                                    ) {
+                                        ScheduleForgetConfigScreen(viewModel = vm)
+                                    }
                                 }
-                                val vm: RunTasksViewModel = viewModel(
-                                    viewModelStoreOwner = parentEntry,
-                                    factory = RunTasksViewModelFactory(
-                                        app,
-                                        app.rootRepository,
-                                        app.repositoriesRepository,
-                                        app.resticBinaryManager,
-                                        app.appInfoRepository,
-                                        app.preferencesRepository,
-                                        app.operationWorkRepository
+                                composable(SchedulesRoutes.CheckConfig) { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry(Screen.Schedules.route)
+                                    }
+                                    val vm: SchedulesViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository)
                                     )
-                                )
-                                CheckConfigScreen(viewModel = vm)
+                                    DestinationScaffold(
+                                        titleRes = R.string.topbar_check_config,
+                                        isTopLevel = false,
+                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
+                                    ) {
+                                        ScheduleCheckConfigScreen(viewModel = vm)
+                                    }
+                                }
+                                composable(SchedulesRoutes.CustomDirectoriesConfig) { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry(Screen.Schedules.route)
+                                    }
+                                    val vm: SchedulesViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository)
+                                    )
+                                    DestinationScaffold(
+                                        titleRes = R.string.title_custom_directories,
+                                        isTopLevel = false,
+                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
+                                    ) {
+                                        ScheduleCustomDirectoriesConfigScreen(viewModel = vm)
+                                    }
+                                }
                             }
-                        }
-                        composable(
-                            route = "${Screen.SnapshotDetails.route}/{snapshotId}",
-                            arguments = listOf(navArgument("snapshotId") { type = NavType.StringType })
-                        ) { backStackEntry ->
-                            SnapshotDetailsScreen(
-                                navController = navController,
-                                snapshotId = backStackEntry.arguments?.getString("snapshotId")
-                            )
-                        }
-                        navigation(
-                            startDestination = "${Screen.Restore.route}/{snapshotId}",
-                            route = "restore_graph/{snapshotId}",
-                            arguments = listOf(navArgument("snapshotId") { type = NavType.StringType })
-                        ) {
+                            navigation(
+                                startDestination = RunTasksRoutes.Main,
+                                route = Screen.RunTasks.route
+                            ) {
+                                composable(RunTasksRoutes.Main) { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry(Screen.RunTasks.route)
+                                    }
+                                    val vm: RunTasksViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = RunTasksViewModelFactory(
+                                            app,
+                                            app.rootRepository,
+                                            app.repositoriesRepository,
+                                            app.resticBinaryManager,
+                                            app.appInfoRepository,
+                                            app.preferencesRepository,
+                                            app.operationWorkRepository
+                                        )
+                                    )
+                                    val uiState by vm.uiState.collectAsState()
+                                    DestinationScaffold(
+                                        titleRes = R.string.topbar_tasks,
+                                        isTopLevel = false,
+                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() },
+                                        floatingActionButton = {
+                                            if (!uiState.isRunning) {
+                                                ExtendedFloatingActionButton(
+                                                    onClick = { vm.run() },
+                                                    shape = RoundedCornerShape(20.dp),
+                                                    icon = { Icon(Icons.Outlined.PlayArrow, contentDescription = stringResource(R.string.fab_run_tasks)) },
+                                                    text = { Text(stringResource(R.string.fab_run_tasks)) }
+                                                )
+                                            }
+                                        }
+                                    ) {
+                                        RunTasksScreen(
+                                            viewModel = vm,
+                                            onNavigateToOperationProgress = {
+                                                navController.navigate(Screen.OperationProgress.route) { launchSingleTop = true }
+                                            },
+                                            onNavigateToBackupConfig = { navController.navigate(RunTasksRoutes.BackupConfig) },
+                                            onNavigateToCustomDirectoriesConfig = { navController.navigate(RunTasksRoutes.CustomDirectoriesConfig) },
+                                            onNavigateToForgetConfig = { navController.navigate(RunTasksRoutes.ForgetConfig) },
+                                            onNavigateToCheckConfig = { navController.navigate(RunTasksRoutes.CheckConfig) }
+                                        )
+                                    }
+                                }
+                                composable(RunTasksRoutes.BackupConfig) { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry(Screen.RunTasks.route)
+                                    }
+                                    val vm: RunTasksViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = RunTasksViewModelFactory(
+                                            app,
+                                            app.rootRepository,
+                                            app.repositoriesRepository,
+                                            app.resticBinaryManager,
+                                            app.appInfoRepository,
+                                            app.preferencesRepository,
+                                            app.operationWorkRepository
+                                        )
+                                    )
+                                    DestinationScaffold(
+                                        titleRes = R.string.topbar_backup_config,
+                                        isTopLevel = false,
+                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
+                                    ) {
+                                        BackupConfigScreen(viewModel = vm)
+                                    }
+                                }
+                                composable(RunTasksRoutes.CustomDirectoriesConfig) { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry(Screen.RunTasks.route)
+                                    }
+                                    val vm: RunTasksViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = RunTasksViewModelFactory(
+                                            app,
+                                            app.rootRepository,
+                                            app.repositoriesRepository,
+                                            app.resticBinaryManager,
+                                            app.appInfoRepository,
+                                            app.preferencesRepository,
+                                            app.operationWorkRepository
+                                        )
+                                    )
+                                    DestinationScaffold(
+                                        titleRes = R.string.title_custom_directories,
+                                        isTopLevel = false,
+                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
+                                    ) {
+                                        CustomDirectoriesConfigScreen(viewModel = vm)
+                                    }
+                                }
+                                composable(RunTasksRoutes.ForgetConfig) { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry(Screen.RunTasks.route)
+                                    }
+                                    val vm: RunTasksViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = RunTasksViewModelFactory(
+                                            app,
+                                            app.rootRepository,
+                                            app.repositoriesRepository,
+                                            app.resticBinaryManager,
+                                            app.appInfoRepository,
+                                            app.preferencesRepository,
+                                            app.operationWorkRepository
+                                        )
+                                    )
+                                    DestinationScaffold(
+                                        titleRes = R.string.topbar_forget_config,
+                                        isTopLevel = false,
+                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
+                                    ) {
+                                        ForgetConfigScreen(viewModel = vm)
+                                    }
+                                }
+                                composable(RunTasksRoutes.CheckConfig) { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry(Screen.RunTasks.route)
+                                    }
+                                    val vm: RunTasksViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = RunTasksViewModelFactory(
+                                            app,
+                                            app.rootRepository,
+                                            app.repositoriesRepository,
+                                            app.resticBinaryManager,
+                                            app.appInfoRepository,
+                                            app.preferencesRepository,
+                                            app.operationWorkRepository
+                                        )
+                                    )
+                                    DestinationScaffold(
+                                        titleRes = R.string.topbar_check_config,
+                                        isTopLevel = false,
+                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
+                                    ) {
+                                        CheckConfigScreen(viewModel = vm)
+                                    }
+                                }
+                            }
                             composable(
-                                route = "${Screen.Restore.route}/{snapshotId}",
+                                route = "${Screen.SnapshotDetails.route}/{snapshotId}",
                                 arguments = listOf(navArgument("snapshotId") { type = NavType.StringType })
                             ) { backStackEntry ->
-                                val parentEntry = remember(backStackEntry) {
-                                    navController.getBackStackEntry("restore_graph/{snapshotId}")
-                                }
-                                val snapshotId = parentEntry.arguments?.getString("snapshotId") ?: ""
-                                val viewModel: RestoreViewModel = viewModel(
-                                    viewModelStoreOwner = parentEntry,
-                                    factory = RestoreViewModelFactory(
-                                        app,
-                                        app.repositoriesRepository,
-                                        app.rootRepository,
-                                        app.resticBinaryManager,
-                                        app.resticRepository,
-                                        app.appInfoRepository,
-                                        app.metadataRepository,
-                                        app.preferencesRepository,
-                                        app.operationWorkRepository,
-                                        snapshotId
+                                val snapshotId = backStackEntry.arguments?.getString("snapshotId")
+                                DestinationScaffold(
+                                    titleRes = R.string.topbar_snapshot_details,
+                                    isTopLevel = false,
+                                    onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() },
+                                    floatingActionButton = {
+                                        ExtendedFloatingActionButton(
+                                            text = { Text(stringResource(R.string.fab_restore)) },
+                                            icon = { Icon(Icons.Outlined.Restore, contentDescription = stringResource(R.string.topbar_restore_snapshot)) },
+                                            shape = RoundedCornerShape(20.dp),
+                                            onClick = { navController.navigate("${Screen.Restore.route}/$snapshotId") }
+                                        )
+                                    }
+                                ) {
+                                    SnapshotDetailsScreen(
+                                        navController = navController,
+                                        snapshotId = snapshotId
                                     )
-                                )
-                                RestoreScreen(
-                                    viewModel = viewModel,
-                                    onNavigateToOperationProgress = { navController.navigate(Screen.OperationProgress.route) { launchSingleTop = true } },
-                                    onNavigateToAppsConfig = { navController.navigate(io.github.hddq.restoid.ui.restore.RestoreRoutes.AppsConfig) },
-                                    onNavigateToCustomDirectoriesConfig = { navController.navigate(io.github.hddq.restoid.ui.restore.RestoreRoutes.CustomDirectoriesConfig) }
-                                )
-                            }
-                            composable(io.github.hddq.restoid.ui.restore.RestoreRoutes.AppsConfig) { backStackEntry ->
-                                val parentEntry = remember(backStackEntry) {
-                                    navController.getBackStackEntry("restore_graph/{snapshotId}")
                                 }
-                                val snapshotId = parentEntry.arguments?.getString("snapshotId") ?: ""
-                                val vm: RestoreViewModel = viewModel(
-                                    viewModelStoreOwner = parentEntry,
-                                    factory = RestoreViewModelFactory(
-                                        app,
-                                        app.repositoriesRepository,
-                                        app.rootRepository,
-                                        app.resticBinaryManager,
-                                        app.resticRepository,
-                                        app.appInfoRepository,
-                                        app.metadataRepository,
-                                        app.preferencesRepository,
-                                        app.operationWorkRepository,
-                                        snapshotId
-                                    )
-                                )
-                                io.github.hddq.restoid.ui.screens.RestoreAppsConfigScreen(viewModel = vm)
                             }
-                            composable(io.github.hddq.restoid.ui.restore.RestoreRoutes.CustomDirectoriesConfig) { backStackEntry ->
-                                val parentEntry = remember(backStackEntry) {
-                                    navController.getBackStackEntry("restore_graph/{snapshotId}")
+                            navigation(
+                                startDestination = "${Screen.Restore.route}/{snapshotId}",
+                                route = "restore_graph/{snapshotId}",
+                                arguments = listOf(navArgument("snapshotId") { type = NavType.StringType })
+                            ) {
+                                composable(
+                                    route = "${Screen.Restore.route}/{snapshotId}",
+                                    arguments = listOf(navArgument("snapshotId") { type = NavType.StringType })
+                                ) { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry("restore_graph/{snapshotId}")
+                                    }
+                                    val snapshotId = parentEntry.arguments?.getString("snapshotId") ?: ""
+                                    val viewModel: RestoreViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = RestoreViewModelFactory(
+                                            app,
+                                            app.repositoriesRepository,
+                                            app.rootRepository,
+                                            app.resticBinaryManager,
+                                            app.resticRepository,
+                                            app.appInfoRepository,
+                                            app.metadataRepository,
+                                            app.preferencesRepository,
+                                            app.operationWorkRepository,
+                                            snapshotId
+                                        )
+                                    )
+                                    val isRestoring by viewModel.isRestoring.collectAsState()
+                                    DestinationScaffold(
+                                        titleRes = R.string.topbar_restore_snapshot,
+                                        isTopLevel = false,
+                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() },
+                                        floatingActionButton = {
+                                            if (!isRestoring) {
+                                                ExtendedFloatingActionButton(
+                                                    onClick = { viewModel.startRestore() },
+                                                    shape = RoundedCornerShape(20.dp),
+                                                    icon = { Icon(Icons.Outlined.Restore, contentDescription = stringResource(R.string.fab_start_restore)) },
+                                                    text = { Text(stringResource(R.string.fab_start_restore)) }
+                                                )
+                                            }
+                                        }
+                                    ) {
+                                        RestoreScreen(
+                                            viewModel = viewModel,
+                                            onNavigateToOperationProgress = { navController.navigate(Screen.OperationProgress.route) { launchSingleTop = true } },
+                                            onNavigateToAppsConfig = { navController.navigate(io.github.hddq.restoid.ui.restore.RestoreRoutes.AppsConfig) },
+                                            onNavigateToCustomDirectoriesConfig = { navController.navigate(io.github.hddq.restoid.ui.restore.RestoreRoutes.CustomDirectoriesConfig) }
+                                        )
+                                    }
                                 }
-                                val snapshotId = parentEntry.arguments?.getString("snapshotId") ?: ""
-                                val vm: RestoreViewModel = viewModel(
-                                    viewModelStoreOwner = parentEntry,
-                                    factory = RestoreViewModelFactory(
-                                        app,
-                                        app.repositoriesRepository,
-                                        app.rootRepository,
-                                        app.resticBinaryManager,
-                                        app.resticRepository,
-                                        app.appInfoRepository,
-                                        app.metadataRepository,
-                                        app.preferencesRepository,
-                                        app.operationWorkRepository,
-                                        snapshotId
+                                composable(io.github.hddq.restoid.ui.restore.RestoreRoutes.AppsConfig) { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry("restore_graph/{snapshotId}")
+                                    }
+                                    val snapshotId = parentEntry.arguments?.getString("snapshotId") ?: ""
+                                    val vm: RestoreViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = RestoreViewModelFactory(
+                                            app,
+                                            app.repositoriesRepository,
+                                            app.rootRepository,
+                                            app.resticBinaryManager,
+                                            app.resticRepository,
+                                            app.appInfoRepository,
+                                            app.metadataRepository,
+                                            app.preferencesRepository,
+                                            app.operationWorkRepository,
+                                            snapshotId
+                                        )
                                     )
-                                )
-                                io.github.hddq.restoid.ui.screens.RestoreCustomDirectoriesConfigScreen(viewModel = vm)
+                                    DestinationScaffold(
+                                        titleRes = R.string.apps_to_restore_title,
+                                        isTopLevel = false,
+                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
+                                    ) {
+                                        io.github.hddq.restoid.ui.screens.RestoreAppsConfigScreen(viewModel = vm)
+                                    }
+                                }
+                                composable(io.github.hddq.restoid.ui.restore.RestoreRoutes.CustomDirectoriesConfig) { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry("restore_graph/{snapshotId}")
+                                    }
+                                    val snapshotId = parentEntry.arguments?.getString("snapshotId") ?: ""
+                                    val vm: RestoreViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = RestoreViewModelFactory(
+                                            app,
+                                            app.repositoriesRepository,
+                                            app.rootRepository,
+                                            app.resticBinaryManager,
+                                            app.resticRepository,
+                                            app.appInfoRepository,
+                                            app.metadataRepository,
+                                            app.preferencesRepository,
+                                            app.operationWorkRepository,
+                                            snapshotId
+                                        )
+                                    )
+                                    DestinationScaffold(
+                                        titleRes = R.string.title_custom_directories,
+                                        isTopLevel = false,
+                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
+                                    ) {
+                                        io.github.hddq.restoid.ui.screens.RestoreCustomDirectoriesConfigScreen(viewModel = vm)
+                                    }
+                                }
                             }
-                        }
-                        composable(Screen.Licenses.route) { LicensesScreen(onNavigateUp = { navController.navigateUp() }) }
-                        composable(Screen.OperationProgress.route) {
-                            OperationProgressScreen(onNavigateUp = { navController.navigateUp() })
+                            composable(Screen.Licenses.route) {
+                                DestinationScaffold(
+                                    titleRes = R.string.topbar_open_source_licenses,
+                                    isTopLevel = false,
+                                    onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
+                                ) {
+                                    LicensesScreen(onNavigateUp = { navController.navigateUp() })
+                                }
+                            }
+                            composable(Screen.OperationProgress.route) {
+                                DestinationScaffold(
+                                    titleRes = R.string.topbar_operation_progress,
+                                    isTopLevel = false,
+                                    onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
+                                ) {
+                                    OperationProgressScreen(onNavigateUp = { navController.navigateUp() })
+                                }
+                            }
                         }
                     }
                 }
             }
+        }
+}
+
+@Composable
+private fun RestoidBottomNavigationBar(
+    selectedScreen: Screen,
+    onSelectScreen: (Screen) -> Unit
+) {
+    val items = listOf(
+        Triple(Screen.Home, Icons.Filled.Home, Icons.Outlined.Home),
+        Triple(Screen.Schedules, Icons.Filled.Schedule, Icons.Outlined.Schedule),
+        Triple(Screen.Settings, Icons.Filled.Settings, Icons.Outlined.Settings)
+    )
+    NavigationBar(
+        containerColor = MaterialTheme.colorScheme.surfaceContainer
+    ) {
+        items.forEach { (screen, selectedIcon, unselectedIcon) ->
+            val selected = screen == selectedScreen
+            NavigationBarItem(
+                icon = {
+                    Icon(
+                        imageVector = if (selected) selectedIcon else unselectedIcon,
+                        contentDescription = null
+                    )
+                },
+                label = {
+                    Text(
+                        text = stringResource(screen.titleRes),
+                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+                    )
+                },
+                selected = selected,
+                onClick = {
+                    if (!selected) {
+                        onSelectScreen(screen)
+                    }
                 }
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DestinationScaffold(
+    titleRes: Int,
+    isTopLevel: Boolean,
+    isHome: Boolean = false,
+    onBack: () -> Unit,
+    bottomBar: @Composable () -> Unit = {},
+    floatingActionButton: @Composable () -> Unit = {},
+    content: @Composable () -> Unit
+) {
+    val appBarActions = remember { mutableStateOf<(@Composable RowScope.() -> Unit)?>(null) }
+    CompositionLocalProvider(LocalAppBarActions provides appBarActions) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = MaterialTheme.colorScheme.background,
+            topBar = {
+                TopAppBar(
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background,
+                        scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer
+                    ),
+                    title = {
+                        Text(
+                            text = stringResource(titleRes),
+                            style = if (isTopLevel) {
+                                MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold)
+                            } else {
+                                MaterialTheme.typography.titleLarge
+                            },
+                            color = if (isHome) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurface
+                            }
+                        )
+                    },
+                    navigationIcon = {
+                        if (!isTopLevel) {
+                            IconButton(onClick = onBack) {
+                                Icon(
+                                    Icons.AutoMirrored.Outlined.ArrowBack,
+                                    contentDescription = stringResource(R.string.cd_back)
+                                )
+                            }
+                        }
+                    },
+                    actions = {
+                        if (!isTopLevel) {
+                            appBarActions.value?.invoke(this)
+                        }
+                    }
+                )
+            },
+            bottomBar = bottomBar,
+            floatingActionButton = floatingActionButton
+        ) { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) {
+                content()
             }
         }
     }

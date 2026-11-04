@@ -210,7 +210,9 @@ fun AddEditScheduleScreen(
     var intervalText by remember(state.intervalHours) { mutableStateOf(state.intervalHours.toString()) }
     val appBarActions = LocalAppBarActions.current
 
-    BackHandler {
+    val hasUnsavedChanges = remember(state) { viewModel.hasChanges(state) }
+
+    BackHandler(enabled = hasUnsavedChanges) {
         viewModel.onBackPress()
     }
 
