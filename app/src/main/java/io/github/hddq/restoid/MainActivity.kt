@@ -376,9 +376,9 @@ class MainActivity : FragmentActivity() {
                         },
                         predictivePopEnterTransition = { swipeEdge ->
                             val slideDirection = if (swipeEdge == BackEventCompat.EDGE_RIGHT) {
-                                AnimatedContentTransitionScope.SlideDirection.Start
+                                AnimatedContentTransitionScope.SlideDirection.Left
                             } else {
-                                AnimatedContentTransitionScope.SlideDirection.End
+                                AnimatedContentTransitionScope.SlideDirection.Right
                             }
                             slideIntoContainer(
                                 towards = slideDirection,
@@ -394,9 +394,9 @@ class MainActivity : FragmentActivity() {
                         },
                         predictivePopExitTransition = { swipeEdge ->
                             val slideDirection = if (swipeEdge == BackEventCompat.EDGE_RIGHT) {
-                                AnimatedContentTransitionScope.SlideDirection.Start
+                                AnimatedContentTransitionScope.SlideDirection.Left
                             } else {
-                                AnimatedContentTransitionScope.SlideDirection.End
+                                AnimatedContentTransitionScope.SlideDirection.Right
                             }
                             val pivotX = if (swipeEdge == BackEventCompat.EDGE_RIGHT) 0.25f else 0.75f
                             scaleOut(
