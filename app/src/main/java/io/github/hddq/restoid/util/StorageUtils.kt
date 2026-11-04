@@ -98,6 +98,36 @@ object StorageUtils {
     }
 
     /**
+     * Fast non-blocking check whether [pathOrUri] is a directory or file.
+     * Returns true if definitely a directory, false if definitely a file,
+     * or null if the path cannot be determined by standard File APIs (e.g. root-only path).
+     */
+    fun isDirectoryFast(pathOrUri: String): Boolean? {
+        val path = resolveCustomDirectoryPath(pathOrUri) ?: pathOrUri
+        val file = File(path)
+        if (file.isDirectory) return true
+        if (file.isFile) return false
+        return null
+    }
+
+    /**
+     * Determines whether [pathOrUri] points to a directory (as opposed to a file).
+     * Uses standard File checks first, then root shell if needed.
+     */
+    fun isDirectoryPath(pathOrUri: String): Boolean {
+        isDirectoryFast(pathOrUri)?.let { return it }
+        val path = resolveCustomDirectoryPath(pathOrUri) ?: pathOrUri
+        val isRoot = runCatching { Shell.getShell().isRoot }.getOrDefault(false)
+        if (isRoot) {
+            val checkDir = runCatching { Shell.cmd("[ -d ${shellQuote(path)} ]").exec().isSuccess }.getOrDefault(false)
+            if (checkDir) return true
+            val checkFile = runCatching { Shell.cmd("[ -f ${shellQuote(path)} ]").exec().isSuccess }.getOrDefault(false)
+            if (checkFile) return false
+        }
+        return !File(path).name.contains(".")
+    }
+
+    /**
      * Lists child directory names inside [path], sorted case-insensitively.
      * Returns null when the directory does not exist or cannot be listed.
      */

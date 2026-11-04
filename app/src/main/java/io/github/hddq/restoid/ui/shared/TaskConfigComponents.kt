@@ -31,6 +31,7 @@ import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Inventory2
@@ -59,8 +60,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -825,8 +829,19 @@ fun CustomDirectoriesConfigScreen(
                                         .padding(vertical = 12.dp, horizontal = 16.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    val initialIsDir = io.github.hddq.restoid.util.StorageUtils.isDirectoryFast(customDir.uri)
+                                    val isDirectory by produceState(
+                                        initialValue = initialIsDir ?: true,
+                                        key1 = customDir.uri
+                                    ) {
+                                        if (initialIsDir == null) {
+                                            value = withContext(Dispatchers.IO) {
+                                                io.github.hddq.restoid.util.StorageUtils.isDirectoryPath(customDir.uri)
+                                            }
+                                        }
+                                    }
                                     Icon(
-                                        imageVector = Icons.Outlined.Folder,
+                                        imageVector = if (isDirectory) Icons.Outlined.Folder else Icons.Outlined.Description,
                                         contentDescription = null,
                                         tint = if (customDir.isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.padding(end = 16.dp)

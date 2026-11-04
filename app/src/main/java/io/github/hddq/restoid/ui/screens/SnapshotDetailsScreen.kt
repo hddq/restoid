@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -39,6 +40,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -319,9 +323,20 @@ fun ConfirmForgetDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
 @Composable
 fun BackedUpCustomDirItem(path: String, metadata: io.github.hddq.restoid.model.CustomDirectoryMetadata) {
     val context = LocalContext.current
+    val initialIsDir = io.github.hddq.restoid.util.StorageUtils.isDirectoryFast(path)
+    val isDirectory by produceState(
+        initialValue = initialIsDir ?: true,
+        key1 = path
+    ) {
+        if (initialIsDir == null) {
+            value = withContext(Dispatchers.IO) {
+                io.github.hddq.restoid.util.StorageUtils.isDirectoryPath(path)
+            }
+        }
+    }
     Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(
-            Icons.Outlined.Folder,
+            if (isDirectory) Icons.Outlined.Folder else Icons.Outlined.Description,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary
         )

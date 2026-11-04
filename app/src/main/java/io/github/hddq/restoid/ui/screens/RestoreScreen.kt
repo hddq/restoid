@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Inventory2
@@ -49,8 +50,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -610,6 +614,17 @@ private fun RestoreCustomDirListItem(
     isSelected: Boolean,
     onToggle: () -> Unit
 ) {
+    val initialIsDir = io.github.hddq.restoid.util.StorageUtils.isDirectoryFast(path)
+    val isDirectory by produceState(
+        initialValue = initialIsDir ?: true,
+        key1 = path
+    ) {
+        if (initialIsDir == null) {
+            value = withContext(Dispatchers.IO) {
+                io.github.hddq.restoid.util.StorageUtils.isDirectoryPath(path)
+            }
+        }
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -618,7 +633,7 @@ private fun RestoreCustomDirListItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            Icons.Outlined.Folder,
+            if (isDirectory) Icons.Outlined.Folder else Icons.Outlined.Description,
             contentDescription = null,
             tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
         )
