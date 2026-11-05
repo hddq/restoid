@@ -462,6 +462,10 @@
     <string name="channel_completed_operations">Completed Operations</string>
     <string name="channel_ongoing_description">Shows ongoing backup and restore progress silently.</string>
     <string name="channel_completed_description">Alerts when a backup or restore has finished.</string>
+    <string name="channel_successful_operations">Successful Operations</string>
+    <string name="channel_successful_description">Alerts when a backup or restore has finished successfully.</string>
+    <string name="channel_failed_operations">Failed Operations</string>
+    <string name="channel_failed_description">Alerts when a backup or restore operation fails or encounters errors.</string>
     <plurals name="notification_files_progress">
         <item quantity="one">%1$d/%2$d file</item>
         <item quantity="other">%1$d/%2$d files</item>
