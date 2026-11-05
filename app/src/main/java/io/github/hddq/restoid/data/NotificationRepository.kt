@@ -33,14 +33,33 @@ class NotificationRepository(private val context: Context) {
     companion object {
         const val EXTRA_OPEN_OPERATION_PROGRESS = "extra_open_operation_progress"
         const val PROGRESS_CHANNEL_ID = "progress_channel"
-        const val FINISHED_CHANNEL_ID = "finished_channel"
+        const val SUCCESS_CHANNEL_ID = "success_channel"
+        const val ERROR_CHANNEL_ID = "error_channel"
+        const val LEGACY_FINISHED_CHANNEL_ID = "finished_channel"
+
+        @Deprecated("Use SUCCESS_CHANNEL_ID or ERROR_CHANNEL_ID instead")
+        const val FINISHED_CHANNEL_ID = LEGACY_FINISHED_CHANNEL_ID
+
         const val PROGRESS_NOTIFICATION_ID = 1
-        const val FINISHED_NOTIFICATION_ID = 2
+        const val SUCCESS_NOTIFICATION_ID = 2
+        const val ERROR_NOTIFICATION_ID = 3
+
+        @Deprecated("Use SUCCESS_NOTIFICATION_ID or ERROR_NOTIFICATION_ID instead")
+        const val FINISHED_NOTIFICATION_ID = SUCCESS_NOTIFICATION_ID
+
+        fun finishedNotificationChannelId(success: Boolean): String =
+            if (success) SUCCESS_CHANNEL_ID else ERROR_CHANNEL_ID
+
+        fun finishedNotificationId(success: Boolean): Int =
+            if (success) SUCCESS_NOTIFICATION_ID else ERROR_NOTIFICATION_ID
     }
 
     fun createNotificationChannels() {
         val notificationManager: NotificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        // Clean up legacy channel
+        notificationManager.deleteNotificationChannel(LEGACY_FINISHED_CHANNEL_ID)
 
         // Low importance channel for silent progress updates
         val progressChannel = NotificationChannel(
@@ -52,15 +71,25 @@ class NotificationRepository(private val context: Context) {
         }
         notificationManager.createNotificationChannel(progressChannel)
 
-        // High importance channel for finished notifications to make them pop up
-        val finishedChannel = NotificationChannel(
-            FINISHED_CHANNEL_ID,
-            context.getString(R.string.channel_completed_operations),
+        // Default importance channel for finished notifications to alert in notification shade
+        val successChannel = NotificationChannel(
+            SUCCESS_CHANNEL_ID,
+            context.getString(R.string.channel_successful_operations),
+            NotificationManager.IMPORTANCE_DEFAULT
+        ).apply {
+            description = context.getString(R.string.channel_successful_description)
+        }
+        notificationManager.createNotificationChannel(successChannel)
+
+        // High importance channel for errors to make them pop up
+        val errorChannel = NotificationChannel(
+            ERROR_CHANNEL_ID,
+            context.getString(R.string.channel_failed_operations),
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
-            description = context.getString(R.string.channel_completed_description)
+            description = context.getString(R.string.channel_failed_description)
         }
-        notificationManager.createNotificationChannel(finishedChannel)
+        notificationManager.createNotificationChannel(errorChannel)
     }
 
     private fun createPendingIntent(): PendingIntent {
@@ -146,12 +175,15 @@ class NotificationRepository(private val context: Context) {
             context.getString(R.string.notification_operation_finished_failure, operationName)
         }
 
-        return NotificationCompat.Builder(context, FINISHED_CHANNEL_ID)
+        val channelId = finishedNotificationChannelId(success)
+        val priority = if (success) NotificationCompat.PRIORITY_DEFAULT else NotificationCompat.PRIORITY_HIGH
+
+        return NotificationCompat.Builder(context, channelId)
             .setContentTitle(title)
             .setContentText(summary)
             .setStyle(NotificationCompat.BigTextStyle().bigText(summary))
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setPriority(priority)
             .setAutoCancel(true)
             .setContentIntent(createPendingIntent())
             .build()
@@ -184,8 +216,9 @@ class NotificationRepository(private val context: Context) {
             return
         }
 
+        val notificationId = finishedNotificationId(success)
         NotificationManagerCompat.from(context)
-            .notify(FINISHED_NOTIFICATION_ID, buildOperationFinishedNotification(operationName, success, summary))
+            .notify(notificationId, buildOperationFinishedNotification(operationName, success, summary))
     }
 
 
