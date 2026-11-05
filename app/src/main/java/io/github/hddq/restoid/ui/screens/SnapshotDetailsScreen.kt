@@ -26,10 +26,11 @@ import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
@@ -65,6 +66,7 @@ import io.github.hddq.restoid.ui.snapshot.ForgetResult
 import io.github.hddq.restoid.ui.snapshot.SnapshotDetailsViewModel
 import io.github.hddq.restoid.ui.snapshot.SnapshotDetailsViewModelFactory
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SnapshotDetailsScreen(
     navController: NavController,
@@ -132,7 +134,7 @@ fun SnapshotDetailsScreen(
             .padding(horizontal = 16.dp)
     ) {
         when {
-            isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { LoadingIndicator() }
             error != null -> Text(stringResource(R.string.error_with_message, error ?: ""), color = MaterialTheme.colorScheme.error)
             snapshot != null -> {
                 val customDirs = metadata?.customDirectories ?: emptyMap()
@@ -213,7 +215,7 @@ fun SnapshotDetailsScreen(
 
         if (isForgetting) {
             Spacer(Modifier.height(16.dp))
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            LinearWavyProgressIndicator(modifier = Modifier.fillMaxWidth())
             Text(stringResource(R.string.snapshot_forgetting), modifier = Modifier.align(Alignment.CenterHorizontally))
             Spacer(Modifier.height(16.dp))
         }

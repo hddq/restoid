@@ -16,8 +16,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,6 +40,7 @@ import io.github.hddq.restoid.ui.screens.settings.components.RootRequestRow
 import io.github.hddq.restoid.ui.screens.settings.components.RootStatusRow
 import io.github.hddq.restoid.ui.settings.SettingsViewModel
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SystemSettings(
     viewModel: SettingsViewModel,
@@ -75,7 +77,7 @@ fun SystemSettings(
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                            LoadingIndicator(modifier = Modifier.size(24.dp))
                             Spacer(Modifier.width(8.dp))
                             Text(stringResource(R.string.checking_for_root))
                         }

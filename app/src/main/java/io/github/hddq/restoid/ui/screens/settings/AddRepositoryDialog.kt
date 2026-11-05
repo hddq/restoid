@@ -29,7 +29,7 @@ import io.github.hddq.restoid.ui.settings.AddRepoUiState
 import io.github.hddq.restoid.ui.settings.SftpAuthMethod
 import io.github.hddq.restoid.util.SftpRepositorySpec
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AddRepositoryDialog(
     uiState: AddRepoUiState,
@@ -446,7 +446,10 @@ fun AddRepositoryDialog(
                 enabled = canConfirm
             ) {
                 if (isBusy) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                    LoadingIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
                 } else {
                     Text(stringResource(R.string.action_add))
                 }
