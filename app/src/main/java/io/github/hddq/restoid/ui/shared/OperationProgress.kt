@@ -29,8 +29,9 @@ import androidx.compose.material.icons.filled.Error
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,7 +42,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -89,6 +89,7 @@ data class OperationProgress(
  * A generalized composable to display the progress and final summary of
  * a backup or restore operation.
  */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ProgressScreenContent(
     progress: OperationProgress,
@@ -198,23 +199,17 @@ fun ProgressScreenContent(
                         Column(Modifier.padding(16.dp)) {
                             Text(stringResource(R.string.progress_overall), style = MaterialTheme.typography.labelMedium)
                             Spacer(Modifier.height(8.dp))
-                            LinearProgressIndicator(
+                            LinearWavyProgressIndicator(
                                 progress = { progress.overallPercentage },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(8.dp),
-                                strokeCap = StrokeCap.Round
+                                modifier = Modifier.fillMaxWidth()
                             )
                             Spacer(Modifier.height(20.dp))
 
                             Text(stringResource(R.string.progress_stage), style = MaterialTheme.typography.labelMedium)
                             Spacer(Modifier.height(8.dp))
-                            LinearProgressIndicator(
+                            LinearWavyProgressIndicator(
                                 progress = { progress.stagePercentage },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(8.dp),
-                                strokeCap = StrokeCap.Round
+                                modifier = Modifier.fillMaxWidth()
                             )
                             Spacer(Modifier.height(24.dp))
 

@@ -19,6 +19,7 @@ import io.github.hddq.restoid.R
 import io.github.hddq.restoid.ui.settings.ChangePasswordState
 import io.github.hddq.restoid.ui.settings.SettingsViewModel
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ChangePasswordDialog(
     viewModel: SettingsViewModel,
@@ -126,7 +127,10 @@ fun ChangePasswordDialog(
                         changePasswordState != ChangePasswordState.InProgress
             ) {
                 if (changePasswordState == ChangePasswordState.InProgress) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    LoadingIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 } else {
                     Text(stringResource(R.string.action_change))
                 }
