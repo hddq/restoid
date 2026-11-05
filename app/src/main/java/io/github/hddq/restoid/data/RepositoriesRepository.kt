@@ -127,6 +127,7 @@ class RepositoriesRepository(
     fun getRepositoryPassword(key: String): String? = passwordManager.getPassword(key)
     fun hasRepositoryPassword(key: String): Boolean = passwordManager.hasPassword(key)
     fun hasStoredRepositoryPassword(key: String): Boolean = passwordManager.hasStoredPassword(key)
+    fun hasStoredRepositoryPasswordEntry(key: String): Boolean = passwordManager.hasStoredPasswordEntry(key)
     fun saveRepositoryPasswordTemporary(key: String, password: String) = passwordManager.savePasswordTemporary(key, password)
     fun saveRepositoryPassword(key: String, password: String) = passwordManager.savePassword(key, password)
     fun forgetPassword(key: String) = passwordManager.removeStoredPassword(key)
@@ -171,6 +172,16 @@ class RepositoriesRepository(
         }
     }
 
+    fun hasStoredSftpCredentialsEntry(key: String): Boolean {
+        val repo = getRepositoryByKey(key) ?: return false
+        return if (repo.sftpKeyAuthRequired) {
+            passwordManager.hasStoredSftpKeyEntry(key) &&
+                (!repo.sftpKeyPassphraseRequired || passwordManager.hasStoredSftpKeyPassphraseEntry(key))
+        } else {
+            passwordManager.hasStoredSftpPasswordEntry(key)
+        }
+    }
+
     fun getRestUsername(key: String): String? = passwordManager.getRestUsername(key)
     fun getRestPassword(key: String): String? = passwordManager.getRestPassword(key)
 
@@ -188,6 +199,10 @@ class RepositoriesRepository(
 
     fun hasStoredRestCredentials(key: String): Boolean {
         return passwordManager.hasStoredRestUsername(key) && passwordManager.hasStoredRestPassword(key)
+    }
+
+    fun hasStoredRestCredentialsEntry(key: String): Boolean {
+        return passwordManager.hasStoredRestUsernameEntry(key) && passwordManager.hasStoredRestPasswordEntry(key)
     }
 
     fun saveRestCredentialsTemporary(key: String, username: String, password: String) {
@@ -222,6 +237,10 @@ class RepositoriesRepository(
 
     fun hasStoredS3Credentials(key: String): Boolean {
         return passwordManager.hasStoredS3AccessKeyId(key) && passwordManager.hasStoredS3SecretAccessKey(key)
+    }
+
+    fun hasStoredS3CredentialsEntry(key: String): Boolean {
+        return passwordManager.hasStoredS3AccessKeyIdEntry(key) && passwordManager.hasStoredS3SecretAccessKeyEntry(key)
     }
 
     fun saveS3CredentialsTemporary(key: String, accessKeyId: String, secretAccessKey: String) {

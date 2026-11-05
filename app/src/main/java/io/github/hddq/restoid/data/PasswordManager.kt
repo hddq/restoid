@@ -6,6 +6,7 @@ import io.github.hddq.restoid.util.CryptoHelper
 
 class PasswordManager(private val context: Context) {
 
+    private val lock = Any()
     private val temporaryPasswords = mutableMapOf<String, String>()
 
     private val prefs: SharedPreferences = context.getSharedPreferences("repository_passwords_native", Context.MODE_PRIVATE)
@@ -16,52 +17,109 @@ class PasswordManager(private val context: Context) {
     }
 
     fun savePassword(repositoryPath: String, password: String) {
-        // Ensure temporary cache is in sync when saving permanently
-        temporaryPasswords[repositoryPath] = password
         val encrypted = CryptoHelper.encrypt(password)
-        prefs.edit()
-            .putString(repositoryPath, encrypted)
-            .apply()
+        synchronized(lock) {
+            temporaryPasswords[repositoryPath] = password
+            prefs.edit()
+                .putString(repositoryPath, encrypted)
+                .apply()
+        }
     }
 
     fun savePasswordTemporary(repositoryPath: String, password: String) {
-        temporaryPasswords[repositoryPath] = password
+        synchronized(lock) {
+            temporaryPasswords[repositoryPath] = password
+        }
     }
 
     fun getPassword(repositoryPath: String): String? {
-        val temp = temporaryPasswords[repositoryPath]
+        val (temp, encrypted) = synchronized(lock) {
+            temporaryPasswords[repositoryPath] to prefs.getString(repositoryPath, null)
+        }
         if (temp != null) return temp
+        if (encrypted == null) return null
         
-        val encrypted = prefs.getString(repositoryPath, null) ?: return null
-        return CryptoHelper.decrypt(encrypted)
+        return when (val result = CryptoHelper.decryptDetailed(encrypted)) {
+            is CryptoHelper.DecryptionResult.Success -> result.value
+            is CryptoHelper.DecryptionResult.Invalid -> {
+                // Cannot decrypt stored password (e.g. keystore changed after backup restore or corrupted).
+                // Only clean up if the stored entry still matches the failed value to avoid deleting a concurrent user save.
+                synchronized(lock) {
+                    if (prefs.getString(repositoryPath, null) == encrypted) {
+                        prefs.edit().remove(repositoryPath).apply()
+                    }
+                }
+                null
+            }
+            is CryptoHelper.DecryptionResult.FailedTemporarily -> {
+                // Temporary KeyStore / system error; do NOT delete the stored password, as it may be recoverable later.
+                null
+            }
+        }
     }
 
     fun removePassword(repositoryPath: String) {
-        // Also remove from temporary cache if it exists there
-        temporaryPasswords.remove(repositoryPath)
-        prefs.edit()
-            .remove(repositoryPath)
-            .apply()
+        synchronized(lock) {
+            temporaryPasswords.remove(repositoryPath)
+            prefs.edit()
+                .remove(repositoryPath)
+                .apply()
+        }
     }
 
     fun hasPassword(repositoryPath: String): Boolean {
-        return temporaryPasswords.containsKey(repositoryPath) || prefs.contains(repositoryPath)
+        synchronized(lock) {
+            if (temporaryPasswords.containsKey(repositoryPath)) return true
+        }
+        return hasStoredPassword(repositoryPath)
+    }
+
+    /**
+     * Checks whether an encrypted entry exists in storage, regardless of whether decryption succeeds.
+     */
+    fun hasStoredPasswordEntry(repositoryPath: String): Boolean {
+        synchronized(lock) {
+            return prefs.contains(repositoryPath)
+        }
     }
 
     fun hasStoredPassword(repositoryPath: String): Boolean {
-        return prefs.contains(repositoryPath)
+        val encrypted = synchronized(lock) {
+            prefs.getString(repositoryPath, null)
+        } ?: return false
+
+        return when (CryptoHelper.decryptDetailed(encrypted)) {
+            is CryptoHelper.DecryptionResult.Success -> true
+            is CryptoHelper.DecryptionResult.Invalid -> {
+                synchronized(lock) {
+                    if (prefs.getString(repositoryPath, null) == encrypted) {
+                        prefs.edit().remove(repositoryPath).apply()
+                    }
+                }
+                false
+            }
+            is CryptoHelper.DecryptionResult.FailedTemporarily -> {
+                // A stored entry is not an available credential while KeyStore is unavailable.
+                // Callers that only need to know whether an entry exists use
+                // hasStoredPasswordEntry() instead.
+                false
+            }
+        }
     }
 
     fun removeStoredPassword(repositoryPath: String) {
-        // Also remove from temporary cache if it exists there
-        temporaryPasswords.remove(repositoryPath)
-        prefs.edit()
-            .remove(repositoryPath)
-            .apply()
+        synchronized(lock) {
+            temporaryPasswords.remove(repositoryPath)
+            prefs.edit()
+                .remove(repositoryPath)
+                .apply()
+        }
     }
 
     fun clearTemporaryPasswords() {
-        temporaryPasswords.clear()
+        synchronized(lock) {
+            temporaryPasswords.clear()
+        }
     }
 
     private fun sftpPasswordKey(repositoryKey: String): String {
@@ -112,6 +170,10 @@ class PasswordManager(private val context: Context) {
         return hasStoredPassword(sftpPasswordKey(repositoryKey))
     }
 
+    fun hasStoredSftpPasswordEntry(repositoryKey: String): Boolean {
+        return hasStoredPasswordEntry(sftpPasswordKey(repositoryKey))
+    }
+
     fun removeSftpPassword(repositoryKey: String) {
         removePassword(sftpPasswordKey(repositoryKey))
     }
@@ -138,6 +200,10 @@ class PasswordManager(private val context: Context) {
 
     fun hasStoredSftpKey(repositoryKey: String): Boolean {
         return hasStoredPassword(sftpKeyKey(repositoryKey))
+    }
+
+    fun hasStoredSftpKeyEntry(repositoryKey: String): Boolean {
+        return hasStoredPasswordEntry(sftpKeyKey(repositoryKey))
     }
 
     fun removeSftpKey(repositoryKey: String) {
@@ -168,6 +234,10 @@ class PasswordManager(private val context: Context) {
         return hasStoredPassword(sftpKeyPassphraseKey(repositoryKey))
     }
 
+    fun hasStoredSftpKeyPassphraseEntry(repositoryKey: String): Boolean {
+        return hasStoredPasswordEntry(sftpKeyPassphraseKey(repositoryKey))
+    }
+
     fun removeSftpKeyPassphrase(repositoryKey: String) {
         removePassword(sftpKeyPassphraseKey(repositoryKey))
     }
@@ -194,6 +264,10 @@ class PasswordManager(private val context: Context) {
 
     fun hasStoredRestUsername(repositoryKey: String): Boolean {
         return hasStoredPassword(restUsernameKey(repositoryKey))
+    }
+
+    fun hasStoredRestUsernameEntry(repositoryKey: String): Boolean {
+        return hasStoredPasswordEntry(restUsernameKey(repositoryKey))
     }
 
     fun removeRestUsername(repositoryKey: String) {
@@ -224,6 +298,10 @@ class PasswordManager(private val context: Context) {
         return hasStoredPassword(restPasswordKey(repositoryKey))
     }
 
+    fun hasStoredRestPasswordEntry(repositoryKey: String): Boolean {
+        return hasStoredPasswordEntry(restPasswordKey(repositoryKey))
+    }
+
     fun removeRestPassword(repositoryKey: String) {
         removePassword(restPasswordKey(repositoryKey))
     }
@@ -252,6 +330,10 @@ class PasswordManager(private val context: Context) {
         return hasStoredPassword(s3AccessKeyIdKey(repositoryKey))
     }
 
+    fun hasStoredS3AccessKeyIdEntry(repositoryKey: String): Boolean {
+        return hasStoredPasswordEntry(s3AccessKeyIdKey(repositoryKey))
+    }
+
     fun removeS3AccessKeyId(repositoryKey: String) {
         removePassword(s3AccessKeyIdKey(repositoryKey))
     }
@@ -278,6 +360,10 @@ class PasswordManager(private val context: Context) {
 
     fun hasStoredS3SecretAccessKey(repositoryKey: String): Boolean {
         return hasStoredPassword(s3SecretAccessKeyKey(repositoryKey))
+    }
+
+    fun hasStoredS3SecretAccessKeyEntry(repositoryKey: String): Boolean {
+        return hasStoredPasswordEntry(s3SecretAccessKeyKey(repositoryKey))
     }
 
     fun removeS3SecretAccessKey(repositoryKey: String) {

@@ -149,6 +149,7 @@ class SettingsViewModel(
 
     fun hasRepositoryPassword(key: String) = repositoriesRepository.hasRepositoryPassword(key)
     fun hasStoredRepositoryPassword(key: String) = repositoriesRepository.hasStoredRepositoryPassword(key)
+    fun hasStoredRepositoryPasswordEntry(key: String) = repositoriesRepository.hasStoredRepositoryPasswordEntry(key)
     fun forgetPassword(key: String) = repositoriesRepository.forgetPassword(key)
     fun savePassword(key: String, password: String) = repositoriesRepository.saveRepositoryPassword(key, password)
     fun hasSftpPassword(key: String) = repositoriesRepository.hasSftpPassword(key)
@@ -158,6 +159,7 @@ class SettingsViewModel(
     fun hasSftpKey(key: String) = repositoriesRepository.hasSftpKey(key)
     fun hasStoredSftpKey(key: String) = repositoriesRepository.hasStoredSftpKey(key)
     fun hasStoredSftpCredentials(key: String) = repositoriesRepository.hasStoredSftpCredentials(key)
+    fun hasStoredSftpCredentialsEntry(key: String) = repositoriesRepository.hasStoredSftpCredentialsEntry(key)
     fun forgetSftpKey(key: String) = repositoriesRepository.forgetSftpKey(key)
     fun saveSftpKey(key: String, sftpKey: String) = repositoriesRepository.saveSftpKey(key, sftpKey)
     fun hasSftpKeyPassphrase(key: String) = repositoriesRepository.hasSftpKeyPassphrase(key)
@@ -166,12 +168,14 @@ class SettingsViewModel(
     fun hasSftpCredentials(key: String) = repositoriesRepository.hasSftpCredentials(key)
     fun hasRestCredentials(key: String) = repositoriesRepository.hasRestCredentials(key)
     fun hasStoredRestCredentials(key: String) = repositoriesRepository.hasStoredRestCredentials(key)
+    fun hasStoredRestCredentialsEntry(key: String) = repositoriesRepository.hasStoredRestCredentialsEntry(key)
     fun forgetRestCredentials(key: String) = repositoriesRepository.forgetRestCredentials(key)
     fun saveRestCredentials(key: String, username: String, password: String) {
         repositoriesRepository.saveRestCredentials(key, username, password)
     }
     fun hasS3Credentials(key: String) = repositoriesRepository.hasS3Credentials(key)
     fun hasStoredS3Credentials(key: String) = repositoriesRepository.hasStoredS3Credentials(key)
+    fun hasStoredS3CredentialsEntry(key: String) = repositoriesRepository.hasStoredS3CredentialsEntry(key)
     fun forgetS3Credentials(key: String) = repositoriesRepository.forgetS3Credentials(key)
     fun saveS3Credentials(key: String, accessKeyId: String, secretAccessKey: String) {
         repositoriesRepository.saveS3Credentials(key, accessKeyId, secretAccessKey)
@@ -249,7 +253,7 @@ class SettingsViewModel(
                 repositoriesRepository.getExecutionResticOptions(key)
             )
             if (result.isSuccess) {
-                if (repositoriesRepository.hasStoredRepositoryPassword(key)) {
+                if (repositoriesRepository.hasStoredRepositoryPasswordEntry(key)) {
                     repositoriesRepository.saveRepositoryPassword(key, newPassword)
                 }
                 _changePasswordState.value = ChangePasswordState.Success
