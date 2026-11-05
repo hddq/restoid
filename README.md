@@ -1,7 +1,7 @@
 # Restoid
-Root-based Android backup tool powered by [`restic`](https://github.com/restic/restic/).
+Android backup tool powered by [`restic`](https://github.com/restic/restic/).
 
-Restoid gives you control over your app backups through a clean and simple user interface. It's built for users who want robust, encrypted, and deduplicated backups.
+Restoid gives you control over your backups through a clean and simple user interface. It's built for users who want robust, encrypted, and deduplicated backups.
 
 ## 📥 Download
 
@@ -26,9 +26,9 @@ Restoid gives you control over your app backups through a clean and simple user 
 ## ✨ Features
 
 * **Restic-Powered**: Leverages the speed, security, and efficiency of `restic` for deduplicated and encrypted backups.
-* **Selective App Backup**: Choose exactly which user-installed applications you want to back up.
-* **Full Control Over What You Back Up**: Granularly select what to include for each app: APK files, user data, device-protected data, external/OBB/media files.
-* **Custom Directory Backup**: Back up custom directories like DCIM, Documents, etc. (works without root).
+* **Selective App Backup**: Choose exactly which user-installed applications you want to back up (requires root).
+* **Full Control Over What You Back Up**: Granularly select what to include for each app: APK files, user data, device-protected data, external/OBB/media files (requires root).
+* **Custom Directory Backup**: Back up custom directories and files like DCIM, Documents, etc.
 * **Flexible Repository Management**: Create and manage repositories across native restic backends: Local directory, SFTP, REST server, and Amazon S3/MinIO.
 * **Snapshot Management**: Easily browse backup snapshots, view details of what was backed up, and forget old snapshots.
 * **Flexible Restore**: Restore entire apps or just specific parts (like only app data).
@@ -37,7 +37,7 @@ Restoid gives you control over your app backups through a clean and simple user 
 
 ## ⚠️ Requirements
 
-* **Root Access**: Restoid requires elevated privileges to access app data directories. It uses `libsu` for robust root command execution.
+* **Root Access (Optional)**: Root access is only required if you want to back up apps and their data.
 * **Android Version**: Minimum SDK 29 (Android 10), but SDK 37 (Android 17) is recommended.
 
 ## 🤝 How to Contribute
