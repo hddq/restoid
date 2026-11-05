@@ -33,6 +33,7 @@ class HeavyOperationWorker(
         val requestId = inputData.getString(OperationWorkContract.INPUT_REQUEST_ID)
             ?: return Result.failure()
 
+        val startTimeMillis = System.currentTimeMillis()
         val initialProgress = OperationProgress(stageTitle = applicationContext.getString(R.string.progress_initializing))
         setForeground(createForegroundInfo(operationType, initialProgress))
         app.operationRuntimeRepository.markEnqueued(operationType, initialProgress)
@@ -148,6 +149,20 @@ class HeavyOperationWorker(
         app.operationRuntimeRepository.markFinished(operationType, finalResult.success, finalResult.progress)
         setProgress(OperationWorkContract.progressToData(operationType, finalResult.progress))
 
+        val endTimeMillis = System.currentTimeMillis()
+        val durationSeconds = ((endTimeMillis - startTimeMillis) / 1000).coerceAtLeast(0)
+        val logEntry = app.operationLogRepository.addLog(
+            operationType = operationType,
+            scheduleName = scheduleName,
+            startTimeMillis = startTimeMillis,
+            endTimeMillis = endTimeMillis,
+            durationSeconds = durationSeconds,
+            success = finalResult.success,
+            stageTitle = finalResult.progress.stageTitle,
+            summary = finalResult.progress.finalSummary,
+            error = finalResult.progress.error
+        )
+
         val displayName = if (scheduleName != null) {
             applicationContext.getString(R.string.operation_schedule_name, scheduleName)
         } else {
@@ -156,7 +171,8 @@ class HeavyOperationWorker(
         notificationRepository.showOperationFinishedNotification(
             displayName,
             finalResult.success,
-            finalResult.progress.finalSummary
+            finalResult.progress.finalSummary,
+            logId = logEntry.id
         )
 
         val output = OperationWorkContract.outputToData(operationType, finalResult.success, finalResult.progress)

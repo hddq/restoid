@@ -32,6 +32,7 @@ class NotificationRepository(private val context: Context) {
 
     companion object {
         const val EXTRA_OPEN_OPERATION_PROGRESS = "extra_open_operation_progress"
+        const val EXTRA_OPEN_OPERATION_LOG_ID = "extra_open_operation_log_id"
         const val PROGRESS_CHANNEL_ID = "progress_channel"
         const val SUCCESS_CHANNEL_ID = "success_channel"
         const val ERROR_CHANNEL_ID = "error_channel"
@@ -92,11 +93,15 @@ class NotificationRepository(private val context: Context) {
         notificationManager.createNotificationChannel(errorChannel)
     }
 
-    private fun createPendingIntent(): PendingIntent {
-        val requestCode = System.currentTimeMillis().toInt()
+    private fun createPendingIntent(logId: String? = null): PendingIntent {
+        val requestCode = logId?.hashCode() ?: System.currentTimeMillis().toInt()
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-            putExtra(EXTRA_OPEN_OPERATION_PROGRESS, true)
+            if (logId != null) {
+                putExtra(EXTRA_OPEN_OPERATION_LOG_ID, logId)
+            } else {
+                putExtra(EXTRA_OPEN_OPERATION_PROGRESS, true)
+            }
         }
         return PendingIntent.getActivity(context, requestCode, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
     }
@@ -168,7 +173,12 @@ class NotificationRepository(private val context: Context) {
             .build()
     }
 
-    fun buildOperationFinishedNotification(operationName: String, success: Boolean, summary: String): Notification {
+    fun buildOperationFinishedNotification(
+        operationName: String,
+        success: Boolean,
+        summary: String,
+        logId: String? = null
+    ): Notification {
         val title = if (success) {
             context.getString(R.string.notification_operation_finished_success, operationName)
         } else {
@@ -185,7 +195,7 @@ class NotificationRepository(private val context: Context) {
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setPriority(priority)
             .setAutoCancel(true)
-            .setContentIntent(createPendingIntent())
+            .setContentIntent(createPendingIntent(logId))
             .build()
     }
 
@@ -204,7 +214,12 @@ class NotificationRepository(private val context: Context) {
     }
 
 
-    fun showOperationFinishedNotification(operationName: String, success: Boolean, summary: String) {
+    fun showOperationFinishedNotification(
+        operationName: String,
+        success: Boolean,
+        summary: String,
+        logId: String? = null
+    ) {
         cancelProgressNotification()
 
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
@@ -218,7 +233,7 @@ class NotificationRepository(private val context: Context) {
 
         val notificationId = finishedNotificationId(success)
         NotificationManagerCompat.from(context)
-            .notify(notificationId, buildOperationFinishedNotification(operationName, success, summary))
+            .notify(notificationId, buildOperationFinishedNotification(operationName, success, summary, logId))
     }
 
 
