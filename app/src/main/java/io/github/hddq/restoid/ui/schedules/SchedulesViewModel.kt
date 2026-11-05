@@ -307,7 +307,7 @@ class SchedulesViewModel(
         val repoKey = _uiState.value.selectedRepoKey
         val repository = repoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
 
-        if (repository != null && repository.backendType == RepositoryBackendType.LOCAL) {
+        if (!isExcluded && repository != null && repository.backendType == RepositoryBackendType.LOCAL) {
             val repoCanonicalKey = StorageUtils.resolveCustomDirectoryKey(repository.path)
             if (repoCanonicalKey == newKey) {
                 Toast.makeText(

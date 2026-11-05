@@ -36,13 +36,16 @@ class ScheduleWorker(
         val schedule = schedules[scheduleIndex]
         if (!schedule.isEnabled) return Result.success()
 
+        // Only actual sources start a backup. Exclusions merely refine an included source.
+        val hasSelectedApps = schedule.config.backupEnabled && schedule.config.selectedPackageNames.isNotEmpty()
+
         // Trigger the run tasks operation
         val workRequest = RunTasksWorkRequest(
             repositoryKey = repoKey,
-            backupEnabled = schedule.config.backupEnabled || schedule.config.customDirectories.isNotEmpty() || schedule.config.excludedCustomDirectories.isNotEmpty(),
+            backupEnabled = hasSelectedApps || schedule.config.customDirectories.isNotEmpty(),
             backupTypes = schedule.config.backupTypes,
-            selectedPackageNames = if (schedule.config.backupEnabled) schedule.config.selectedPackageNames else emptyList(),
-            appBackupTypes = if (schedule.config.backupEnabled) schedule.config.appBackupTypes else emptyMap(),
+            selectedPackageNames = if (hasSelectedApps) schedule.config.selectedPackageNames else emptyList(),
+            appBackupTypes = if (hasSelectedApps) schedule.config.appBackupTypes else emptyMap(),
             customDirectories = schedule.config.customDirectories,
             excludedCustomDirectories = schedule.config.excludedCustomDirectories,
             unlockRepo = schedule.config.unlockRepo,

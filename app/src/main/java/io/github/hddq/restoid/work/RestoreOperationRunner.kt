@@ -136,7 +136,10 @@ class RestoreOperationRunner(
 
             val restoreStageTitle = "[${currentStageNum}/${totalStages}] ${stageList[0]}"
             if (pathsToRestore.isNotEmpty()) {
-                val includes = pathsToRestore.joinToString(" ") { "--include ${shellQuote(it)}" }
+                // Restic does not allow --include and --exclude in the same restore command.
+                // Restore paths are positional arguments, so they still limit the restore while
+                // allowing exclusions to be applied.
+                val restorePaths = pathsToRestore.joinToString(" ") { shellQuote(it) }
                 val commandEnvironment = linkedMapOf(
                     "HOME" to context.filesDir.absolutePath,
                     "TMPDIR" to context.cacheDir.absolutePath
@@ -160,16 +163,16 @@ class RestoreOperationRunner(
                     append("restore ").append(currentSnapshot.id).append(" --target ")
                     append(shellQuote(tempRestoreDir.absolutePath)).append(' ')
                     append("--exclude-xattr 'security.selinux' ")
-                    append(includes)
                     val excludes = request.excludedCustomDirectories.joinToString(" ") { dirUriStr ->
                         val realPath = io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(dirUriStr) ?: dirUriStr
                         val shellPath = io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(realPath)
                         "--exclude ${shellQuote(shellPath)}"
                     }
                     if (excludes.isNotEmpty()) {
-                        append(' ').append(excludes)
+                        append(excludes).append(' ')
                     }
-                    append(" --json")
+                    append("--json ")
+                    append(restorePaths)
                 }
 
                 val stdoutCallback = object : CallbackList<String>() {

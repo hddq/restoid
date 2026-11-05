@@ -487,6 +487,7 @@ fun RestoreCustomDirectoriesConfigScreen(
         io.github.hddq.restoid.ui.components.FolderPickerSheet(
             allowSystemPaths = true,
             allowFiles = true,
+            allowMissingPaths = true,
             onSelectPath = { selectedPath ->
                 showFolderPicker = false
                 viewModel.addExcludedCustomDirectory(selectedPath)

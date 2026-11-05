@@ -179,9 +179,9 @@ class RunTasksViewModel(
         }
 
         val maintenance = _uiState.value.maintenance
-        val hasCustomDirs = _uiState.value.customDirectoriesBackupEnabled && (selectedCustomDirs.isNotEmpty() || selectedExcludedCustomDirs.isNotEmpty())
+        val hasCustomDirs = _uiState.value.customDirectoriesBackupEnabled && selectedCustomDirs.isNotEmpty()
         val hasRoot = rootState.value == io.github.hddq.restoid.data.RootState.Granted
-        val backupAppsEnabled = _uiState.value.backupEnabled && hasRoot
+        val backupAppsEnabled = _uiState.value.backupEnabled && hasRoot && _uiState.value.apps.any { it.isSelected }
         
         val request = RunTasksWorkRequest(
             repositoryKey = selectedRepoKey,
@@ -346,7 +346,7 @@ class RunTasksViewModel(
         val repoKey = repositoriesRepository.selectedRepository.value
         val repository = repoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
 
-        if (repository != null && repository.backendType == RepositoryBackendType.LOCAL) {
+        if (!isExcluded && repository != null && repository.backendType == RepositoryBackendType.LOCAL) {
             val repoCanonicalKey = StorageUtils.resolveCustomDirectoryKey(repository.path)
             if (repoCanonicalKey == newKey) {
                 Toast.makeText(
