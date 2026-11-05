@@ -448,7 +448,7 @@ fun AddRepositoryDialog(
                 if (isBusy) {
                     LoadingIndicator(
                         modifier = Modifier.size(24.dp),
-                        color = MaterialTheme.colorScheme.onPrimary
+                        color = MaterialTheme.colorScheme.primary
                     )
                 } else {
                     Text(stringResource(R.string.action_add))
