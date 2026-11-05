@@ -154,8 +154,9 @@ class SchedulesViewModel(
             ),
             triggerConditions = schedule.triggerConditions,
             lastRunTimestamp = schedule.lastRunTimestamp,
-            customDirectoriesBackupEnabled = schedule.config.customDirectories.isNotEmpty(),
-            customDirectories = schedule.config.customDirectories.map { io.github.hddq.restoid.model.CustomDirectory(it, true) }
+            customDirectoriesBackupEnabled = schedule.config.customDirectories.isNotEmpty() || schedule.config.excludedCustomDirectories.isNotEmpty(),
+            customDirectories = schedule.config.customDirectories.map { io.github.hddq.restoid.model.CustomDirectory(it, isSelected = true, isExcluded = false) } +
+                    schedule.config.excludedCustomDirectories.map { io.github.hddq.restoid.model.CustomDirectory(it, isSelected = true, isExcluded = true) }
         )
         _addEditState.value = newState
         initialState = newState
@@ -234,7 +235,12 @@ class SchedulesViewModel(
                 backupTypes = state.backupTypes.toSelection(),
                 selectedPackageNames = if (actualBackupEnabled) state.apps.filter { it.isSelected }.map { it.packageName } else emptyList(),
                 appBackupTypes = if (actualBackupEnabled) selectedAppBackupTypes(state).mapValues { it.value.toSelection() } else emptyMap(),
-                customDirectories = if (state.customDirectoriesBackupEnabled) state.customDirectories.filter { it.isSelected }.map { it.uri } else emptyList(),
+                customDirectories = if (state.customDirectoriesBackupEnabled) {
+                    state.customDirectories.filter { !it.isExcluded && it.isSelected }.map { it.uri }
+                } else emptyList(),
+                excludedCustomDirectories = if (state.customDirectoriesBackupEnabled) {
+                    state.customDirectories.filter { it.isExcluded && it.isSelected }.map { it.uri }
+                } else emptyList(),
                 unlockRepo = state.maintenance.unlockRepo,
                 forgetSnapshots = state.maintenance.forgetSnapshots,
                 pruneRepo = state.maintenance.pruneRepo,
@@ -287,7 +293,7 @@ class SchedulesViewModel(
         _addEditState.update { it.copy(customDirectoriesBackupEnabled = enabled) }
     }
 
-    fun addCustomDirectory(uriString: String) {
+    fun addCustomDirectory(uriString: String, isExcluded: Boolean = false) {
         val newKey = StorageUtils.resolveCustomDirectoryKey(uriString)
         if (_addEditState.value.customDirectories.any { StorageUtils.resolveCustomDirectoryKey(it.uri) == newKey }) {
             Toast.makeText(
@@ -314,7 +320,7 @@ class SchedulesViewModel(
         }
 
         _addEditState.update { state ->
-            state.copy(customDirectories = state.customDirectories + io.github.hddq.restoid.model.CustomDirectory(uriString))
+            state.copy(customDirectories = state.customDirectories + io.github.hddq.restoid.model.CustomDirectory(uri = uriString, isExcluded = isExcluded))
         }
     }
 
@@ -323,6 +329,16 @@ class SchedulesViewModel(
             state.copy(
                 customDirectories = state.customDirectories.map {
                     if (it.uri == uriString) it.copy(isSelected = !it.isSelected) else it
+                }
+            )
+        }
+    }
+
+    fun toggleCustomDirectoryCategory(uriString: String) {
+        _addEditState.update { state ->
+            state.copy(
+                customDirectories = state.customDirectories.map {
+                    if (it.uri == uriString) it.copy(isExcluded = !it.isExcluded) else it
                 }
             )
         }

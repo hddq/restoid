@@ -32,7 +32,9 @@ import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.FolderOff
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.Key
@@ -42,6 +44,7 @@ import androidx.compose.material.icons.outlined.SdCard
 import androidx.compose.material.icons.outlined.SelectAll
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material.icons.outlined.Today
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.DropdownMenu
@@ -766,11 +769,13 @@ fun buildCheckSubtitle(config: io.github.hddq.restoid.model.MaintenanceConfig, c
 }
 
 fun buildCustomDirectoriesSubtitle(directories: List<io.github.hddq.restoid.model.CustomDirectory>, context: android.content.Context): String {
-    val selectedCount = directories.count { it.isSelected }
-    return if (selectedCount == 0) {
-        context.getString(io.github.hddq.restoid.R.string.run_tasks_custom_directories_subtitle_none)
-    } else {
-        context.getString(io.github.hddq.restoid.R.string.run_tasks_custom_directories_subtitle_count, selectedCount)
+    val includedCount = directories.count { !it.isExcluded && it.isSelected }
+    val excludedCount = directories.count { it.isExcluded && it.isSelected }
+    return when {
+        includedCount == 0 && excludedCount == 0 -> context.getString(io.github.hddq.restoid.R.string.run_tasks_custom_directories_subtitle_none)
+        includedCount > 0 && excludedCount > 0 -> context.getString(io.github.hddq.restoid.R.string.custom_directories_subtitle_summary, includedCount, excludedCount)
+        includedCount > 0 -> context.getString(io.github.hddq.restoid.R.string.custom_directories_subtitle_included_only, includedCount)
+        else -> context.getString(io.github.hddq.restoid.R.string.custom_directories_subtitle_excluded_only, excludedCount)
     }
 }
 
@@ -778,13 +783,18 @@ fun buildCustomDirectoriesSubtitle(directories: List<io.github.hddq.restoid.mode
 @Composable
 fun CustomDirectoriesConfigScreen(
     customDirectories: List<io.github.hddq.restoid.model.CustomDirectory>,
-    onAddDirectory: (String) -> Unit,
+    onAddDirectory: (String, Boolean) -> Unit,
     onToggleDirectory: (String) -> Unit,
     onRemoveDirectory: (String) -> Unit = {},
+    onToggleCategory: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var showFolderPicker by remember { mutableStateOf(false) }
+    var pickerTargetIsExcluded by remember { mutableStateOf(false) }
     var menuExpandedForUri by remember { mutableStateOf<String?>(null) }
+
+    val includedDirs = customDirectories.filter { !it.isExcluded }
+    val excludedDirs = customDirectories.filter { it.isExcluded }
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -808,117 +818,152 @@ fun CustomDirectoriesConfigScreen(
             }
         }
 
-        if (customDirectories.isNotEmpty()) {
+        // Section 1: Included files and folders
+        item {
+            ExpressiveSectionHeader(
+                title = stringResource(R.string.custom_directories_included_category)
+            )
+        }
+
+        if (includedDirs.isNotEmpty()) {
             item {
                 ExpressiveCardGroup {
-                    customDirectories.forEachIndexed { index, customDir ->
+                    includedDirs.forEachIndexed { index, customDir ->
                         key(customDir.uri) {
-                        val resolvedPath = io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(customDir.uri)
-                        val displayPath = resolvedPath ?: runCatching {
-                            android.net.Uri.parse(customDir.uri).lastPathSegment
-                        }.getOrNull() ?: customDir.uri
+                            val resolvedPath = io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(customDir.uri)
+                            val displayPath = resolvedPath ?: runCatching {
+                                android.net.Uri.parse(customDir.uri).lastPathSegment
+                            }.getOrNull() ?: customDir.uri
 
-                        ExpressiveSegmentedSurface(
-                            index = index,
-                            count = customDirectories.size
-                        ) {
-                            Box(modifier = Modifier.fillMaxWidth()) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .combinedClickable(
-                                            onClick = { onToggleDirectory(customDir.uri) },
-                                            onLongClick = { menuExpandedForUri = customDir.uri }
-                                        )
-                                        .padding(vertical = 12.dp, horizontal = 16.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    val initialIsDir = io.github.hddq.restoid.util.StorageUtils.isDirectoryFast(customDir.uri)
-                                    val isDirectory by produceState(
-                                        initialValue = initialIsDir ?: true,
-                                        key1 = customDir.uri
+                            ExpressiveSegmentedSurface(
+                                index = index,
+                                count = includedDirs.size
+                            ) {
+                                Box(modifier = Modifier.fillMaxWidth()) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .combinedClickable(
+                                                onClick = { onToggleDirectory(customDir.uri) },
+                                                onLongClick = { menuExpandedForUri = customDir.uri }
+                                            )
+                                            .padding(vertical = 12.dp, horizontal = 16.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        if (initialIsDir == null) {
-                                            value = withContext(Dispatchers.IO) {
-                                                io.github.hddq.restoid.util.StorageUtils.isDirectoryPath(customDir.uri)
+                                        val initialIsDir = io.github.hddq.restoid.util.StorageUtils.isDirectoryFast(customDir.uri)
+                                        val isDirectory by produceState(
+                                            initialValue = initialIsDir ?: true,
+                                            key1 = customDir.uri
+                                        ) {
+                                            if (initialIsDir == null) {
+                                                value = withContext(Dispatchers.IO) {
+                                                    io.github.hddq.restoid.util.StorageUtils.isDirectoryPath(customDir.uri)
+                                                }
                                             }
                                         }
-                                    }
-                                    Icon(
-                                        imageVector = if (isDirectory) Icons.Outlined.Folder else Icons.Outlined.Description,
-                                        contentDescription = null,
-                                        tint = if (customDir.isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(end = 16.dp)
-                                    )
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        val title = displayPath.substringAfterLast("/")
-                                        Text(
-                                            text = title.ifEmpty { displayPath },
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            style = MaterialTheme.typography.bodyLarge
+                                        Icon(
+                                            imageVector = if (isDirectory) Icons.Outlined.Folder else Icons.Outlined.Description,
+                                            contentDescription = null,
+                                            tint = if (customDir.isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(end = 16.dp)
                                         )
-                                        Text(
-                                            text = displayPath,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(16.dp))
-                                    Switch(
-                                        checked = customDir.isSelected,
-                                        onCheckedChange = { onToggleDirectory(customDir.uri) },
-                                        thumbContent = if (customDir.isSelected) {
-                                            {
-                                                Icon(
-                                                    imageVector = Icons.Filled.Check,
-                                                    contentDescription = null,
-                                                    modifier = Modifier.size(SwitchDefaults.IconSize)
-                                                )
-                                            }
-                                        } else {
-                                            null
-                                        }
-                                    )
-                                }
-
-                                DropdownMenu(
-                                    expanded = menuExpandedForUri == customDir.uri,
-                                    onDismissRequest = { menuExpandedForUri = null }
-                                ) {
-                                    DropdownMenuItem(
-                                        text = {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            val title = displayPath.substringAfterLast("/")
                                             Text(
-                                                text = stringResource(R.string.action_delete),
-                                                color = MaterialTheme.colorScheme.error
+                                                text = title.ifEmpty { displayPath },
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                style = MaterialTheme.typography.bodyLarge
                                             )
-                                        },
-                                        leadingIcon = {
-                                            Icon(
-                                                imageVector = Icons.Outlined.Delete,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.error
+                                            Text(
+                                                text = displayPath,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
-                                        },
-                                        onClick = {
-                                            menuExpandedForUri = null
-                                            onRemoveDirectory(customDir.uri)
                                         }
-                                    )
+                                        Spacer(modifier = Modifier.width(16.dp))
+                                        Switch(
+                                            checked = customDir.isSelected,
+                                            onCheckedChange = { onToggleDirectory(customDir.uri) },
+                                            thumbContent = if (customDir.isSelected) {
+                                                {
+                                                    Icon(
+                                                        imageVector = Icons.Filled.Check,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                                                    )
+                                                }
+                                            } else {
+                                                null
+                                            }
+                                        )
+                                    }
+
+                                    DropdownMenu(
+                                        expanded = menuExpandedForUri == customDir.uri,
+                                        onDismissRequest = { menuExpandedForUri = null }
+                                    ) {
+                                        if (onToggleCategory != null) {
+                                            DropdownMenuItem(
+                                                text = {
+                                                    Text(text = stringResource(R.string.custom_directories_action_move_to_excluded))
+                                                },
+                                                leadingIcon = {
+                                                    Icon(
+                                                        imageVector = Icons.Outlined.SwapHoriz,
+                                                        contentDescription = null
+                                                    )
+                                                },
+                                                onClick = {
+                                                    menuExpandedForUri = null
+                                                    onToggleCategory(customDir.uri)
+                                                }
+                                            )
+                                        }
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(
+                                                    text = stringResource(R.string.action_delete),
+                                                    color = MaterialTheme.colorScheme.error
+                                                )
+                                            },
+                                            leadingIcon = {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.Delete,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.error
+                                                )
+                                            },
+                                            onClick = {
+                                                menuExpandedForUri = null
+                                                onRemoveDirectory(customDir.uri)
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
-                        }
                     }
                 }
+            }
+        } else {
+            item {
+                Text(
+                    text = stringResource(R.string.custom_directories_included_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 
         item {
             FilledTonalButton(
-                onClick = { showFolderPicker = true },
+                onClick = {
+                    pickerTargetIsExcluded = false
+                    showFolderPicker = true
+                },
                 shape = MaterialTheme.shapes.extraLarge,
                 modifier = Modifier.padding(top = 4.dp)
             ) {
@@ -927,7 +972,165 @@ fun CustomDirectoriesConfigScreen(
                     contentDescription = null
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.action_add_directory))
+                Text(stringResource(R.string.custom_directories_add_included))
+            }
+        }
+
+        // Section 2: Excluded files and folders
+        item {
+            ExpressiveSectionHeader(
+                title = stringResource(R.string.custom_directories_excluded_category)
+            )
+        }
+
+        if (excludedDirs.isNotEmpty()) {
+            item {
+                ExpressiveCardGroup {
+                    excludedDirs.forEachIndexed { index, customDir ->
+                        key(customDir.uri) {
+                            val resolvedPath = io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(customDir.uri)
+                            val displayPath = resolvedPath ?: runCatching {
+                                android.net.Uri.parse(customDir.uri).lastPathSegment
+                            }.getOrNull() ?: customDir.uri
+
+                            ExpressiveSegmentedSurface(
+                                index = index,
+                                count = excludedDirs.size
+                            ) {
+                                Box(modifier = Modifier.fillMaxWidth()) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .combinedClickable(
+                                                onClick = { onToggleDirectory(customDir.uri) },
+                                                onLongClick = { menuExpandedForUri = customDir.uri }
+                                            )
+                                            .padding(vertical = 12.dp, horizontal = 16.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        val initialIsDir = io.github.hddq.restoid.util.StorageUtils.isDirectoryFast(customDir.uri)
+                                        val isDirectory by produceState(
+                                            initialValue = initialIsDir ?: true,
+                                            key1 = customDir.uri
+                                        ) {
+                                            if (initialIsDir == null) {
+                                                value = withContext(Dispatchers.IO) {
+                                                    io.github.hddq.restoid.util.StorageUtils.isDirectoryPath(customDir.uri)
+                                                }
+                                            }
+                                        }
+                                        Icon(
+                                            imageVector = if (isDirectory) Icons.Outlined.FolderOff else Icons.Outlined.Block,
+                                            contentDescription = null,
+                                            tint = if (customDir.isSelected) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(end = 16.dp)
+                                        )
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            val title = displayPath.substringAfterLast("/")
+                                            Text(
+                                                text = title.ifEmpty { displayPath },
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                style = MaterialTheme.typography.bodyLarge
+                                            )
+                                            Text(
+                                                text = displayPath,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(16.dp))
+                                        Switch(
+                                            checked = customDir.isSelected,
+                                            onCheckedChange = { onToggleDirectory(customDir.uri) },
+                                            thumbContent = if (customDir.isSelected) {
+                                                {
+                                                    Icon(
+                                                        imageVector = Icons.Filled.Check,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                                                    )
+                                                }
+                                            } else {
+                                                null
+                                            }
+                                        )
+                                    }
+
+                                    DropdownMenu(
+                                        expanded = menuExpandedForUri == customDir.uri,
+                                        onDismissRequest = { menuExpandedForUri = null }
+                                    ) {
+                                        if (onToggleCategory != null) {
+                                            DropdownMenuItem(
+                                                text = {
+                                                    Text(text = stringResource(R.string.custom_directories_action_move_to_included))
+                                                },
+                                                leadingIcon = {
+                                                    Icon(
+                                                        imageVector = Icons.Outlined.SwapHoriz,
+                                                        contentDescription = null
+                                                    )
+                                                },
+                                                onClick = {
+                                                    menuExpandedForUri = null
+                                                    onToggleCategory(customDir.uri)
+                                                }
+                                            )
+                                        }
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(
+                                                    text = stringResource(R.string.action_delete),
+                                                    color = MaterialTheme.colorScheme.error
+                                                )
+                                            },
+                                            leadingIcon = {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.Delete,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.error
+                                                )
+                                            },
+                                            onClick = {
+                                                menuExpandedForUri = null
+                                                onRemoveDirectory(customDir.uri)
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            item {
+                Text(
+                    text = stringResource(R.string.custom_directories_excluded_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        item {
+            FilledTonalButton(
+                onClick = {
+                    pickerTargetIsExcluded = true
+                    showFolderPicker = true
+                },
+                shape = MaterialTheme.shapes.extraLarge,
+                modifier = Modifier.padding(top = 4.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Add,
+                    contentDescription = null
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(stringResource(R.string.custom_directories_add_excluded))
             }
         }
     }
@@ -938,9 +1141,27 @@ fun CustomDirectoriesConfigScreen(
             allowFiles = true,
             onSelectPath = { selectedPath ->
                 showFolderPicker = false
-                onAddDirectory(selectedPath)
+                onAddDirectory(selectedPath, pickerTargetIsExcluded)
             },
             onDismissRequest = { showFolderPicker = false }
         )
     }
 }
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun CustomDirectoriesConfigScreen(
+    customDirectories: List<io.github.hddq.restoid.model.CustomDirectory>,
+    onAddDirectory: (String) -> Unit,
+    onToggleDirectory: (String) -> Unit,
+    onRemoveDirectory: (String) -> Unit = {},
+    onToggleCategory: ((String) -> Unit)? = null,
+    modifier: Modifier = Modifier
+) = CustomDirectoriesConfigScreen(
+    customDirectories = customDirectories,
+    onAddDirectory = { path, _ -> onAddDirectory(path) },
+    onToggleDirectory = onToggleDirectory,
+    onRemoveDirectory = onRemoveDirectory,
+    onToggleCategory = onToggleCategory,
+    modifier = modifier
+)

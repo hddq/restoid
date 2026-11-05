@@ -656,6 +656,7 @@ fun ScheduleCustomDirectoriesConfigScreen(
         onAddDirectory = viewModel::addCustomDirectory,
         onToggleDirectory = viewModel::toggleCustomDirectory,
         onRemoveDirectory = viewModel::removeCustomDirectory,
+        onToggleCategory = viewModel::toggleCustomDirectoryCategory,
         modifier = modifier
     )
 }

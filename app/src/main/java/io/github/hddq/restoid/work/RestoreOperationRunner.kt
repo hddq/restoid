@@ -161,6 +161,14 @@ class RestoreOperationRunner(
                     append(shellQuote(tempRestoreDir.absolutePath)).append(' ')
                     append("--exclude-xattr 'security.selinux' ")
                     append(includes)
+                    val excludes = request.excludedCustomDirectories.joinToString(" ") { dirUriStr ->
+                        val realPath = io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(dirUriStr) ?: dirUriStr
+                        val shellPath = io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(realPath)
+                        "--exclude ${shellQuote(shellPath)}"
+                    }
+                    if (excludes.isNotEmpty()) {
+                        append(' ').append(excludes)
+                    }
                     append(" --json")
                 }
 

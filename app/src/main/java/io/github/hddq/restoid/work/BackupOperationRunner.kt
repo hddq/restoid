@@ -122,6 +122,7 @@ class BackupOperationRunner(
                 request.backupTypes,
                 request.appBackupTypes,
                 request.customDirectories,
+                request.excludedCustomDirectories,
                 shouldStop
             )
             restoidMetadataFile = File(context.cacheDir, "restoid.json")
@@ -364,6 +365,7 @@ class BackupOperationRunner(
         backupTypes: BackupTypeSelection,
         appBackupTypes: Map<String, BackupTypeSelection>,
         customDirectories: List<String>,
+        excludedCustomDirectories: List<String>,
         shouldStop: () -> Boolean
     ): Triple<MutableList<String>, List<String>, RestoidMetadata> {
         fun throwIfCancelled() {
@@ -433,6 +435,14 @@ class BackupOperationRunner(
                 isDirectory = Shell.cmd("[ -d ${shellQuote(shellPath)} ]").exec().isSuccess
             )
         }
+
+        excludedCustomDirectories.forEach { dirUriStr ->
+            throwIfCancelled()
+            val realPath = io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(dirUriStr) ?: dirUriStr
+            val shellPath = io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(realPath)
+            excludePatterns.add(shellQuote(shellPath))
+        }
+
         val metadata = RestoidMetadata(apps = appMetadataMap, customDirectories = customDirectoryMetadataMap)
         return Triple(pathsToBackup, excludePatterns, metadata)
     }
@@ -441,7 +451,7 @@ class BackupOperationRunner(
         request: BackupWorkRequest,
         selectedApps: List<AppInfo>
     ): OperationProgress? {
-        if (selectedApps.isEmpty() && request.customDirectories.isEmpty()) {
+        if (selectedApps.isEmpty() && request.customDirectories.isEmpty() && request.excludedCustomDirectories.isEmpty()) {
             return OperationProgress(
                 isFinished = true,
                 error = context.getString(R.string.error_no_items_selected),
@@ -449,7 +459,7 @@ class BackupOperationRunner(
             )
         }
 
-        if (request.customDirectories.isNotEmpty() && !Shell.getShell().isRoot && !hasAllFilesAccess()) {
+        if ((request.customDirectories.isNotEmpty() || request.excludedCustomDirectories.isNotEmpty()) && !Shell.getShell().isRoot && !hasAllFilesAccess()) {
             return OperationProgress(
                 isFinished = true,
                 error = context.getString(R.string.error_all_files_access_required),

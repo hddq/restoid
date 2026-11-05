@@ -15,9 +15,11 @@ import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.BackupDetail
+import io.github.hddq.restoid.model.CustomDirectory
 import io.github.hddq.restoid.model.CustomDirectoryMetadata
 import io.github.hddq.restoid.model.RestoidMetadata
 import io.github.hddq.restoid.ui.shared.OperationProgress
+import io.github.hddq.restoid.util.StorageUtils
 import io.github.hddq.restoid.work.OperationWorkRepository
 import io.github.hddq.restoid.work.RestoreAppSelection
 import io.github.hddq.restoid.work.RestoreTypeSelection
@@ -99,6 +101,9 @@ class RestoreViewModel(
 
     private val _customDirectories = MutableStateFlow<Map<String, Boolean>>(emptyMap())
     val customDirectories = _customDirectories.asStateFlow()
+
+    private val _excludedCustomDirectories = MutableStateFlow<List<CustomDirectory>>(emptyList())
+    val excludedCustomDirectories = _excludedCustomDirectories.asStateFlow()
 
     private val _customDirectoryMetadata = MutableStateFlow<Map<String, CustomDirectoryMetadata>>(emptyMap())
     val customDirectoryMetadata = _customDirectoryMetadata.asStateFlow()
@@ -336,6 +341,12 @@ class RestoreViewModel(
             emptyList()
         }
 
+        val selectedExcludedCustomDirectories = if (_restoreCustomDirectoriesEnabled.value) {
+            _excludedCustomDirectories.value.filter { it.isSelected }.map { it.uri }
+        } else {
+            emptyList()
+        }
+
         if (resticState !is ResticState.Installed || selectedRepoPath == null || currentSnapshot == null) {
             _restoreProgress.value = OperationProgress(
                 isFinished = true,
@@ -420,7 +431,8 @@ class RestoreViewModel(
                 )
             },
             appRestoreTypes = selectedApps.associate { it.appInfo.packageName to effectiveRestoreTypes(it.appInfo.packageName).toSelection() },
-            selectedCustomDirectories = selectedCustomDirectories
+            selectedCustomDirectories = selectedCustomDirectories,
+            excludedCustomDirectories = selectedExcludedCustomDirectories
         )
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -492,6 +504,26 @@ class RestoreViewModel(
         _customDirectories.update { current ->
             val shouldSelectAll = current.values.any { !it }
             current.mapValues { shouldSelectAll }
+        }
+    }
+
+    fun addExcludedCustomDirectory(uriString: String) {
+        val newKey = StorageUtils.resolveCustomDirectoryKey(uriString)
+        if (_excludedCustomDirectories.value.any { StorageUtils.resolveCustomDirectoryKey(it.uri) == newKey }) return
+        _excludedCustomDirectories.update {
+            it + CustomDirectory(uri = uriString, isSelected = true, isExcluded = true)
+        }
+    }
+
+    fun toggleExcludedCustomDirectory(uriString: String) {
+        _excludedCustomDirectories.update { current ->
+            current.map { if (it.uri == uriString) it.copy(isSelected = !it.isSelected) else it }
+        }
+    }
+
+    fun removeExcludedCustomDirectory(uriString: String) {
+        _excludedCustomDirectories.update { current ->
+            current.filter { it.uri != uriString }
         }
     }
 

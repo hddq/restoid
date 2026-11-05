@@ -39,11 +39,12 @@ class ScheduleWorker(
         // Trigger the run tasks operation
         val workRequest = RunTasksWorkRequest(
             repositoryKey = repoKey,
-            backupEnabled = schedule.config.backupEnabled || schedule.config.customDirectories.isNotEmpty(),
+            backupEnabled = schedule.config.backupEnabled || schedule.config.customDirectories.isNotEmpty() || schedule.config.excludedCustomDirectories.isNotEmpty(),
             backupTypes = schedule.config.backupTypes,
             selectedPackageNames = if (schedule.config.backupEnabled) schedule.config.selectedPackageNames else emptyList(),
             appBackupTypes = if (schedule.config.backupEnabled) schedule.config.appBackupTypes else emptyMap(),
             customDirectories = schedule.config.customDirectories,
+            excludedCustomDirectories = schedule.config.excludedCustomDirectories,
             unlockRepo = schedule.config.unlockRepo,
             forgetSnapshots = schedule.config.forgetSnapshots,
             pruneRepo = schedule.config.pruneRepo,
