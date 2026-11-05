@@ -1,1 +1,1 @@
-Root-based Android app backup tool powered by restic
+Android backup tool powered by restic
