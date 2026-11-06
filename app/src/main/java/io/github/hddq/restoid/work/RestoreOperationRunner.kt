@@ -137,11 +137,14 @@ class RestoreOperationRunner(
 
             val restoreStageTitle = "[${currentStageNum}/${totalStages}] ${stageList[0]}"
             if (pathsToRestore.isNotEmpty()) {
+                val snapshotPaths = pathsToRestore.distinct()
                 // Snapshot paths must stay exactly as Restic saved them. In particular, do not
-                // translate /mnt/media_rw paths to their current /storage mount here.
+                // translate selected paths to their current /storage mount here. Exclusions,
+                // however, may have been chosen through a /storage picker, so map their mount
+                // prefix to the equivalent prefix used by the selected snapshot path.
                 val excludedSnapshotPaths = request.excludedCustomDirectories.map { dirUriStr ->
                     val realPath = io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(dirUriStr) ?: dirUriStr
-                    realPath
+                    mapToSnapshotMount(realPath, snapshotPaths)
                 }
                 val commandEnvironment = linkedMapOf(
                     "HOME" to context.filesDir.absolutePath,
@@ -180,7 +183,7 @@ class RestoreOperationRunner(
                         }
                     }
                 }
-                pathsToRestore.distinct().forEach { restorePath ->
+                snapshotPaths.forEach { restorePath ->
                     if (isPathExcluded(restorePath, excludedSnapshotPaths)) return@forEach
                     val relativeExcludes = excludedSnapshotPaths.mapNotNull { excludedPath ->
                         excludedPath.removePrefix("$restorePath/").takeIf { excludedPath.startsWith("$restorePath/") }
@@ -721,6 +724,22 @@ class RestoreOperationRunner(
 
     private fun isPathExcluded(path: String, excludedPaths: List<String>): Boolean {
         return excludedPaths.any { excluded -> path == excluded || path.startsWith("$excluded/") }
+    }
+
+    /**
+     * Makes an exclusion chosen through `/storage/<UUID>` refer to the same path as a snapshot
+     * saved through `/mnt/media_rw/<UUID>`, without changing the snapshot selector itself.
+     */
+    private fun mapToSnapshotMount(path: String, snapshotPaths: List<String>): String {
+        val externalPathRegex = Regex("^/(storage|mnt/media_rw)/([A-Fa-f0-9-]+)(/.*)?$")
+        val pathMatch = externalPathRegex.matchEntire(path) ?: return path
+        val uuid = pathMatch.groupValues[2]
+        val relativePath = pathMatch.groupValues[3]
+        val snapshotMatch = snapshotPaths
+            .mapNotNull { snapshotPath -> externalPathRegex.matchEntire(snapshotPath) }
+            .firstOrNull { it.groupValues[2].equals(uuid, ignoreCase = true) }
+            ?: return path
+        return "/${snapshotMatch.groupValues[1]}/${snapshotMatch.groupValues[2]}$relativePath"
     }
 
     private fun findRestoredProfilePackageDir(
