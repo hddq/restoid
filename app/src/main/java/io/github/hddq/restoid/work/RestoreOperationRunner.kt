@@ -137,9 +137,11 @@ class RestoreOperationRunner(
 
             val restoreStageTitle = "[${currentStageNum}/${totalStages}] ${stageList[0]}"
             if (pathsToRestore.isNotEmpty()) {
-                val excludedPaths = request.excludedCustomDirectories.map { dirUriStr ->
+                // Snapshot paths must stay exactly as Restic saved them. In particular, do not
+                // translate /mnt/media_rw paths to their current /storage mount here.
+                val excludedSnapshotPaths = request.excludedCustomDirectories.map { dirUriStr ->
                     val realPath = io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(dirUriStr) ?: dirUriStr
-                    io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(realPath)
+                    realPath
                 }
                 val commandEnvironment = linkedMapOf(
                     "HOME" to context.filesDir.absolutePath,
@@ -179,12 +181,13 @@ class RestoreOperationRunner(
                     }
                 }
                 pathsToRestore.distinct().forEach { restorePath ->
-                    val shellRestorePath = io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(restorePath)
-                    if (excludedPaths.any { it == shellRestorePath }) return@forEach
-                    val relativeExcludes = excludedPaths.mapNotNull { excludedPath ->
-                        excludedPath.removePrefix("$shellRestorePath/").takeIf { excludedPath.startsWith("$shellRestorePath/") }
+                    if (isPathExcluded(restorePath, excludedSnapshotPaths)) return@forEach
+                    val relativeExcludes = excludedSnapshotPaths.mapNotNull { excludedPath ->
+                        excludedPath.removePrefix("$restorePath/").takeIf { excludedPath.startsWith("$restorePath/") }
                     }
-                    val targetDir = requireNotNull(File(tempRestoreDir, shellRestorePath.drop(1)).parentFile)
+                    // A snapshot:path restore writes the selected directory's contents directly
+                    // into --target. Target that directory so staging retains the original layout.
+                    val targetDir = File(tempRestoreDir, restorePath.drop(1))
                     val command = buildString {
                         if (envPrefix.isNotEmpty()) append(envPrefix).append(' ')
                         append("RESTIC_PASSWORD_FILE=").append(shellQuote(passwordFile.absolutePath)).append(' ')
@@ -193,7 +196,7 @@ class RestoreOperationRunner(
                         append("--retry-lock 5s ")
                         if (resticOptionFlags.isNotEmpty()) append(resticOptionFlags).append(' ')
                         append("-r ").append(shellQuote(selectedRepoPath)).append(' ')
-                        append("restore ").append(shellQuote("${currentSnapshot.id}:$shellRestorePath")).append(" --target ")
+                        append("restore ").append(shellQuote("${currentSnapshot.id}:$restorePath")).append(" --target ")
                         append(shellQuote(targetDir.absolutePath)).append(' ')
                         append("--exclude-xattr 'security.selinux' ")
                         relativeExcludes.forEach { relativePath ->
@@ -370,8 +373,9 @@ class RestoreOperationRunner(
                         Shell.cmd("mkdir -p ${shellQuote(parent.absolutePath)}").exec()
                     }
                     
-                    if (targetPath in excludedPaths) {
-                        // A selected root can also be excluded. Leave its existing destination intact.
+                    if (isPathExcluded(targetPath, excludedPaths)) {
+                        // An excluded parent also protects every selected child beneath it.
+                        // Leave the existing destination intact.
                     } else if (Shell.cmd("[ -e ${shellQuote(sourcePath)} ]").exec().isSuccess) {
                         val preservedPaths = preserveExcludedDestinationPaths(
                             targetPath,
@@ -713,6 +717,10 @@ class RestoreOperationRunner(
         return paths.map { (preserved, destination) ->
             Shell.cmd("mkdir -p ${shellQuote(File(destination).parentFile!!.absolutePath)} && rm -rf ${shellQuote(destination)} && mv ${shellQuote(preserved.absolutePath)} ${shellQuote(destination)}").exec().isSuccess
         }.all { it }
+    }
+
+    private fun isPathExcluded(path: String, excludedPaths: List<String>): Boolean {
+        return excludedPaths.any { excluded -> path == excluded || path.startsWith("$excluded/") }
     }
 
     private fun findRestoredProfilePackageDir(
