@@ -47,6 +47,8 @@ class RestoidApplication : Application() {
         private set
     lateinit var operationRuntimeRepository: OperationRuntimeRepository
         private set
+    lateinit var operationLogRepository: OperationLogRepository
+        private set
     lateinit var operationWorkRepository: OperationWorkRepository
         private set
 
@@ -80,6 +82,7 @@ class RestoidApplication : Application() {
         operationLockManager = OperationLockManager(applicationContext)
         operationRequestStore = OperationRequestStore(applicationContext)
         operationRuntimeRepository = OperationRuntimeRepository(applicationContext)
+        operationLogRepository = OperationLogRepository(applicationContext)
         operationWorkRepository = OperationWorkRepository(
             applicationContext,
             operationRequestStore,

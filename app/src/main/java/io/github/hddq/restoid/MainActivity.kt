@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
@@ -96,8 +97,11 @@ import io.github.hddq.restoid.ui.schedules.SchedulesRoutes
 import io.github.hddq.restoid.ui.schedules.SchedulesScreen
 import io.github.hddq.restoid.ui.schedules.SchedulesViewModel
 import io.github.hddq.restoid.ui.schedules.SchedulesViewModelFactory
+import io.github.hddq.restoid.ui.operation.OperationLogsViewModel
+import io.github.hddq.restoid.ui.operation.OperationLogsViewModelFactory
 import io.github.hddq.restoid.ui.screens.HomeScreen
 import io.github.hddq.restoid.ui.screens.LicensesScreen
+import io.github.hddq.restoid.ui.screens.OperationLogsScreen
 import io.github.hddq.restoid.ui.screens.OperationProgressScreen
 import io.github.hddq.restoid.ui.screens.RestoreScreen
 import io.github.hddq.restoid.ui.screens.SettingsScreen
@@ -113,6 +117,8 @@ val LocalAppBarActions = compositionLocalOf<MutableState<(@Composable RowScope.(
 class MainActivity : FragmentActivity() {
     private companion object {
         const val STATE_APP_UNLOCKED = "state_app_unlocked"
+        const val STATE_OPEN_OPERATION_PROGRESS = "state_open_operation_progress"
+        const val STATE_OPEN_OPERATION_LOG_ID = "state_open_operation_log_id"
         const val APP_UNLOCK_BACKGROUND_TIMEOUT_MS = 60_000L
     }
 
@@ -121,6 +127,7 @@ class MainActivity : FragmentActivity() {
     private var backgroundedAtElapsedRealtimeMs: Long? = null
     private var isAuthenticationInProgress = false
     private var openOperationProgressOnLaunch by mutableStateOf(false)
+    private var openOperationLogIdOnLaunch by mutableStateOf<String?>(null)
 
     private val screenOffReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: android.content.Context?, intent: Intent?) {
@@ -135,7 +142,13 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         val app = applicationContext as RestoidApplication
         isAppUnlocked = savedInstanceState?.getBoolean(STATE_APP_UNLOCKED) ?: false
-        openOperationProgressOnLaunch = consumeOpenOperationProgressFlag(intent)
+        openOperationProgressOnLaunch = savedInstanceState?.getBoolean(STATE_OPEN_OPERATION_PROGRESS)
+            ?: consumeOpenOperationProgressFlag(intent)
+        openOperationLogIdOnLaunch = savedInstanceState?.getString(STATE_OPEN_OPERATION_LOG_ID)
+            ?: consumeOpenOperationLogIdFlag(intent)
+        if (openOperationLogIdOnLaunch != null) {
+            openOperationProgressOnLaunch = false
+        }
         registerReceiver(screenOffReceiver, IntentFilter(Intent.ACTION_SCREEN_OFF))
         enableEdgeToEdge()
 
@@ -148,6 +161,8 @@ class MainActivity : FragmentActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putBoolean(STATE_APP_UNLOCKED, isAppUnlocked)
+        outState.putBoolean(STATE_OPEN_OPERATION_PROGRESS, openOperationProgressOnLaunch)
+        outState.putString(STATE_OPEN_OPERATION_LOG_ID, openOperationLogIdOnLaunch)
         super.onSaveInstanceState(outState)
     }
 
@@ -189,9 +204,25 @@ class MainActivity : FragmentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (consumeOpenOperationProgressFlag(intent)) {
+        val shouldOpenProgress = consumeOpenOperationProgressFlag(intent)
+        val logId = consumeOpenOperationLogIdFlag(intent)
+        if (logId != null) {
+            openOperationLogIdOnLaunch = logId
+            openOperationProgressOnLaunch = false
+        } else if (shouldOpenProgress) {
             openOperationProgressOnLaunch = true
+            openOperationLogIdOnLaunch = null
         }
+    }
+
+    private fun consumeOpenOperationLogIdFlag(sourceIntent: Intent?): String? {
+        if (sourceIntent == null) return null
+        val logId = sourceIntent.getStringExtra(NotificationRepository.EXTRA_OPEN_OPERATION_LOG_ID)
+        if (logId != null) {
+            sourceIntent.removeExtra(NotificationRepository.EXTRA_OPEN_OPERATION_LOG_ID)
+        }
+        setIntent(sourceIntent)
+        return logId
     }
 
     private fun consumeOpenOperationProgressFlag(sourceIntent: Intent?): Boolean {
@@ -280,8 +311,20 @@ class MainActivity : FragmentActivity() {
                     )
                     val homeUiState by homeViewModel.uiState.collectAsState()
 
-                    if (openOperationProgressOnLaunch && isAppUnlocked) {
-                        androidx.compose.runtime.LaunchedEffect(openOperationProgressOnLaunch, isAppUnlocked) {
+                    val isNavigationAllowed = isAppUnlocked || !app.preferencesRepository.loadRequireAppUnlock()
+
+                    if (openOperationLogIdOnLaunch != null && isNavigationAllowed) {
+                        val targetLogId = openOperationLogIdOnLaunch
+                        androidx.compose.runtime.LaunchedEffect(targetLogId, isNavigationAllowed) {
+                            navController.navigate("${Screen.OperationLogs.route}?logId=$targetLogId") {
+                                launchSingleTop = true
+                            }
+                            openOperationLogIdOnLaunch = null
+                        }
+                    }
+
+                    if (openOperationProgressOnLaunch && isNavigationAllowed) {
+                        androidx.compose.runtime.LaunchedEffect(openOperationProgressOnLaunch, isNavigationAllowed) {
                             navController.navigate(Screen.OperationProgress.route) {
                                 launchSingleTop = true
                             }
@@ -419,6 +462,14 @@ class MainActivity : FragmentActivity() {
                                 isTopLevel = true,
                                 isHome = true,
                                 onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() },
+                                actions = {
+                                    IconButton(onClick = { navController.navigate(Screen.OperationLogs.route) }) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Outlined.ReceiptLong,
+                                            contentDescription = stringResource(R.string.screen_operation_logs)
+                                        )
+                                    }
+                                },
                                 bottomBar = {
                                     RestoidBottomNavigationBar(
                                         selectedScreen = Screen.Home,
@@ -915,6 +966,32 @@ class MainActivity : FragmentActivity() {
                                     OperationProgressScreen(onNavigateUp = { navController.navigateUp() })
                                 }
                             }
+                            composable(
+                                route = "${Screen.OperationLogs.route}?logId={logId}",
+                                arguments = listOf(
+                                    navArgument("logId") {
+                                        type = NavType.StringType
+                                        nullable = true
+                                        defaultValue = null
+                                    }
+                                )
+                            ) { backStackEntry ->
+                                val initialLogId = backStackEntry.arguments?.getString("logId")
+                                val viewModel: OperationLogsViewModel = viewModel(
+                                    factory = OperationLogsViewModelFactory(app.operationLogRepository)
+                                )
+                                DestinationScaffold(
+                                    titleRes = R.string.screen_operation_logs,
+                                    isTopLevel = false,
+                                    onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
+                                ) {
+                                    OperationLogsScreen(
+                                        viewModel = viewModel,
+                                        initialSelectedLogId = initialLogId,
+                                        onNavigateUp = { navController.navigateUp() }
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -968,6 +1045,7 @@ private fun DestinationScaffold(
     isTopLevel: Boolean,
     isHome: Boolean = false,
     onBack: () -> Unit,
+    actions: @Composable RowScope.() -> Unit = {},
     bottomBar: @Composable () -> Unit = {},
     floatingActionButton: @Composable () -> Unit = {},
     content: @Composable () -> Unit
@@ -1009,6 +1087,7 @@ private fun DestinationScaffold(
                         }
                     },
                     actions = {
+                        actions()
                         if (!isTopLevel) {
                             appBarActions.value?.invoke(this)
                         }

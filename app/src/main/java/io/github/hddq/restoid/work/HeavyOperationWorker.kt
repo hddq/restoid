@@ -12,6 +12,8 @@ import io.github.hddq.restoid.data.NotificationRepository
 import io.github.hddq.restoid.data.OperationType
 import io.github.hddq.restoid.ui.shared.OperationProgress
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import kotlin.math.abs
 
 class HeavyOperationWorker(
@@ -33,6 +35,7 @@ class HeavyOperationWorker(
         val requestId = inputData.getString(OperationWorkContract.INPUT_REQUEST_ID)
             ?: return Result.failure()
 
+        val startTimeMillis = System.currentTimeMillis()
         val initialProgress = OperationProgress(stageTitle = applicationContext.getString(R.string.progress_initializing))
         setForeground(createForegroundInfo(operationType, initialProgress))
         app.operationRuntimeRepository.markEnqueued(operationType, initialProgress)
@@ -144,20 +147,40 @@ class HeavyOperationWorker(
             else -> runResult
         }
 
-        notifier.forceNotify(finalResult.progress)
-        app.operationRuntimeRepository.markFinished(operationType, finalResult.success, finalResult.progress)
-        setProgress(OperationWorkContract.progressToData(operationType, finalResult.progress))
+        withContext(NonCancellable) {
+            notifier.forceNotify(finalResult.progress)
+            app.operationRuntimeRepository.markFinished(operationType, finalResult.success, finalResult.progress)
 
-        val displayName = if (scheduleName != null) {
-            applicationContext.getString(R.string.operation_schedule_name, scheduleName)
-        } else {
-            operationName(operationType)
+            val endTimeMillis = System.currentTimeMillis()
+            val durationSeconds = ((endTimeMillis - startTimeMillis) / 1000).coerceAtLeast(0)
+            val logEntry = app.operationLogRepository.addLog(
+                operationType = operationType,
+                scheduleName = scheduleName,
+                startTimeMillis = startTimeMillis,
+                endTimeMillis = endTimeMillis,
+                durationSeconds = durationSeconds,
+                success = finalResult.success,
+                stageTitle = finalResult.progress.stageTitle,
+                summary = finalResult.progress.finalSummary,
+                error = finalResult.progress.error
+            )
+
+            val displayName = if (scheduleName != null) {
+                applicationContext.getString(R.string.operation_schedule_name, scheduleName)
+            } else {
+                operationName(operationType)
+            }
+            notificationRepository.showOperationFinishedNotification(
+                displayName,
+                finalResult.success,
+                finalResult.progress.finalSummary,
+                logId = logEntry.id
+            )
+
+            runCatching {
+                setProgress(OperationWorkContract.progressToData(operationType, finalResult.progress))
+            }
         }
-        notificationRepository.showOperationFinishedNotification(
-            displayName,
-            finalResult.success,
-            finalResult.progress.finalSummary
-        )
 
         val output = OperationWorkContract.outputToData(operationType, finalResult.success, finalResult.progress)
         return if (finalResult.success) Result.success(output) else Result.failure(output)

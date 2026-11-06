@@ -50,4 +50,12 @@ class NotificationRepositoryTest {
         )
         assertEquals(3, notificationIds.size)
     }
+
+    @Test
+    fun extraConstants_areDistinct() {
+        assertNotEquals(
+            NotificationRepository.EXTRA_OPEN_OPERATION_PROGRESS,
+            NotificationRepository.EXTRA_OPEN_OPERATION_LOG_ID
+        )
+    }
 }
