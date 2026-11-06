@@ -190,7 +190,7 @@ class RunTasksViewModel(
             selectedPackageNames = if (backupAppsEnabled) _uiState.value.apps.filter { it.isSelected }.map { it.packageName } else emptyList(),
             appBackupTypes = if (backupAppsEnabled) selectedAppBackupTypes().mapValues { it.value.toSelection() } else emptyMap(),
             customDirectories = if (hasCustomDirs) selectedCustomDirs.toList() else emptyList(),
-            excludedCustomDirectories = if (hasCustomDirs) selectedExcludedCustomDirs.toList() else emptyList(),
+            excludedCustomDirectories = if (_uiState.value.customDirectoriesBackupEnabled) selectedExcludedCustomDirs.toList() else emptyList(),
             unlockRepo = maintenance.unlockRepo,
             forgetSnapshots = maintenance.forgetSnapshots,
             pruneRepo = maintenance.pruneRepo,
@@ -376,6 +376,19 @@ class RunTasksViewModel(
     }
 
     fun toggleCustomDirectoryCategory(uriString: String) {
+        val entry = _uiState.value.customDirectories.firstOrNull { it.uri == uriString }
+        val repoKey = repositoriesRepository.selectedRepository.value
+        val repository = repoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
+        if (entry?.isExcluded == true && repository?.backendType == RepositoryBackendType.LOCAL &&
+            StorageUtils.resolveCustomDirectoryKey(repository.path) == StorageUtils.resolveCustomDirectoryKey(uriString)
+        ) {
+            Toast.makeText(
+                application,
+                application.getString(R.string.error_cannot_backup_repo_to_itself),
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
         _uiState.update { state ->
             state.copy(
                 customDirectories = state.customDirectories.map {

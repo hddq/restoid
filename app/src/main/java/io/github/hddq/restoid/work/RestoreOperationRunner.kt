@@ -19,6 +19,7 @@ import io.github.hddq.restoid.ui.shared.OperationProgress
 import io.github.hddq.restoid.util.ResticOutputParser
 import io.github.hddq.restoid.util.buildResticOptionFlags
 import io.github.hddq.restoid.util.buildShellEnvironmentPrefix
+import io.github.hddq.restoid.util.escapeResticPattern
 import io.github.hddq.restoid.util.shellQuote
 import java.io.File
 import java.util.Locale
@@ -136,10 +137,10 @@ class RestoreOperationRunner(
 
             val restoreStageTitle = "[${currentStageNum}/${totalStages}] ${stageList[0]}"
             if (pathsToRestore.isNotEmpty()) {
-                // Restic does not allow --include and --exclude in the same restore command.
-                // Restore paths are positional arguments, so they still limit the restore while
-                // allowing exclusions to be applied.
-                val restorePaths = pathsToRestore.joinToString(" ") { shellQuote(it) }
+                val excludedPaths = request.excludedCustomDirectories.map { dirUriStr ->
+                    val realPath = io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(dirUriStr) ?: dirUriStr
+                    io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(realPath)
+                }
                 val commandEnvironment = linkedMapOf(
                     "HOME" to context.filesDir.absolutePath,
                     "TMPDIR" to context.cacheDir.absolutePath
@@ -150,30 +151,6 @@ class RestoreOperationRunner(
                 val resticOptionFlags = buildResticOptionFlags(
                     repositoriesRepository.getExecutionResticOptions(request.repositoryKey)
                 )
-
-                val command = buildString {
-                    if (envPrefix.isNotEmpty()) append(envPrefix).append(' ')
-                    append("RESTIC_PASSWORD_FILE=").append(shellQuote(passwordFile.absolutePath)).append(' ')
-                    append("RESTIC_CACHE_DIR=").append(shellQuote(File(context.cacheDir, if (com.topjohnwu.superuser.Shell.getShell().isRoot) "restic" else "restic-user").absolutePath)).append(' ')
-                    append(shellQuote(resticState.path)).append(' ')
-                    append("--retry-lock 5s ")
-                    if (resticOptionFlags.isNotEmpty()) append(resticOptionFlags).append(' ')
-                    append("-r ")
-                    append(shellQuote(selectedRepoPath)).append(' ')
-                    append("restore ").append(currentSnapshot.id).append(" --target ")
-                    append(shellQuote(tempRestoreDir.absolutePath)).append(' ')
-                    append("--exclude-xattr 'security.selinux' ")
-                    val excludes = request.excludedCustomDirectories.joinToString(" ") { dirUriStr ->
-                        val realPath = io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(dirUriStr) ?: dirUriStr
-                        val shellPath = io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(realPath)
-                        "--exclude ${shellQuote(shellPath)}"
-                    }
-                    if (excludes.isNotEmpty()) {
-                        append(excludes).append(' ')
-                    }
-                    append("--json ")
-                    append(restorePaths)
-                }
 
                 val stdoutCallback = object : CallbackList<String>() {
                     override fun onAddElement(line: String) {
@@ -201,13 +178,36 @@ class RestoreOperationRunner(
                         }
                     }
                 }
-                val stderr = mutableListOf<String>()
-                val restoreResult = Shell.cmd(command).to(stdoutCallback, stderr).exec()
-                throwIfCancelled()
-
-                if (!restoreResult.isSuccess) {
-                    val errorOutput = stderr.joinToString("\n")
-                    throw IllegalStateException(if (errorOutput.isEmpty()) context.getString(R.string.restore_error_command_failed) else errorOutput)
+                pathsToRestore.distinct().forEach { restorePath ->
+                    val shellRestorePath = io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(restorePath)
+                    if (excludedPaths.any { it == shellRestorePath }) return@forEach
+                    val relativeExcludes = excludedPaths.mapNotNull { excludedPath ->
+                        excludedPath.removePrefix("$shellRestorePath/").takeIf { excludedPath.startsWith("$shellRestorePath/") }
+                    }
+                    val targetDir = requireNotNull(File(tempRestoreDir, shellRestorePath.drop(1)).parentFile)
+                    val command = buildString {
+                        if (envPrefix.isNotEmpty()) append(envPrefix).append(' ')
+                        append("RESTIC_PASSWORD_FILE=").append(shellQuote(passwordFile.absolutePath)).append(' ')
+                        append("RESTIC_CACHE_DIR=").append(shellQuote(File(context.cacheDir, if (com.topjohnwu.superuser.Shell.getShell().isRoot) "restic" else "restic-user").absolutePath)).append(' ')
+                        append(shellQuote(resticState.path)).append(' ')
+                        append("--retry-lock 5s ")
+                        if (resticOptionFlags.isNotEmpty()) append(resticOptionFlags).append(' ')
+                        append("-r ").append(shellQuote(selectedRepoPath)).append(' ')
+                        append("restore ").append(shellQuote("${currentSnapshot.id}:$shellRestorePath")).append(" --target ")
+                        append(shellQuote(targetDir.absolutePath)).append(' ')
+                        append("--exclude-xattr 'security.selinux' ")
+                        relativeExcludes.forEach { relativePath ->
+                            append("--exclude ").append(shellQuote(escapeResticPattern("/$relativePath"))).append(' ')
+                        }
+                        append("--json")
+                    }
+                    val stderr = mutableListOf<String>()
+                    val restoreResult = Shell.cmd(command).to(stdoutCallback, stderr).exec()
+                    throwIfCancelled()
+                    if (!restoreResult.isSuccess) {
+                        val errorOutput = stderr.joinToString("\n")
+                        throw IllegalStateException(if (errorOutput.isEmpty()) context.getString(R.string.restore_error_command_failed) else errorOutput)
+                    }
                 }
             } else {
                 progressState = progressState.copy(
@@ -298,7 +298,7 @@ class RestoreOperationRunner(
                     }
 
                     if (appProcessSuccess && with(appRestoreTypes) { data || deviceProtectedData || externalData || obb || media }) {
-                        if (!moveRestoredDataAndFixPerms(packageName, tempRestoreDir, appRestoreTypes)) {
+                        if (!moveRestoredDataAndFixPerms(packageName, tempRestoreDir, appRestoreTypes, request.excludedCustomDirectories)) {
                             appProcessSuccess = false
                             failureDetails.add(context.getString(R.string.restore_failure_data_restore, appName))
                         }
@@ -359,6 +359,10 @@ class RestoreOperationRunner(
                     // sourcePath is tempRestoreDir + path (since path is absolute e.g. /sdcard/X3, it will be tempRestoreDir/sdcard/X3)
                     val sourcePath = File(tempRestoreDir, path.drop(1)).absolutePath
                     val targetPath = io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(path)
+                    val excludedPaths = request.excludedCustomDirectories.map { excluded ->
+                        val realPath = io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(excluded) ?: excluded
+                        io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(realPath)
+                    }
                     val targetFile = File(targetPath)
                     val parent = targetFile.parentFile
                     
@@ -366,7 +370,14 @@ class RestoreOperationRunner(
                         Shell.cmd("mkdir -p ${shellQuote(parent.absolutePath)}").exec()
                     }
                     
-                    if (Shell.cmd("[ -e ${shellQuote(sourcePath)} ]").exec().isSuccess) {
+                    if (targetPath in excludedPaths) {
+                        // A selected root can also be excluded. Leave its existing destination intact.
+                    } else if (Shell.cmd("[ -e ${shellQuote(sourcePath)} ]").exec().isSuccess) {
+                        val preservedPaths = preserveExcludedDestinationPaths(
+                            targetPath,
+                            excludedPaths,
+                            File(tempRestoreDir, "preserved-custom-$index")
+                        )
                         Shell.cmd("rm -rf ${shellQuote(targetPath)}").exec()
                         // The restic staging directory contains the saved mode and owner. Preserve
                         // them when copying it into a protected destination instead of creating
@@ -376,6 +387,9 @@ class RestoreOperationRunner(
                             processSuccess = false
                             failureDetails.add(context.getString(R.string.restore_failure_custom_directory, path))
                         } else {
+                            if (!restorePreservedDestinationPaths(preservedPaths)) {
+                                processSuccess = false
+                            }
                             if (Shell.getShell().isRoot && (targetPath.startsWith("/storage/") || targetPath.startsWith("/sdcard/"))) {
                                 val ownerResult = Shell.cmd("stat -c '%u:%g' ${shellQuote(parent?.absolutePath ?: "/sdcard")}").exec()
                                 val owner = ownerResult.out.firstOrNull()?.trim()
@@ -541,7 +555,8 @@ class RestoreOperationRunner(
     private fun moveRestoredDataAndFixPerms(
         packageName: String,
         tempRestoreDir: File,
-        types: RestoreTypeSelection
+        types: RestoreTypeSelection,
+        excludedCustomDirectories: List<String>
     ): Boolean {
         var allSucceeded = true
 
@@ -581,6 +596,21 @@ class RestoreOperationRunner(
             findRestoredExternalPackageDir(tempRestoreDir, "media", packageName)?.let {
                 dataMappings.add(it to mediaPath(currentUserId, packageName))
             }
+        }
+
+        val excludedPaths = excludedCustomDirectories.map { excluded ->
+            val realPath = io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(excluded) ?: excluded
+            io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(realPath)
+        }
+        val destinationsToProtect = buildList {
+            if (types.data) add(targetDestination)
+            if (types.deviceProtectedData) add(deDataPath(currentUserId, packageName))
+            if (types.externalData) add(externalDataPath(currentUserId, packageName))
+            if (types.obb) add(obbPath(currentUserId, packageName))
+            if (types.media) add(mediaPath(currentUserId, packageName))
+        }
+        val preservedPaths = destinationsToProtect.distinct().flatMapIndexed { index, destination ->
+            preserveExcludedDestinationPaths(destination, excludedPaths, File(tempRestoreDir, "preserved-app-$index"))
         }
 
         Shell.cmd("am force-stop --user $currentUserId ${shellQuote(packageName)}").exec()
@@ -654,7 +684,35 @@ class RestoreOperationRunner(
                 }
             }
         }
+        if (!restorePreservedDestinationPaths(preservedPaths)) {
+            allSucceeded = false
+        }
         return allSucceeded
+    }
+
+    /** Moves excluded descendants out of a destination before it is replaced, then restores them. */
+    private fun preserveExcludedDestinationPaths(
+        destination: String,
+        excludedPaths: List<String>,
+        preserveDir: File
+    ): List<Pair<File, String>> {
+        val directChildren = excludedPaths
+            .filter { it == destination || it.startsWith("$destination/") }
+            .sortedBy { it.length }
+            .filter { candidate -> excludedPaths.none { other -> other != candidate && candidate.startsWith("$other/") } }
+        return directChildren.mapIndexedNotNull { index, path ->
+            if (!Shell.cmd("[ -e ${shellQuote(path)} ]").exec().isSuccess) return@mapIndexedNotNull null
+            val preserved = File(preserveDir, index.toString())
+            Shell.cmd("mkdir -p ${shellQuote(preserved.parentFile!!.absolutePath)} && mv ${shellQuote(path)} ${shellQuote(preserved.absolutePath)}").exec()
+                .takeIf { it.isSuccess }
+                ?.let { preserved to path }
+        }
+    }
+
+    private fun restorePreservedDestinationPaths(paths: List<Pair<File, String>>): Boolean {
+        return paths.map { (preserved, destination) ->
+            Shell.cmd("mkdir -p ${shellQuote(File(destination).parentFile!!.absolutePath)} && rm -rf ${shellQuote(destination)} && mv ${shellQuote(preserved.absolutePath)} ${shellQuote(destination)}").exec().isSuccess
+        }.all { it }
     }
 
     private fun findRestoredProfilePackageDir(

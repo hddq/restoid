@@ -335,6 +335,19 @@ class SchedulesViewModel(
     }
 
     fun toggleCustomDirectoryCategory(uriString: String) {
+        val entry = _addEditState.value.customDirectories.firstOrNull { it.uri == uriString }
+        val repoKey = _uiState.value.selectedRepoKey
+        val repository = repoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
+        if (entry?.isExcluded == true && repository?.backendType == RepositoryBackendType.LOCAL &&
+            StorageUtils.resolveCustomDirectoryKey(repository.path) == StorageUtils.resolveCustomDirectoryKey(uriString)
+        ) {
+            Toast.makeText(
+                application,
+                application.getString(R.string.error_cannot_backup_repo_to_itself),
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
         _addEditState.update { state ->
             state.copy(
                 customDirectories = state.customDirectories.map {

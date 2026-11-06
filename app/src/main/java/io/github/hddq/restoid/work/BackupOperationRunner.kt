@@ -19,6 +19,7 @@ import io.github.hddq.restoid.ui.shared.OperationProgress
 import io.github.hddq.restoid.util.ResticOutputParser
 import io.github.hddq.restoid.util.buildResticOptionFlags
 import io.github.hddq.restoid.util.buildShellEnvironmentPrefix
+import io.github.hddq.restoid.util.escapeResticPattern
 import io.github.hddq.restoid.util.shellQuote
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -185,7 +186,9 @@ class BackupOperationRunner(
 
             val tags = listOf("restoid", "backup")
             val tagFlags = tags.joinToString(" ") { "--tag '$it'" }
-            val excludeFlags = excludePatterns.distinct().joinToString(" ") { pattern -> "--exclude $pattern" }
+            val excludeFlags = excludePatterns.distinct().joinToString(" ") { pattern ->
+                "--exclude ${shellQuote(pattern)}"
+            }
             val envPrefix = buildShellEnvironmentPrefix(repositoryEnvironment)
             val resticOptionFlags = buildResticOptionFlags(repositoryResticOptions)
 
@@ -395,11 +398,11 @@ class BackupOperationRunner(
             pathsToBackup.addAll(existingAppPaths)
 
             if (effectiveBackupTypes.data) {
-                excludePatterns.add("'/data/user/${getCurrentUserId()}/${app.packageName}/cache'")
-                excludePatterns.add("'/data/user/${getCurrentUserId()}/${app.packageName}/code_cache'")
+                excludePatterns.add("/data/user/${getCurrentUserId()}/${app.packageName}/cache")
+                excludePatterns.add("/data/user/${getCurrentUserId()}/${app.packageName}/code_cache")
             }
             if (effectiveBackupTypes.externalData) {
-                excludePatterns.add("'/storage/emulated/${getCurrentUserId()}/Android/data/${app.packageName}/cache'")
+                excludePatterns.add("/storage/emulated/${getCurrentUserId()}/Android/data/${app.packageName}/cache")
             }
 
             throwIfCancelled()
@@ -440,7 +443,7 @@ class BackupOperationRunner(
             throwIfCancelled()
             val realPath = io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(dirUriStr) ?: dirUriStr
             val shellPath = io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(realPath)
-            excludePatterns.add(shellQuote(shellPath))
+            excludePatterns.add(escapeResticPattern(shellPath))
         }
 
         val metadata = RestoidMetadata(apps = appMetadataMap, customDirectories = customDirectoryMetadataMap)
