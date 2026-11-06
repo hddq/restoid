@@ -83,16 +83,18 @@ fun OperationLogsScreen(
     val listState = rememberLazyListState()
     val expandedLogIds = remember { mutableStateListOf<String>() }
     var showClearDialog by remember { mutableStateOf(false) }
+    var handledInitialSelectedLogId by remember(initialSelectedLogId) { mutableStateOf<String?>(null) }
 
-    // Auto-expand and scroll to initialSelectedLogId if provided
+    // Auto-expand and scroll to initialSelectedLogId once when found
     LaunchedEffect(initialSelectedLogId, logs) {
-        if (initialSelectedLogId != null) {
-            if (!expandedLogIds.contains(initialSelectedLogId)) {
-                expandedLogIds.add(initialSelectedLogId)
-            }
+        if (initialSelectedLogId != null && handledInitialSelectedLogId != initialSelectedLogId) {
             val index = logs.indexOfFirst { it.id == initialSelectedLogId }
             if (index >= 0) {
+                if (!expandedLogIds.contains(initialSelectedLogId)) {
+                    expandedLogIds.add(initialSelectedLogId)
+                }
                 listState.animateScrollToItem(index)
+                handledInitialSelectedLogId = initialSelectedLogId
             }
         }
     }
@@ -256,7 +258,9 @@ private fun OperationLogItem(
             ) {
                 Icon(
                     imageVector = if (log.success) Icons.Filled.CheckCircle else Icons.Filled.Error,
-                    contentDescription = null,
+                    contentDescription = stringResource(
+                        if (log.success) R.string.operation_status_success else R.string.operation_status_failed
+                    ),
                     tint = if (log.success) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(28.dp)
                 )
@@ -278,7 +282,9 @@ private fun OperationLogItem(
                 IconButton(onClick = onToggleExpand) {
                     Icon(
                         imageVector = if (isExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
-                        contentDescription = null,
+                        contentDescription = stringResource(
+                            if (isExpanded) R.string.action_collapse else R.string.action_expand
+                        ),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }

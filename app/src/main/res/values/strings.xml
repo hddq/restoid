@@ -604,6 +604,10 @@
     <string name="operation_logs_clear_confirm_desc">This will delete all stored operation log history.</string>
     <string name="operation_logs_duration">Duration: %1$s</string>
     <string name="operation_logs_copied">Log copied to clipboard</string>
+    <string name="operation_status_success">Success</string>
+    <string name="operation_status_failed">Failed</string>
+    <string name="action_expand">Expand</string>
+    <string name="action_collapse">Collapse</string>
     <string name="action_copy_log">Copy Log</string>
     <string name="action_clear">Clear</string>
 </resources>

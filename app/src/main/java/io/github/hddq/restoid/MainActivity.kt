@@ -117,6 +117,8 @@ val LocalAppBarActions = compositionLocalOf<MutableState<(@Composable RowScope.(
 class MainActivity : FragmentActivity() {
     private companion object {
         const val STATE_APP_UNLOCKED = "state_app_unlocked"
+        const val STATE_OPEN_OPERATION_PROGRESS = "state_open_operation_progress"
+        const val STATE_OPEN_OPERATION_LOG_ID = "state_open_operation_log_id"
         const val APP_UNLOCK_BACKGROUND_TIMEOUT_MS = 60_000L
     }
 
@@ -140,8 +142,13 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         val app = applicationContext as RestoidApplication
         isAppUnlocked = savedInstanceState?.getBoolean(STATE_APP_UNLOCKED) ?: false
-        openOperationProgressOnLaunch = consumeOpenOperationProgressFlag(intent)
-        openOperationLogIdOnLaunch = consumeOpenOperationLogIdFlag(intent)
+        openOperationProgressOnLaunch = savedInstanceState?.getBoolean(STATE_OPEN_OPERATION_PROGRESS)
+            ?: consumeOpenOperationProgressFlag(intent)
+        openOperationLogIdOnLaunch = savedInstanceState?.getString(STATE_OPEN_OPERATION_LOG_ID)
+            ?: consumeOpenOperationLogIdFlag(intent)
+        if (openOperationLogIdOnLaunch != null) {
+            openOperationProgressOnLaunch = false
+        }
         registerReceiver(screenOffReceiver, IntentFilter(Intent.ACTION_SCREEN_OFF))
         enableEdgeToEdge()
 
@@ -154,6 +161,8 @@ class MainActivity : FragmentActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putBoolean(STATE_APP_UNLOCKED, isAppUnlocked)
+        outState.putBoolean(STATE_OPEN_OPERATION_PROGRESS, openOperationProgressOnLaunch)
+        outState.putString(STATE_OPEN_OPERATION_LOG_ID, openOperationLogIdOnLaunch)
         super.onSaveInstanceState(outState)
     }
 
@@ -195,12 +204,14 @@ class MainActivity : FragmentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (consumeOpenOperationProgressFlag(intent)) {
-            openOperationProgressOnLaunch = true
-        }
+        val shouldOpenProgress = consumeOpenOperationProgressFlag(intent)
         val logId = consumeOpenOperationLogIdFlag(intent)
         if (logId != null) {
             openOperationLogIdOnLaunch = logId
+            openOperationProgressOnLaunch = false
+        } else if (shouldOpenProgress) {
+            openOperationProgressOnLaunch = true
+            openOperationLogIdOnLaunch = null
         }
     }
 
@@ -300,9 +311,11 @@ class MainActivity : FragmentActivity() {
                     )
                     val homeUiState by homeViewModel.uiState.collectAsState()
 
-                    if (openOperationLogIdOnLaunch != null && isAppUnlocked) {
+                    val isNavigationAllowed = isAppUnlocked || !app.preferencesRepository.loadRequireAppUnlock()
+
+                    if (openOperationLogIdOnLaunch != null && isNavigationAllowed) {
                         val targetLogId = openOperationLogIdOnLaunch
-                        androidx.compose.runtime.LaunchedEffect(targetLogId, isAppUnlocked) {
+                        androidx.compose.runtime.LaunchedEffect(targetLogId, isNavigationAllowed) {
                             navController.navigate("${Screen.OperationLogs.route}?logId=$targetLogId") {
                                 launchSingleTop = true
                             }
@@ -310,8 +323,8 @@ class MainActivity : FragmentActivity() {
                         }
                     }
 
-                    if (openOperationProgressOnLaunch && isAppUnlocked) {
-                        androidx.compose.runtime.LaunchedEffect(openOperationProgressOnLaunch, isAppUnlocked) {
+                    if (openOperationProgressOnLaunch && isNavigationAllowed) {
+                        androidx.compose.runtime.LaunchedEffect(openOperationProgressOnLaunch, isNavigationAllowed) {
                             navController.navigate(Screen.OperationProgress.route) {
                                 launchSingleTop = true
                             }
