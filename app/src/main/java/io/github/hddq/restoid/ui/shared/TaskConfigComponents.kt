@@ -74,6 +74,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -272,7 +273,9 @@ fun SelectAllListItem(
     isChecked: Boolean,
     subtitle: String? = null,
     onClick: (() -> Unit)? = null,
-    onToggle: () -> Unit
+    onToggle: () -> Unit,
+    iconSize: Dp = 48.dp,
+    iconPadding: Dp = 8.dp
 ) {
     Row(
         modifier = Modifier
@@ -286,8 +289,8 @@ fun SelectAllListItem(
             imageVector = Icons.Outlined.SelectAll,
             contentDescription = null,
             modifier = Modifier
-                .size(48.dp)
-                .padding(8.dp),
+                .size(iconSize)
+                .padding(iconPadding),
             tint = MaterialTheme.colorScheme.primary
         )
         Spacer(Modifier.width(16.dp))
