@@ -301,7 +301,9 @@ fun RestoreCustomDirectoriesConfigScreen(
                             isChecked = isAllCustomDirsSelected,
                             subtitle = if (selectedCount > 0) "$selectedCount selected" else "None selected",
                             onClick = null,
-                            onToggle = viewModel::toggleAllCustomDirectoriesSelection
+                            onToggle = viewModel::toggleAllCustomDirectoriesSelection,
+                            iconSize = 24.dp,
+                            iconPadding = 0.dp
                         )
                     }
                     customDirectoriesList.forEachIndexed { index, (path, isSelected) ->
