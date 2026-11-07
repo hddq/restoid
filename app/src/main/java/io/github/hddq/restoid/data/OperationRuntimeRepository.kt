@@ -10,6 +10,7 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.util.UUID
 
 data class OperationRuntimeState(
     val operationType: OperationType? = null,
@@ -18,7 +19,9 @@ data class OperationRuntimeState(
     val stopRequested: Boolean = false,
     val progress: OperationProgress = OperationProgress(),
     val startTimeMillis: Long? = null,
-    val scheduleName: String? = null
+    val lastUpdatedTimeMillis: Long? = null,
+    val scheduleName: String? = null,
+    val runId: String? = null
 )
 
 class OperationRuntimeRepository(
@@ -39,7 +42,8 @@ class OperationRuntimeRepository(
         operationType: OperationType,
         initialProgress: OperationProgress,
         startTimeMillis: Long = System.currentTimeMillis(),
-        scheduleName: String? = null
+        scheduleName: String? = null,
+        runId: String = UUID.randomUUID().toString()
     ) {
         updateState(
             OperationRuntimeState(
@@ -49,12 +53,18 @@ class OperationRuntimeRepository(
                 stopRequested = false,
                 progress = initialProgress.copy(isFinished = false),
                 startTimeMillis = startTimeMillis,
-                scheduleName = scheduleName
+                lastUpdatedTimeMillis = startTimeMillis,
+                scheduleName = scheduleName,
+                runId = runId
             )
         )
     }
 
-    fun markProgress(operationType: OperationType, progress: OperationProgress) {
+    fun markProgress(
+        operationType: OperationType,
+        progress: OperationProgress,
+        updatedTimeMillis: Long = System.currentTimeMillis()
+    ) {
         val current = _state.value
         updateState(
             OperationRuntimeState(
@@ -64,7 +74,9 @@ class OperationRuntimeRepository(
                 stopRequested = current.stopRequested && current.operationType == operationType,
                 progress = progress,
                 startTimeMillis = current.startTimeMillis,
-                scheduleName = current.scheduleName
+                lastUpdatedTimeMillis = updatedTimeMillis,
+                scheduleName = current.scheduleName,
+                runId = current.runId
             )
         )
     }
@@ -75,7 +87,12 @@ class OperationRuntimeRepository(
         updateState(current.copy(scheduleName = scheduleName))
     }
 
-    fun markFinished(operationType: OperationType, success: Boolean, progress: OperationProgress) {
+    fun markFinished(
+        operationType: OperationType,
+        success: Boolean,
+        progress: OperationProgress,
+        finishedTimeMillis: Long = System.currentTimeMillis()
+    ) {
         val current = _state.value
         updateState(
             OperationRuntimeState(
@@ -85,18 +102,25 @@ class OperationRuntimeRepository(
                 stopRequested = false,
                 progress = progress.copy(isFinished = true),
                 startTimeMillis = current.startTimeMillis,
-                scheduleName = current.scheduleName
+                lastUpdatedTimeMillis = finishedTimeMillis,
+                scheduleName = current.scheduleName,
+                runId = current.runId
             )
         )
     }
 
-    fun markStopRequested(operationType: OperationType, progress: OperationProgress) {
+    fun markStopRequested(
+        operationType: OperationType,
+        progress: OperationProgress,
+        updatedTimeMillis: Long = System.currentTimeMillis()
+    ) {
         val current = _state.value
         if (!current.isRunning || current.operationType != operationType) return
         updateState(
             current.copy(
                 stopRequested = true,
-                progress = progress.copy(isFinished = false)
+                progress = progress.copy(isFinished = false),
+                lastUpdatedTimeMillis = updatedTimeMillis
             )
         )
     }
@@ -112,11 +136,11 @@ class OperationRuntimeRepository(
         updateState(OperationRuntimeState())
     }
 
-    fun clearStaleRunningState(): OperationRuntimeState? {
+    fun getStaleRunningState(): OperationRuntimeState? {
         val current = _state.value
         if (!current.isRunning && !current.stopRequested) return null
         val interruptedSummary = interruptedSummaryProvider()
-        val cleared = current.copy(
+        return current.copy(
             isRunning = false,
             success = false,
             stopRequested = false,
@@ -130,6 +154,10 @@ class OperationRuntimeRepository(
                 }
             )
         )
+    }
+
+    fun clearStaleRunningState(): OperationRuntimeState? {
+        val cleared = getStaleRunningState() ?: return null
         updateState(cleared)
         return cleared
     }
@@ -144,10 +172,10 @@ class OperationRuntimeRepository(
         _state.value = newState
         val encoded = runCatching { json.encodeToString(PersistedState.fromRuntimeState(newState)) }.getOrNull()
         if (encoded == null) {
-            prefs.edit().remove(KEY_STATE).apply()
+            prefs.edit().remove(KEY_STATE).commit()
             return
         }
-        prefs.edit().putString(KEY_STATE, encoded).apply()
+        prefs.edit().putString(KEY_STATE, encoded).commit()
     }
 
     @Serializable
@@ -158,7 +186,9 @@ class OperationRuntimeRepository(
         val stopRequested: Boolean = false,
         val progress: OperationProgress = OperationProgress(),
         val startTimeMillis: Long? = null,
-        val scheduleName: String? = null
+        val lastUpdatedTimeMillis: Long? = null,
+        val scheduleName: String? = null,
+        val runId: String? = null
     ) {
         fun toRuntimeState(): OperationRuntimeState {
             return OperationRuntimeState(
@@ -168,7 +198,9 @@ class OperationRuntimeRepository(
                 stopRequested = stopRequested,
                 progress = progress,
                 startTimeMillis = startTimeMillis,
-                scheduleName = scheduleName
+                lastUpdatedTimeMillis = lastUpdatedTimeMillis,
+                scheduleName = scheduleName,
+                runId = runId
             )
         }
 
@@ -181,7 +213,9 @@ class OperationRuntimeRepository(
                     stopRequested = state.stopRequested,
                     progress = state.progress,
                     startTimeMillis = state.startTimeMillis,
-                    scheduleName = state.scheduleName
+                    lastUpdatedTimeMillis = state.lastUpdatedTimeMillis,
+                    scheduleName = state.scheduleName,
+                    runId = state.runId
                 )
             }
         }

@@ -36,6 +36,7 @@ class HeavyOperationWorker(
             ?: return Result.failure()
 
         val enqueuedState = app.operationRuntimeRepository.state.value
+        val runId = enqueuedState.runId ?: requestId
         val startTimeMillis = enqueuedState.startTimeMillis ?: System.currentTimeMillis()
         var scheduleName: String? = enqueuedState.scheduleName
         val initialProgress = OperationProgress(stageTitle = applicationContext.getString(R.string.progress_initializing))
@@ -44,7 +45,8 @@ class HeavyOperationWorker(
             operationType = operationType,
             initialProgress = initialProgress,
             startTimeMillis = startTimeMillis,
-            scheduleName = scheduleName
+            scheduleName = scheduleName,
+            runId = runId
         )
         setProgress(OperationWorkContract.progressToData(operationType, initialProgress))
 
@@ -160,6 +162,7 @@ class HeavyOperationWorker(
             val endTimeMillis = System.currentTimeMillis()
             val durationSeconds = ((endTimeMillis - startTimeMillis) / 1000).coerceAtLeast(0)
             val logEntry = app.operationLogRepository.addLog(
+                id = runId,
                 operationType = operationType,
                 scheduleName = scheduleName,
                 startTimeMillis = startTimeMillis,
@@ -170,7 +173,12 @@ class HeavyOperationWorker(
                 summary = finalResult.progress.finalSummary,
                 error = finalResult.progress.error
             )
-            app.operationRuntimeRepository.markFinished(operationType, finalResult.success, finalResult.progress)
+            app.operationRuntimeRepository.markFinished(
+                operationType = operationType,
+                success = finalResult.success,
+                progress = finalResult.progress,
+                finishedTimeMillis = endTimeMillis
+            )
 
             val displayName = if (scheduleName != null) {
                 applicationContext.getString(R.string.operation_schedule_name, scheduleName)

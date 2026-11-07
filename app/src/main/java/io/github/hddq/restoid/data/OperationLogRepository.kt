@@ -36,6 +36,7 @@ class OperationLogRepository(
     }
 
     fun addLog(
+        id: String = UUID.randomUUID().toString(),
         operationType: OperationType,
         scheduleName: String? = null,
         startTimeMillis: Long = System.currentTimeMillis(),
@@ -47,8 +48,12 @@ class OperationLogRepository(
         error: String? = null
     ): OperationLogEntry = synchronized(lock) {
         ensureLoadedLocked()
+        val existing = _logs.value.find { it.id == id }
+        if (existing != null) {
+            return@synchronized existing
+        }
         val entry = OperationLogEntry(
-            id = UUID.randomUUID().toString(),
+            id = id,
             operationType = operationType,
             scheduleName = scheduleName?.take(MAX_FIELD_LENGTH),
             startTimeMillis = startTimeMillis,
@@ -91,7 +96,7 @@ class OperationLogRepository(
     private fun updateLogsLocked(newLogs: List<OperationLogEntry>) {
         _logs.value = newLogs
         if (newLogs.isEmpty()) {
-            prefs.edit().remove(KEY_LOGS).apply()
+            prefs.edit().remove(KEY_LOGS).commit()
             return
         }
         val encoded = runCatching { json.encodeToString(newLogs) }.getOrNull()
@@ -101,7 +106,7 @@ class OperationLogRepository(
             } else {
                 remove(KEY_LOGS)
             }
-            apply()
+            commit()
         }
     }
 

@@ -28,14 +28,17 @@ class OperationRuntimeRepositoryTest {
             operationType = OperationType.BACKUP,
             initialProgress = initialProgress,
             startTimeMillis = 12345L,
-            scheduleName = "Daily Backup"
+            scheduleName = "Daily Backup",
+            runId = "run-abc"
         )
 
         val state = repository.state.value
         assertTrue(state.isRunning)
         assertEquals(OperationType.BACKUP, state.operationType)
         assertEquals(12345L, state.startTimeMillis)
+        assertEquals(12345L, state.lastUpdatedTimeMillis)
         assertEquals("Daily Backup", state.scheduleName)
+        assertEquals("run-abc", state.runId)
         assertEquals("Initializing", state.progress.stageTitle)
 
         // Verify reloaded state from prefs preserves metadata
@@ -44,7 +47,9 @@ class OperationRuntimeRepositoryTest {
         assertTrue(restoredState.isRunning)
         assertEquals(OperationType.BACKUP, restoredState.operationType)
         assertEquals(12345L, restoredState.startTimeMillis)
+        assertEquals(12345L, restoredState.lastUpdatedTimeMillis)
         assertEquals("Daily Backup", restoredState.scheduleName)
+        assertEquals("run-abc", restoredState.runId)
     }
 
     @Test
@@ -53,18 +58,22 @@ class OperationRuntimeRepositoryTest {
             operationType = OperationType.RUN_TASKS,
             initialProgress = OperationProgress(stageTitle = "Starting"),
             startTimeMillis = 5000L,
-            scheduleName = "Nightly Maintenance"
+            scheduleName = "Nightly Maintenance",
+            runId = "run-xyz"
         )
 
         repository.markProgress(
             operationType = OperationType.RUN_TASKS,
-            progress = OperationProgress(stageTitle = "Processing Files", overallPercentage = 50f)
+            progress = OperationProgress(stageTitle = "Processing Files", overallPercentage = 50f),
+            updatedTimeMillis = 8000L
         )
 
         val state = repository.state.value
         assertTrue(state.isRunning)
         assertEquals(5000L, state.startTimeMillis)
+        assertEquals(8000L, state.lastUpdatedTimeMillis)
         assertEquals("Nightly Maintenance", state.scheduleName)
+        assertEquals("run-xyz", state.runId)
         assertEquals("Processing Files", state.progress.stageTitle)
         assertEquals(50f, state.progress.overallPercentage)
     }
