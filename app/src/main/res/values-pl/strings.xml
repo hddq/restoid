@@ -525,4 +525,25 @@
     <string name="folder_browser_show_hidden">Pokaż ukryte foldery</string>
     <string name="folder_browser_show_hidden_items">Pokaż ukryte pliki i foldery</string>
     <string name="error_cannot_backup_repo_to_itself"></string>
+    <string name="operation_logs_clear_confirm_title"></string>
+    <string name="action_copy_log"></string>
+    <string name="operation_logs_duration"></string>
+    <string name="action_clear"></string>
+    <string name="channel_failed_description"></string>
+    <string name="operation_logs_clear"></string>
+    <string name="channel_failed_operations"></string>
+    <string name="placeholder_sftp_port" translatable="false"></string>
+    <string name="operation_status_failed"></string>
+    <string name="operation_logs_copied"></string>
+    <string name="operation_logs_clear_confirm_desc"></string>
+    <string name="screen_operation_logs"></string>
+    <string name="channel_successful_operations"></string>
+    <string name="operation_logs_empty_desc"></string>
+    <string name="action_collapse"></string>
+    <string name="placeholder_sftp_repository_path" translatable="false"></string>
+    <string name="operation_logs_empty"></string>
+    <string name="channel_successful_description"></string>
+    <string name="placeholder_sftp_host" translatable="false"></string>
+    <string name="action_expand"></string>
+    <string name="operation_status_success"></string>
 </resources>
