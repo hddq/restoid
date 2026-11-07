@@ -95,6 +95,7 @@ fun FolderPickerSheet(
     initialPath: String? = null,
     allowSystemPaths: Boolean = false,
     allowFiles: Boolean = false,
+    allowMissingPaths: Boolean = false,
     onSelectPath: (String) -> Unit,
     onDismissRequest: () -> Unit
 ) {
@@ -216,7 +217,9 @@ fun FolderPickerSheet(
                         else -> null
                     }
                 }
-                if (pathType == null) {
+                if (pathType == null && allowMissingPaths) {
+                    onSelectPath(normalized)
+                } else if (pathType == null) {
                     manualPathError = notFoundTemplate.format(normalized)
                 } else if (pathType == "file") {
                     onSelectPath(normalized)
