@@ -148,6 +148,75 @@ class OperationLogRepositoryTest {
         assertEquals(OperationLogRepository.MAX_LOG_ENTRIES, logs.size)
         assertEquals("Run 120", logs.first().stageTitle)
     }
+
+    @Test
+    fun upsertLog_inProgressPersistsForCrashRecoveryAndUpdatesInPlaceUntilFinalized() {
+        val logId = "run-123"
+
+        // 1. Operation starts (inProgress = true)
+        repository.upsertLog(
+            id = logId,
+            operationType = OperationType.BACKUP,
+            startTimeMillis = 1000L,
+            endTimeMillis = 1000L,
+            durationSeconds = 0L,
+            success = false,
+            stageTitle = "Initializing...",
+            summary = "Operation was interrupted.",
+            error = "Operation was interrupted.",
+            inProgress = true
+        )
+
+        // Hidden from live completed logs while running in the current process
+        assertTrue(repository.logs.value.isEmpty())
+
+        // 2. Progress updates stage and duration in place
+        repository.upsertLog(
+            id = logId,
+            operationType = OperationType.BACKUP,
+            startTimeMillis = 1000L,
+            endTimeMillis = 16000L,
+            durationSeconds = 15L,
+            success = false,
+            stageTitle = "Backing up Apps (3/10)",
+            summary = "Operation was interrupted.",
+            error = "Operation was interrupted.",
+            inProgress = true
+        )
+
+        // If the app is killed now and reloaded in a new process, the interrupted log is present
+        val reloadedAfterKill = OperationLogRepository(fakePrefs, Dispatchers.Unconfined)
+        assertEquals(1, reloadedAfterKill.logs.value.size)
+        val killedEntry = reloadedAfterKill.logs.value.first()
+        assertEquals(logId, killedEntry.id)
+        assertEquals(false, killedEntry.success)
+        assertEquals("Backing up Apps (3/10)", killedEntry.stageTitle)
+        assertEquals(15L, killedEntry.durationSeconds)
+        assertEquals("Operation was interrupted.", killedEntry.error)
+
+        // 3. If instead the operation finishes normally (inProgress = false), it updates in place and becomes visible
+        repository.upsertLog(
+            id = logId,
+            operationType = OperationType.BACKUP,
+            startTimeMillis = 1000L,
+            endTimeMillis = 31000L,
+            durationSeconds = 30L,
+            success = true,
+            stageTitle = "Backup Complete",
+            summary = "Added 42 MB",
+            error = null,
+            inProgress = false
+        )
+
+        assertEquals(1, repository.logs.value.size)
+        val finalEntry = repository.logs.value.first()
+        assertEquals(logId, finalEntry.id)
+        assertEquals(true, finalEntry.success)
+        assertEquals("Backup Complete", finalEntry.stageTitle)
+        assertEquals(30L, finalEntry.durationSeconds)
+        assertEquals("Added 42 MB", finalEntry.summary)
+        assertNull(finalEntry.error)
+    }
 }
 
 /**

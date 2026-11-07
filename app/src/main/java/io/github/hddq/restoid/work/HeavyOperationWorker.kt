@@ -14,6 +14,7 @@ import io.github.hddq.restoid.ui.shared.OperationProgress
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
+import java.util.UUID
 import kotlin.math.abs
 
 class HeavyOperationWorker(
@@ -35,14 +36,32 @@ class HeavyOperationWorker(
         val requestId = inputData.getString(OperationWorkContract.INPUT_REQUEST_ID)
             ?: return Result.failure()
 
+        val logId = UUID.randomUUID().toString()
         val startTimeMillis = System.currentTimeMillis()
-        val initialProgress = OperationProgress(stageTitle = applicationContext.getString(R.string.progress_initializing))
-        setForeground(createForegroundInfo(operationType, initialProgress))
-        app.operationRuntimeRepository.markEnqueued(operationType, initialProgress)
-        setProgress(OperationWorkContract.progressToData(operationType, initialProgress))
-
+        val interruptedSummary = applicationContext.getString(R.string.operation_interrupted)
         var scheduleName: String? = null
-        val notifier = WorkerProgressNotifier(operationType)
+
+        fun saveInProgressLog(progress: OperationProgress, timestampMillis: Long = System.currentTimeMillis()) {
+            val durationSeconds = ((timestampMillis - startTimeMillis) / 1000).coerceAtLeast(0)
+            app.operationLogRepository.upsertLog(
+                id = logId,
+                operationType = operationType,
+                scheduleName = scheduleName,
+                startTimeMillis = startTimeMillis,
+                endTimeMillis = timestampMillis,
+                durationSeconds = durationSeconds,
+                success = false,
+                stageTitle = progress.stageTitle.ifBlank {
+                    applicationContext.getString(R.string.progress_initializing)
+                },
+                summary = interruptedSummary,
+                error = interruptedSummary,
+                inProgress = true
+            )
+        }
+
+        val initialProgress = OperationProgress(stageTitle = applicationContext.getString(R.string.progress_initializing))
+        val notifier = WorkerProgressNotifier(operationType, ::saveInProgressLog)
         val shouldStop = { isStopped || app.operationRuntimeRepository.state.value.stopRequested }
 
         // Aborts remote-backend runs when the network drops or turns metered
@@ -65,6 +84,11 @@ class HeavyOperationWorker(
         }
 
         val runResult = try {
+            setForeground(createForegroundInfo(operationType, initialProgress))
+            app.operationRuntimeRepository.markEnqueued(operationType, initialProgress)
+            saveInProgressLog(initialProgress, startTimeMillis)
+            setProgress(OperationWorkContract.progressToData(operationType, initialProgress))
+
             when (operationType) {
                 OperationType.BACKUP -> {
                     val request = app.operationRequestStore.loadBackupRequest(requestId)
@@ -83,6 +107,9 @@ class HeavyOperationWorker(
                 OperationType.RUN_TASKS -> {
                     val request = app.operationRequestStore.loadRunTasksRequest(requestId)
                     scheduleName = request.scheduleName
+                    if (scheduleName != null) {
+                        saveInProgressLog(initialProgress)
+                    }
                     armLossMonitor(request.repositoryKey, request.requireUnmeteredNetwork)
                     val runner = RunTasksOperationRunner(
                         context = applicationContext,
@@ -139,7 +166,6 @@ class HeavyOperationWorker(
             app.operationRequestStore.deleteRequest(requestId)
         }
 
-        val interruptedSummary = applicationContext.getString(R.string.operation_interrupted)
         val finalResult = when {
             runResult.success -> runResult
             runResult.progress.error == interruptedSummary || runResult.progress.finalSummary == interruptedSummary -> runResult
@@ -153,7 +179,8 @@ class HeavyOperationWorker(
 
             val endTimeMillis = System.currentTimeMillis()
             val durationSeconds = ((endTimeMillis - startTimeMillis) / 1000).coerceAtLeast(0)
-            val logEntry = app.operationLogRepository.addLog(
+            val logEntry = app.operationLogRepository.upsertLog(
+                id = logId,
                 operationType = operationType,
                 scheduleName = scheduleName,
                 startTimeMillis = startTimeMillis,
@@ -224,26 +251,37 @@ class HeavyOperationWorker(
     }
 
     private inner class WorkerProgressNotifier(
-        private val operationType: OperationType
+        private val operationType: OperationType,
+        private val onSaveInProgressLog: (OperationProgress, Long) -> Unit
     ) {
         private var lastUpdateAtMs: Long = 0L
         private var lastOverallPercentage: Float = -1f
         private var lastStageTitle: String = ""
+        private var isFinished: Boolean = false
 
         fun onProgress(progress: OperationProgress) {
             if (!shouldEmit(progress)) return
-            emit(progress)
+            emit(progress, isFinal = false)
         }
 
         fun forceNotify(progress: OperationProgress) {
-            emit(progress)
+            emit(progress, isFinal = true)
         }
 
-        private fun emit(progress: OperationProgress) {
+        private fun emit(progress: OperationProgress, isFinal: Boolean) {
             synchronized(emitMonitor) {
+                if (isFinished && !isFinal) return
+                if (isFinal) {
+                    isFinished = true
+                }
+
                 lastUpdateAtMs = System.currentTimeMillis()
                 lastOverallPercentage = progress.overallPercentage
                 lastStageTitle = progress.stageTitle
+
+                if (!isFinal && !progress.isFinished) {
+                    onSaveInProgressLog(progress, lastUpdateAtMs)
+                }
 
                 app.operationRuntimeRepository.markProgress(operationType, progress)
                 setForegroundAsync(createForegroundInfo(operationType, progress))
