@@ -9,6 +9,7 @@ import com.topjohnwu.superuser.Shell
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.MetadataRepository
 import io.github.hddq.restoid.data.OperationLockManager
+import io.github.hddq.restoid.data.PreferencesRepository
 import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.RepositoryBackendType
 import io.github.hddq.restoid.data.ResticBinaryManager
@@ -29,7 +30,8 @@ class RestoreOperationRunner(
     private val resticBinaryManager: ResticBinaryManager,
     private val resticRepository: ResticRepository,
     private val metadataRepository: MetadataRepository,
-    private val operationLockManager: OperationLockManager
+    private val operationLockManager: OperationLockManager,
+    private val preferencesRepository: PreferencesRepository = PreferencesRepository(context)
 ) {
 
     suspend fun run(
@@ -88,6 +90,10 @@ class RestoreOperationRunner(
 
             if (selectedAppPackages.isNotEmpty() && !Shell.getShell().isRoot) {
                 throw IllegalStateException(context.getString(R.string.root_access_denied))
+            }
+
+            if (preferencesRepository.hasPendingVerifierRecovery()) {
+                restorePendingVerifierSettings(preferencesRepository)
             }
 
             val currentSnapshot = findSnapshot(request)
@@ -241,44 +247,111 @@ class RestoreOperationRunner(
                         val apkFiles = restoredContentDir?.walk()?.filter { it.isFile && it.extension == "apk" }?.toList() ?: emptyList()
 
                         if (apkFiles.isNotEmpty()) {
-                            val targetUserId = getCurrentUserId()
-                            val installFlags = buildString {
-                                append("--user $targetUserId ")
-                                if (request.allowDowngrade) append("-r -d") else append("-r")
-                            }
-                            val createResult = Shell.cmd("pm install-create $installFlags").exec()
-                            val sessionId = createResult.out.firstOrNull()?.substringAfterLast('[')?.substringBefore(']')
-
-                            if (createResult.isSuccess && sessionId != null) {
-                                var allWritesSucceeded = true
-                                apkFiles.forEachIndexed { splitIndex, apkFile ->
-                                    val writeCmd = "pm install-write -S ${apkFile.length()} $sessionId '${splitIndex}_${apkFile.name}' '${apkFile.absolutePath}'"
-                                    if (!Shell.cmd(writeCmd).exec().isSuccess) {
-                                        allWritesSucceeded = false
-                                        return@forEachIndexed
-                                    }
-                                }
-
-                                if (allWritesSucceeded) {
-                                    val commitResult = Shell.cmd("pm install-commit $sessionId").exec()
-                                    if (!commitResult.isSuccess || !commitResult.out.any { it.contains("Success") }) {
-                                        appProcessSuccess = false
-                                        failureDetails.add(
-                                            context.getString(
-                                                R.string.restore_failure_install_commit,
-                                                appName,
-                                                commitResult.err.joinToString(" ")
-                                            )
-                                        )
-                                    }
-                                } else {
-                                    appProcessSuccess = false
-                                    failureDetails.add(context.getString(R.string.restore_failure_write_apk_splits, appName))
-                                    Shell.cmd("pm install-abandon $sessionId").exec()
-                                }
+                            val requiredMinTargetSdk = minRequiredTargetSdkForInstall(Build.VERSION.SDK_INT)
+                            val archiveTargetSdk = if (requiredMinTargetSdk > 0) {
+                                resolveBasePackageArchiveInfo(apkFiles)?.applicationInfo?.targetSdkVersion ?: 0
                             } else {
+                                0
+                            }
+                            val isLowTargetSdk = requiredMinTargetSdk > 0 && archiveTargetSdk in 1 until requiredMinTargetSdk
+
+                            if (isLowTargetSdk && !request.bypassVerification) {
                                 appProcessSuccess = false
-                                failureDetails.add(context.getString(R.string.restore_failure_create_install_session, appName))
+                                failureDetails.add(
+                                    context.getString(R.string.restore_skipped_low_target_sdk, appName, archiveTargetSdk.toString())
+                                )
+                            } else {
+                                val targetUserId = getCurrentUserId()
+                                val installFlags = buildString {
+                                    append("--user $targetUserId ")
+                                    if (request.allowDowngrade) append("-r -d ") else append("-r ")
+                                    if (request.bypassVerification && Build.VERSION.SDK_INT >= 34) {
+                                        append("--bypass-low-target-sdk-block ")
+                                    }
+                                }.trim()
+
+                                var verifierDisabledForInstall = false
+                                try {
+                                    if (request.bypassVerification) {
+                                        verifierDisabledForInstall = disableVerifierForInstall(preferencesRepository)
+                                    }
+
+                                    var createResult = Shell.cmd("pm install-create $installFlags").exec()
+                                    if (!createResult.isSuccess && installFlags.contains("--bypass-low-target-sdk-block")) {
+                                        val fallbackFlags = installFlags.replace("--bypass-low-target-sdk-block", "").trim()
+                                        createResult = Shell.cmd("pm install-create $fallbackFlags").exec()
+                                    }
+                                    val sessionId = createResult.out.firstOrNull()?.substringAfterLast('[')?.substringBefore(']')
+
+                                    if (createResult.isSuccess && sessionId != null) {
+                                        var allWritesSucceeded = true
+                                        apkFiles.forEachIndexed { splitIndex, apkFile ->
+                                            val writeCmd = "pm install-write -S ${apkFile.length()} $sessionId '${splitIndex}_${apkFile.name}' '${apkFile.absolutePath}'"
+                                            if (!Shell.cmd(writeCmd).exec().isSuccess) {
+                                                allWritesSucceeded = false
+                                                return@forEachIndexed
+                                            }
+                                        }
+
+                                        if (allWritesSucceeded) {
+                                            val commitResult = Shell.cmd("pm install-commit $sessionId").exec()
+                                            if (!commitResult.isSuccess || !commitResult.out.any { it.contains("Success") }) {
+                                                appProcessSuccess = false
+                                                val errorOutput = (commitResult.err + commitResult.out)
+                                                    .filter { it.isNotBlank() && !it.contains("Success") }
+                                                    .joinToString(" ")
+                                                    .ifBlank { "Unknown commit failure" }
+
+                                                val isSignatureMismatch = errorOutput.contains("INSTALL_FAILED_UPDATE_INCOMPATIBLE", ignoreCase = true) ||
+                                                    errorOutput.contains("signatures do not match", ignoreCase = true)
+                                                val isDeprecatedSdk = errorOutput.contains("INSTALL_FAILED_DEPRECATED_SDK_VERSION", ignoreCase = true)
+
+                                                if (isSignatureMismatch) {
+                                                    failureDetails.add(
+                                                        context.getString(
+                                                            R.string.restore_failure_signature_mismatch,
+                                                            appName
+                                                        )
+                                                    )
+                                                } else if (isDeprecatedSdk && !request.bypassVerification) {
+                                                    val sdkLabel = if (archiveTargetSdk > 0) {
+                                                        archiveTargetSdk.toString()
+                                                    } else if (requiredMinTargetSdk > 0) {
+                                                        "<$requiredMinTargetSdk"
+                                                    } else {
+                                                        "legacy"
+                                                    }
+                                                    failureDetails.add(
+                                                        context.getString(
+                                                            R.string.restore_skipped_low_target_sdk,
+                                                            appName,
+                                                            sdkLabel
+                                                        )
+                                                    )
+                                                } else {
+                                                    failureDetails.add(
+                                                        context.getString(
+                                                            R.string.restore_failure_install_commit,
+                                                            appName,
+                                                            errorOutput
+                                                        )
+                                                    )
+                                                }
+                                            }
+                                        } else {
+                                            appProcessSuccess = false
+                                            failureDetails.add(context.getString(R.string.restore_failure_write_apk_splits, appName))
+                                            Shell.cmd("pm install-abandon $sessionId").exec()
+                                        }
+                                    } else {
+                                        appProcessSuccess = false
+                                        failureDetails.add(context.getString(R.string.restore_failure_create_install_session, appName))
+                                    }
+                                } finally {
+                                    if (verifierDisabledForInstall || preferencesRepository.hasPendingVerifierRecovery()) {
+                                        restorePendingVerifierSettings(preferencesRepository)
+                                    }
+                                }
                             }
                         } else {
                             appProcessSuccess = false
@@ -449,6 +522,9 @@ class RestoreOperationRunner(
             )
             OperationRunResult(success = false, progress = finalProgress)
         } finally {
+            if (preferencesRepository.hasPendingVerifierRecovery()) {
+                restorePendingVerifierSettings(preferencesRepository)
+            }
             if (operationLockAcquired) {
                 operationLockManager.release()
             }
@@ -457,6 +533,93 @@ class RestoreOperationRunner(
         }
 
         return finalResult
+    }
+
+    private fun resolveBasePackageArchiveInfo(apkFiles: List<File>): android.content.pm.PackageInfo? {
+        for (candidate in orderApkCandidatesForBaseSelection(apkFiles)) {
+            val archiveInfo = runCatching {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    context.packageManager.getPackageArchiveInfo(
+                        candidate.absolutePath,
+                        android.content.pm.PackageManager.PackageInfoFlags.of(0)
+                    )
+                } else {
+                    @Suppress("DEPRECATION")
+                    context.packageManager.getPackageArchiveInfo(candidate.absolutePath, 0)
+                }
+            }.getOrNull()
+            if (archiveInfo?.applicationInfo != null) {
+                return archiveInfo
+            }
+        }
+        return null
+    }
+
+    companion object {
+        internal fun minRequiredTargetSdkForInstall(deviceSdkInt: Int): Int {
+            return when {
+                deviceSdkInt >= 35 -> 24
+                deviceSdkInt == 34 -> 23
+                else -> 0
+            }
+        }
+
+        internal fun orderApkCandidatesForBaseSelection(apkFiles: List<File>): List<File> {
+            return apkFiles.sortedWith(
+                compareBy<File> { file ->
+                    val lowerName = file.name.lowercase(Locale.US)
+                    when {
+                        lowerName == "base.apk" -> 0
+                        !lowerName.startsWith("split_") && !lowerName.startsWith("split.") && !lowerName.contains(".split.") -> 1
+                        else -> 2
+                    }
+                }.thenBy { it.name }
+            )
+        }
+
+        fun disableVerifierForInstall(preferencesRepository: PreferencesRepository): Boolean {
+            if (!preferencesRepository.hasPendingVerifierRecovery()) {
+                val pkgRead = Shell.cmd("settings get global package_verifier_enable").exec()
+                val adbRead = Shell.cmd("settings get global verifier_verify_adb_installs").exec()
+                if (!pkgRead.isSuccess || !adbRead.isSuccess) {
+                    return false
+                }
+                val originalPackageVerifier = pkgRead.out.firstOrNull()?.trim()
+                val originalAdbVerifier = adbRead.out.firstOrNull()?.trim()
+                preferencesRepository.savePendingVerifierRecoveryIfAbsent(
+                    packageVerifierEnable = originalPackageVerifier,
+                    adbVerifierEnable = originalAdbVerifier
+                )
+            }
+            val putPkg = Shell.cmd("settings put global package_verifier_enable 0").exec()
+            val putAdb = Shell.cmd("settings put global verifier_verify_adb_installs 0").exec()
+            return putPkg.isSuccess && putAdb.isSuccess
+        }
+
+        fun restorePendingVerifierSettings(preferencesRepository: PreferencesRepository): Boolean {
+            val backup = preferencesRepository.loadPendingVerifierRecovery() ?: return true
+            return runCatching {
+                if (!Shell.getShell().isRoot) {
+                    return false
+                }
+                val restoredPkg = restoreGlobalSetting("package_verifier_enable", backup.packageVerifierEnable)
+                val restoredAdb = restoreGlobalSetting("verifier_verify_adb_installs", backup.adbVerifierEnable)
+                if (restoredPkg && restoredAdb) {
+                    preferencesRepository.clearPendingVerifierRecovery()
+                    true
+                } else {
+                    false
+                }
+            }.getOrDefault(false)
+        }
+
+        private fun restoreGlobalSetting(key: String, originalValue: String?): Boolean {
+            return if (originalValue.isNullOrBlank() || originalValue == "null") {
+                Shell.cmd("settings delete global $key").exec().isSuccess
+            } else {
+                Shell.cmd("settings put global $key ${shellQuote(originalValue)}").exec().isSuccess
+            }
+        }
     }
 
     private suspend fun findSnapshot(request: RestoreWorkRequest): SnapshotInfo? {

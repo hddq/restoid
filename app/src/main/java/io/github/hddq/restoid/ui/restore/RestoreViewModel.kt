@@ -117,6 +117,9 @@ class RestoreViewModel(
 
     private val _allowDowngrade = MutableStateFlow(false)
     val allowDowngrade = _allowDowngrade.asStateFlow()
+
+    private val _bypassVerification = MutableStateFlow(true)
+    val bypassVerification = _bypassVerification.asStateFlow()
     
     private val _restoreAppsEnabled = MutableStateFlow(true)
     val restoreAppsEnabled = _restoreAppsEnabled.asStateFlow()
@@ -140,6 +143,7 @@ class RestoreViewModel(
     init {
         _restoreTypes.value = preferencesRepository.loadRestoreTypes()
         _allowDowngrade.value = preferencesRepository.loadAllowDowngrade()
+        _bypassVerification.value = preferencesRepository.loadBypassVerification()
         observeOperationState()
         if (snapshotId.isNotBlank()) {
             loadSnapshotDetails(snapshotId)
@@ -316,6 +320,7 @@ class RestoreViewModel(
         if (_isRestoring.value) return
         preferencesRepository.saveRestoreTypes(_restoreTypes.value)
         preferencesRepository.saveAllowDowngrade(_allowDowngrade.value)
+        preferencesRepository.saveBypassVerification(_bypassVerification.value)
 
         val resticState = resticBinaryManager.resticState.value
         val selectedRepoKey = repositoriesRepository.selectedRepository.value
@@ -420,7 +425,8 @@ class RestoreViewModel(
                 )
             },
             appRestoreTypes = selectedApps.associate { it.appInfo.packageName to effectiveRestoreTypes(it.appInfo.packageName).toSelection() },
-            selectedCustomDirectories = selectedCustomDirectories
+            selectedCustomDirectories = selectedCustomDirectories,
+            bypassVerification = _bypassVerification.value
         )
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -504,6 +510,11 @@ class RestoreViewModel(
                 }
             }
         }
+    }
+
+    fun setBypassVerification(value: Boolean) {
+        _bypassVerification.value = value
+        preferencesRepository.saveBypassVerification(value)
     }
 
     fun setRestoreApk(value: Boolean) = _restoreTypes.update { it.copy(apk = value) }

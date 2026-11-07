@@ -1,18 +1,23 @@
 package io.github.hddq.restoid.data
 
 import android.content.Context
+import android.content.SharedPreferences
 import io.github.hddq.restoid.ui.shared.BackupTypes
 import io.github.hddq.restoid.model.MaintenanceConfig
 import io.github.hddq.restoid.ui.restore.RestoreTypes
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-class PreferencesRepository(context: Context) {
-    private val prefs = context.getSharedPreferences("user_preferences", Context.MODE_PRIVATE)
+class PreferencesRepository internal constructor(private val prefs: SharedPreferences) {
+    constructor(context: Context) : this(context.getSharedPreferences("user_preferences", Context.MODE_PRIVATE))
+
     private val json = Json { ignoreUnknownKeys = true }
 
     private companion object {
         const val KEY_REQUIRE_APP_UNLOCK = "require_app_unlock"
+        const val KEY_VERIFIER_RECOVERY_PENDING = "restore_verifier_recovery_pending"
+        const val KEY_VERIFIER_ORIG_PACKAGE = "restore_verifier_orig_package"
+        const val KEY_VERIFIER_ORIG_ADB = "restore_verifier_orig_adb"
     }
 
     // Maintenance Preferences
@@ -170,6 +175,51 @@ class PreferencesRepository(context: Context) {
         return prefs.getBoolean("restore_allowDowngrade", false)
     }
 
+    fun saveBypassVerification(bypass: Boolean) {
+        prefs.edit().putBoolean("restore_bypassVerification", bypass).apply()
+    }
+
+    fun loadBypassVerification(): Boolean {
+        return prefs.getBoolean("restore_bypassVerification", true)
+    }
+
+    @Synchronized
+    fun hasPendingVerifierRecovery(): Boolean {
+        return prefs.getBoolean(KEY_VERIFIER_RECOVERY_PENDING, false)
+    }
+
+    @Synchronized
+    fun savePendingVerifierRecoveryIfAbsent(packageVerifierEnable: String?, adbVerifierEnable: String?) {
+        if (prefs.getBoolean(KEY_VERIFIER_RECOVERY_PENDING, false)) {
+            return
+        }
+        prefs.edit()
+            .putBoolean(KEY_VERIFIER_RECOVERY_PENDING, true)
+            .putString(KEY_VERIFIER_ORIG_PACKAGE, packageVerifierEnable)
+            .putString(KEY_VERIFIER_ORIG_ADB, adbVerifierEnable)
+            .commit()
+    }
+
+    @Synchronized
+    fun loadPendingVerifierRecovery(): VerifierSettingsBackup? {
+        if (!prefs.getBoolean(KEY_VERIFIER_RECOVERY_PENDING, false)) {
+            return null
+        }
+        return VerifierSettingsBackup(
+            packageVerifierEnable = prefs.getString(KEY_VERIFIER_ORIG_PACKAGE, null),
+            adbVerifierEnable = prefs.getString(KEY_VERIFIER_ORIG_ADB, null)
+        )
+    }
+
+    @Synchronized
+    fun clearPendingVerifierRecovery() {
+        prefs.edit()
+            .remove(KEY_VERIFIER_RECOVERY_PENDING)
+            .remove(KEY_VERIFIER_ORIG_PACKAGE)
+            .remove(KEY_VERIFIER_ORIG_ADB)
+            .commit()
+    }
+
     fun saveRequireAppUnlock(required: Boolean) {
         prefs.edit().putBoolean(KEY_REQUIRE_APP_UNLOCK, required).apply()
     }
@@ -178,3 +228,8 @@ class PreferencesRepository(context: Context) {
         return prefs.getBoolean(KEY_REQUIRE_APP_UNLOCK, false)
     }
 }
+
+data class VerifierSettingsBackup(
+    val packageVerifierEnable: String?,
+    val adbVerifierEnable: String?
+)

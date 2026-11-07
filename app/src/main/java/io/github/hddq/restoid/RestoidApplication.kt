@@ -86,7 +86,8 @@ class RestoidApplication : Application() {
         operationWorkRepository = OperationWorkRepository(
             applicationContext,
             operationRequestStore,
-            operationRuntimeRepository
+            operationRuntimeRepository,
+            preferencesRepository
         )
 
         passwordManager.clearTemporaryPasswords()

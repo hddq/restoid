@@ -63,6 +63,8 @@
 
     <string name="restore_options_title">Restore Options</string>
     <string name="allow_downgrade">Allow Downgrade</string>
+    <string name="bypass_verification">Bypass app verification</string>
+    <string name="bypass_verification_description">Skip Play Protect and old Android version blocks for unattended restore</string>
     <string name="apps_to_restore_title">Apps to Restore</string>
     <string name="no_app_data_found_in_snapshot">No app data found in this snapshot.</string>
     <string name="restore_backup_version_with_installed">Backup: %1$s -&gt; Installed: %2$s</string>
@@ -400,6 +402,8 @@
     <string name="restore_stage_processing_template_apps">[%1$d/%2$d] Processing Apps</string>
     <string name="restore_stage_processing_template_custom_directories">[%1$d/%2$d] Processing Custom Directories</string>
     <string name="restore_failure_install_commit">%1$s: Install commit failed: %2$s</string>
+    <string name="restore_failure_signature_mismatch">%1$s: Signature mismatch with currently installed app. Skipped.</string>
+    <string name="restore_skipped_low_target_sdk">%1$s: Skipped installation because it targets an older Android SDK (%2$s).</string>
     <string name="restore_failure_write_apk_splits">%1$s: Failed to write APK splits.</string>
     <string name="restore_failure_create_install_session">%1$s: Failed to create install session.</string>
     <string name="restore_failure_no_apk_files">%1$s: No APK files found in restored data.</string>
