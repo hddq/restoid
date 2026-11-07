@@ -35,13 +35,19 @@ class HeavyOperationWorker(
         val requestId = inputData.getString(OperationWorkContract.INPUT_REQUEST_ID)
             ?: return Result.failure()
 
-        val startTimeMillis = System.currentTimeMillis()
+        val enqueuedState = app.operationRuntimeRepository.state.value
+        val startTimeMillis = enqueuedState.startTimeMillis ?: System.currentTimeMillis()
+        var scheduleName: String? = enqueuedState.scheduleName
         val initialProgress = OperationProgress(stageTitle = applicationContext.getString(R.string.progress_initializing))
         setForeground(createForegroundInfo(operationType, initialProgress))
-        app.operationRuntimeRepository.markEnqueued(operationType, initialProgress)
+        app.operationRuntimeRepository.markEnqueued(
+            operationType = operationType,
+            initialProgress = initialProgress,
+            startTimeMillis = startTimeMillis,
+            scheduleName = scheduleName
+        )
         setProgress(OperationWorkContract.progressToData(operationType, initialProgress))
 
-        var scheduleName: String? = null
         val notifier = WorkerProgressNotifier(operationType)
         val shouldStop = { isStopped || app.operationRuntimeRepository.state.value.stopRequested }
 
@@ -83,6 +89,7 @@ class HeavyOperationWorker(
                 OperationType.RUN_TASKS -> {
                     val request = app.operationRequestStore.loadRunTasksRequest(requestId)
                     scheduleName = request.scheduleName
+                    app.operationRuntimeRepository.updateScheduleName(scheduleName)
                     armLossMonitor(request.repositoryKey, request.requireUnmeteredNetwork)
                     val runner = RunTasksOperationRunner(
                         context = applicationContext,
@@ -149,7 +156,6 @@ class HeavyOperationWorker(
 
         withContext(NonCancellable) {
             notifier.forceNotify(finalResult.progress)
-            app.operationRuntimeRepository.markFinished(operationType, finalResult.success, finalResult.progress)
 
             val endTimeMillis = System.currentTimeMillis()
             val durationSeconds = ((endTimeMillis - startTimeMillis) / 1000).coerceAtLeast(0)
@@ -164,6 +170,7 @@ class HeavyOperationWorker(
                 summary = finalResult.progress.finalSummary,
                 error = finalResult.progress.error
             )
+            app.operationRuntimeRepository.markFinished(operationType, finalResult.success, finalResult.progress)
 
             val displayName = if (scheduleName != null) {
                 applicationContext.getString(R.string.operation_schedule_name, scheduleName)

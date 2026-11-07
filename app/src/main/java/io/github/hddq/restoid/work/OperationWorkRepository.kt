@@ -7,6 +7,7 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.topjohnwu.superuser.Shell
 import io.github.hddq.restoid.R
+import io.github.hddq.restoid.data.OperationLogRepository
 import io.github.hddq.restoid.data.OperationRuntimeRepository
 import io.github.hddq.restoid.data.OperationRuntimeState
 import io.github.hddq.restoid.data.OperationType
@@ -25,10 +26,12 @@ import java.util.concurrent.ExecutionException
 class OperationWorkRepository(
     context: Context,
     private val requestStore: OperationRequestStore,
-    private val runtimeRepository: OperationRuntimeRepository
+    private val runtimeRepository: OperationRuntimeRepository,
+    private val operationLogRepository: OperationLogRepository,
+    private val workManagerProvider: () -> WorkManager = { WorkManager.getInstance(context.applicationContext) }
 ) {
     private val appContext = context.applicationContext
-    private val workManager = WorkManager.getInstance(appContext)
+    private val workManager by lazy { workManagerProvider() }
     private val enqueueMutex = Mutex()
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -37,28 +40,32 @@ class OperationWorkRepository(
     suspend fun enqueueBackup(request: BackupWorkRequest): Boolean {
         return enqueueOperation(
             operationType = OperationType.BACKUP,
-            requestIdProvider = { requestStore.saveBackupRequest(request) }
+            requestIdProvider = { requestStore.saveBackupRequest(request) },
+            scheduleName = null
         )
     }
 
     suspend fun enqueueRestore(request: RestoreWorkRequest): Boolean {
         return enqueueOperation(
             operationType = OperationType.RESTORE,
-            requestIdProvider = { requestStore.saveRestoreRequest(request) }
+            requestIdProvider = { requestStore.saveRestoreRequest(request) },
+            scheduleName = null
         )
     }
 
     suspend fun enqueueRunTasks(request: RunTasksWorkRequest): Boolean {
         return enqueueOperation(
             operationType = OperationType.RUN_TASKS,
-            requestIdProvider = { requestStore.saveRunTasksRequest(request) }
+            requestIdProvider = { requestStore.saveRunTasksRequest(request) },
+            scheduleName = request.scheduleName
         )
     }
 
     suspend fun enqueueMaintenance(request: MaintenanceWorkRequest): Boolean {
         return enqueueOperation(
             operationType = OperationType.MAINTENANCE,
-            requestIdProvider = { requestStore.saveMaintenanceRequest(request) }
+            requestIdProvider = { requestStore.saveMaintenanceRequest(request) },
+            scheduleName = null
         )
     }
 
@@ -68,7 +75,10 @@ class OperationWorkRepository(
 
     suspend fun reconcileStateWithWorkManager() {
         if (!hasActiveWork()) {
-            runtimeRepository.clearStaleRunningState()
+            val stale = runtimeRepository.clearStaleRunningState()
+            if (stale != null) {
+                logInterruptedOperation(stale)
+            }
         }
     }
 
@@ -96,6 +106,8 @@ class OperationWorkRepository(
     fun forceStopCurrentOperation() {
         repositoryScope.launch {
             enqueueMutex.withLock {
+                val state = runtimeRepository.state.value
+                val wasRunning = state.isRunning || state.stopRequested
                 runCatching {
                     workManager.cancelUniqueWork(OperationWorkContract.UNIQUE_WORK_NAME).result.get()
                 }
@@ -104,6 +116,23 @@ class OperationWorkRepository(
                 }
                 runCatching { Shell.getCachedShell()?.close() }
                 runtimeRepository.forceClear()
+                if (wasRunning && state.operationType != null) {
+                    val interruptedSummary = appContext.getString(R.string.operation_interrupted)
+                    val finishedProgress = state.progress.copy(
+                        stageTitle = appContext.getString(
+                            R.string.progress_operation_failed,
+                            operationLabel(state.operationType)
+                        ),
+                        isFinished = true,
+                        error = state.progress.error ?: interruptedSummary,
+                        finalSummary = if (state.progress.finalSummary.isNotBlank()) {
+                            state.progress.finalSummary
+                        } else {
+                            interruptedSummary
+                        }
+                    )
+                    logInterruptedOperation(state.copy(progress = finishedProgress))
+                }
             }
         }
     }
@@ -123,18 +152,49 @@ class OperationWorkRepository(
         if (state.success == true && state.progress.isFinished) return
 
         val interruptedSummary = appContext.getString(R.string.operation_interrupted)
+        val finishedProgress = state.progress.copy(
+            stageTitle = appContext.getString(
+                R.string.progress_operation_failed,
+                operationLabel(operationType)
+            ),
+            isFinished = true,
+            error = interruptedSummary,
+            finalSummary = interruptedSummary
+        )
         runtimeRepository.markFinished(
             operationType = operationType,
             success = false,
-            progress = state.progress.copy(
-                stageTitle = appContext.getString(
-                    R.string.progress_operation_failed,
-                    operationLabel(operationType)
-                ),
-                isFinished = true,
-                error = interruptedSummary,
-                finalSummary = interruptedSummary
-            )
+            progress = finishedProgress
+        )
+        logInterruptedOperation(state.copy(progress = finishedProgress))
+    }
+
+    private fun logInterruptedOperation(state: OperationRuntimeState) {
+        val opType = state.operationType ?: return
+        val endTimeMillis = System.currentTimeMillis()
+        val startTimeMillis = state.startTimeMillis ?: endTimeMillis
+        val durationSeconds = ((endTimeMillis - startTimeMillis) / 1000).coerceAtLeast(0)
+        val interruptedSummary = appContext.getString(R.string.operation_interrupted)
+        val stageTitle = state.progress.stageTitle.ifBlank {
+            appContext.getString(R.string.progress_operation_failed, operationLabel(opType))
+        }
+        val summary = if (state.progress.finalSummary.isNotBlank()) {
+            state.progress.finalSummary
+        } else {
+            state.progress.error ?: interruptedSummary
+        }
+        val error = state.progress.error ?: interruptedSummary
+
+        operationLogRepository.addLog(
+            operationType = opType,
+            scheduleName = state.scheduleName,
+            startTimeMillis = startTimeMillis,
+            endTimeMillis = endTimeMillis,
+            durationSeconds = durationSeconds,
+            success = false,
+            stageTitle = stageTitle,
+            summary = summary,
+            error = error
         )
     }
 
@@ -149,7 +209,8 @@ class OperationWorkRepository(
 
     private suspend fun enqueueOperation(
         operationType: OperationType,
-        requestIdProvider: () -> String
+        requestIdProvider: () -> String,
+        scheduleName: String? = null
     ): Boolean = enqueueMutex.withLock {
         withContext(Dispatchers.IO) {
             val current = runtimeRepository.state.value
@@ -159,7 +220,13 @@ class OperationWorkRepository(
 
             val requestId = requestIdProvider()
             val initialProgress = OperationProgress(stageTitle = appContext.getString(R.string.progress_initializing))
-            runtimeRepository.markEnqueued(operationType, initialProgress)
+            val startTimeMillis = System.currentTimeMillis()
+            runtimeRepository.markEnqueued(
+                operationType = operationType,
+                initialProgress = initialProgress,
+                startTimeMillis = startTimeMillis,
+                scheduleName = scheduleName
+            )
 
             return@withContext try {
                 val workRequest = OneTimeWorkRequestBuilder<HeavyOperationWorker>()

@@ -1,6 +1,7 @@
 package io.github.hddq.restoid.data
 
 import android.content.Context
+import android.content.SharedPreferences
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.ui.shared.OperationProgress
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,25 +16,40 @@ data class OperationRuntimeState(
     val isRunning: Boolean = false,
     val success: Boolean? = null,
     val stopRequested: Boolean = false,
-    val progress: OperationProgress = OperationProgress()
+    val progress: OperationProgress = OperationProgress(),
+    val startTimeMillis: Long? = null,
+    val scheduleName: String? = null
 )
 
-class OperationRuntimeRepository(context: Context) {
-    private val appContext = context.applicationContext
-    private val prefs = appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+class OperationRuntimeRepository(
+    private val prefs: SharedPreferences,
+    private val interruptedSummaryProvider: () -> String
+) {
+    constructor(context: Context) : this(
+        context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE),
+        { context.applicationContext.getString(R.string.operation_interrupted) }
+    )
+
     private val json = Json { ignoreUnknownKeys = true }
 
     private val _state = MutableStateFlow(loadState())
     val state = _state.asStateFlow()
 
-    fun markEnqueued(operationType: OperationType, initialProgress: OperationProgress) {
+    fun markEnqueued(
+        operationType: OperationType,
+        initialProgress: OperationProgress,
+        startTimeMillis: Long = System.currentTimeMillis(),
+        scheduleName: String? = null
+    ) {
         updateState(
             OperationRuntimeState(
                 operationType = operationType,
                 isRunning = true,
                 success = null,
                 stopRequested = false,
-                progress = initialProgress.copy(isFinished = false)
+                progress = initialProgress.copy(isFinished = false),
+                startTimeMillis = startTimeMillis,
+                scheduleName = scheduleName
             )
         )
     }
@@ -46,19 +62,30 @@ class OperationRuntimeRepository(context: Context) {
                 isRunning = !progress.isFinished,
                 success = null,
                 stopRequested = current.stopRequested && current.operationType == operationType,
-                progress = progress
+                progress = progress,
+                startTimeMillis = current.startTimeMillis,
+                scheduleName = current.scheduleName
             )
         )
     }
 
+    fun updateScheduleName(scheduleName: String?) {
+        val current = _state.value
+        if (current.scheduleName == scheduleName) return
+        updateState(current.copy(scheduleName = scheduleName))
+    }
+
     fun markFinished(operationType: OperationType, success: Boolean, progress: OperationProgress) {
+        val current = _state.value
         updateState(
             OperationRuntimeState(
                 operationType = operationType,
                 isRunning = false,
                 success = success,
                 stopRequested = false,
-                progress = progress.copy(isFinished = true)
+                progress = progress.copy(isFinished = true),
+                startTimeMillis = current.startTimeMillis,
+                scheduleName = current.scheduleName
             )
         )
     }
@@ -85,26 +112,26 @@ class OperationRuntimeRepository(context: Context) {
         updateState(OperationRuntimeState())
     }
 
-    fun clearStaleRunningState() {
+    fun clearStaleRunningState(): OperationRuntimeState? {
         val current = _state.value
-        if (!current.isRunning && !current.stopRequested) return
-        val interruptedSummary = appContext.getString(R.string.operation_interrupted)
-        updateState(
-            current.copy(
-                isRunning = false,
-                success = false,
-                stopRequested = false,
-                progress = current.progress.copy(
-                    isFinished = true,
-                    error = current.progress.error ?: interruptedSummary,
-                    finalSummary = if (current.progress.finalSummary.isNotBlank()) {
-                        current.progress.finalSummary
-                    } else {
-                        current.progress.error ?: interruptedSummary
-                    }
-                )
+        if (!current.isRunning && !current.stopRequested) return null
+        val interruptedSummary = interruptedSummaryProvider()
+        val cleared = current.copy(
+            isRunning = false,
+            success = false,
+            stopRequested = false,
+            progress = current.progress.copy(
+                isFinished = true,
+                error = current.progress.error ?: interruptedSummary,
+                finalSummary = if (current.progress.finalSummary.isNotBlank()) {
+                    current.progress.finalSummary
+                } else {
+                    current.progress.error ?: interruptedSummary
+                }
             )
         )
+        updateState(cleared)
+        return cleared
     }
 
     private fun loadState(): OperationRuntimeState {
@@ -129,7 +156,9 @@ class OperationRuntimeRepository(context: Context) {
         val isRunning: Boolean = false,
         val success: Boolean? = null,
         val stopRequested: Boolean = false,
-        val progress: OperationProgress = OperationProgress()
+        val progress: OperationProgress = OperationProgress(),
+        val startTimeMillis: Long? = null,
+        val scheduleName: String? = null
     ) {
         fun toRuntimeState(): OperationRuntimeState {
             return OperationRuntimeState(
@@ -137,7 +166,9 @@ class OperationRuntimeRepository(context: Context) {
                 isRunning = isRunning,
                 success = success,
                 stopRequested = stopRequested,
-                progress = progress
+                progress = progress,
+                startTimeMillis = startTimeMillis,
+                scheduleName = scheduleName
             )
         }
 
@@ -148,7 +179,9 @@ class OperationRuntimeRepository(context: Context) {
                     isRunning = state.isRunning,
                     success = state.success,
                     stopRequested = state.stopRequested,
-                    progress = state.progress
+                    progress = state.progress,
+                    startTimeMillis = state.startTimeMillis,
+                    scheduleName = state.scheduleName
                 )
             }
         }
