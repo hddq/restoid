@@ -41,22 +41,25 @@ class HeavyOperationWorker(
         val interruptedSummary = applicationContext.getString(R.string.operation_interrupted)
         var scheduleName: String? = null
 
-        fun saveInProgressLog(progress: OperationProgress, timestampMillis: Long = System.currentTimeMillis()) {
+        fun saveInProgressLog(
+            progress: OperationProgress,
+            timestampMillis: Long = System.currentTimeMillis(),
+            durable: Boolean = false
+        ) {
             val durationSeconds = ((timestampMillis - startTimeMillis) / 1000).coerceAtLeast(0)
-            app.operationLogRepository.upsertLog(
+            app.operationLogRepository.saveActiveLog(
                 id = logId,
                 operationType = operationType,
                 scheduleName = scheduleName,
                 startTimeMillis = startTimeMillis,
                 endTimeMillis = timestampMillis,
                 durationSeconds = durationSeconds,
-                success = false,
                 stageTitle = progress.stageTitle.ifBlank {
                     applicationContext.getString(R.string.progress_initializing)
                 },
                 summary = interruptedSummary,
                 error = interruptedSummary,
-                inProgress = true
+                durable = durable
             )
         }
 
@@ -86,7 +89,7 @@ class HeavyOperationWorker(
         val runResult = try {
             setForeground(createForegroundInfo(operationType, initialProgress))
             app.operationRuntimeRepository.markEnqueued(operationType, initialProgress)
-            saveInProgressLog(initialProgress, startTimeMillis)
+            saveInProgressLog(initialProgress, startTimeMillis, durable = true)
             setProgress(OperationWorkContract.progressToData(operationType, initialProgress))
 
             when (operationType) {
@@ -108,7 +111,7 @@ class HeavyOperationWorker(
                     val request = app.operationRequestStore.loadRunTasksRequest(requestId)
                     scheduleName = request.scheduleName
                     if (scheduleName != null) {
-                        saveInProgressLog(initialProgress)
+                        saveInProgressLog(initialProgress, startTimeMillis, durable = true)
                     }
                     armLossMonitor(request.repositoryKey, request.requireUnmeteredNetwork)
                     val runner = RunTasksOperationRunner(
@@ -179,7 +182,7 @@ class HeavyOperationWorker(
 
             val endTimeMillis = System.currentTimeMillis()
             val durationSeconds = ((endTimeMillis - startTimeMillis) / 1000).coerceAtLeast(0)
-            val logEntry = app.operationLogRepository.upsertLog(
+            val logEntry = app.operationLogRepository.completeActiveLog(
                 id = logId,
                 operationType = operationType,
                 scheduleName = scheduleName,

@@ -150,95 +150,175 @@ class OperationLogRepositoryTest {
     }
 
     @Test
-    fun upsertLog_inProgressPersistsForCrashRecoveryAndUpdatesInPlaceUntilFinalized() {
-        val logId = "run-123"
+    fun saveActiveLog_durableSavesToStoredStateForCrashRecovery() {
+        val logId = "recovery-run-1"
 
-        // 1. Operation starts (inProgress = true)
-        repository.upsertLog(
+        // 1. Initial record saved durably before starting runner
+        repository.saveActiveLog(
             id = logId,
             operationType = OperationType.BACKUP,
+            scheduleName = "Nightly",
             startTimeMillis = 1000L,
             endTimeMillis = 1000L,
             durationSeconds = 0L,
-            success = false,
             stageTitle = "Initializing...",
             summary = "Operation was interrupted.",
             error = "Operation was interrupted.",
-            inProgress = true
+            durable = true
         )
+
+        // Durable write must call commit() synchronously
+        assertTrue(fakePrefs.lastOperationWasCommit)
 
         // Hidden from live completed logs while running in the current process
         assertTrue(repository.logs.value.isEmpty())
 
-        // 2. Progress updates stage and duration in place
-        repository.upsertLog(
-            id = logId,
+        // 2. Simulate process kill (SIGKILL) - the live in-memory cache is lost.
+        // A new process starts and initializes SharedPreferences strictly from stored disk state.
+        val storedDiskPrefs = fakePrefs.createFromStoredDiskState()
+        val recoveredRepo = OperationLogRepository(storedDiskPrefs, Dispatchers.Unconfined)
+
+        assertEquals(1, recoveredRepo.logs.value.size)
+        val recovered = recoveredRepo.logs.value.first()
+        assertEquals(logId, recovered.id)
+        assertEquals(OperationType.BACKUP, recovered.operationType)
+        assertEquals("Nightly", recovered.scheduleName)
+        assertEquals(false, recovered.success)
+        assertEquals("Initializing...", recovered.stageTitle)
+        assertEquals("Operation was interrupted.", recovered.error)
+
+        // Recovery persists the entry into completed logs and clears the active checkpoint
+        assertNotNull(storedDiskPrefs.getString(OperationLogRepository.KEY_LOGS, null))
+        assertNull(storedDiskPrefs.getString(OperationLogRepository.KEY_ACTIVE_LOG, null))
+    }
+
+    @Test
+    fun saveActiveLog_progressUpdatesActiveLogWithoutReencodingCompletedHistory() {
+        // Pre-populate completed history
+        repository.addLog(
+            operationType = OperationType.BACKUP,
+            success = true,
+            stageTitle = "Old run",
+            summary = "Old summary"
+        )
+        fakePrefs.flushApplyToDisk()
+        val originalHistoryJson = fakePrefs.getString(OperationLogRepository.KEY_LOGS, null)
+        assertNotNull(originalHistoryJson)
+
+        val activeId = "active-run-2"
+        // Progress update with durable = false
+        repository.saveActiveLog(
+            id = activeId,
             operationType = OperationType.BACKUP,
             startTimeMillis = 1000L,
-            endTimeMillis = 16000L,
-            durationSeconds = 15L,
-            success = false,
-            stageTitle = "Backing up Apps (3/10)",
+            endTimeMillis = 15000L,
+            durationSeconds = 14L,
+            stageTitle = "Backing up Apps (4/10)",
             summary = "Operation was interrupted.",
             error = "Operation was interrupted.",
-            inProgress = true
+            durable = false
         )
 
-        // If the app is killed now and reloaded in a new process, the interrupted log is present
-        val reloadedAfterKill = OperationLogRepository(fakePrefs, Dispatchers.Unconfined)
-        assertEquals(1, reloadedAfterKill.logs.value.size)
-        val killedEntry = reloadedAfterKill.logs.value.first()
-        assertEquals(logId, killedEntry.id)
-        assertEquals(false, killedEntry.success)
-        assertEquals("Backing up Apps (3/10)", killedEntry.stageTitle)
-        assertEquals(15L, killedEntry.durationSeconds)
-        assertEquals("Operation was interrupted.", killedEntry.error)
+        // Completed history key was NOT rewritten or re-encoded during progress update
+        assertEquals(originalHistoryJson, fakePrefs.getString(OperationLogRepository.KEY_LOGS, null))
 
-        // 3. If instead the operation finishes normally (inProgress = false), it updates in place and becomes visible
-        repository.upsertLog(
-            id = logId,
+        // Only the single active log checkpoint was written
+        assertNotNull(fakePrefs.getString(OperationLogRepository.KEY_ACTIVE_LOG, null))
+
+        // Live logs list still displays only completed history
+        assertEquals(1, repository.logs.value.size)
+        assertEquals("Old run", repository.logs.value.first().stageTitle)
+    }
+
+    @Test
+    fun completeActiveLog_finalizesActiveRunAndClearsActiveCheckpoint() {
+        val activeId = "active-run-3"
+        repository.saveActiveLog(
+            id = activeId,
             operationType = OperationType.BACKUP,
             startTimeMillis = 1000L,
-            endTimeMillis = 31000L,
-            durationSeconds = 30L,
+            endTimeMillis = 5000L,
+            durationSeconds = 4L,
+            stageTitle = "Backing up",
+            summary = "Operation was interrupted.",
+            error = "Operation was interrupted.",
+            durable = true
+        )
+
+        repository.completeActiveLog(
+            id = activeId,
+            operationType = OperationType.BACKUP,
+            startTimeMillis = 1000L,
+            endTimeMillis = 30000L,
+            durationSeconds = 29L,
             success = true,
             stageTitle = "Backup Complete",
             summary = "Added 42 MB",
-            error = null,
-            inProgress = false
+            error = null
         )
 
+        // Active checkpoint is cleared
+        assertNull(fakePrefs.getString(OperationLogRepository.KEY_ACTIVE_LOG, null))
+
+        // Completed history contains the finalized run
         assertEquals(1, repository.logs.value.size)
         val finalEntry = repository.logs.value.first()
-        assertEquals(logId, finalEntry.id)
+        assertEquals(activeId, finalEntry.id)
         assertEquals(true, finalEntry.success)
         assertEquals("Backup Complete", finalEntry.stageTitle)
-        assertEquals(30L, finalEntry.durationSeconds)
+        assertEquals(29L, finalEntry.durationSeconds)
         assertEquals("Added 42 MB", finalEntry.summary)
         assertNull(finalEntry.error)
     }
 }
 
 /**
- * Minimal in-memory SharedPreferences implementation for JVM unit tests.
+ * In-memory SharedPreferences implementation for JVM unit tests that distinguishes
+ * between the live in-memory cache and persisted storage on disk.
+ *
+ * Calling [commit] synchronously flushes changes to [diskStorage].
+ * Calling [apply] updates only [liveCache] immediately, simulating Android's
+ * asynchronous disk write queue.
  */
-private class FakeSharedPreferences : SharedPreferences {
-    private val data = mutableMapOf<String, Any?>()
+private class FakeSharedPreferences(
+    initialData: Map<String, Any?> = emptyMap()
+) : SharedPreferences {
+    private val diskStorage = mutableMapOf<String, Any?>().apply { putAll(initialData) }
+    private val liveCache = mutableMapOf<String, Any?>().apply { putAll(initialData) }
 
-    override fun getAll(): MutableMap<String, *> = data.toMutableMap()
-    override fun getString(key: String?, defValue: String?): String? = data[key] as? String ?: defValue
+    var lastOperationWasCommit: Boolean = false
+        private set
+
+    /**
+     * Simulates restarting the process by returning a new [FakeSharedPreferences] instance
+     * populated only with data that was durably written to [diskStorage].
+     */
+    fun createFromStoredDiskState(): FakeSharedPreferences {
+        return FakeSharedPreferences(diskStorage)
+    }
+
+    /**
+     * Simulates the background worker or OS flushing pending [apply] writes to disk.
+     */
+    fun flushApplyToDisk() {
+        diskStorage.clear()
+        diskStorage.putAll(liveCache)
+    }
+
+    override fun getAll(): MutableMap<String, *> = liveCache.toMutableMap()
+    override fun getString(key: String?, defValue: String?): String? = liveCache[key] as? String ?: defValue
     override fun getStringSet(key: String?, defValues: MutableSet<String>?): MutableSet<String>? =
-        @Suppress("UNCHECKED_CAST") (data[key] as? MutableSet<String> ?: defValues)
-    override fun getInt(key: String?, defValue: Int): Int = data[key] as? Int ?: defValue
-    override fun getLong(key: String?, defValue: Long): Long = data[key] as? Long ?: defValue
-    override fun getFloat(key: String?, defValue: Float): Float = data[key] as? Float ?: defValue
-    override fun getBoolean(key: String?, defValue: Boolean): Boolean = data[key] as? Boolean ?: defValue
-    override fun contains(key: String?): Boolean = data.containsKey(key)
-    override fun edit(): SharedPreferences.Editor = FakeEditor(data)
+        @Suppress("UNCHECKED_CAST") (liveCache[key] as? MutableSet<String> ?: defValues)
+    override fun getInt(key: String?, defValue: Int): Int = liveCache[key] as? Int ?: defValue
+    override fun getLong(key: String?, defValue: Long): Long = liveCache[key] as? Long ?: defValue
+    override fun getFloat(key: String?, defValue: Float): Float = liveCache[key] as? Float ?: defValue
+    override fun getBoolean(key: String?, defValue: Boolean): Boolean = liveCache[key] as? Boolean ?: defValue
+    override fun contains(key: String?): Boolean = liveCache.containsKey(key)
+    override fun edit(): SharedPreferences.Editor = FakeEditor()
     override fun registerOnSharedPreferenceChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener?) {}
     override fun unregisterOnSharedPreferenceChangeListener(listener: SharedPreferences.OnSharedPreferenceChangeListener?) {}
 
-    private class FakeEditor(private val backingData: MutableMap<String, Any?>) : SharedPreferences.Editor {
+    private inner class FakeEditor : SharedPreferences.Editor {
         private val temp = mutableMapOf<String, Any?>()
         private val removed = mutableSetOf<String>()
         private var clear = false
@@ -277,12 +357,20 @@ private class FakeSharedPreferences : SharedPreferences {
         }
         override fun commit(): Boolean {
             apply()
+            flushPendingToDisk()
+            lastOperationWasCommit = true
             return true
         }
         override fun apply() {
-            if (clear) backingData.clear()
-            removed.forEach { backingData.remove(it) }
-            backingData.putAll(temp)
+            if (clear) liveCache.clear()
+            removed.forEach { liveCache.remove(it) }
+            liveCache.putAll(temp)
+            lastOperationWasCommit = false
+        }
+        private fun flushPendingToDisk() {
+            if (clear) diskStorage.clear()
+            removed.forEach { diskStorage.remove(it) }
+            diskStorage.putAll(temp)
         }
     }
 }
