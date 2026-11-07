@@ -270,6 +270,44 @@ class OperationLogRepositoryTest {
         assertEquals("Added 42 MB", finalEntry.summary)
         assertNull(finalEntry.error)
     }
+
+    @Test
+    fun saveActiveLog_forceStopAndRapidRestart_doesNotLoseFirstRunIfKilled() {
+        val run1Id = "run-1"
+        val run2Id = "run-2"
+
+        // 1. Run 1 starts
+        repository.saveActiveLog(
+            id = run1Id,
+            operationType = OperationType.BACKUP,
+            stageTitle = "Backing up Run 1",
+            summary = "Operation was interrupted.",
+            error = "Operation was interrupted.",
+            durable = true
+        )
+
+        // 2. User force-stops Run 1 and immediately starts Run 2 before Run 1's cleanup finished
+        repository.saveActiveLog(
+            id = run2Id,
+            operationType = OperationType.BACKUP,
+            stageTitle = "Starting Run 2",
+            summary = "Operation was interrupted.",
+            error = "Operation was interrupted.",
+            durable = true
+        )
+
+        // 3. Process is killed while Run 2 is active.
+        // Next process boots from disk state:
+        val storedPrefs = fakePrefs.createFromStoredDiskState()
+        val recoveredRepo = OperationLogRepository(storedPrefs, Dispatchers.Unconfined)
+
+        // Both Run 1 and Run 2 must be preserved in history as interrupted
+        assertEquals(2, recoveredRepo.logs.value.size)
+        assertEquals(run2Id, recoveredRepo.logs.value[0].id)
+        assertEquals("Starting Run 2", recoveredRepo.logs.value[0].stageTitle)
+        assertEquals(run1Id, recoveredRepo.logs.value[1].id)
+        assertEquals("Backing up Run 1", recoveredRepo.logs.value[1].stageTitle)
+    }
 }
 
 /**

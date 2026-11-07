@@ -72,6 +72,15 @@ class OperationLogRepository(
         durable: Boolean = false
     ): OperationLogEntry = synchronized(lock) {
         ensureLoadedLocked()
+        val editor = prefs.edit()
+        val previousActive = loadActiveLogLocked()
+        if (previousActive != null && previousActive.id != id) {
+            val updated = (listOf(previousActive) + _logs.value.filterNot { it.id == previousActive.id }).take(MAX_LOG_ENTRIES)
+            _logs.value = updated
+            runCatching { json.encodeToString(updated) }.getOrNull()?.let {
+                editor.putString(KEY_LOGS, it)
+            }
+        }
         activeLogId = id
         val entry = OperationLogEntry(
             id = id,
@@ -86,7 +95,6 @@ class OperationLogRepository(
             error = error?.take(MAX_FIELD_LENGTH)
         )
         val encoded = runCatching { json.encodeToString(entry) }.getOrNull()
-        val editor = prefs.edit()
         if (encoded != null) {
             editor.putString(KEY_ACTIVE_LOG, encoded)
         } else {
