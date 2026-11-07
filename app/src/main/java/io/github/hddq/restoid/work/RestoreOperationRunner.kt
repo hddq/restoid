@@ -33,6 +33,13 @@ class RestoreOperationRunner(
     private val operationLockManager: OperationLockManager
 ) {
 
+    private data class PreservedDestinationPath(
+        val temporary: File,
+        val destination: String,
+        val parentOwner: String?,
+        val parentMode: String?
+    )
+
     suspend fun run(
         request: RestoreWorkRequest,
         onProgress: (OperationProgress) -> Unit,
@@ -579,18 +586,11 @@ class RestoreOperationRunner(
             if (types.obb) add(obbPath(currentUserId, packageName))
             if (types.media) add(mediaPath(currentUserId, packageName))
         }
-        val preservedPaths = destinationsToProtect.distinct().flatMap { destination ->
-            preserveExcludedDestinationPaths(destination, excludedPaths)
-        }
-
+        Shell.cmd("am force-stop --user $currentUserId ${shellQuote(packageName)}").exec()
+        val preservedPaths = mutableListOf<PreservedDestinationPath>()
         try {
-            Shell.cmd("am force-stop --user $currentUserId ${shellQuote(packageName)}").exec()
-            if (dataMappings.any { (_, destination) -> destination.startsWith("/data/user/") || destination.startsWith("/data/user_de/") }) {
-                val clearPackageResult = Shell.cmd("pm clear --user $currentUserId ${shellQuote(packageName)}").exec()
-                if (!clearPackageResult.isSuccess) {
-                    allSucceeded = false
-                    Log.w("RestoreOperationRunner", "Failed to clear package data before restoring $packageName")
-                }
+            destinationsToProtect.distinct().forEach { destination ->
+                preservedPaths += preserveExcludedDestinationPaths(destination, excludedPaths)
             }
 
             for ((source, destination) in dataMappings) {
@@ -666,17 +666,22 @@ class RestoreOperationRunner(
     private fun preserveExcludedDestinationPaths(
         destination: String,
         excludedPaths: List<String>
-    ): List<Pair<File, String>> {
+    ): List<PreservedDestinationPath> {
         val pathsToPreserve = excludedPaths
             .filter { it == destination || it.startsWith("$destination/") }
             .sortedBy { it.length }
             .filter { candidate -> excludedPaths.none { other -> other != candidate && candidate.startsWith("$other/") } }
         val parent = File(destination).parentFile ?: return emptyList()
         val preserveRoot = File(parent, ".restoid-preserved-${System.nanoTime()}")
-        val preserved = mutableListOf<Pair<File, String>>()
+        val preserved = mutableListOf<PreservedDestinationPath>()
         pathsToPreserve.forEachIndexed { index, path ->
             if (!Shell.cmd("[ -e ${shellQuote(path)} ]").exec().isSuccess) return@forEachIndexed
             val temporary = File(preserveRoot, index.toString())
+            val liveParent = requireNotNull(File(path).parentFile)
+            val parentStat = Shell.cmd("stat -c '%u:%g:%a' ${shellQuote(liveParent.absolutePath)}").exec()
+            val parentMetadata = parentStat.out.firstOrNull()?.trim()?.split(':')
+            val parentOwner = parentMetadata?.takeIf { it.size == 3 }?.let { "${it[0]}:${it[1]}" }
+            val parentMode = parentMetadata?.takeIf { it.size == 3 }?.get(2)
             val result = Shell.cmd(
                 "mkdir -p ${shellQuote(preserveRoot.absolutePath)} && mv ${shellQuote(path)} ${shellQuote(temporary.absolutePath)}"
             ).exec()
@@ -684,19 +689,33 @@ class RestoreOperationRunner(
                 restorePreservedDestinationPaths(preserved)
                 throw IllegalStateException("Failed to preserve excluded restore path: $path")
             }
-            preserved += temporary to path
+            preserved += PreservedDestinationPath(temporary, path, parentOwner, parentMode)
         }
         return preserved
     }
 
-    private fun restorePreservedDestinationPaths(paths: List<Pair<File, String>>): Boolean {
-        val restored = paths.map { (temporary, destination) ->
-            Shell.cmd(
-                "mkdir -p ${shellQuote(File(destination).parentFile!!.absolutePath)} && " +
-                    "rm -rf ${shellQuote(destination)} && mv ${shellQuote(temporary.absolutePath)} ${shellQuote(destination)}"
+    private fun restorePreservedDestinationPaths(paths: List<PreservedDestinationPath>): Boolean {
+        val restored = paths.map { preserved ->
+            val parent = requireNotNull(File(preserved.destination).parentFile)
+            val moved = Shell.cmd(
+                "mkdir -p ${shellQuote(parent.absolutePath)} && " +
+                    "rm -rf ${shellQuote(preserved.destination)} && " +
+                    "mv ${shellQuote(preserved.temporary.absolutePath)} ${shellQuote(preserved.destination)}"
             ).exec().isSuccess
+            if (!moved) {
+                false
+            } else {
+                val ownerRestored = preserved.parentOwner?.let { owner ->
+                    Shell.cmd("chown $owner ${shellQuote(parent.absolutePath)}").exec().isSuccess
+                } ?: true
+                val modeRestored = preserved.parentMode?.let { mode ->
+                    Shell.cmd("chmod $mode ${shellQuote(parent.absolutePath)}").exec().isSuccess
+                } ?: true
+                Shell.cmd("restorecon -F ${shellQuote(parent.absolutePath)}").exec()
+                ownerRestored && modeRestored
+            }
         }.all { it }
-        paths.mapNotNull { it.first.parentFile }.distinct().forEach { parent ->
+        paths.mapNotNull { it.temporary.parentFile }.distinct().forEach { parent ->
             Shell.cmd("rmdir ${shellQuote(parent.absolutePath)}").exec()
         }
         return restored
