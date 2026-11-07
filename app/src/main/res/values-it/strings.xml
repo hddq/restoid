@@ -541,4 +541,33 @@
     <string name="tasks_guide_check_title">Verifica integrità</string>
     <string name="custom_directory_not_found">Directory personalizzata non trovata: %1$s</string>
     <string name="tasks_guide_forget_title">Dimentica snapshot</string>
+    <string name="operation_logs_clear_confirm_title"></string>
+    <string name="license_restic_license" translatable="false"></string>
+    <string name="action_copy_log"></string>
+    <string name="operation_logs_duration"></string>
+    <string name="action_clear"></string>
+    <string name="channel_failed_description"></string>
+    <string name="license_restoid_author" translatable="false"></string>
+    <string name="license_restoid_name" translatable="false"></string>
+    <string name="operation_logs_clear"></string>
+    <string name="channel_failed_operations"></string>
+    <string name="license_restic_name" translatable="false"></string>
+    <string name="license_restoid_url" translatable="false"></string>
+    <string name="placeholder_sftp_port" translatable="false"></string>
+    <string name="operation_status_failed"></string>
+    <string name="operation_logs_copied"></string>
+    <string name="operation_logs_clear_confirm_desc"></string>
+    <string name="screen_operation_logs"></string>
+    <string name="channel_successful_operations"></string>
+    <string name="operation_logs_empty_desc"></string>
+    <string name="action_collapse"></string>
+    <string name="placeholder_sftp_repository_path" translatable="false"></string>
+    <string name="operation_logs_empty"></string>
+    <string name="license_restic_url" translatable="false"></string>
+    <string name="channel_successful_description"></string>
+    <string name="placeholder_sftp_host" translatable="false"></string>
+    <string name="action_expand"></string>
+    <string name="app_name" translatable="false"></string>
+    <string name="operation_status_success"></string>
+    <string name="license_restic_author" translatable="false"></string>
 </resources>
