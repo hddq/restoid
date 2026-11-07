@@ -174,6 +174,7 @@ fun RestoreAppsConfigScreen(
     val backupDetails by viewModel.backupDetails.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val allowDowngrade by viewModel.allowDowngrade.collectAsState()
+    val bypassVerification by viewModel.bypassVerification.collectAsState()
     val restoreTypes by viewModel.restoreTypes.collectAsState()
     val appRestoreTypes by viewModel.appRestoreTypes.collectAsState()
     val rootState by viewModel.rootState.collectAsState()
@@ -199,12 +200,21 @@ fun RestoreAppsConfigScreen(
         item(key = "options_section") {
             Column(modifier = Modifier.padding(bottom = 14.dp)) {
                 ExpressiveSectionHeader(title = stringResource(R.string.restore_options_title))
-                ExpressiveSegmentedSurface(index = 0, count = 1) {
+                ExpressiveSegmentedSurface(index = 0, count = 2) {
                     TaskRow(
                         title = stringResource(R.string.allow_downgrade),
                         icon = Icons.Outlined.History,
                         checked = allowDowngrade,
                         onCheckedChange = viewModel::setAllowDowngrade
+                    )
+                }
+                ExpressiveSegmentedSurface(index = 1, count = 2) {
+                    TaskRow(
+                        title = stringResource(R.string.bypass_verification),
+                        subtitle = stringResource(R.string.bypass_verification_description),
+                        icon = Icons.Outlined.Shield,
+                        checked = bypassVerification,
+                        onCheckedChange = viewModel::setBypassVerification
                     )
                 }
             }

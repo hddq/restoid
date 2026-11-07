@@ -1,14 +1,16 @@
 package io.github.hddq.restoid.data
 
 import android.content.Context
+import android.content.SharedPreferences
 import io.github.hddq.restoid.ui.shared.BackupTypes
 import io.github.hddq.restoid.model.MaintenanceConfig
 import io.github.hddq.restoid.ui.restore.RestoreTypes
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-class PreferencesRepository(context: Context) {
-    private val prefs = context.getSharedPreferences("user_preferences", Context.MODE_PRIVATE)
+class PreferencesRepository internal constructor(private val prefs: SharedPreferences) {
+    constructor(context: Context) : this(context.getSharedPreferences("user_preferences", Context.MODE_PRIVATE))
+
     private val json = Json { ignoreUnknownKeys = true }
 
     private companion object {
@@ -168,6 +170,14 @@ class PreferencesRepository(context: Context) {
 
     fun loadAllowDowngrade(): Boolean {
         return prefs.getBoolean("restore_allowDowngrade", false)
+    }
+
+    fun saveBypassVerification(bypass: Boolean) {
+        prefs.edit().putBoolean("restore_bypassVerification", bypass).apply()
+    }
+
+    fun loadBypassVerification(): Boolean {
+        return prefs.getBoolean("restore_bypassVerification", true)
     }
 
     fun saveRequireAppUnlock(required: Boolean) {
