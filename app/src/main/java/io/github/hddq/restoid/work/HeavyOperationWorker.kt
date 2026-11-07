@@ -104,7 +104,8 @@ class HeavyOperationWorker(
                         resticBinaryManager = app.resticBinaryManager,
                         resticRepository = app.resticRepository,
                         metadataRepository = app.metadataRepository,
-                        operationLockManager = app.operationLockManager
+                        operationLockManager = app.operationLockManager,
+                        preferencesRepository = app.preferencesRepository
                     )
                     runner.run(request, notifier::onProgress, shouldStop)
                 }
@@ -148,6 +149,9 @@ class HeavyOperationWorker(
         }
 
         withContext(NonCancellable) {
+            if (app.preferencesRepository.hasPendingVerifierRecovery()) {
+                RestoreOperationRunner.restorePendingVerifierSettings(app.preferencesRepository)
+            }
             notifier.forceNotify(finalResult.progress)
             app.operationRuntimeRepository.markFinished(operationType, finalResult.success, finalResult.progress)
 

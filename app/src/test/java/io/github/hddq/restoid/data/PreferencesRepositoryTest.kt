@@ -1,7 +1,9 @@
 package io.github.hddq.restoid.data
 
 import android.content.SharedPreferences
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -40,6 +42,34 @@ class PreferencesRepositoryTest {
     fun saveAllowDowngrade_persistsValue() {
         repository.saveAllowDowngrade(true)
         assertTrue(repository.loadAllowDowngrade())
+    }
+
+    @Test
+    fun pendingVerifierRecovery_savesLoadsAndClears() {
+        assertFalse(repository.hasPendingVerifierRecovery())
+        assertNull(repository.loadPendingVerifierRecovery())
+
+        repository.savePendingVerifierRecoveryIfAbsent("1", "1")
+        assertTrue(repository.hasPendingVerifierRecovery())
+        assertEquals(
+            VerifierSettingsBackup(packageVerifierEnable = "1", adbVerifierEnable = "1"),
+            repository.loadPendingVerifierRecovery()
+        )
+
+        repository.clearPendingVerifierRecovery()
+        assertFalse(repository.hasPendingVerifierRecovery())
+        assertNull(repository.loadPendingVerifierRecovery())
+    }
+
+    @Test
+    fun savePendingVerifierRecoveryIfAbsent_doesNotOverwriteExistingRecoveryState() {
+        repository.savePendingVerifierRecoveryIfAbsent("1", "null")
+        repository.savePendingVerifierRecoveryIfAbsent("0", "0")
+
+        assertEquals(
+            VerifierSettingsBackup(packageVerifierEnable = "1", adbVerifierEnable = "null"),
+            repository.loadPendingVerifierRecovery()
+        )
     }
 }
 

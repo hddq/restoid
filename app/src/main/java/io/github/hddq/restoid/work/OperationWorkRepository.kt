@@ -10,6 +10,7 @@ import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.OperationRuntimeRepository
 import io.github.hddq.restoid.data.OperationRuntimeState
 import io.github.hddq.restoid.data.OperationType
+import io.github.hddq.restoid.data.PreferencesRepository
 import io.github.hddq.restoid.ui.shared.OperationProgress
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -25,7 +26,8 @@ import java.util.concurrent.ExecutionException
 class OperationWorkRepository(
     context: Context,
     private val requestStore: OperationRequestStore,
-    private val runtimeRepository: OperationRuntimeRepository
+    private val runtimeRepository: OperationRuntimeRepository,
+    private val preferencesRepository: PreferencesRepository = PreferencesRepository(context.applicationContext)
 ) {
     private val appContext = context.applicationContext
     private val workManager = WorkManager.getInstance(appContext)
@@ -69,6 +71,11 @@ class OperationWorkRepository(
     suspend fun reconcileStateWithWorkManager() {
         if (!hasActiveWork()) {
             runtimeRepository.clearStaleRunningState()
+            if (preferencesRepository.hasPendingVerifierRecovery()) {
+                withContext(Dispatchers.IO) {
+                    RestoreOperationRunner.restorePendingVerifierSettings(preferencesRepository)
+                }
+            }
         }
     }
 
@@ -103,6 +110,9 @@ class OperationWorkRepository(
                     workManager.cancelAllWorkByTag(OperationWorkContract.TAG_HEAVY_OPERATION).result.get()
                 }
                 runCatching { Shell.getCachedShell()?.close() }
+                if (preferencesRepository.hasPendingVerifierRecovery()) {
+                    RestoreOperationRunner.restorePendingVerifierSettings(preferencesRepository)
+                }
                 runtimeRepository.forceClear()
             }
         }
@@ -115,6 +125,12 @@ class OperationWorkRepository(
             delay(CANCEL_FINALIZE_RETRY_DELAY_MS)
             activeWork = hasActiveWork()
             attempts += 1
+        }
+
+        if (preferencesRepository.hasPendingVerifierRecovery()) {
+            withContext(Dispatchers.IO) {
+                RestoreOperationRunner.restorePendingVerifierSettings(preferencesRepository)
+            }
         }
 
         val state = runtimeRepository.state.value

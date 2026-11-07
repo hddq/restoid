@@ -15,6 +15,9 @@ class PreferencesRepository internal constructor(private val prefs: SharedPrefer
 
     private companion object {
         const val KEY_REQUIRE_APP_UNLOCK = "require_app_unlock"
+        const val KEY_VERIFIER_RECOVERY_PENDING = "restore_verifier_recovery_pending"
+        const val KEY_VERIFIER_ORIG_PACKAGE = "restore_verifier_orig_package"
+        const val KEY_VERIFIER_ORIG_ADB = "restore_verifier_orig_adb"
     }
 
     // Maintenance Preferences
@@ -180,6 +183,43 @@ class PreferencesRepository internal constructor(private val prefs: SharedPrefer
         return prefs.getBoolean("restore_bypassVerification", true)
     }
 
+    @Synchronized
+    fun hasPendingVerifierRecovery(): Boolean {
+        return prefs.getBoolean(KEY_VERIFIER_RECOVERY_PENDING, false)
+    }
+
+    @Synchronized
+    fun savePendingVerifierRecoveryIfAbsent(packageVerifierEnable: String?, adbVerifierEnable: String?) {
+        if (prefs.getBoolean(KEY_VERIFIER_RECOVERY_PENDING, false)) {
+            return
+        }
+        prefs.edit()
+            .putBoolean(KEY_VERIFIER_RECOVERY_PENDING, true)
+            .putString(KEY_VERIFIER_ORIG_PACKAGE, packageVerifierEnable)
+            .putString(KEY_VERIFIER_ORIG_ADB, adbVerifierEnable)
+            .commit()
+    }
+
+    @Synchronized
+    fun loadPendingVerifierRecovery(): VerifierSettingsBackup? {
+        if (!prefs.getBoolean(KEY_VERIFIER_RECOVERY_PENDING, false)) {
+            return null
+        }
+        return VerifierSettingsBackup(
+            packageVerifierEnable = prefs.getString(KEY_VERIFIER_ORIG_PACKAGE, null),
+            adbVerifierEnable = prefs.getString(KEY_VERIFIER_ORIG_ADB, null)
+        )
+    }
+
+    @Synchronized
+    fun clearPendingVerifierRecovery() {
+        prefs.edit()
+            .remove(KEY_VERIFIER_RECOVERY_PENDING)
+            .remove(KEY_VERIFIER_ORIG_PACKAGE)
+            .remove(KEY_VERIFIER_ORIG_ADB)
+            .commit()
+    }
+
     fun saveRequireAppUnlock(required: Boolean) {
         prefs.edit().putBoolean(KEY_REQUIRE_APP_UNLOCK, required).apply()
     }
@@ -188,3 +228,8 @@ class PreferencesRepository internal constructor(private val prefs: SharedPrefer
         return prefs.getBoolean(KEY_REQUIRE_APP_UNLOCK, false)
     }
 }
+
+data class VerifierSettingsBackup(
+    val packageVerifierEnable: String?,
+    val adbVerifierEnable: String?
+)
