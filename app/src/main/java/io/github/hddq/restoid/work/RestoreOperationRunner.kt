@@ -126,7 +126,13 @@ class RestoreOperationRunner(
             tempRestoreDir = File(context.cacheDir, "restic-restore-${System.currentTimeMillis()}").also { it.mkdirs() }
 
             val customPathsToRestore = request.selectedCustomDirectories.toSet()
-            val pathsToRestore = generatePathsToRestore(selectedAppPackages, currentSnapshot, request.restoreTypes, request.appRestoreTypes).toMutableList()
+            val appPathsToRestore = generatePathsToRestore(
+                selectedAppPackages,
+                currentSnapshot,
+                request.restoreTypes,
+                request.appRestoreTypes
+            ).toSet()
+            val pathsToRestore = appPathsToRestore.toMutableList()
             pathsToRestore.addAll(customPathsToRestore)
             val metadata = selectedRepository.id?.let { repoId ->
                 metadataRepository.getMetadataForSnapshot(repoId, currentSnapshot.id)
@@ -191,7 +197,7 @@ class RestoreOperationRunner(
                     }
                     // Restic merges custom directories directly into their live destinations.
                     // App files still need staging for installation and ownership handling.
-                    val targetDir = if (restorePath in customPathsToRestore) {
+                    val targetDir = if (restorePath in customPathsToRestore && restorePath !in appPathsToRestore) {
                         File(io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(restorePath))
                     } else {
                         File(tempRestoreDir, restorePath.drop(1))
@@ -309,7 +315,7 @@ class RestoreOperationRunner(
                     }
 
                     if (appProcessSuccess && with(appRestoreTypes) { data || deviceProtectedData || externalData || obb || media }) {
-                        if (!moveRestoredDataAndFixPerms(packageName, tempRestoreDir, appRestoreTypes)) {
+                        if (!moveRestoredDataAndFixPerms(packageName, tempRestoreDir, appRestoreTypes, request.excludedCustomDirectories)) {
                             appProcessSuccess = false
                             failureDetails.add(context.getString(R.string.restore_failure_data_restore, appName))
                         }
@@ -519,7 +525,8 @@ class RestoreOperationRunner(
     private fun moveRestoredDataAndFixPerms(
         packageName: String,
         tempRestoreDir: File,
-        types: RestoreTypeSelection
+        types: RestoreTypeSelection,
+        excludedCustomDirectories: List<String>
     ): Boolean {
         var allSucceeded = true
 
@@ -561,9 +568,32 @@ class RestoreOperationRunner(
             }
         }
 
-        Shell.cmd("am force-stop --user $currentUserId ${shellQuote(packageName)}").exec()
+        val excludedPaths = excludedCustomDirectories.map { excluded ->
+            val realPath = io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(excluded) ?: excluded
+            io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(realPath)
+        }
+        val destinationsToProtect = buildList {
+            if (types.data) add(targetDestination)
+            if (types.deviceProtectedData) add(deDataPath(currentUserId, packageName))
+            if (types.externalData) add(externalDataPath(currentUserId, packageName))
+            if (types.obb) add(obbPath(currentUserId, packageName))
+            if (types.media) add(mediaPath(currentUserId, packageName))
+        }
+        val preservedPaths = destinationsToProtect.distinct().flatMap { destination ->
+            preserveExcludedDestinationPaths(destination, excludedPaths)
+        }
 
-        for ((source, destination) in dataMappings) {
+        try {
+            Shell.cmd("am force-stop --user $currentUserId ${shellQuote(packageName)}").exec()
+            if (dataMappings.any { (_, destination) -> destination.startsWith("/data/user/") || destination.startsWith("/data/user_de/") }) {
+                val clearPackageResult = Shell.cmd("pm clear --user $currentUserId ${shellQuote(packageName)}").exec()
+                if (!clearPackageResult.isSuccess) {
+                    allSucceeded = false
+                    Log.w("RestoreOperationRunner", "Failed to clear package data before restoring $packageName")
+                }
+            }
+
+            for ((source, destination) in dataMappings) {
             if (Shell.cmd("[ -e '${source.absolutePath}' ]").exec().isSuccess) {
                 Shell.cmd("mkdir -p '$destination'").exec()
                 val isPrivateAppData = destination.startsWith("/data/user/") || destination.startsWith("/data/user_de/")
@@ -575,6 +605,13 @@ class RestoreOperationRunner(
                     contextResult.out.firstOrNull()?.trim()?.takeIf { contextResult.isSuccess && it.isNotEmpty() }
                 } else {
                     null
+                }
+                val clearResult = Shell.cmd(
+                    "find ${shellQuote(destination)} -mindepth 1 -maxdepth 1 -exec rm -rf '{}' '+'"
+                ).exec()
+                if (!clearResult.isSuccess) {
+                    allSucceeded = false
+                    continue
                 }
                 val copyResult = Shell.cmd(
                     "find ${shellQuote(source.absolutePath)} -mindepth 1 -maxdepth 1 -exec cp -a '{}' ${shellQuote(destination)} ';'"
@@ -616,8 +653,53 @@ class RestoreOperationRunner(
                     Log.w("RestoreOperationRunner", "Failed to relabel restored path $destination")
                 }
             }
+            }
+        } finally {
+            if (!restorePreservedDestinationPaths(preservedPaths)) {
+                allSucceeded = false
+            }
         }
         return allSucceeded
+    }
+
+    /** Preserves exclusions beside the live destination before its remaining data is cleared. */
+    private fun preserveExcludedDestinationPaths(
+        destination: String,
+        excludedPaths: List<String>
+    ): List<Pair<File, String>> {
+        val pathsToPreserve = excludedPaths
+            .filter { it == destination || it.startsWith("$destination/") }
+            .sortedBy { it.length }
+            .filter { candidate -> excludedPaths.none { other -> other != candidate && candidate.startsWith("$other/") } }
+        val parent = File(destination).parentFile ?: return emptyList()
+        val preserveRoot = File(parent, ".restoid-preserved-${System.nanoTime()}")
+        val preserved = mutableListOf<Pair<File, String>>()
+        pathsToPreserve.forEachIndexed { index, path ->
+            if (!Shell.cmd("[ -e ${shellQuote(path)} ]").exec().isSuccess) return@forEachIndexed
+            val temporary = File(preserveRoot, index.toString())
+            val result = Shell.cmd(
+                "mkdir -p ${shellQuote(preserveRoot.absolutePath)} && mv ${shellQuote(path)} ${shellQuote(temporary.absolutePath)}"
+            ).exec()
+            if (!result.isSuccess) {
+                restorePreservedDestinationPaths(preserved)
+                throw IllegalStateException("Failed to preserve excluded restore path: $path")
+            }
+            preserved += temporary to path
+        }
+        return preserved
+    }
+
+    private fun restorePreservedDestinationPaths(paths: List<Pair<File, String>>): Boolean {
+        val restored = paths.map { (temporary, destination) ->
+            Shell.cmd(
+                "mkdir -p ${shellQuote(File(destination).parentFile!!.absolutePath)} && " +
+                    "rm -rf ${shellQuote(destination)} && mv ${shellQuote(temporary.absolutePath)} ${shellQuote(destination)}"
+            ).exec().isSuccess
+        }.all { it }
+        paths.mapNotNull { it.first.parentFile }.distinct().forEach { parent ->
+            Shell.cmd("rmdir ${shellQuote(parent.absolutePath)}").exec()
+        }
+        return restored
     }
 
     private fun isPathExcluded(path: String, excludedPaths: List<String>): Boolean {
