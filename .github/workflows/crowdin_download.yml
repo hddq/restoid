@@ -1,0 +1,38 @@
+name: Crowdin Download
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  synchronize-with-crowdin:
+    name: Download translations from Crowdin
+    if: github.repository_owner == 'hddq'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Download translations
+        uses: crowdin/github-action@v3
+        with:
+          upload_translations: false
+          upload_sources: false
+          download_translations: true
+          localization_branch_name: l10n_crowdin
+          create_pull_request: true
+          pull_request_title: 'i18n: translations update from Crowdin'
+          pull_request_body: 'New translations synchronized from Crowdin.'
+          pull_request_base_branch_name: master
+          commit_message: 'i18n: translations update from Crowdin'
+          github_user_name: 'Crowdin Bot'
+          github_user_email: 'support+bot@crowdin.com'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
+          CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
