@@ -6,6 +6,7 @@ Fonctionnalités :
 * Restic-Powered : Exploite la vitesse, la sécurité et l'efficacité de restic pour des sauvegardes locales, dédupliquées et chiffrées.
 * Sauvegarde sélective : Choisissez exactement les applications installées que vous souhaitez sauvegarder.
 * Contrôle granulaire : Sélectionnez avec précision ce qu'il faut inclure pour chaque application : fichiers APK, données utilisateur, données protégées, fichiers externes/OBB ou médias.
+* Custom Directory Backup: Back up custom directories and files like DCIM, Documents, etc.
 * Gestion flexible des dépôts : Créez et gérez des dépôts via les backends natifs de restic : Répertoire local, SFTP, Serveur REST et Amazon S3/MinIO.
 * Gestion des Snapshots : Parcourez facilement l'historique de vos snapshots, consultez les détails de ce qui a été sauvegardé, et supprimez les anciennes données pour gagner de l'espace.
 * Restauration chirurgicale : Restaurez des applications entières, ou seulement des parties spécifiques (comme restaurer uniquement les données de l'application sans écraser l'APK).
