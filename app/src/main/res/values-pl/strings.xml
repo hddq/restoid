@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">Restoid</string>
     <string name="screen_home">Strona główna</string>
     <string name="screen_settings">Ustawienia</string>
+    <string name="screen_tasks">Zadania</string>
     <string name="screen_snapshot_details">Szczegóły migawki</string>
     <string name="screen_restore">Przywróć</string>
     <string name="screen_licenses">Licencje</string>
     <string name="screen_schedules">Harmonogramy</string>
     <string name="screen_operation_progress">Postęp operacji</string>
+    <string name="topbar_tasks">Zadania</string>
     <string name="topbar_backup_config">Konfiguracja backupu</string>
     <string name="topbar_forget_config">Zasady zapominania</string>
     <string name="topbar_check_config">Sprawdź integralność</string>
@@ -20,6 +21,7 @@
     <string name="topbar_restore_snapshot">Przywróć migawkę</string>
     <string name="cd_back">Wstecz</string>
     <string name="cd_forget_snapshot">Zapomnij migawkę</string>
+    <string name="action_run_now">Uruchom teraz</string>
     <string name="fab_run_tasks">Uruchom zadania</string>
     <string name="fab_add_schedule">Dodaj harmonogram</string>
     <string name="fab_restore">Przywróć</string>
@@ -32,21 +34,76 @@
     <string name="run_tasks_phase_summary">%1$s:\n%2$s</string>
     <string name="backup_types_title">Typy backupu</string>
     <string name="backup_type_apk">APK</string>
+    <string name="backup_type_apk_desc">Plik pakietu aplikacji</string>
     <string name="backup_type_data">Dane</string>
+    <string name="backup_type_data_desc">Wewnętrzne dane aplikacji (/data/user/&lt;id&gt;)</string>
     <string name="backup_type_device_protected_data">Dane chronione urządzenia</string>
+    <string name="backup_type_device_protected_data_desc">Dane dostępne przed odblokowaniem urządzenia (/data/user_de/&lt;id&gt;)</string>
     <string name="backup_type_external_data">Dane zewnętrzne</string>
+    <string name="backup_type_external_data_desc">Dane aplikacji w pamięci zewnętrznej (/storage/emulated/&lt;id&gt;/Android/data)</string>
     <string name="backup_type_obb_data">Dane OBB</string>
+    <string name="backup_type_obb_data_desc">Pliki zasobów (obb) (/storage/emulated/&lt;id&gt;/Android/obb)</string>
     <string name="backup_type_media_data">Dane multimedialne</string>
+    <string name="backup_type_media_data_desc">Pliki multimedialne aplikacji (/storage/emulated/&lt;id&gt;/Android/media)</string>
+    <string name="settings_system_permission_storage">Dostęp do pamięci</string>
+    <string name="settings_system_permission_local_network">Dostęp do sieci lokalnej</string>
+    <string name="local_network_permission_enabled">Przyznano dostęp do sieci lokalnej</string>
+    <string name="backup_type_permissions">Uprawnienia</string>
+    <string name="backup_type_permissions_desc">Przyznane uprawnienia</string>
     <string name="apps_title">Aplikacje</string>
     <string name="toggle_all">Zaznacz/Odznacz wszystko</string>
+    <string name="backup_types_for_selected_apps">Typy kopii zapasowych dla wybranych aplikacji</string>
+    <string name="backup_types_none">Żadne</string>
+    <string name="backup_types_mixed">Mieszane</string>
     <string name="restore_options_title">Opcje przywracania</string>
     <string name="allow_downgrade">Zezwól na starszą wersję (downgrade)</string>
     <string name="apps_to_restore_title">Aplikacje do przywrócenia</string>
     <string name="no_app_data_found_in_snapshot">Nie znaleziono danych aplikacji w tej migawce.</string>
     <string name="restore_backup_version_with_installed">Backup: %1$s -&gt; Zainstalowano: %2$s</string>
     <string name="restore_backup_version_only">Backup: %1$s</string>
-    <string name="home_title" translatable="false">Restoid</string>
     <string name="run_tasks_applications">Aplikacje</string>
+    <string name="run_tasks_custom_directories">Niestandardowe pliki i foldery</string>
+    <string name="run_tasks_custom_directories_subtitle_none">Nie wybrano plików ani folderów</string>
+    <string name="run_tasks_custom_directories_subtitle_count">%1$d katalogów wybranych</string>
+    <string name="run_tasks_custom_directories_subtitle_with_exclusions">%1$d paths selected, %2$d excluded</string>
+    <string name="action_add_directory">Dodaj plik lub folder</string>
+    <string name="action_add_excluded_directory">Exclude File or Folder</string>
+    <string name="folder_browser_select_this_folder">Wybierz tę ścieżkę</string>
+    <string name="folder_browser_show_hidden">Pokaż ukryte foldery</string>
+    <string name="folder_browser_show_hidden_items">Pokaż ukryte pliki i foldery</string>
+    <string name="folder_browser_cannot_list">Nie można wyświetlić zawartości tego folderu.</string>
+    <string name="folder_browser_empty">Brak podfolderów.</string>
+    <string name="folder_browser_empty_items">Brak plików lub folderów.</string>
+    <string name="folder_browser_up">W górę do folderu nadrzędnego</string>
+    <string name="folder_browser_roots_title">Lokalizacje przechowywania</string>
+    <string name="folder_browser_internal_storage">Pamięć wewnętrzna</string>
+    <string name="folder_browser_system_root">Katalog główny systemu (/)</string>
+    <string name="folder_browser_external_storage">Pamięć zewnętrzna (%1$s)</string>
+    <string name="folder_browser_edit_path">Wpisz ścieżkę ręcznie</string>
+    <string name="folder_browser_new_folder">Nowy folder</string>
+    <string name="folder_browser_new_folder_name">Nazwa folderu</string>
+    <string name="folder_browser_create_failed">Nie udało się utworzyć folderu.</string>
+    <string name="action_create">Utwórz</string>
+    <string name="action_go">Przejdź</string>
+    <string name="title_custom_directories">Własne Foldery</string>
+    <string name="custom_directories_description">Wybierz pliki lub foldery na urządzeniu, które mają zostać uwzględnione w kopii zapasowej.</string>
+    <string name="custom_directories_long_press_hint">Dotknij i przytrzymaj element, aby otworzyć menu i go usunąć.</string>
+    <string name="custom_directories_typed_path_label">Ścieżka do pliku lub folderu</string>
+    <string name="custom_directories_typed_path_hint">np. /storage/emulated/0/Download lub /system/build.prop</string>
+    <string name="custom_directories_typed_path_invalid">Wprowadź prawidłową ścieżkę bezwzględną do folderu.</string>
+    <string name="custom_directories_typed_path_not_found">Folder nie istnieje: %1$s</string>
+    <string name="custom_directory_not_found">Nie znaleziono niestandardowego katalogu: %1$s</string>
+    <string name="custom_directories_already_added">Ten katalog znajduje się już na liście.</string>
+    <string name="custom_directories_unresolvable">Nie udało się rozpoznać niestandardowego katalogu: %1$s</string>
+    <string name="custom_directories_section_include">Include</string>
+    <string name="custom_directories_section_exclude">Exclude</string>
+    <string name="custom_directories_exclude_description">Select subdirectories or files to exclude from the backup.</string>
+    <string name="action_exclude_subfolder">Exclude subfolder…</string>
+    <string name="warning_exclusion_conflict_header">Some exclusions may exclude files from app backups:</string>
+    <string name="warning_exclusion_conflict_show_more">Show %1$d more…</string>
+    <string name="warning_exclusion_conflict_show_less">Show less</string>
+    <string name="error_all_files_access_required">Dostęp do wszystkich plików jest wymagany do utworzenia kopii zapasowej niestandardowych katalogów.</string>
+    <string name="summary_all_files_access_required">Przyznaj dostęp do wszystkich plików, a następnie spróbuj ponownie.</string>
     <string name="run_tasks_backup_subtitle">Wybrano %1$d aplikacji - %2$s</string>
     <string name="run_tasks_forget_snapshots">Zapomnij migawki</string>
     <string name="run_tasks_forget_subtitle">Zachowaj ostatnie %1$d, dzienne %2$d, tygodniowe %3$d, miesięczne %4$d</string>
@@ -66,6 +123,7 @@
     <string name="dialog_discard_changes_message">Masz niezapisane zmiany. Czy na pewno chcesz je odrzucić?</string>
     <string name="action_discard">Odrzuć</string>
     <string name="error_with_message">Błąd: %1$s</string>
+    <string name="error_cannot_backup_repo_to_itself">Cannot add the repository itself as a custom directory to backup.</string>
     <string name="no_snapshots_found_for_repository">Nie znaleziono migawek dla wybranego repozytorium.</string>
     <plurals name="snapshots_count">
         <item quantity="one">Migawka (%1$d)</item>
@@ -89,8 +147,52 @@
         <item quantity="many">Aplikacjе (%1$d):</item>
         <item quantity="other">Aplikacjе (%1$d):</item>
     </plurals>
+    <plurals name="backed_up_items_count">
+        <item quantity="one">Zarchiwizowano (%1$d):</item>
+        <item quantity="few">Utworzono kopii (%1$d):</item>
+        <item quantity="many">Utworzono kopię zapasową (%1$d):</item>
+        <item quantity="other">Utworzono kopię zapasową (%1$d):</item>
+    </plurals>
+    <plurals name="custom_directories_count">
+        <item quantity="one">Katalog niestandardowy (%1$d):</item>
+        <item quantity="few">Katalogi niestandardowe (%1$d):</item>
+        <item quantity="many">Katalogi niestandardowe (%1$d):</item>
+        <item quantity="other">Katalogi niestandardowe (%1$d):</item>
+    </plurals>
     <string name="no_app_info_for_snapshot">Brak informacji o aplikacjach w tej migawce.</string>
     <string name="metadata_missing_or_corrupted">Metadane są niedostępne lub uszkodzone.</string>
+    <string name="metadata_restore_success">Metadane zostały pomyślnie przywrócone.</string>
+    <string name="time_just_now">teraz</string>
+    <plurals name="time_mins_ago">
+        <item quantity="one">%d minutę temu</item>
+        <item quantity="few">%d minuty temu</item>
+        <item quantity="many">%d minut temu</item>
+        <item quantity="other">%d minut temu</item>
+    </plurals>
+    <plurals name="time_hours_ago">
+        <item quantity="one">%d godzinę temu</item>
+        <item quantity="few">%d godziny temu</item>
+        <item quantity="many">%d godzin temu</item>
+        <item quantity="other">%d godzin temu</item>
+    </plurals>
+    <plurals name="time_days_ago">
+        <item quantity="one">%d dzień temu</item>
+        <item quantity="few">%d dni temu</item>
+        <item quantity="many">%d dni temu</item>
+        <item quantity="other">%d dni temu</item>
+    </plurals>
+    <plurals name="time_months_ago">
+        <item quantity="one">%d miesiąc temu</item>
+        <item quantity="few">%d miesiące temu</item>
+        <item quantity="many">%d miesięcy temu</item>
+        <item quantity="other">%d miesięcy temu</item>
+    </plurals>
+    <plurals name="time_years_ago">
+        <item quantity="one">%d rok temu</item>
+        <item quantity="few">%d lata temu</item>
+        <item quantity="many">%d lat temu</item>
+        <item quantity="other">%d lat temu</item>
+    </plurals>
     <string name="maintenance_task_unlock_repository">Odblokuj repozytorium</string>
     <string name="maintenance_task_prune_repository">Oczyść repozytorium</string>
     <string name="maintenance_keep_last">Zachowaj ostatnie</string>
@@ -104,6 +206,12 @@
         <item quantity="many">Zabezpieczonе aplikacjе (%1$d)</item>
         <item quantity="other">Zabezpieczonе aplikacjе (%1$d)</item>
     </plurals>
+    <plurals name="snapshot_backed_up_custom_directories_count">
+        <item quantity="one">Zarchiwizowany katalog niestandardowy (%1$d)</item>
+        <item quantity="few">Zarchiwizowane katalogi niestandardowe (%1$d)</item>
+        <item quantity="many">Kopie zapasowe katalogów niestandardowych (%1$d)</item>
+        <item quantity="other">Kopie zapasowe katalogów niestandardowych (%1$d)</item>
+    </plurals>
     <string name="snapshot_not_found">Nie znaleziono migawki.</string>
     <string name="snapshot_forgetting">Zapominanie migawki…</string>
     <string name="snapshot_id">ID: %1$s</string>
@@ -113,6 +221,7 @@
     <string name="dialog_forget_snapshot_message">To usunie wpis migawki. Faktyczne dane zostaną usunięte dopiero po uruchomieniu oczyszczania (prune). Jesteś pewien?</string>
     <string name="label_password">Hasło</string>
     <string name="label_repository_password">Hasło do repozytorium</string>
+    <string name="repository_password_explanation">Wymagane do szyfrowania i przywracania tego repozytorium Restic. Różne od danych logowania SFTP. Przechowuj je w bezpiecznym miejscu: jeśli je zgubisz, nie będziesz w stanie przywrócić swoich kopii zapasowych.</string>
     <string name="label_rest_username">Nazwa użytkownika REST</string>
     <string name="label_rest_password">Hasło REST</string>
     <string name="label_s3_access_key_id">ID klucza dostępu S3</string>
@@ -127,6 +236,7 @@
     <string name="action_done">Gotowe</string>
     <string name="action_add">Dodaj</string>
     <string name="action_delete">Usuń</string>
+    <string name="action_restore_metadata">Przywróć metadane</string>
     <string name="action_change">Zmień</string>
     <string name="action_save">Zapisz</string>
     <string name="action_grant">Przyznaj</string>
@@ -134,6 +244,10 @@
     <string name="action_forget">Zapomnij</string>
     <string name="action_try_again">Spróbuj ponownie</string>
     <string name="action_disable">Wyłącz</string>
+    <string name="action_enable">Włacz</string>
+    <string name="usage_stats_permission_enabled">Przyznano dostęp do użycia aplikacji</string>
+    <string name="usage_stats_permission_disabled">Wymagany dostęp do użycia aplikacji</string>
+    <string name="usage_stats_permission_description">Umożliwia szybsze obliczanie rozmiaru aplikacji podczas tworzenia kopii zapasowych zamiast skanowania katalogów</string>
     <string name="progress_initializing">Inicjowanie…</string>
     <string name="progress_stopping">Zatrzymywanie…</string>
     <string name="progress_operation_complete">%1$s Zakończono</string>
@@ -144,7 +258,6 @@
     <string name="progress_items">Elementy</string>
     <string name="progress_size">Rozmiar</string>
     <string name="progress_processing">Przetwarzanie:</string>
-    <string name="progress_placeholder" translatable="false">...</string>
     <string name="dialog_add_repository_title">Dodaj repozytorium</string>
     <string name="label_repository_type">Typ repozytorium</string>
     <string name="label_repository_specification">Specyfikacja repozytorium</string>
@@ -154,7 +267,6 @@
     <string name="label_sftp_password">Hasło SFTP</string>
     <string name="label_sftp_ssh_key">Klucz SSH</string>
     <string name="label_sftp_private_key">Klucz prywatny SSH SFTP</string>
-    <string name="placeholder_sftp_private_key" translatable="false">-----BEGIN OPENSSH PRIVATE KEY-----\n...</string>
     <string name="label_sftp_key_passphrase">Hasło klucza SSH</string>
     <string name="label_sftp_key_passphrase_optional">Hasło klucza SSH (opcjonalne)</string>
     <string name="dialog_sftp_trust_title">Zaufaj serwerowi SFTP</string>
@@ -163,9 +275,15 @@
     <string name="repo_backend_local">Lokalny katalog</string>
     <string name="repo_backend_sftp">SFTP (SSH)</string>
     <string name="repo_backend_rest">Serwer HTTP REST</string>
-    <string name="repo_backend_s3" translatable="false">Amazon S3 / MinIO</string>
-    <string name="repo_hint_rest" translatable="false">http://host:8000/</string>
-    <string name="repo_hint_s3" translatable="false">s3.us-east-1.amazonaws.com/bucket_name</string>
+    <string name="label_sftp_host">Host</string>
+    <string name="label_sftp_port">Port</string>
+    <string name="label_sftp_username">Nazwa użytkownika</string>
+    <string name="label_sftp_repository_path">Ścieżka do repozytorium</string>
+    <string name="repo_supporting_sftp_path">Bezwzględna (/srv/restic-repo) lub względna względem katalogu domowego (restic-repo)</string>
+    <string name="error_sftp_host_empty">Host nie może być pusty</string>
+    <string name="error_sftp_username_empty">Nazwa użytkownika nie może być pusta</string>
+    <string name="error_sftp_path_empty">Ścieżka do repozytorium nie może być pusta</string>
+    <string name="error_sftp_port_invalid">Port musi być liczbą z zakresu od 1 do 65535</string>
     <string name="label_path">Ścieżka</string>
     <string name="placeholder_select_directory">Wybierz katalog…</string>
     <string name="cd_select_folder">Wybierz folder</string>
@@ -180,6 +298,9 @@
     <string name="root_access_denied">Brak dostępu do roota</string>
     <string name="checking_for_root">Sprawdzanie roota…</string>
     <string name="root_access_granted">Dostęp do roota przyznany</string>
+    <string name="storage_permission_enabled">Przyznano dostęp do wszystkich plików</string>
+    <string name="storage_permission_disabled">Wymagany dostęp do wszystkich plików</string>
+    <string name="storage_permission_description">Wymagane do tworzenia kopii zapasowych własnych katalogów bez dostępu root.</string>
     <string name="dependencies_title">Zależności</string>
     <string name="about_title">O aplikacji</string>
     <string name="version_label">Wersja</string>
@@ -235,9 +356,18 @@
     <string name="backup_stage_preparing">[%1$d/%2$d] Przygotowywanie backupu...</string>
     <string name="backup_stage_running">[%1$d/%2$d] Tworzenie kopii zapasowej…</string>
     <string name="backup_stage_finalizing">[%1$d/%2$d] Zakańczanie backupu…</string>
+    <string name="backup_error_no_files_selected_for_items">Nie znaleziono plików do zarchiwizowania dla wybranych elementów.</string>
     <string name="backup_error_command_failed_with_code">Polecenie restic zakończyło się błędem z kodem %1$d.</string>
     <string name="backup_warning_metadata_not_saved">Ostrzeżenie: Nie udało się lokalnie zapisać pliku z metadanymi backupu.</string>
+    <plurals name="backup_summary_success_items">
+        <item quantity="one">Zarchiwizowano %1$d element.</item>
+        <item quantity="few">Zarchiwizowano %1$d elementów.</item>
+        <item quantity="many">Utworzono kopię zapasową %1$d elementów.</item>
+        <item quantity="other">Utworzono kopię zapasową %1$d elementów.</item>
+    </plurals>
     <string name="error_fatal_with_message">Wystąpił błąd krytyczny: %1$s</string>
+    <string name="error_no_items_selected">Nie wybrano żadnych elementów.</string>
+    <string name="summary_no_items_selected">Nie wybrano żadnych elementów.</string>
     <string name="error_no_backup_types_selected">Nie wybrano typów backupu.</string>
     <string name="summary_no_backup_types_selected">Żadne typy backupu nie zostały wybrane.</string>
     <string name="error_restic_not_installed">Restic nie jest zainstalowany.</string>
@@ -260,9 +390,13 @@
     <string name="restore_stage_processing_apps">Przetwarzanie aplikacji</string>
     <string name="restore_stage_cleanup">Sprzątanie</string>
     <string name="restore_error_preflight_failed">Testy przed przywracaniem nie powiodły się.</string>
+    <string name="restore_error_no_items_selected">Nie wybrano elementów do przywrócenia.</string>
+    <string name="restore_error_no_restore_types_selected">Nie wybrano typów przywracania.</string>
     <string name="restore_error_password_not_found">Nie znaleziono hasła dla repozytorium.</string>
     <string name="restore_error_no_files_found">Nie znaleziono plików w migawce dla wybranych elementów.</string>
     <string name="restore_error_command_failed">Polecenie restic restore zawiodło.</string>
+    <string name="restore_stage_processing_template_apps">[%1$d/%2$d] Przetwarzanie aplikacji</string>
+    <string name="restore_stage_processing_template_custom_directories">[%1$d/%2$d] Przetwarzanie katalogów niestandardowych</string>
     <string name="restore_failure_install_commit">%1$s: Zatwierdzenie instalacji nie powiodło się: %2$s</string>
     <string name="restore_failure_write_apk_splits">%1$s: Nie udało się zapisać podziałów APK.</string>
     <string name="restore_failure_create_install_session">%1$s: Nie udało się utworzyć sesji instalacji.</string>
@@ -270,7 +404,21 @@
     <string name="restore_failure_data_restore">%1$s: Przywracanie danych nie powiodło się lub jest niekompletne.</string>
     <string name="restore_failure_permissions_app_not_installed">%1$s: Nie udało się przywrócić uprawnień, bo aplikacja nie jest zainstalowana.</string>
     <string name="restore_failure_permissions_partial">%1$s: Nie udało się przywrócić niektórych uprawnień: %2$s</string>
+    <string name="restore_stage_processing_custom_directories">Przetwarzanie katalogów niestandardowych…</string>
+    <string name="restore_failure_custom_directory">Nie udało się przywrócić katalogu niestandardowego %1$s</string>
     <string name="restore_summary_finished_in">Przywracanie zakończone w %1$s.</string>
+    <plurals name="restore_summary_processed_items">
+        <item quantity="one">Pomyślnie przetworzono %1$d element.</item>
+        <item quantity="few">Pomyślnie przetworzono %1$d elementów.</item>
+        <item quantity="many">Pomyślnie przetworzono %1$d elementów.</item>
+        <item quantity="other">Pomyślnie przetworzono %1$d elementów.</item>
+    </plurals>
+    <plurals name="restore_summary_failed_items">
+        <item quantity="one">Nie udało się przywrócić %1$d elementu.</item>
+        <item quantity="few">Nie udało się przywrócić %1$d elementów.</item>
+        <item quantity="many">Nie udało się przywrócić %1$d elementów.</item>
+        <item quantity="other">Nie udało się przywrócić %1$d elementów.</item>
+    </plurals>
     <string name="restore_summary_details">\n\nSzczegóły:\n- %1$s</string>
     <string name="maintenance_task_unlock">Odblokuj</string>
     <string name="maintenance_task_forget">Zapomnij</string>
@@ -313,6 +461,10 @@
     <string name="channel_completed_operations">Zakończone operacje</string>
     <string name="channel_ongoing_description">Pokazuje postęp backupu i przywracania bez pikania.</string>
     <string name="channel_completed_description">Wysyła powiadomienie, gdy operacja się zakończy.</string>
+    <string name="channel_successful_operations">Successful Operations</string>
+    <string name="channel_successful_description">Alerts when a backup or restore has finished successfully.</string>
+    <string name="channel_failed_operations">Failed Operations</string>
+    <string name="channel_failed_description">Alerts when a backup or restore operation fails or encounters errors.</string>
     <plurals name="notification_files_progress">
         <item quantity="one">%1$d/%2$d plik</item>
         <item quantity="few">%1$d/%2$d pliki</item>
@@ -326,6 +478,12 @@
     <string name="operation_interrupted">Operacja została przerwana.</string>
     <string name="dialog_stop_operation_title">Zatrzymać operację?</string>
     <string name="dialog_stop_operation_message">Czy na pewno chcesz zatrzymać obecną operację? Wszystkie niezakończone akcje zostaną przerwane.</string>
+    <string name="home_operation_running_title">%1$s – trwa przetwarzanie</string>
+    <string name="home_operation_running_default_title">Trwa operacja</string>
+    <string name="home_operation_running_tap_hint">Dotknij, aby zobaczyć postęp</string>
+    <string name="action_force_stop">Wymuś zatrzymanie</string>
+    <string name="dialog_force_stop_operation_title">Wymusić zatrzymanie operacji?</string>
+    <string name="dialog_force_stop_operation_message">Czy chcesz wymusić zatrzymanie bieżącej operacji? Wszelkie niedokończone zadania zostaną anulowane, a stan operacji zresetowany.</string>
     <string name="repo_error_exists">Repozytorium już istnieje.</string>
     <string name="repo_error_binary_not_ready">Restic nie jest gotowy do działania.</string>
     <string name="repo_error_invalid_password_or_corrupted">Nieprawidłowe hasło lub repozytorium jest uszkodzone.</string>
@@ -399,189 +557,47 @@
     <string name="preset_1_month">1m</string>
     <string name="license_unknown_author">Nieznany</string>
     <string name="license_unknown_name">Nieznana Licencja</string>
-    <string name="license_restoid_author" translatable="false">hddq</string>
-    <string name="license_restoid_name" translatable="false">GPL-3.0</string>
-    <string name="license_restoid_url" translatable="false">https://github.com/hddq/restoid/blob/master/LICENSE</string>
-    <string name="license_restic_name" translatable="false">Restic</string>
-    <string name="license_restic_author" translatable="false">Alexander Neumann</string>
-    <string name="license_restic_license" translatable="false">BSD-2-Clause</string>
-    <string name="license_restic_url" translatable="false">https://github.com/restic/restic/blob/master/LICENSE</string>
     <string name="license_url_label">URL Licencji: %1$s</string>
     <string name="license_project_website_label">Strona projektu: %1$s</string>
     <string name="license_no_link_available">Brak dostępnego linku</string>
     <string name="license_tap_to_expand">… (dotknij, by rozwinąć)</string>
     <string name="cd_open_link">Otwórz link</string>
     <string name="cd_copy_license">Skopiuj licencję</string>
-    <string name="time_just_now">teraz</string>
-    <plurals name="time_mins_ago">
-        <item quantity="one">%d minutę temu</item>
-        <item quantity="few">%d minuty temu</item>
-        <item quantity="many">%d minut temu</item>
-        <item quantity="other">%d minut temu</item>
-    </plurals>
-    <plurals name="time_hours_ago">
-        <item quantity="one">%d godzinę temu</item>
-        <item quantity="few">%d godziny temu</item>
-        <item quantity="many">%d godzin temu</item>
-        <item quantity="other">%d godzin temu</item>
-    </plurals>
-    <plurals name="time_days_ago">
-        <item quantity="one">%d dzień temu</item>
-        <item quantity="few">%d dni temu</item>
-        <item quantity="many">%d dni temu</item>
-        <item quantity="other">%d dni temu</item>
-    </plurals>
-    <plurals name="time_months_ago">
-        <item quantity="one">%d miesiąc temu</item>
-        <item quantity="few">%d miesiące temu</item>
-        <item quantity="many">%d miesięcy temu</item>
-        <item quantity="other">%d miesięcy temu</item>
-    </plurals>
-    <plurals name="time_years_ago">
-        <item quantity="one">%d rok temu</item>
-        <item quantity="few">%d lata temu</item>
-        <item quantity="many">%d lat temu</item>
-        <item quantity="other">%d lat temu</item>
-    </plurals>
-    <string name="backup_type_permissions">Uprawnienia</string>
-    <string name="backup_types_for_selected_apps">Typy kopii zapasowych dla wybranych aplikacji</string>
-    <string name="backup_types_none">Żadne</string>
-    <string name="backup_types_mixed">Mieszane</string>
-    <string name="restore_error_no_restore_types_selected">Nie wybrano typów przywracania.</string>
-    <string name="backup_type_apk_desc">Plik pakietu aplikacji</string>
-    <string name="backup_type_data_desc">Wewnętrzne dane aplikacji (/data/user/&lt;id&gt;)</string>
-    <string name="backup_type_device_protected_data_desc">Dane dostępne przed odblokowaniem urządzenia (/data/user_de/&lt;id&gt;)</string>
-    <string name="backup_type_external_data_desc">Dane aplikacji w pamięci zewnętrznej (/storage/emulated/&lt;id&gt;/Android/data)</string>
-    <string name="backup_type_obb_data_desc">Pliki zasobów (obb) (/storage/emulated/&lt;id&gt;/Android/obb)</string>
-    <string name="backup_type_media_data_desc">Pliki multimedialne aplikacji (/storage/emulated/&lt;id&gt;/Android/media)</string>
-    <string name="backup_type_permissions_desc">Przyznane uprawnienia</string>
-    <string name="action_enable">Włacz</string>
-    <string name="usage_stats_permission_enabled">Przyznano dostęp do użycia aplikacji</string>
-    <string name="usage_stats_permission_disabled">Wymagany dostęp do użycia aplikacji</string>
-    <string name="usage_stats_permission_description">Umożliwia szybsze obliczanie rozmiaru aplikacji podczas tworzenia kopii zapasowych zamiast skanowania katalogów</string>
-    <string name="metadata_restore_success">Metadane zostały pomyślnie przywrócone.</string>
-    <string name="action_restore_metadata">Przywróć metadane</string>
     <string name="repo_warning_metadata_restore_failed_title">Przywracanie metadanych nie powiodło się</string>
     <string name="repo_warning_metadata_restore_failed">Repozytorium zostało pomyślnie dodane, ale przywrócenie jego metadanych (harmonogramy, szczegółowe informacje o kopiach zapasowych) nie powiodło się. Zazwyczaj oznacza to, że migawka metadanych jest brakująca lub repozytorium jest zablokowane. Aby spróbować ponownie, otwórz Ustawienia → Repozytoria, dotknij menu repozytorium i wybierz „Przywróć metadane”.</string>
-    <string name="screen_tasks">Zadania</string>
-    <string name="topbar_tasks">Zadania</string>
-    <string name="run_tasks_custom_directories">Niestandardowe pliki i foldery</string>
-    <string name="run_tasks_custom_directories_subtitle_none">Nie wybrano plików ani folderów</string>
-    <string name="storage_permission_enabled">Przyznano dostęp do wszystkich plików</string>
-    <string name="storage_permission_disabled">Wymagany dostęp do wszystkich plików</string>
-    <string name="storage_permission_description">Wymagane do tworzenia kopii zapasowych własnych katalogów bez dostępu root.</string>
-    <string name="settings_system_permission_storage">Dostęp do pamięci</string>
-    <string name="settings_system_permission_local_network">Dostęp do sieci lokalnej</string>
-    <string name="local_network_permission_enabled">Przyznano dostęp do sieci lokalnej</string>
-    <plurals name="custom_directories_count">
-        <item quantity="one">Katalog niestandardowy (%1$d):</item>
-        <item quantity="few">Katalogi niestandardowe (%1$d):</item>
-        <item quantity="many">Katalogi niestandardowe (%1$d):</item>
-        <item quantity="other">Katalogi niestandardowe (%1$d):</item>
-    </plurals>
-    <plurals name="snapshot_backed_up_custom_directories_count">
-        <item quantity="one">Zarchiwizowany katalog niestandardowy (%1$d)</item>
-        <item quantity="few">Zarchiwizowane katalogi niestandardowe (%1$d)</item>
-        <item quantity="many">Kopie zapasowe katalogów niestandardowych (%1$d)</item>
-        <item quantity="other">Kopie zapasowe katalogów niestandardowych (%1$d)</item>
-    </plurals>
-    <string name="backup_error_no_files_selected_for_items">Nie znaleziono plików do zarchiwizowania dla wybranych elementów.</string>
-    <plurals name="backup_summary_success_items">
-        <item quantity="one">Zarchiwizowano %1$d element.</item>
-        <item quantity="few">Zarchiwizowano %1$d elementów.</item>
-        <item quantity="many">Utworzono kopię zapasową %1$d elementów.</item>
-        <item quantity="other">Utworzono kopię zapasową %1$d elementów.</item>
-    </plurals>
-    <string name="error_no_items_selected">Nie wybrano żadnych elementów.</string>
-    <string name="summary_no_items_selected">Nie wybrano żadnych elementów.</string>
-    <string name="restore_error_no_items_selected">Nie wybrano elementów do przywrócenia.</string>
-    <string name="restore_stage_processing_template_apps">[%1$d/%2$d] Przetwarzanie aplikacji</string>
-    <string name="restore_stage_processing_template_custom_directories">[%1$d/%2$d] Przetwarzanie katalogów niestandardowych</string>
-    <string name="restore_stage_processing_custom_directories">Przetwarzanie katalogów niestandardowych…</string>
-    <string name="restore_failure_custom_directory">Nie udało się przywrócić katalogu niestandardowego %1$s</string>
-    <plurals name="restore_summary_processed_items">
-        <item quantity="one">Pomyślnie przetworzono %1$d element.</item>
-        <item quantity="few">Pomyślnie przetworzono %1$d elementów.</item>
-        <item quantity="many">Pomyślnie przetworzono %1$d elementów.</item>
-        <item quantity="other">Pomyślnie przetworzono %1$d elementów.</item>
-    </plurals>
-    <plurals name="restore_summary_failed_items">
-        <item quantity="one">Nie udało się przywrócić %1$d elementu.</item>
-        <item quantity="few">Nie udało się przywrócić %1$d elementów.</item>
-        <item quantity="many">Nie udało się przywrócić %1$d elementów.</item>
-        <item quantity="other">Nie udało się przywrócić %1$d elementów.</item>
-    </plurals>
-    <string name="action_run_now">Uruchom teraz</string>
-    <string name="run_tasks_custom_directories_subtitle_count">%1$d katalogów wybranych</string>
-    <string name="action_add_directory">Dodaj plik lub folder</string>
-    <string name="title_custom_directories">Własne Foldery</string>
-    <plurals name="backed_up_items_count">
-        <item quantity="one">Zarchiwizowano (%1$d):</item>
-        <item quantity="few">Utworzono kopii (%1$d):</item>
-        <item quantity="many">Utworzono kopię zapasową (%1$d):</item>
-        <item quantity="other">Utworzono kopię zapasową (%1$d):</item>
-    </plurals>
-    <string name="folder_browser_select_this_folder">Wybierz tę ścieżkę</string>
-    <string name="folder_browser_show_hidden">Pokaż ukryte foldery</string>
-    <string name="folder_browser_show_hidden_items">Pokaż ukryte pliki i foldery</string>
-    <string name="dialog_force_stop_operation_message">Czy chcesz wymusić zatrzymanie bieżącej operacji? Wszelkie niedokończone zadania zostaną anulowane, a stan operacji zresetowany.</string>
-    <string name="action_create">Utwórz</string>
-    <string name="tasks_guide_unlock_title">Odblokuj repozytorium</string>
-    <string name="label_sftp_username">Nazwa użytkownika</string>
-    <string name="home_operation_running_tap_hint">Dotknij, aby zobaczyć postęp</string>
-    <string name="folder_browser_roots_title">Lokalizacje przechowywania</string>
-    <string name="folder_browser_empty_items">Brak plików lub folderów.</string>
+    <!-- Tasks & Maintenance Guide -->
     <string name="cd_help">Pomoc</string>
-    <string name="tasks_guide_files_desc">Tworzy kopie zapasowe niestandardowych plików i katalogów wybranych z pamięci urządzenia.</string>
-    <string name="repository_password_explanation">Wymagane do szyfrowania i przywracania tego repozytorium Restic. Różne od danych logowania SFTP. Przechowuj je w bezpiecznym miejscu: jeśli je zgubisz, nie będziesz w stanie przywrócić swoich kopii zapasowych.</string>
-    <string name="folder_browser_up">W górę do folderu nadrzędnego</string>
-    <string name="tasks_guide_prune_title">Oczyszczanie repozytorium</string>
-    <string name="tasks_guide_apps_title">Aplikacje</string>
-    <string name="dialog_force_stop_operation_title">Wymusić zatrzymanie operacji?</string>
-    <string name="folder_browser_edit_path">Wpisz ścieżkę ręcznie</string>
-    <string name="repo_supporting_sftp_path">Bezwzględna (/srv/restic-repo) lub względna względem katalogu domowego (restic-repo)</string>
-    <string name="custom_directories_already_added">Ten katalog znajduje się już na liście.</string>
-    <string name="tasks_guide_prune_desc">Skanuje repozytorium w poszukiwaniu bloków danych, do których nie odwołuje się już żadna pozostająca migawka, trwale je usuwa i przepakowuje pakiety, aby faktycznie odzyskać miejsce na dysku. Oczyszczanie jest zasobożerne i najlepiej uruchamiać je okresowo (np. co tydzień lub co miesiąc).</string>
-    <string name="label_sftp_host">Host</string>
-    <string name="summary_all_files_access_required">Przyznaj dostęp do wszystkich plików, a następnie spróbuj ponownie.</string>
-    <string name="folder_browser_new_folder_name">Nazwa folderu</string>
-    <string name="home_operation_running_title">%1$s – trwa przetwarzanie</string>
-    <string name="action_go">Przejdź</string>
-    <string name="action_force_stop">Wymuś zatrzymanie</string>
-    <string name="error_sftp_host_empty">Host nie może być pusty</string>
-    <string name="tasks_guide_subtitle">Dowiedz się, co robi każde zadanie kopii zapasowej i konserwacji oraz jak ze sobą współpracują.</string>
-    <string name="custom_directories_typed_path_not_found">Folder nie istnieje: %1$s</string>
-    <string name="custom_directories_typed_path_label">Ścieżka do pliku lub folderu</string>
-    <string name="folder_browser_empty">Brak podfolderów.</string>
-    <string name="tasks_guide_forget_vs_prune_desc">Wyobraź sobie Forget jako usuwanie kart katalogowych z indeksu biblioteki, a Prune jako fizyczne usuwanie niepotrzebnych książek z budynku. Najpierw uruchamiasz Forget, aby wybrać, co usunąć, a następnie Prune, aby faktycznie zwolnić miejsce w pamięci.</string>
-    <string name="custom_directories_long_press_hint">Dotknij i przytrzymaj element, aby otworzyć menu i go usunąć.</string>
-    <string name="tasks_guide_docs_button">Oficjalna dokumentacja Restic</string>
-    <string name="folder_browser_system_root">Katalog główny systemu (/)</string>
-    <string name="label_sftp_port">Port</string>
-    <string name="tasks_guide_forget_vs_prune_title">Forget a Prune: jaka jest różnica?</string>
-    <string name="tasks_guide_unlock_desc">Usuwa osierocone blokady pozostawione po nagle przerwanej poprzedniej kopii zapasowej lub zadaniu (np. zamknięciu aplikacji, restarcie urządzenia lub zerwaniu połączenia). Dzięki temu kolejne zadania mogą przebiegać bezpiecznie.</string>
-    <string name="error_sftp_path_empty">Ścieżka do repozytorium nie może być pusta</string>
-    <string name="label_sftp_repository_path">Ścieżka do repozytorium</string>
-    <string name="folder_browser_internal_storage">Pamięć wewnętrzna</string>
-    <string name="custom_directories_description">Wybierz pliki lub foldery na urządzeniu, które mają zostać uwzględnione w kopii zapasowej.</string>
-    <string name="folder_browser_cannot_list">Nie można wyświetlić zawartości tego folderu.</string>
-    <string name="error_sftp_port_invalid">Port musi być liczbą z zakresu od 1 do 65535</string>
-    <string name="custom_directories_unresolvable">Nie udało się rozpoznać niestandardowego katalogu: %1$s</string>
-    <string name="custom_directories_typed_path_hint">np. /storage/emulated/0/Download lub /system/build.prop</string>
-    <string name="error_sftp_username_empty">Nazwa użytkownika nie może być pusta</string>
-    <string name="home_operation_running_default_title">Trwa operacja</string>
-    <string name="tasks_guide_check_desc">Sprawdza strukturę i indeksy repozytorium. Domyślnie zawartość zapisanych plików nie jest odczytywana. Włącz opcję Odczytaj wszystkie dane w ustawieniach sprawdzania integralności, aby zweryfikować również pakiety danych.</string>
-    <string name="error_all_files_access_required">Dostęp do wszystkich plików jest wymagany do utworzenia kopii zapasowej niestandardowych katalogów.</string>
-    <string name="tasks_guide_forget_desc">Stosuje politykę zachowywania (np. zachowaj ostatnie N migawek dziennych, tygodniowych lub miesięcznych) i usuwa stare wpisy migawek z historii repozytorium. Uwaga: To tylko usuwa odwołania do migawek; nie usuwa jeszcze surowych bloków danych.</string>
-    <string name="folder_browser_create_failed">Nie udało się utworzyć folderu.</string>
-    <string name="folder_browser_external_storage">Pamięć zewnętrzna (%1$s)</string>
-    <string name="no_browser_available">Nie znaleziono przeglądarki do otwarcia linku. Skopiowano adres URL do schowka.</string>
-    <string name="folder_browser_new_folder">Nowy folder</string>
-    <string name="tasks_guide_apps_desc">Tworzy kopie zapasowe zainstalowanych aplikacji, w tym plików APK, danych aplikacji, danych chronionych urządzenia oraz danych pamięci zewnętrznej.</string>
     <string name="tasks_guide_title">Przewodnik po zadaniach i konserwacji</string>
-    <string name="custom_directories_typed_path_invalid">Wprowadź prawidłową ścieżkę bezwzględną do folderu.</string>
-    <string name="tasks_guide_files_title">Pliki i foldery</string>
-    <string name="tasks_guide_check_title">Sprawdź integralność</string>
-    <string name="custom_directory_not_found">Nie znaleziono niestandardowego katalogu: %1$s</string>
+    <string name="tasks_guide_subtitle">Dowiedz się, co robi każde zadanie kopii zapasowej i konserwacji oraz jak ze sobą współpracują.</string>
+    <string name="tasks_guide_unlock_title">Odblokuj repozytorium</string>
+    <string name="tasks_guide_unlock_desc">Usuwa osierocone blokady pozostawione po nagle przerwanej poprzedniej kopii zapasowej lub zadaniu (np. zamknięciu aplikacji, restarcie urządzenia lub zerwaniu połączenia). Dzięki temu kolejne zadania mogą przebiegać bezpiecznie.</string>
     <string name="tasks_guide_forget_title">Zapomnij migawki</string>
+    <string name="tasks_guide_forget_desc">Stosuje politykę zachowywania (np. zachowaj ostatnie N migawek dziennych, tygodniowych lub miesięcznych) i usuwa stare wpisy migawek z historii repozytorium. Uwaga: To tylko usuwa odwołania do migawek; nie usuwa jeszcze surowych bloków danych.</string>
+    <string name="tasks_guide_prune_title">Oczyszczanie repozytorium</string>
+    <string name="tasks_guide_prune_desc">Skanuje repozytorium w poszukiwaniu bloków danych, do których nie odwołuje się już żadna pozostająca migawka, trwale je usuwa i przepakowuje pakiety, aby faktycznie odzyskać miejsce na dysku. Oczyszczanie jest zasobożerne i najlepiej uruchamiać je okresowo (np. co tydzień lub co miesiąc).</string>
+    <string name="tasks_guide_check_title">Sprawdź integralność</string>
+    <string name="tasks_guide_check_desc">Sprawdza strukturę i indeksy repozytorium. Domyślnie zawartość zapisanych plików nie jest odczytywana. Włącz opcję Odczytaj wszystkie dane w ustawieniach sprawdzania integralności, aby zweryfikować również pakiety danych.</string>
+    <string name="tasks_guide_forget_vs_prune_title">Forget a Prune: jaka jest różnica?</string>
+    <string name="tasks_guide_forget_vs_prune_desc">Wyobraź sobie Forget jako usuwanie kart katalogowych z indeksu biblioteki, a Prune jako fizyczne usuwanie niepotrzebnych książek z budynku. Najpierw uruchamiasz Forget, aby wybrać, co usunąć, a następnie Prune, aby faktycznie zwolnić miejsce w pamięci.</string>
+    <string name="tasks_guide_apps_title">Aplikacje</string>
+    <string name="tasks_guide_apps_desc">Tworzy kopie zapasowe zainstalowanych aplikacji, w tym plików APK, danych aplikacji, danych chronionych urządzenia oraz danych pamięci zewnętrznej.</string>
+    <string name="tasks_guide_files_title">Pliki i foldery</string>
+    <string name="tasks_guide_files_desc">Tworzy kopie zapasowe niestandardowych plików i katalogów wybranych z pamięci urządzenia.</string>
+    <string name="tasks_guide_docs_button">Oficjalna dokumentacja Restic</string>
+    <string name="no_browser_available">Nie znaleziono przeglądarki do otwarcia linku. Skopiowano adres URL do schowka.</string>
+    <!-- Operation Logs -->
+    <string name="screen_operation_logs">Operation Logs</string>
+    <string name="operation_logs_empty">No operation logs yet</string>
+    <string name="operation_logs_empty_desc">Completed backup, restore, and maintenance runs will appear here.</string>
+    <string name="operation_logs_clear">Clear logs</string>
+    <string name="operation_logs_clear_confirm_title">Clear all logs?</string>
+    <string name="operation_logs_clear_confirm_desc">This will delete all stored operation log history.</string>
+    <string name="operation_logs_duration">Duration: %1$s</string>
+    <string name="operation_logs_copied">Log copied to clipboard</string>
+    <string name="operation_status_success">Success</string>
+    <string name="operation_status_failed">Failed</string>
+    <string name="action_expand">Expand</string>
+    <string name="action_collapse">Collapse</string>
+    <string name="action_copy_log">Copy Log</string>
+    <string name="action_clear">Clear</string>
 </resources>
