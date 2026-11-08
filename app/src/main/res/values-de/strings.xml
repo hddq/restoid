@@ -2,11 +2,13 @@
 <resources>
     <string name="screen_home">Start</string>
     <string name="screen_settings">Einstellungen</string>
+    <string name="screen_tasks">Aufgaben</string>
     <string name="screen_snapshot_details">Snapshot-Details</string>
     <string name="screen_restore">Wiederherstellen</string>
     <string name="screen_licenses">Lizenzen</string>
     <string name="screen_schedules">Zeitpläne</string>
     <string name="screen_operation_progress">Fortschritt</string>
+    <string name="topbar_tasks">Aufgaben</string>
     <string name="topbar_backup_config">Backup-Konfiguration</string>
     <string name="topbar_forget_config">Forget-Richtlinie</string>
     <string name="topbar_check_config">Integritätsprüfung</string>
@@ -19,6 +21,7 @@
     <string name="topbar_restore_snapshot">Snapshot wiederherstellen</string>
     <string name="cd_back">Zurück</string>
     <string name="cd_forget_snapshot">Snapshot vergessen</string>
+    <string name="action_run_now">Jetzt ausführen</string>
     <string name="fab_run_tasks">Tasks ausführen</string>
     <string name="fab_add_schedule">Zeitplan hinzufügen</string>
     <string name="fab_restore">Wiederherstellen</string>
@@ -31,21 +34,76 @@
     <string name="run_tasks_phase_summary">%1$s:\n%2$s</string>
     <string name="backup_types_title">Backup-Typen</string>
     <string name="backup_type_apk">APK</string>
+    <string name="backup_type_apk_desc">Die Anwendungspaketdatei</string>
     <string name="backup_type_data">Daten</string>
+    <string name="backup_type_data_desc">Interne App-Daten (/data/data)</string>
     <string name="backup_type_device_protected_data">Gerätegeschützte Daten</string>
+    <string name="backup_type_device_protected_data_desc">Daten zugänglich vor Geräteentsperrung (/data/user_de)</string>
     <string name="backup_type_external_data">Externe Daten</string>
+    <string name="backup_type_external_data_desc">App-Daten auf externem Speicher (/sdcard/Android/data)</string>
     <string name="backup_type_obb_data">OBB-Daten</string>
+    <string name="backup_type_obb_data_desc">Opaque Binary Blob-Dateien (/sdcard/Android/obb)</string>
     <string name="backup_type_media_data">Medien-Daten</string>
+    <string name="backup_type_media_data_desc">App-Mediendateien (/sdcard/Android/media)</string>
+    <string name="settings_system_permission_storage">Speicherzugriff</string>
+    <string name="settings_system_permission_local_network">Zugriff auf lokales Netzwerk</string>
+    <string name="local_network_permission_enabled">Zugriff auf lokales Netzwerk gewährt</string>
+    <string name="backup_type_permissions">Berechtigungen</string>
+    <string name="backup_type_permissions_desc">Erteilte Laufzeitberechtigungen</string>
     <string name="apps_title">Apps</string>
     <string name="toggle_all">Alle umschalten</string>
+    <string name="backup_types_for_selected_apps">Sicherungstypen für ausgewählte Apps</string>
+    <string name="backup_types_none">Keine</string>
+    <string name="backup_types_mixed">Gemischt</string>
     <string name="restore_options_title">Restore-Optionen</string>
     <string name="allow_downgrade">Downgrade zulassen</string>
     <string name="apps_to_restore_title">Wiederherzustellende Apps</string>
     <string name="no_app_data_found_in_snapshot">Keine App-Daten in diesem Snapshot gefunden.</string>
     <string name="restore_backup_version_with_installed">Backup: %1$s -&gt; Installiert: %2$s</string>
     <string name="restore_backup_version_only">Backup: %1$s</string>
-    <string name="home_title" translatable="false">Restoid</string>
     <string name="run_tasks_applications">Anwendungen</string>
+    <string name="run_tasks_custom_directories">Benutzerdefinierte Verzeichnisse</string>
+    <string name="run_tasks_custom_directories_subtitle_none">Keine Verzeichnisse ausgewählt</string>
+    <string name="run_tasks_custom_directories_subtitle_count">%1$d Verzeichnisse ausgewählt</string>
+    <string name="run_tasks_custom_directories_subtitle_with_exclusions">%1$d paths selected, %2$d excluded</string>
+    <string name="action_add_directory">Verzeichnis hinzufügen</string>
+    <string name="action_add_excluded_directory">Exclude File or Folder</string>
+    <string name="folder_browser_select_this_folder">Diesen Pfad auswählen</string>
+    <string name="folder_browser_show_hidden">Versteckte Ordner anzeigen</string>
+    <string name="folder_browser_show_hidden_items">Versteckte Dateien und Ordner anzeigen</string>
+    <string name="folder_browser_cannot_list">Dieser Ordner kann nicht aufgelistet werden.</string>
+    <string name="folder_browser_empty">Keine Unterordner.</string>
+    <string name="folder_browser_empty_items">Keine Dateien oder Ordner.</string>
+    <string name="folder_browser_up">Zum übergeordneten Ordner</string>
+    <string name="folder_browser_roots_title">Speicherorte</string>
+    <string name="folder_browser_internal_storage">Interner Speicher</string>
+    <string name="folder_browser_system_root">Systemstammverzeichnis (/)</string>
+    <string name="folder_browser_external_storage">Externer Speicher (%1$s)</string>
+    <string name="folder_browser_edit_path">Pfad manuell eingeben</string>
+    <string name="folder_browser_new_folder">Neuer Ordner</string>
+    <string name="folder_browser_new_folder_name">Ordnername</string>
+    <string name="folder_browser_create_failed">Ordner konnte nicht erstellt werden.</string>
+    <string name="action_create">Erstellen</string>
+    <string name="action_go">Los</string>
+    <string name="title_custom_directories">Benutzerdefinierte Verzeichnisse</string>
+    <string name="custom_directories_description">Wählen Sie benutzerdefinierte Verzeichnisse auf Ihrem Gerät aus, die in das Backup aufgenommen werden sollen.</string>
+    <string name="custom_directories_long_press_hint">Einen Eintrag gedrückt halten, um das Menü zu öffnen und ihn zu löschen.</string>
+    <string name="custom_directories_typed_path_label">Datei- oder Ordnerpfad</string>
+    <string name="custom_directories_typed_path_hint">z. B. /storage/emulated/0/Download oder /system/build.prop</string>
+    <string name="custom_directories_typed_path_invalid">Geben Sie einen gültigen absoluten Ordnerpfad ein.</string>
+    <string name="custom_directories_typed_path_not_found">Ordner existiert nicht: %1$s</string>
+    <string name="custom_directory_not_found">Benutzerdefiniertes Verzeichnis nicht gefunden: %1$s</string>
+    <string name="custom_directories_already_added">Dieses Verzeichnis ist bereits in der Liste enthalten.</string>
+    <string name="custom_directories_unresolvable">Benutzerdefiniertes Verzeichnis konnte nicht aufgelöst werden: %1$s</string>
+    <string name="custom_directories_section_include">Include</string>
+    <string name="custom_directories_section_exclude">Exclude</string>
+    <string name="custom_directories_exclude_description">Select subdirectories or files to exclude from the backup.</string>
+    <string name="action_exclude_subfolder">Exclude subfolder…</string>
+    <string name="warning_exclusion_conflict_header">Some exclusions may exclude files from app backups:</string>
+    <string name="warning_exclusion_conflict_show_more">Show %1$d more…</string>
+    <string name="warning_exclusion_conflict_show_less">Show less</string>
+    <string name="error_all_files_access_required">Der Zugriff auf alle Dateien ist erforderlich, um benutzerdefinierte Verzeichnisse zu sichern.</string>
+    <string name="summary_all_files_access_required">Gewähren Sie den Zugriff auf alle Dateien und versuchen Sie es erneut.</string>
     <string name="run_tasks_backup_subtitle">%1$d Apps ausgewählt - %2$s</string>
     <string name="run_tasks_forget_snapshots">Snapshots vergessen</string>
     <string name="run_tasks_forget_subtitle">Behalte letzte %1$d, täglich %2$d, wöchentlich %3$d, monatlich %4$d</string>
@@ -65,6 +123,7 @@
     <string name="dialog_discard_changes_message">Du hast ungespeicherte Änderungen. Willst du sie wirklich verwerfen?</string>
     <string name="action_discard">Verwerfen</string>
     <string name="error_with_message">Fehler: %1$s</string>
+    <string name="error_cannot_backup_repo_to_itself">Das Repository selbst kann nicht als benutzerdefiniertes Verzeichnis für das Backup hinzugefügt werden.</string>
     <string name="no_snapshots_found_for_repository">Keine Snapshots für das ausgewählte Repository gefunden.</string>
     <plurals name="snapshots_count">
         <item quantity="one">Snapshot (%1$d)</item>
@@ -84,8 +143,38 @@
         <item quantity="one">App (%1$d):</item>
         <item quantity="other">Apps (%1$d):</item>
     </plurals>
+    <plurals name="backed_up_items_count">
+        <item quantity="one">Gesichert (%1$d):</item>
+        <item quantity="other">Gesichert (%1$d):</item>
+    </plurals>
+    <plurals name="custom_directories_count">
+        <item quantity="one">Benutzerdefiniertes Verzeichnis (%1$d):</item>
+        <item quantity="other">Benutzerdefinierte Verzeichnisse (%1$d):</item>
+    </plurals>
     <string name="no_app_info_for_snapshot">Keine App-Infos für diesen Snapshot verfügbar.</string>
     <string name="metadata_missing_or_corrupted">Metadaten fehlen oder sind beschädigt.</string>
+    <string name="metadata_restore_success">Metadaten erfolgreich wiederhergestellt.</string>
+    <string name="time_just_now">gerade eben</string>
+    <plurals name="time_mins_ago">
+        <item quantity="one">vor %d Minute</item>
+        <item quantity="other">vor %d Minuten</item>
+    </plurals>
+    <plurals name="time_hours_ago">
+        <item quantity="one">vor %d Stunde</item>
+        <item quantity="other">vor %d Stunden</item>
+    </plurals>
+    <plurals name="time_days_ago">
+        <item quantity="one">vor %d Tag</item>
+        <item quantity="other">vor %d Tagen</item>
+    </plurals>
+    <plurals name="time_months_ago">
+        <item quantity="one">vor %d Monat</item>
+        <item quantity="other">vor %d Monaten</item>
+    </plurals>
+    <plurals name="time_years_ago">
+        <item quantity="one">vor %d Jahr</item>
+        <item quantity="other">vor %d Jahren</item>
+    </plurals>
     <string name="maintenance_task_unlock_repository">Repository entsperren</string>
     <string name="maintenance_task_prune_repository">Repository bereinigen (Prune)</string>
     <string name="maintenance_keep_last">Behalte letzte</string>
@@ -97,6 +186,10 @@
         <item quantity="one">Gesicherte App (%1$d)</item>
         <item quantity="other">Gesicherte Apps (%1$d)</item>
     </plurals>
+    <plurals name="snapshot_backed_up_custom_directories_count">
+        <item quantity="one">Gesichertes benutzerdefiniertes Verzeichnis (%1$d)</item>
+        <item quantity="other">Gesicherte benutzerdefinierte Verzeichnisse (%1$d)</item>
+    </plurals>
     <string name="snapshot_not_found">Kein Snapshot gefunden.</string>
     <string name="snapshot_forgetting">Snapshot wird vergessen…</string>
     <string name="snapshot_id">ID: %1$s</string>
@@ -106,6 +199,7 @@
     <string name="dialog_forget_snapshot_message">Dies entfernt den Snapshot-Eintrag. Die tatsächlichen Daten werden erst nach einem Prune gelöscht. Bist du sicher?</string>
     <string name="label_password">Passwort</string>
     <string name="label_repository_password">Repository-Passwort</string>
+    <string name="repository_password_explanation">Erforderlich zur Verschlüsselung und Wiederherstellung dieses Restic-Repositorys. Unterscheidet sich von Ihrem SFTP-Login. Sicher aufbewahren: Wenn Sie es verlieren, können Sie Ihre Backups nicht wiederherstellen.</string>
     <string name="label_rest_username">REST-Benutzername</string>
     <string name="label_rest_password">REST-Passwort</string>
     <string name="label_s3_access_key_id">S3 Access Key ID</string>
@@ -120,6 +214,7 @@
     <string name="action_done">Fertig</string>
     <string name="action_add">Hinzufügen</string>
     <string name="action_delete">Löschen</string>
+    <string name="action_restore_metadata">Metadaten wiederherstellen</string>
     <string name="action_change">Ändern</string>
     <string name="action_save">Speichern</string>
     <string name="action_grant">Gewähren</string>
@@ -127,6 +222,10 @@
     <string name="action_forget">Vergessen</string>
     <string name="action_try_again">Erneut versuchen</string>
     <string name="action_disable">Deaktivieren</string>
+    <string name="action_enable">Aktivieren</string>
+    <string name="usage_stats_permission_enabled">App-Nutzungszugriff gewährt</string>
+    <string name="usage_stats_permission_disabled">Zugriff auf App-Nutzungsdaten erforderlich</string>
+    <string name="usage_stats_permission_description">Ermöglicht eine schnellere Berechnung der App-Größe bei Backups statt des Durchsuchens von Verzeichnissen</string>
     <string name="progress_initializing">Initialisiere…</string>
     <string name="progress_stopping">Stoppe…</string>
     <string name="progress_operation_complete">%1$s abgeschlossen</string>
@@ -137,7 +236,6 @@
     <string name="progress_items">Elemente</string>
     <string name="progress_size">Größe</string>
     <string name="progress_processing">Verarbeite:</string>
-    <string name="progress_placeholder" translatable="false">...</string>
     <string name="dialog_add_repository_title">Repository hinzufügen</string>
     <string name="label_repository_type">Repository-Typ</string>
     <string name="label_repository_specification">Repository-Spezifikation</string>
@@ -147,7 +245,6 @@
     <string name="label_sftp_password">SFTP-Passwort</string>
     <string name="label_sftp_ssh_key">SSH-Key</string>
     <string name="label_sftp_private_key">SFTP SSH Private Key</string>
-    <string name="placeholder_sftp_private_key" translatable="false">-----BEGIN OPENSSH PRIVATE KEY-----\n...</string>
     <string name="label_sftp_key_passphrase">SSH-Key Passphrase</string>
     <string name="label_sftp_key_passphrase_optional">SSH-Key Passphrase (optional)</string>
     <string name="dialog_sftp_trust_title">SFTP-Server vertrauen</string>
@@ -156,9 +253,15 @@
     <string name="repo_backend_local">Lokales Verzeichnis</string>
     <string name="repo_backend_sftp">SFTP (SSH)</string>
     <string name="repo_backend_rest">HTTP REST Server</string>
-    <string name="repo_backend_s3" translatable="false">Amazon S3 / MinIO</string>
-    <string name="repo_hint_rest" translatable="false">http://host:8000/</string>
-    <string name="repo_hint_s3" translatable="false">s3.us-east-1.amazonaws.com/bucket_name</string>
+    <string name="label_sftp_host">Host</string>
+    <string name="label_sftp_port">Port</string>
+    <string name="label_sftp_username">Benutzername</string>
+    <string name="label_sftp_repository_path">Repository-Pfad</string>
+    <string name="repo_supporting_sftp_path">Absolut (/srv/restic-repo) oder relativ zu Ihrem Home-Verzeichnis (restic-repo)</string>
+    <string name="error_sftp_host_empty">Host darf nicht leer sein</string>
+    <string name="error_sftp_username_empty">Benutzername darf nicht leer sein</string>
+    <string name="error_sftp_path_empty">Repository-Pfad darf nicht leer sein</string>
+    <string name="error_sftp_port_invalid">Port muss eine Zahl zwischen 1 und 65535 sein</string>
     <string name="label_path">Pfad</string>
     <string name="placeholder_select_directory">Wähle ein Verzeichnis…</string>
     <string name="cd_select_folder">Ordner auswählen</string>
@@ -173,6 +276,9 @@
     <string name="root_access_denied">Root-Zugriff verweigert</string>
     <string name="checking_for_root">Prüfe auf Root…</string>
     <string name="root_access_granted">Root-Zugriff gewährt</string>
+    <string name="storage_permission_enabled">Zugriff auf alle Dateien gewährt</string>
+    <string name="storage_permission_disabled">Zugriff auf alle Dateien erforderlich</string>
+    <string name="storage_permission_description">Erforderlich für die Sicherung benutzerdefinierter Verzeichnisse ohne Root-Zugriff.</string>
     <string name="dependencies_title">Abhängigkeiten</string>
     <string name="about_title">Über</string>
     <string name="version_label">Version</string>
@@ -228,9 +334,16 @@
     <string name="backup_stage_preparing">[%1$d/%2$d] Bereite Backup vor...</string>
     <string name="backup_stage_running">[%1$d/%2$d] Sichern der Elemente läuft…</string>
     <string name="backup_stage_finalizing">[%1$d/%2$d] Schließe Backup ab…</string>
+    <string name="backup_error_no_files_selected_for_items">Für die ausgewählten Elemente wurden keine Dateien zum Sichern gefunden.</string>
     <string name="backup_error_command_failed_with_code">Restic-Befehl mit Exit-Code %1$d fehlgeschlagen.</string>
     <string name="backup_warning_metadata_not_saved">Warnung: Backup-Metadaten-Datei konnte nicht lokal gespeichert werden.</string>
+    <plurals name="backup_summary_success_items">
+        <item quantity="one">%1$d Element gesichert.</item>
+        <item quantity="other">%1$d Elemente gesichert.</item>
+    </plurals>
     <string name="error_fatal_with_message">Ein fataler Fehler ist aufgetreten: %1$s</string>
+    <string name="error_no_items_selected">Keine Elemente ausgewählt.</string>
+    <string name="summary_no_items_selected">Es wurden keine Elemente ausgewählt.</string>
     <string name="error_no_backup_types_selected">Keine Backup-Typen ausgewählt.</string>
     <string name="summary_no_backup_types_selected">Es wurden keine Backup-Typen ausgewählt.</string>
     <string name="error_restic_not_installed">Restic ist nicht installiert.</string>
@@ -253,9 +366,13 @@
     <string name="restore_stage_processing_apps">Verarbeite Apps</string>
     <string name="restore_stage_cleanup">Aufräumen</string>
     <string name="restore_error_preflight_failed">Vorabprüfungen für Restore fehlgeschlagen.</string>
+    <string name="restore_error_no_items_selected">Keine Elemente zur Wiederherstellung ausgewählt.</string>
+    <string name="restore_error_no_restore_types_selected">Keine Wiederherstellungstypen ausgewählt.</string>
     <string name="restore_error_password_not_found">Passwort für Repository nicht gefunden.</string>
     <string name="restore_error_no_files_found">Für die ausgewählten Elemente wurden im Snapshot keine Dateien gefunden.</string>
     <string name="restore_error_command_failed">Restic-Restore-Befehl fehlgeschlagen.</string>
+    <string name="restore_stage_processing_template_apps">[%1$d/%2$d] Verarbeite Apps</string>
+    <string name="restore_stage_processing_template_custom_directories">[%1$d/%2$d] Verarbeite benutzerdefinierte Verzeichnisse</string>
     <string name="restore_failure_install_commit">%1$s: Install Commit fehlgeschlagen: %2$s</string>
     <string name="restore_failure_write_apk_splits">%1$s: Schreiben der APK-Splits fehlgeschlagen.</string>
     <string name="restore_failure_create_install_session">%1$s: Konnte Installations-Session nicht erstellen.</string>
@@ -263,7 +380,17 @@
     <string name="restore_failure_data_restore">%1$s: Daten-Restore fehlgeschlagen oder unvollständig.</string>
     <string name="restore_failure_permissions_app_not_installed">%1$s: Berechtigungen konnten nicht wiederhergestellt werden, da die App nicht installiert ist.</string>
     <string name="restore_failure_permissions_partial">%1$s: Einige Berechtigungen konnten nicht wiederhergestellt werden: %2$s</string>
+    <string name="restore_stage_processing_custom_directories">Verarbeite benutzerdefinierte Verzeichnisse…</string>
+    <string name="restore_failure_custom_directory">Wiederherstellung des benutzerdefinierten Verzeichnisses fehlgeschlagen: %1$s</string>
     <string name="restore_summary_finished_in">Restore abgeschlossen in %1$s.</string>
+    <plurals name="restore_summary_processed_items">
+        <item quantity="one">%1$d Element erfolgreich verarbeitet.</item>
+        <item quantity="other">%1$d Elemente erfolgreich verarbeitet.</item>
+    </plurals>
+    <plurals name="restore_summary_failed_items">
+        <item quantity="one">Wiederherstellung von %1$d Element fehlgeschlagen.</item>
+        <item quantity="other">Wiederherstellung von %1$d Elementen fehlgeschlagen.</item>
+    </plurals>
     <string name="restore_summary_details">\n\nDetails:\n- %1$s</string>
     <string name="maintenance_task_unlock">Entsperren</string>
     <string name="maintenance_task_forget">Vergessen</string>
@@ -306,6 +433,10 @@
     <string name="channel_completed_operations">Abgeschlossene Vorgänge</string>
     <string name="channel_ongoing_description">Zeigt still den Fortschritt von laufenden Backups und Restores an.</string>
     <string name="channel_completed_description">Alarmiert, wenn ein Backup oder Restore abgeschlossen ist.</string>
+    <string name="channel_successful_operations">Successful Operations</string>
+    <string name="channel_successful_description">Alerts when a backup or restore has finished successfully.</string>
+    <string name="channel_failed_operations">Failed Operations</string>
+    <string name="channel_failed_description">Alerts when a backup or restore operation fails or encounters errors.</string>
     <plurals name="notification_files_progress">
         <item quantity="one">%1$d/%2$d Datei</item>
         <item quantity="other">%1$d/%2$d Dateien</item>
@@ -317,6 +448,12 @@
     <string name="operation_interrupted">Vorgang wurde unterbrochen.</string>
     <string name="dialog_stop_operation_title">Vorgang stoppen?</string>
     <string name="dialog_stop_operation_message">Möchtest du den aktuellen Vorgang stoppen? Alle unfertigen Arbeiten werden abgebrochen.</string>
+    <string name="home_operation_running_title">%1$s wird ausgeführt</string>
+    <string name="home_operation_running_default_title">Vorgang wird ausgeführt</string>
+    <string name="home_operation_running_tap_hint">Tippen, um den Fortschritt anzuzeigen</string>
+    <string name="action_force_stop">Zwangsweise beenden</string>
+    <string name="dialog_force_stop_operation_title">Vorgang zwangsweise beenden?</string>
+    <string name="dialog_force_stop_operation_message">Möchten Sie den aktuellen Vorgang zwangsweise beenden? Alle nicht abgeschlossenen Arbeiten werden abgebrochen und der Vorgangsstatus zurückgesetzt.</string>
     <string name="repo_error_exists">Repository existiert bereits.</string>
     <string name="repo_error_binary_not_ready">Restic-Binary nicht bereit.</string>
     <string name="repo_error_invalid_password_or_corrupted">Ungültiges Passwort oder beschädigtes Repository.</string>
@@ -390,136 +527,41 @@
     <string name="license_tap_to_expand">… (tippen zum Erweitern)</string>
     <string name="cd_open_link">Link öffnen</string>
     <string name="cd_copy_license">Lizenz kopieren</string>
-    <string name="time_just_now">gerade eben</string>
-    <plurals name="time_mins_ago">
-        <item quantity="one">vor %d Minute</item>
-        <item quantity="other">vor %d Minuten</item>
-    </plurals>
-    <plurals name="time_hours_ago">
-        <item quantity="one">vor %d Stunde</item>
-        <item quantity="other">vor %d Stunden</item>
-    </plurals>
-    <plurals name="time_days_ago">
-        <item quantity="one">vor %d Tag</item>
-        <item quantity="other">vor %d Tagen</item>
-    </plurals>
-    <plurals name="time_months_ago">
-        <item quantity="one">vor %d Monat</item>
-        <item quantity="other">vor %d Monaten</item>
-    </plurals>
-    <plurals name="time_years_ago">
-        <item quantity="one">vor %d Jahr</item>
-        <item quantity="other">vor %d Jahren</item>
-    </plurals>
-    <string name="backup_type_permissions">Berechtigungen</string>
-    <string name="backup_types_for_selected_apps">Sicherungstypen für ausgewählte Apps</string>
-    <string name="backup_types_none">Keine</string>
-    <string name="backup_types_mixed">Gemischt</string>
-    <string name="restore_error_no_restore_types_selected">Keine Wiederherstellungstypen ausgewählt.</string>
-    <string name="backup_type_apk_desc">Die Anwendungspaketdatei</string>
-    <string name="backup_type_data_desc">Interne App-Daten (/data/data)</string>
-    <string name="backup_type_device_protected_data_desc">Daten zugänglich vor Geräteentsperrung (/data/user_de)</string>
-    <string name="backup_type_external_data_desc">App-Daten auf externem Speicher (/sdcard/Android/data)</string>
-    <string name="backup_type_obb_data_desc">Opaque Binary Blob-Dateien (/sdcard/Android/obb)</string>
-    <string name="backup_type_media_data_desc">App-Mediendateien (/sdcard/Android/media)</string>
-    <string name="backup_type_permissions_desc">Erteilte Laufzeitberechtigungen</string>
-    <string name="action_enable">Aktivieren</string>
-    <string name="usage_stats_permission_enabled">App-Nutzungszugriff gewährt</string>
-    <string name="usage_stats_permission_disabled">Zugriff auf App-Nutzungsdaten erforderlich</string>
-    <string name="usage_stats_permission_description">Ermöglicht eine schnellere Berechnung der App-Größe bei Backups statt des Durchsuchens von Verzeichnissen</string>
-    <string name="metadata_restore_success">Metadaten erfolgreich wiederhergestellt.</string>
-    <string name="action_restore_metadata">Metadaten wiederherstellen</string>
     <string name="repo_warning_metadata_restore_failed_title">Wiederherstellung der Metadaten fehlgeschlagen</string>
     <string name="repo_warning_metadata_restore_failed">Das Repository wurde erfolgreich hinzugefügt, aber die Wiederherstellung der Metadaten (Zeitpläne, detaillierte Backup-Infos) schlug fehl. Dies bedeutet normalerweise, dass der Metadaten-Snapshot fehlt oder das Repository gesperrt ist. Um es erneut zu versuchen, öffnen Sie Einstellungen → Repositories, tippen Sie auf das Repository-Menü und wählen Sie „Metadaten wiederherstellen“.</string>
-    <string name="screen_tasks">Aufgaben</string>
-    <string name="topbar_tasks">Aufgaben</string>
-    <string name="run_tasks_custom_directories">Benutzerdefinierte Verzeichnisse</string>
-    <string name="run_tasks_custom_directories_subtitle_none">Keine Verzeichnisse ausgewählt</string>
-    <string name="run_tasks_custom_directories_subtitle_count">%1$d Verzeichnisse ausgewählt</string>
-    <string name="action_add_directory">Verzeichnis hinzufügen</string>
-    <string name="title_custom_directories">Benutzerdefinierte Verzeichnisse</string>
-    <string name="custom_directories_description">Wählen Sie benutzerdefinierte Verzeichnisse auf Ihrem Gerät aus, die in das Backup aufgenommen werden sollen.</string>
-    <string name="error_cannot_backup_repo_to_itself">Das Repository selbst kann nicht als benutzerdefiniertes Verzeichnis für das Backup hinzugefügt werden.</string>
-    <plurals name="backed_up_items_count">
-        <item quantity="one">Gesichert (%1$d):</item>
-        <item quantity="other">Gesichert (%1$d):</item>
-    </plurals>
-    <plurals name="custom_directories_count">
-        <item quantity="one">Benutzerdefiniertes Verzeichnis (%1$d):</item>
-        <item quantity="other">Benutzerdefinierte Verzeichnisse (%1$d):</item>
-    </plurals>
-    <plurals name="snapshot_backed_up_custom_directories_count">
-        <item quantity="one">Gesichertes benutzerdefiniertes Verzeichnis (%1$d)</item>
-        <item quantity="other">Gesicherte benutzerdefinierte Verzeichnisse (%1$d)</item>
-    </plurals>
-    <string name="backup_error_no_files_selected_for_items">Für die ausgewählten Elemente wurden keine Dateien zum Sichern gefunden.</string>
-    <plurals name="backup_summary_success_items">
-        <item quantity="one">%1$d Element gesichert.</item>
-        <item quantity="other">%1$d Elemente gesichert.</item>
-    </plurals>
-    <string name="error_no_items_selected">Keine Elemente ausgewählt.</string>
-    <string name="summary_no_items_selected">Es wurden keine Elemente ausgewählt.</string>
-    <string name="restore_error_no_items_selected">Keine Elemente zur Wiederherstellung ausgewählt.</string>
-    <string name="restore_stage_processing_template_apps">[%1$d/%2$d] Verarbeite Apps</string>
-    <string name="restore_stage_processing_template_custom_directories">[%1$d/%2$d] Verarbeite benutzerdefinierte Verzeichnisse</string>
-    <string name="restore_stage_processing_custom_directories">Verarbeite benutzerdefinierte Verzeichnisse…</string>
-    <string name="restore_failure_custom_directory">Wiederherstellung des benutzerdefinierten Verzeichnisses fehlgeschlagen: %1$s</string>
-    <plurals name="restore_summary_processed_items">
-        <item quantity="one">%1$d Element erfolgreich verarbeitet.</item>
-        <item quantity="other">%1$d Elemente erfolgreich verarbeitet.</item>
-    </plurals>
-    <plurals name="restore_summary_failed_items">
-        <item quantity="one">Wiederherstellung von %1$d Element fehlgeschlagen.</item>
-        <item quantity="other">Wiederherstellung von %1$d Elementen fehlgeschlagen.</item>
-    </plurals>
-    <string name="action_run_now">Jetzt ausführen</string>
-    <string name="storage_permission_enabled">Zugriff auf alle Dateien gewährt</string>
-    <string name="storage_permission_disabled">Zugriff auf alle Dateien erforderlich</string>
-    <string name="storage_permission_description">Erforderlich für die Sicherung benutzerdefinierter Verzeichnisse ohne Root-Zugriff.</string>
-    <string name="settings_system_permission_storage">Speicherzugriff</string>
-    <string name="settings_system_permission_local_network">Zugriff auf lokales Netzwerk</string>
-    <string name="local_network_permission_enabled">Zugriff auf lokales Netzwerk gewährt</string>
-    <string name="home_operation_running_title">%1$s wird ausgeführt</string>
-    <string name="home_operation_running_default_title">Vorgang wird ausgeführt</string>
-    <string name="home_operation_running_tap_hint">Tippen, um den Fortschritt anzuzeigen</string>
-    <string name="action_force_stop">Zwangsweise beenden</string>
-    <string name="dialog_force_stop_operation_title">Vorgang zwangsweise beenden?</string>
-    <string name="dialog_force_stop_operation_message">Möchten Sie den aktuellen Vorgang zwangsweise beenden? Alle nicht abgeschlossenen Arbeiten werden abgebrochen und der Vorgangsstatus zurückgesetzt.</string>
-    <string name="action_create">Erstellen</string>
-    <string name="label_sftp_username">Benutzername</string>
-    <string name="folder_browser_roots_title">Speicherorte</string>
-    <string name="folder_browser_empty_items">Keine Dateien oder Ordner.</string>
-    <string name="repository_password_explanation">Erforderlich zur Verschlüsselung und Wiederherstellung dieses Restic-Repositorys. Unterscheidet sich von Ihrem SFTP-Login. Sicher aufbewahren: Wenn Sie es verlieren, können Sie Ihre Backups nicht wiederherstellen.</string>
-    <string name="folder_browser_up">Zum übergeordneten Ordner</string>
-    <string name="folder_browser_edit_path">Pfad manuell eingeben</string>
-    <string name="repo_supporting_sftp_path">Absolut (/srv/restic-repo) oder relativ zu Ihrem Home-Verzeichnis (restic-repo)</string>
-    <string name="custom_directories_already_added">Dieses Verzeichnis ist bereits in der Liste enthalten.</string>
-    <string name="label_sftp_host">Host</string>
-    <string name="summary_all_files_access_required">Gewähren Sie den Zugriff auf alle Dateien und versuchen Sie es erneut.</string>
-    <string name="folder_browser_new_folder_name">Ordnername</string>
-    <string name="action_go">Los</string>
-    <string name="error_sftp_host_empty">Host darf nicht leer sein</string>
-    <string name="custom_directories_typed_path_not_found">Ordner existiert nicht: %1$s</string>
-    <string name="custom_directories_typed_path_label">Datei- oder Ordnerpfad</string>
-    <string name="folder_browser_empty">Keine Unterordner.</string>
-    <string name="custom_directories_long_press_hint">Einen Eintrag gedrückt halten, um das Menü zu öffnen und ihn zu löschen.</string>
-    <string name="folder_browser_system_root">Systemstammverzeichnis (/)</string>
-    <string name="label_sftp_port">Port</string>
-    <string name="folder_browser_select_this_folder">Diesen Pfad auswählen</string>
-    <string name="folder_browser_show_hidden_items">Versteckte Dateien und Ordner anzeigen</string>
-    <string name="folder_browser_show_hidden">Versteckte Ordner anzeigen</string>
-    <string name="error_sftp_path_empty">Repository-Pfad darf nicht leer sein</string>
-    <string name="label_sftp_repository_path">Repository-Pfad</string>
-    <string name="folder_browser_internal_storage">Interner Speicher</string>
-    <string name="folder_browser_cannot_list">Dieser Ordner kann nicht aufgelistet werden.</string>
-    <string name="error_sftp_port_invalid">Port muss eine Zahl zwischen 1 und 65535 sein</string>
-    <string name="custom_directories_unresolvable">Benutzerdefiniertes Verzeichnis konnte nicht aufgelöst werden: %1$s</string>
-    <string name="custom_directories_typed_path_hint">z. B. /storage/emulated/0/Download oder /system/build.prop</string>
-    <string name="error_sftp_username_empty">Benutzername darf nicht leer sein</string>
-    <string name="error_all_files_access_required">Der Zugriff auf alle Dateien ist erforderlich, um benutzerdefinierte Verzeichnisse zu sichern.</string>
-    <string name="folder_browser_create_failed">Ordner konnte nicht erstellt werden.</string>
-    <string name="folder_browser_external_storage">Externer Speicher (%1$s)</string>
-    <string name="folder_browser_new_folder">Neuer Ordner</string>
-    <string name="custom_directories_typed_path_invalid">Geben Sie einen gültigen absoluten Ordnerpfad ein.</string>
-    <string name="custom_directory_not_found">Benutzerdefiniertes Verzeichnis nicht gefunden: %1$s</string>
+    <!-- Tasks & Maintenance Guide -->
+    <string name="cd_help">Help</string>
+    <string name="tasks_guide_title">Tasks &amp; Maintenance Guide</string>
+    <string name="tasks_guide_subtitle">Learn what each backup and maintenance task does and how they work together.</string>
+    <string name="tasks_guide_unlock_title">Repository entsperren</string>
+    <string name="tasks_guide_unlock_desc">Removes stale locks left behind when a previous backup or task was unexpectedly interrupted (e.g. app closed, device restarted, or connection dropped). This allows future tasks to proceed safely.</string>
+    <string name="tasks_guide_forget_title">Forget snapshots</string>
+    <string name="tasks_guide_forget_desc">Applies your retention policy (e.g. keep last N daily, weekly, or monthly snapshots) and removes old snapshot records from repository history. Note: This only dereferences the snapshots; it does not delete raw data chunks yet.</string>
+    <string name="tasks_guide_prune_title">Repository bereinigen (Prune)</string>
+    <string name="tasks_guide_prune_desc">Scans the repository for data chunks no longer referenced by any remaining snapshot, permanently deletes them, and repacks packs to actually reclaim disk space. Prune is resource-intensive and is best run periodically (e.g. weekly or monthly).</string>
+    <string name="tasks_guide_check_title">Check integrity</string>
+    <string name="tasks_guide_check_desc">Checks repository structure and indexes. By default, stored file contents are not read. Enable Read all data in the Check Integrity settings to also verify the data packs.</string>
+    <string name="tasks_guide_forget_vs_prune_title">Forget vs. Prune: What is the difference?</string>
+    <string name="tasks_guide_forget_vs_prune_desc">Think of Forget as removing catalog cards from a library index, and Prune as actually removing the unneeded books from the building. You run Forget first to choose what to delete, and Prune afterward to actually free up storage space.</string>
+    <string name="tasks_guide_apps_title">Anwendungen</string>
+    <string name="tasks_guide_apps_desc">Backs up installed apps, including APKs, app data, device-protected data, and external storage data.</string>
+    <string name="tasks_guide_files_title">Files &amp; Folders</string>
+    <string name="tasks_guide_files_desc">Backs up custom files and directories selected from device storage.</string>
+    <string name="tasks_guide_docs_button">Official Restic Documentation</string>
+    <string name="no_browser_available">No browser found to open link. URL copied to clipboard.</string>
+    <!-- Operation Logs -->
+    <string name="screen_operation_logs">Operation Logs</string>
+    <string name="operation_logs_empty">No operation logs yet</string>
+    <string name="operation_logs_empty_desc">Completed backup, restore, and maintenance runs will appear here.</string>
+    <string name="operation_logs_clear">Clear logs</string>
+    <string name="operation_logs_clear_confirm_title">Clear all logs?</string>
+    <string name="operation_logs_clear_confirm_desc">This will delete all stored operation log history.</string>
+    <string name="operation_logs_duration">Duration: %1$s</string>
+    <string name="operation_logs_copied">Log copied to clipboard</string>
+    <string name="operation_status_success">Success</string>
+    <string name="operation_status_failed">Failed</string>
+    <string name="action_expand">Expand</string>
+    <string name="action_collapse">Collapse</string>
+    <string name="action_copy_log">Copy Log</string>
+    <string name="action_clear">Clear</string>
 </resources>
