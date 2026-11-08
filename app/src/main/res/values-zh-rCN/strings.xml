@@ -2,11 +2,13 @@
 <resources>
     <string name="screen_home">主页</string>
     <string name="screen_settings">设置</string>
+    <string name="screen_tasks">任务</string>
     <string name="screen_snapshot_details">快照详情</string>
     <string name="screen_restore">恢复</string>
     <string name="screen_licenses">许可证</string>
     <string name="screen_schedules">定时任务</string>
     <string name="screen_operation_progress">操作进度</string>
+    <string name="topbar_tasks">任务</string>
     <string name="topbar_backup_config">备份配置</string>
     <string name="topbar_forget_config">移除策略</string>
     <string name="topbar_check_config">完整性检查</string>
@@ -19,6 +21,7 @@
     <string name="topbar_restore_snapshot">恢复快照</string>
     <string name="cd_back">返回</string>
     <string name="cd_forget_snapshot">移除快照</string>
+    <string name="action_run_now">立即运行</string>
     <string name="fab_run_tasks">运行任务</string>
     <string name="fab_add_schedule">添加定时任务</string>
     <string name="fab_restore">恢复</string>
@@ -31,21 +34,76 @@
     <string name="run_tasks_phase_summary">%1$s:\n%2$s</string>
     <string name="backup_types_title">备份类型</string>
     <string name="backup_type_apk">APK</string>
+    <string name="backup_type_apk_desc">应用程序安装包文件</string>
     <string name="backup_type_data">数据</string>
+    <string name="backup_type_data_desc">内部应用数据 (/data/user/&lt;id&gt;)</string>
     <string name="backup_type_device_protected_data">设备保护数据</string>
+    <string name="backup_type_device_protected_data_desc">设备解锁前可访问的数据 (/data/user_de/&lt;id&gt;)</string>
     <string name="backup_type_external_data">外部数据</string>
+    <string name="backup_type_external_data_desc">外部存储上的应用数据 (/storage/emulated/&lt;id&gt;/Android/data)</string>
     <string name="backup_type_obb_data">OBB 数据</string>
+    <string name="backup_type_obb_data_desc">不透明二进制大对象文件 (/storage/emulated/&lt;id&gt;/Android/obb)</string>
     <string name="backup_type_media_data">媒体数据</string>
+    <string name="backup_type_media_data_desc">应用媒体文件 (/storage/emulated/&lt;id&gt;/Android/media)</string>
+    <string name="settings_system_permission_storage">存储访问权限</string>
+    <string name="settings_system_permission_local_network">本地网络访问权限</string>
+    <string name="local_network_permission_enabled">已获得本地网络访问权限</string>
+    <string name="backup_type_permissions">权限</string>
+    <string name="backup_type_permissions_desc">已授予的运行时权限</string>
     <string name="apps_title">应用</string>
     <string name="toggle_all">全选/反选</string>
+    <string name="backup_types_for_selected_apps">所选应用的备份类型</string>
+    <string name="backup_types_none">无</string>
+    <string name="backup_types_mixed">混合</string>
     <string name="restore_options_title">恢复选项</string>
     <string name="allow_downgrade">允许降级</string>
     <string name="apps_to_restore_title">待恢复应用</string>
     <string name="no_app_data_found_in_snapshot">此快照中未找到应用数据。</string>
     <string name="restore_backup_version_with_installed">备份: %1$s -&gt; 已安装: %2$s</string>
     <string name="restore_backup_version_only">备份: %1$s</string>
-    <string name="home_title" translatable="false">Restoid</string>
     <string name="run_tasks_applications">应用程序</string>
+    <string name="run_tasks_custom_directories">自定义目录</string>
+    <string name="run_tasks_custom_directories_subtitle_none">未选择目录</string>
+    <string name="run_tasks_custom_directories_subtitle_count">%1$d 个目录已选择</string>
+    <string name="run_tasks_custom_directories_subtitle_with_exclusions">%1$d paths selected, %2$d excluded</string>
+    <string name="action_add_directory">添加目录</string>
+    <string name="action_add_excluded_directory">Exclude File or Folder</string>
+    <string name="folder_browser_select_this_folder">选择此路径</string>
+    <string name="folder_browser_show_hidden">显示隐藏文件夹</string>
+    <string name="folder_browser_show_hidden_items">显示隐藏文件和文件夹</string>
+    <string name="folder_browser_cannot_list">无法列出此文件夹的内容。</string>
+    <string name="folder_browser_empty">无子文件夹。</string>
+    <string name="folder_browser_empty_items">无文件或文件夹。</string>
+    <string name="folder_browser_up">返回上级文件夹</string>
+    <string name="folder_browser_roots_title">存储位置</string>
+    <string name="folder_browser_internal_storage">内部存储</string>
+    <string name="folder_browser_system_root">系统根目录 (/)</string>
+    <string name="folder_browser_external_storage">外部存储 (%1$s)</string>
+    <string name="folder_browser_edit_path">手动输入路径</string>
+    <string name="folder_browser_new_folder">新建文件夹</string>
+    <string name="folder_browser_new_folder_name">文件夹名称</string>
+    <string name="folder_browser_create_failed">无法创建文件夹。</string>
+    <string name="action_create">创建</string>
+    <string name="action_go">前往</string>
+    <string name="title_custom_directories">自定义目录</string>
+    <string name="custom_directories_description">选择设备上的自定义目录以包含在备份中。</string>
+    <string name="custom_directories_long_press_hint">长按条目可打开菜单并其删除。</string>
+    <string name="custom_directories_typed_path_label">文件或文件夹路径</string>
+    <string name="custom_directories_typed_path_hint">例如 /storage/emulated/0/Download 或 /system/build.prop</string>
+    <string name="custom_directories_typed_path_invalid">请输入有效的绝对文件夹路径。</string>
+    <string name="custom_directories_typed_path_not_found">文件夹不存在：%1$s</string>
+    <string name="custom_directory_not_found">未找到自定义目录：%1$s</string>
+    <string name="custom_directories_already_added">该目录已在列表中。</string>
+    <string name="custom_directories_unresolvable">无法解析自定义目录：%1$s</string>
+    <string name="custom_directories_section_include">Include</string>
+    <string name="custom_directories_section_exclude">Exclude</string>
+    <string name="custom_directories_exclude_description">Select subdirectories or files to exclude from the backup.</string>
+    <string name="action_exclude_subfolder">Exclude subfolder…</string>
+    <string name="warning_exclusion_conflict_header">Some exclusions may exclude files from app backups:</string>
+    <string name="warning_exclusion_conflict_show_more">Show %1$d more…</string>
+    <string name="warning_exclusion_conflict_show_less">Show less</string>
+    <string name="error_all_files_access_required">备份自定义目录需要所有文件访问权限。</string>
+    <string name="summary_all_files_access_required">授于“所有文件访问权限”，然后重试。</string>
     <string name="run_tasks_backup_subtitle">已选择 %1$d 个应用 - %2$s</string>
     <string name="run_tasks_forget_snapshots">移除快照</string>
     <string name="run_tasks_forget_subtitle">保留最新 %1$d，每天 %2$d，每周 %3$d，每月 %4$d</string>
@@ -65,6 +123,7 @@
     <string name="dialog_discard_changes_message">你有未保存的更改。确定要放弃吗？</string>
     <string name="action_discard">放弃</string>
     <string name="error_with_message">错误: %1$s</string>
+    <string name="error_cannot_backup_repo_to_itself">无法将备份仓库本身添加为自定义备份目录。</string>
     <string name="no_snapshots_found_for_repository">所选存储库中未找到快照。</string>
     <plurals name="snapshots_count">
         <item quantity="other">快照 (%1$d)</item>
@@ -82,8 +141,31 @@
     <plurals name="apps_count">
         <item quantity="other">应用 (%1$d):</item>
     </plurals>
+    <plurals name="backed_up_items_count">
+        <item quantity="other">已备份 (%1$d):</item>
+    </plurals>
+    <plurals name="custom_directories_count">
+        <item quantity="other">自定义目录 (%1$d):</item>
+    </plurals>
     <string name="no_app_info_for_snapshot">此快照没有可用的应用信息。</string>
     <string name="metadata_missing_or_corrupted">元数据丢失或损坏。</string>
+    <string name="metadata_restore_success">元数据恢复成功。</string>
+    <string name="time_just_now">刚刚</string>
+    <plurals name="time_mins_ago">
+        <item quantity="other">%d 分钟前</item>
+    </plurals>
+    <plurals name="time_hours_ago">
+        <item quantity="other">%d 小时前</item>
+    </plurals>
+    <plurals name="time_days_ago">
+        <item quantity="other">%d 天前</item>
+    </plurals>
+    <plurals name="time_months_ago">
+        <item quantity="other">%d 个月前</item>
+    </plurals>
+    <plurals name="time_years_ago">
+        <item quantity="other">%d 年前</item>
+    </plurals>
     <string name="maintenance_task_unlock_repository">解锁存储库</string>
     <string name="maintenance_task_prune_repository">清理存储库 (Prune)</string>
     <string name="maintenance_keep_last">保留最新</string>
@@ -94,6 +176,9 @@
     <plurals name="snapshot_backed_up_apps_count">
         <item quantity="other">已备份应用 (%1$d)</item>
     </plurals>
+    <plurals name="snapshot_backed_up_custom_directories_count">
+        <item quantity="other">已备份的自定义目录 (%1$d)</item>
+    </plurals>
     <string name="snapshot_not_found">未找到快照。</string>
     <string name="snapshot_forgetting">正在移除快照…</string>
     <string name="snapshot_id">ID: %1$s</string>
@@ -103,6 +188,7 @@
     <string name="dialog_forget_snapshot_message">这会移除该快照记录。实际数据只有在运行清理 (Prune) 后才会被删除。确定继续？</string>
     <string name="label_password">密码</string>
     <string name="label_repository_password">存储库密码</string>
+    <string name="repository_password_explanation">加密和还原此 Restic 仓库所必需。不同于您的 SFTP 登录密码。请妥善保管：一旦丢失，您将无法还原备份。</string>
     <string name="label_rest_username">REST 用户名</string>
     <string name="label_rest_password">REST 密码</string>
     <string name="label_s3_access_key_id">S3 Access Key ID</string>
@@ -117,6 +203,7 @@
     <string name="action_done">完成</string>
     <string name="action_add">添加</string>
     <string name="action_delete">删除</string>
+    <string name="action_restore_metadata">恢复元数据</string>
     <string name="action_change">更改</string>
     <string name="action_save">保存</string>
     <string name="action_grant">授权</string>
@@ -124,6 +211,10 @@
     <string name="action_forget">移除</string>
     <string name="action_try_again">重试</string>
     <string name="action_disable">禁用</string>
+    <string name="action_enable">启用</string>
+    <string name="usage_stats_permission_enabled">已授予应用使用情况访问权限</string>
+    <string name="usage_stats_permission_disabled">需要应用使用情况访问权限</string>
+    <string name="usage_stats_permission_description">启用后，在备份过程中无需扫描目录，即可更快地计算应用大小</string>
     <string name="progress_initializing">初始化…</string>
     <string name="progress_stopping">正在停止…</string>
     <string name="progress_operation_complete">%1$s 完成</string>
@@ -134,7 +225,6 @@
     <string name="progress_items">项目</string>
     <string name="progress_size">大小</string>
     <string name="progress_processing">正在处理:</string>
-    <string name="progress_placeholder" translatable="false">...</string>
     <string name="dialog_add_repository_title">添加存储库</string>
     <string name="label_repository_type">存储库类型</string>
     <string name="label_repository_specification">存储库规范</string>
@@ -144,7 +234,6 @@
     <string name="label_sftp_password">SFTP 密码</string>
     <string name="label_sftp_ssh_key">SSH 密钥</string>
     <string name="label_sftp_private_key">SFTP SSH 私钥</string>
-    <string name="placeholder_sftp_private_key" translatable="false">-----BEGIN OPENSSH PRIVATE KEY-----\n...</string>
     <string name="label_sftp_key_passphrase">SSH 密钥密码短语 (Passphrase)</string>
     <string name="label_sftp_key_passphrase_optional">SSH 密钥密码短语 (可选)</string>
     <string name="dialog_sftp_trust_title">信任 SFTP 服务器</string>
@@ -153,9 +242,15 @@
     <string name="repo_backend_local">本地目录</string>
     <string name="repo_backend_sftp">SFTP (SSH)</string>
     <string name="repo_backend_rest">HTTP REST 服务器</string>
-    <string name="repo_backend_s3" translatable="false">Amazon S3 / MinIO</string>
-    <string name="repo_hint_rest" translatable="false">http://host:8000/</string>
-    <string name="repo_hint_s3" translatable="false">s3.us-east-1.amazonaws.com/bucket_name</string>
+    <string name="label_sftp_host">主机</string>
+    <string name="label_sftp_port">端口</string>
+    <string name="label_sftp_username">用户名</string>
+    <string name="label_sftp_repository_path">仓库路径</string>
+    <string name="repo_supporting_sftp_path">绝对路径 (/srv/restic-repo) 或相对于您的家目录 (restic-repo)</string>
+    <string name="error_sftp_host_empty">主机不能为空</string>
+    <string name="error_sftp_username_empty">用户名不能为空</string>
+    <string name="error_sftp_path_empty">仓库路径不能为空</string>
+    <string name="error_sftp_port_invalid">端口必须是 1 到 65535 之间的数字</string>
     <string name="label_path">路径</string>
     <string name="placeholder_select_directory">选择一个目录…</string>
     <string name="cd_select_folder">选择文件夹</string>
@@ -170,6 +265,9 @@
     <string name="root_access_denied">Root 权限被拒绝</string>
     <string name="checking_for_root">正在检查 Root 权限…</string>
     <string name="root_access_granted">已授予 Root 权限</string>
+    <string name="storage_permission_enabled">已获得所有文件访问权限</string>
+    <string name="storage_permission_disabled">需要所有文件访问权限</string>
+    <string name="storage_permission_description">在无 Root 权限下备份自定义目录所必需。</string>
     <string name="dependencies_title">依赖项</string>
     <string name="about_title">关于</string>
     <string name="version_label">版本</string>
@@ -225,9 +323,15 @@
     <string name="backup_stage_preparing">[%1$d/%2$d] 正在准备备份...</string>
     <string name="backup_stage_running">[%1$d/%2$d] 正在备份应用…</string>
     <string name="backup_stage_finalizing">[%1$d/%2$d] 正在完成备份…</string>
+    <string name="backup_error_no_files_selected_for_items">未找到所选项对应的备份文件。</string>
     <string name="backup_error_command_failed_with_code">Restic 命令失败，退出代码 %1$d。</string>
     <string name="backup_warning_metadata_not_saved">警告: 无法在本地保存备份元数据文件。</string>
+    <plurals name="backup_summary_success_items">
+        <item quantity="other">已备份 %1$d 个项目。</item>
+    </plurals>
     <string name="error_fatal_with_message">发生致命错误: %1$s</string>
+    <string name="error_no_items_selected">未选择项目。</string>
+    <string name="summary_no_items_selected">未选择任何项目。</string>
     <string name="error_no_backup_types_selected">未选择任何备份类型。</string>
     <string name="summary_no_backup_types_selected">没有备份类型被选择。</string>
     <string name="error_restic_not_installed">未安装 Restic。</string>
@@ -250,9 +354,13 @@
     <string name="restore_stage_processing_apps">处理应用</string>
     <string name="restore_stage_cleanup">清理</string>
     <string name="restore_error_preflight_failed">恢复前检查失败。</string>
+    <string name="restore_error_no_items_selected">未选择要恢复的项目。</string>
+    <string name="restore_error_no_restore_types_selected">未选择还原类型。</string>
     <string name="restore_error_password_not_found">找不到存储库的密码。</string>
     <string name="restore_error_no_files_found">在快照中未找到所选应用的文件。</string>
     <string name="restore_error_command_failed">Restic 恢复命令失败。</string>
+    <string name="restore_stage_processing_template_apps">[%1$d/%2$d] 正在处理应用</string>
+    <string name="restore_stage_processing_template_custom_directories">[%1$d/%2$d] 正在处理自定义目录</string>
     <string name="restore_failure_install_commit">%1$s: 安装提交失败: %2$s</string>
     <string name="restore_failure_write_apk_splits">%1$s: 写入 APK 拆分包失败。</string>
     <string name="restore_failure_create_install_session">%1$s: 创建安装会话失败。</string>
@@ -260,7 +368,15 @@
     <string name="restore_failure_data_restore">%1$s: 数据恢复失败或不完整。</string>
     <string name="restore_failure_permissions_app_not_installed">%1$s: 恢复权限失败，因为应用未安装。</string>
     <string name="restore_failure_permissions_partial">%1$s: 部分权限恢复失败: %2$s</string>
+    <string name="restore_stage_processing_custom_directories">正在处理自定义目录…</string>
+    <string name="restore_failure_custom_directory">无法恢复自定义目录 %1$s</string>
     <string name="restore_summary_finished_in">恢复完成，用时 %1$s。</string>
+    <plurals name="restore_summary_processed_items">
+        <item quantity="other">成功处理 %1$d 个项目。</item>
+    </plurals>
+    <plurals name="restore_summary_failed_items">
+        <item quantity="other">还原 %1$d 个项目失败。</item>
+    </plurals>
     <string name="restore_summary_details">\n\n详情:\n- %1$s</string>
     <string name="maintenance_task_unlock">解锁</string>
     <string name="maintenance_task_forget">移除</string>
@@ -303,6 +419,10 @@
     <string name="channel_completed_operations">已完成的操作</string>
     <string name="channel_ongoing_description">静默显示正在进行的备份和恢复进度。</string>
     <string name="channel_completed_description">在备份或恢复完成时发出警报。</string>
+    <string name="channel_successful_operations">Successful Operations</string>
+    <string name="channel_successful_description">Alerts when a backup or restore has finished successfully.</string>
+    <string name="channel_failed_operations">Failed Operations</string>
+    <string name="channel_failed_description">Alerts when a backup or restore operation fails or encounters errors.</string>
     <plurals name="notification_files_progress">
         <item quantity="other">%1$d/%2$d 个文件</item>
     </plurals>
@@ -313,6 +433,12 @@
     <string name="operation_interrupted">操作被中断。</string>
     <string name="dialog_stop_operation_title">停止操作？</string>
     <string name="dialog_stop_operation_message">你想停止当前操作吗？任何未完成的工作都将被取消。</string>
+    <string name="home_operation_running_title">%1$s正在进行</string>
+    <string name="home_operation_running_default_title">正在进行操作</string>
+    <string name="home_operation_running_tap_hint">点击查看进度</string>
+    <string name="action_force_stop">强行停止</string>
+    <string name="dialog_force_stop_operation_title">强行停止操作？</string>
+    <string name="dialog_force_stop_operation_message">是否要强行停止当前操作？任何未完成的工作将被取消，且操作状态将被重置。</string>
     <string name="repo_error_exists">存储库已存在。</string>
     <string name="repo_error_binary_not_ready">Restic 二进制文件未准备就绪。</string>
     <string name="repo_error_invalid_password_or_corrupted">密码无效或存储库损坏。</string>
@@ -383,144 +509,41 @@
     <string name="license_tap_to_expand">… (点击展开)</string>
     <string name="cd_open_link">打开链接</string>
     <string name="cd_copy_license">复制许可证</string>
-    <string name="time_just_now">刚刚</string>
-    <plurals name="time_mins_ago">
-        <item quantity="other">%d 分钟前</item>
-    </plurals>
-    <plurals name="time_hours_ago">
-        <item quantity="other">%d 小时前</item>
-    </plurals>
-    <plurals name="time_days_ago">
-        <item quantity="other">%d 天前</item>
-    </plurals>
-    <plurals name="time_months_ago">
-        <item quantity="other">%d 个月前</item>
-    </plurals>
-    <plurals name="time_years_ago">
-        <item quantity="other">%d 年前</item>
-    </plurals>
-    <string name="backup_type_permissions">权限</string>
-    <string name="backup_types_for_selected_apps">所选应用的备份类型</string>
-    <string name="backup_types_none">无</string>
-    <string name="backup_types_mixed">混合</string>
-    <string name="restore_error_no_restore_types_selected">未选择还原类型。</string>
-    <string name="backup_type_apk_desc">应用程序安装包文件</string>
-    <string name="backup_type_data_desc">内部应用数据 (/data/user/&lt;id&gt;)</string>
-    <string name="backup_type_device_protected_data_desc">设备解锁前可访问的数据 (/data/user_de/&lt;id&gt;)</string>
-    <string name="backup_type_external_data_desc">外部存储上的应用数据 (/storage/emulated/&lt;id&gt;/Android/data)</string>
-    <string name="backup_type_obb_data_desc">不透明二进制大对象文件 (/storage/emulated/&lt;id&gt;/Android/obb)</string>
-    <string name="backup_type_media_data_desc">应用媒体文件 (/storage/emulated/&lt;id&gt;/Android/media)</string>
-    <string name="backup_type_permissions_desc">已授予的运行时权限</string>
-    <string name="action_enable">启用</string>
-    <string name="usage_stats_permission_enabled">已授予应用使用情况访问权限</string>
-    <string name="usage_stats_permission_disabled">需要应用使用情况访问权限</string>
-    <string name="usage_stats_permission_description">启用后，在备份过程中无需扫描目录，即可更快地计算应用大小</string>
-    <string name="metadata_restore_success">元数据恢复成功。</string>
-    <string name="action_restore_metadata">恢复元数据</string>
     <string name="repo_warning_metadata_restore_failed_title">元数据恢复失败</string>
     <string name="repo_warning_metadata_restore_failed">存储库已成功添加，但恢复其元数据（计划、备份详情信息）失败。这通常意味着元数据快照缺失或存储库被锁定。如需重试，请打开“设置”→“存储库”，点击存储库菜单，然后选择“恢复元数据”。</string>
-    <string name="screen_tasks">任务</string>
-    <string name="topbar_tasks">任务</string>
-    <string name="local_network_permission_enabled">已获得本地网络访问权限</string>
-    <string name="restore_failure_custom_directory">无法恢复自定义目录 %1$s</string>
-    <plurals name="restore_summary_failed_items">
-        <item quantity="other">还原 %1$d 个项目失败。</item>
-    </plurals>
-    <plurals name="backup_summary_success_items">
-        <item quantity="other">已备份 %1$d 个项目。</item>
-    </plurals>
-    <string name="run_tasks_custom_directories">自定义目录</string>
-    <string name="storage_permission_enabled">已获得所有文件访问权限</string>
-    <plurals name="custom_directories_count">
-        <item quantity="other">自定义目录 (%1$d):</item>
-    </plurals>
-    <plurals name="backed_up_items_count">
-        <item quantity="other">已备份 (%1$d):</item>
-    </plurals>
-    <string name="restore_stage_processing_template_apps">[%1$d/%2$d] 正在处理应用</string>
-    <plurals name="restore_summary_processed_items">
-        <item quantity="other">成功处理 %1$d 个项目。</item>
-    </plurals>
-    <string name="error_no_items_selected">未选择项目。</string>
-    <string name="storage_permission_description">在无 Root 权限下备份自定义目录所必需。</string>
-    <string name="restore_error_no_items_selected">未选择要恢复的项目。</string>
-    <string name="run_tasks_custom_directories_subtitle_count">%1$d 个目录已选择</string>
-    <string name="settings_system_permission_storage">存储访问权限</string>
-    <string name="backup_error_no_files_selected_for_items">未找到所选项对应的备份文件。</string>
-    <string name="storage_permission_disabled">需要所有文件访问权限</string>
-    <string name="restore_stage_processing_template_custom_directories">[%1$d/%2$d] 正在处理自定义目录</string>
-    <string name="settings_system_permission_local_network">本地网络访问权限</string>
-    <string name="restore_stage_processing_custom_directories">正在处理自定义目录…</string>
-    <plurals name="snapshot_backed_up_custom_directories_count">
-        <item quantity="other">已备份的自定义目录 (%1$d)</item>
-    </plurals>
-    <string name="custom_directories_description">选择设备上的自定义目录以包含在备份中。</string>
-    <string name="action_add_directory">添加目录</string>
-    <string name="run_tasks_custom_directories_subtitle_none">未选择目录</string>
-    <string name="summary_no_items_selected">未选择任何项目。</string>
-    <string name="action_run_now">立即运行</string>
-    <string name="error_cannot_backup_repo_to_itself">无法将备份仓库本身添加为自定义备份目录。</string>
-    <string name="title_custom_directories">自定义目录</string>
-    <string name="dialog_force_stop_operation_message">是否要强行停止当前操作？任何未完成的工作将被取消，且操作状态将被重置。</string>
-    <string name="action_create">创建</string>
-    <string name="tasks_guide_unlock_title">解锁仓库</string>
-    <string name="label_sftp_username">用户名</string>
-    <string name="home_operation_running_tap_hint">点击查看进度</string>
-    <string name="folder_browser_roots_title">存储位置</string>
-    <string name="folder_browser_empty_items">无文件或文件夹。</string>
+    <!-- Tasks & Maintenance Guide -->
     <string name="cd_help">帮助</string>
-    <string name="tasks_guide_files_desc">备份从设备存储中选定的自定义文件和目录。</string>
-    <string name="repository_password_explanation">加密和还原此 Restic 仓库所必需。不同于您的 SFTP 登录密码。请妥善保管：一旦丢失，您将无法还原备份。</string>
-    <string name="folder_browser_up">返回上级文件夹</string>
-    <string name="tasks_guide_prune_title">整理仓库</string>
-    <string name="tasks_guide_apps_title">应用程序</string>
-    <string name="dialog_force_stop_operation_title">强行停止操作？</string>
-    <string name="folder_browser_edit_path">手动输入路径</string>
-    <string name="repo_supporting_sftp_path">绝对路径 (/srv/restic-repo) 或相对于您的家目录 (restic-repo)</string>
-    <string name="custom_directories_already_added">该目录已在列表中。</string>
-    <string name="tasks_guide_prune_desc">扫描仓库中不再被任何剩余快照引用的数据块，将其永久删除，并重新打包以真正回收磁盘空间。「整理」操作消耗资源较多，建议定期运行（例如每周或每月一次）。</string>
-    <string name="label_sftp_host">主机</string>
-    <string name="summary_all_files_access_required">授于“所有文件访问权限”，然后重试。</string>
-    <string name="folder_browser_new_folder_name">文件夹名称</string>
-    <string name="home_operation_running_title">%1$s正在进行</string>
-    <string name="action_go">前往</string>
-    <string name="action_force_stop">强行停止</string>
-    <string name="error_sftp_host_empty">主机不能为空</string>
-    <string name="tasks_guide_subtitle">了解每个备份和维护任务的作用以及它们是如何协同工作的。</string>
-    <string name="custom_directories_typed_path_not_found">文件夹不存在：%1$s</string>
-    <string name="custom_directories_typed_path_label">文件或文件夹路径</string>
-    <string name="folder_browser_empty">无子文件夹。</string>
-    <string name="tasks_guide_forget_vs_prune_desc">可以将「清理 (Forget)」想象成从图书馆索引中移除目录卡，而「Prune」则是从大楼里真正移除不需要的书籍。您需要先运行 Forget 来选择要删除的内容，随后再运行 Prune 以真正释放存储空间。</string>
-    <string name="custom_directories_long_press_hint">长按条目可打开菜单并其删除。</string>
-    <string name="tasks_guide_docs_button">Restic 官方文档</string>
-    <string name="folder_browser_system_root">系统根目录 (/)</string>
-    <string name="label_sftp_port">端口</string>
-    <string name="tasks_guide_forget_vs_prune_title">清理 (Forget) 与整理 (Prune) 有什么区别？</string>
-    <string name="folder_browser_select_this_folder">选择此路径</string>
-    <string name="folder_browser_show_hidden_items">显示隐藏文件和文件夹</string>
-    <string name="tasks_guide_unlock_desc">清除因之前的备份或任务意外中断（如应用关闭、设备重启或连接断开）而残留的陈旧锁。这允许后续任务安全进行。</string>
-    <string name="folder_browser_show_hidden">显示隐藏文件夹</string>
-    <string name="error_sftp_path_empty">仓库路径不能为空</string>
-    <string name="label_sftp_repository_path">仓库路径</string>
-    <string name="folder_browser_internal_storage">内部存储</string>
-    <string name="folder_browser_cannot_list">无法列出此文件夹的内容。</string>
-    <string name="error_sftp_port_invalid">端口必须是 1 到 65535 之间的数字</string>
-    <string name="custom_directories_unresolvable">无法解析自定义目录：%1$s</string>
-    <string name="custom_directories_typed_path_hint">例如 /storage/emulated/0/Download 或 /system/build.prop</string>
-    <string name="error_sftp_username_empty">用户名不能为空</string>
-    <string name="home_operation_running_default_title">正在进行操作</string>
-    <string name="tasks_guide_check_desc">检查仓库结构和索引。默认情况下不会读取存储的文件内容。可在「检查完整性」设置中启用「读取所有数据」以同时验证数据包。</string>
-    <string name="error_all_files_access_required">备份自定义目录需要所有文件访问权限。</string>
-    <string name="tasks_guide_forget_desc">应用您的保留策略（例如保留最近 N 个每日、每周或每月快照），并从仓库历史记录中移除旧快照记录。注意：这仅取消快照引用，暂不删除原始数据块。</string>
-    <string name="folder_browser_create_failed">无法创建文件夹。</string>
-    <string name="folder_browser_external_storage">外部存储 (%1$s)</string>
-    <string name="no_browser_available">未找到用于打开链接的浏览器。网址已复制到剪贴板。</string>
-    <string name="folder_browser_new_folder">新建文件夹</string>
-    <string name="tasks_guide_apps_desc">备份已安装的应用，包括 APK、应用数据、设备受保护数据以及外部存储数据。</string>
     <string name="tasks_guide_title">任务与维护指南</string>
-    <string name="custom_directories_typed_path_invalid">请输入有效的绝对文件夹路径。</string>
-    <string name="tasks_guide_files_title">文件与文件夹</string>
-    <string name="tasks_guide_check_title">检查完整性</string>
-    <string name="custom_directory_not_found">未找到自定义目录：%1$s</string>
+    <string name="tasks_guide_subtitle">了解每个备份和维护任务的作用以及它们是如何协同工作的。</string>
+    <string name="tasks_guide_unlock_title">解锁仓库</string>
+    <string name="tasks_guide_unlock_desc">清除因之前的备份或任务意外中断（如应用关闭、设备重启或连接断开）而残留的陈旧锁。这允许后续任务安全进行。</string>
     <string name="tasks_guide_forget_title">清理快照</string>
+    <string name="tasks_guide_forget_desc">应用您的保留策略（例如保留最近 N 个每日、每周或每月快照），并从仓库历史记录中移除旧快照记录。注意：这仅取消快照引用，暂不删除原始数据块。</string>
+    <string name="tasks_guide_prune_title">整理仓库</string>
+    <string name="tasks_guide_prune_desc">扫描仓库中不再被任何剩余快照引用的数据块，将其永久删除，并重新打包以真正回收磁盘空间。「整理」操作消耗资源较多，建议定期运行（例如每周或每月一次）。</string>
+    <string name="tasks_guide_check_title">检查完整性</string>
+    <string name="tasks_guide_check_desc">检查仓库结构和索引。默认情况下不会读取存储的文件内容。可在「检查完整性」设置中启用「读取所有数据」以同时验证数据包。</string>
+    <string name="tasks_guide_forget_vs_prune_title">清理 (Forget) 与整理 (Prune) 有什么区别？</string>
+    <string name="tasks_guide_forget_vs_prune_desc">可以将「清理 (Forget)」想象成从图书馆索引中移除目录卡，而「Prune」则是从大楼里真正移除不需要的书籍。您需要先运行 Forget 来选择要删除的内容，随后再运行 Prune 以真正释放存储空间。</string>
+    <string name="tasks_guide_apps_title">应用程序</string>
+    <string name="tasks_guide_apps_desc">备份已安装的应用，包括 APK、应用数据、设备受保护数据以及外部存储数据。</string>
+    <string name="tasks_guide_files_title">文件与文件夹</string>
+    <string name="tasks_guide_files_desc">备份从设备存储中选定的自定义文件和目录。</string>
+    <string name="tasks_guide_docs_button">Restic 官方文档</string>
+    <string name="no_browser_available">未找到用于打开链接的浏览器。网址已复制到剪贴板。</string>
+    <!-- Operation Logs -->
+    <string name="screen_operation_logs">Operation Logs</string>
+    <string name="operation_logs_empty">No operation logs yet</string>
+    <string name="operation_logs_empty_desc">Completed backup, restore, and maintenance runs will appear here.</string>
+    <string name="operation_logs_clear">Clear logs</string>
+    <string name="operation_logs_clear_confirm_title">Clear all logs?</string>
+    <string name="operation_logs_clear_confirm_desc">This will delete all stored operation log history.</string>
+    <string name="operation_logs_duration">Duration: %1$s</string>
+    <string name="operation_logs_copied">Log copied to clipboard</string>
+    <string name="operation_status_success">Success</string>
+    <string name="operation_status_failed">Failed</string>
+    <string name="action_expand">Expand</string>
+    <string name="action_collapse">Collapse</string>
+    <string name="action_copy_log">Copy Log</string>
+    <string name="action_clear">Clear</string>
 </resources>
