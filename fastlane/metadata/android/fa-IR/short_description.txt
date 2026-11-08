@@ -1,1 +1,1 @@
-ابزار پشتیبان‌گیری از برنامه‌های اندروید با دسترسی روت، مبتنی بر restic
+Android backup tool powered by restic
