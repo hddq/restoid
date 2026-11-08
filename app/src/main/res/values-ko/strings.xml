@@ -2,11 +2,13 @@
 <resources>
     <string name="screen_home">홈</string>
     <string name="screen_settings">설정</string>
+    <string name="screen_tasks">작업</string>
     <string name="screen_snapshot_details">스냅샷 상세</string>
     <string name="screen_restore">복원</string>
     <string name="screen_licenses">라이선스</string>
     <string name="screen_schedules">예약</string>
     <string name="screen_operation_progress">작업 진행률</string>
+    <string name="topbar_tasks">작업</string>
     <string name="topbar_backup_config">백업 구성</string>
     <string name="topbar_forget_config">삭제 정책 (Forget)</string>
     <string name="topbar_check_config">무결성 검사</string>
@@ -19,6 +21,7 @@
     <string name="topbar_restore_snapshot">스냅샷 복원</string>
     <string name="cd_back">뒤로</string>
     <string name="cd_forget_snapshot">스냅샷 삭제</string>
+    <string name="action_run_now">지금 실행</string>
     <string name="fab_run_tasks">작업 실행</string>
     <string name="fab_add_schedule">예약 추가</string>
     <string name="fab_restore">복원</string>
@@ -31,21 +34,76 @@
     <string name="run_tasks_phase_summary">%1$s:\n%2$s</string>
     <string name="backup_types_title">백업 유형</string>
     <string name="backup_type_apk">APK</string>
+    <string name="backup_type_apk_desc">애플리케이션 패키지 파일</string>
     <string name="backup_type_data">데이터</string>
+    <string name="backup_type_data_desc">내부 앱 데이터 (/data/user/&lt;id&gt;)</string>
     <string name="backup_type_device_protected_data">디바이스 보호 데이터</string>
+    <string name="backup_type_device_protected_data_desc">기기 잠금 해제 전 액세스 가능한 데이터 (/data/user_de/&lt;id&gt;)</string>
     <string name="backup_type_external_data">외부 데이터</string>
+    <string name="backup_type_external_data_desc">외부 저장소의 앱 데이터 (/storage/emulated/&lt;id&gt;/Android/data)</string>
     <string name="backup_type_obb_data">OBB 데이터</string>
+    <string name="backup_type_obb_data_desc">불투명 바이너리 블롭(OBB) 파일 (/storage/emulated/&lt;id&gt;/Android/obb)</string>
     <string name="backup_type_media_data">미디어 데이터</string>
+    <string name="backup_type_media_data_desc">앱 미디어 파일 (/storage/emulated/&lt;id&gt;/Android/media)</string>
+    <string name="settings_system_permission_storage">저장소 액세스</string>
+    <string name="settings_system_permission_local_network">로컬 네트워크 액세스</string>
+    <string name="local_network_permission_enabled">로컬 네트워크 액세스 권한 허용됨</string>
+    <string name="backup_type_permissions">권한</string>
+    <string name="backup_type_permissions_desc">부여된 런타임 권한</string>
     <string name="apps_title">앱</string>
     <string name="toggle_all">모두 선택</string>
+    <string name="backup_types_for_selected_apps">선택한 앱의 백업 유형</string>
+    <string name="backup_types_none">없음</string>
+    <string name="backup_types_mixed">혼합</string>
     <string name="restore_options_title">복원 옵션</string>
     <string name="allow_downgrade">다운그레이드 허용</string>
     <string name="apps_to_restore_title">복원할 앱</string>
     <string name="no_app_data_found_in_snapshot">이 스냅샷에서 앱 데이터를 찾을 수 없습니다.</string>
     <string name="restore_backup_version_with_installed">백업: %1$s -&gt; 설치됨: %2$s</string>
     <string name="restore_backup_version_only">백업: %1$s</string>
-    <string name="home_title" translatable="false">Restoid</string>
     <string name="run_tasks_applications">애플리케이션</string>
+    <string name="run_tasks_custom_directories">사용자 지정 디렉터리</string>
+    <string name="run_tasks_custom_directories_subtitle_none">선택된 디렉터리 없음</string>
+    <string name="run_tasks_custom_directories_subtitle_count">%1$d개의 디렉터리 선택됨</string>
+    <string name="run_tasks_custom_directories_subtitle_with_exclusions">%1$d paths selected, %2$d excluded</string>
+    <string name="action_add_directory">디렉터리 추가</string>
+    <string name="action_add_excluded_directory">Exclude File or Folder</string>
+    <string name="folder_browser_select_this_folder">이 경로 선택</string>
+    <string name="folder_browser_show_hidden">숨겨진 폴더 표시</string>
+    <string name="folder_browser_show_hidden_items">숨겨진 파일 및 폴더 퓜시</string>
+    <string name="folder_browser_cannot_list">이 폴더의 목\\ub8d을 결성할 싘 없습니다.</string>
+    <string name="folder_browser_empty">하위 폴더가 없습니다.</string>
+    <string name="folder_browser_empty_items">파일 또는 폴더가 없습니다.</string>
+    <string name="folder_browser_up">상위 폴더로</string>
+    <string name="folder_browser_roots_title">저장소 위치</string>
+    <string name="folder_browser_internal_storage">내부 저장소</string>
+    <string name="folder_browser_system_root">시스템 루트(/)</string>
+    <string name="folder_browser_external_storage">외장 저장소 (%1$s)</string>
+    <string name="folder_browser_edit_path">경로 직접 입력</string>
+    <string name="folder_browser_new_folder">새 폴더</string>
+    <string name="folder_browser_new_folder_name">폴더 이름</string>
+    <string name="folder_browser_create_failed">폴더를 생성할 수 없습니다.</string>
+    <string name="action_create">생성</string>
+    <string name="action_go">이동</string>
+    <string name="title_custom_directories">사용자 지정 디렉터리</string>
+    <string name="custom_directories_description">백업에 포함할 기기의 사용자 지정 디렉터리를 선택하세요.</string>
+    <string name="custom_directories_long_press_hint">항목을 길게 터치하여 메뉴를 열고 삭제하세요.</string>
+    <string name="custom_directories_typed_path_label">파일 또다는 폴더 경로</string>
+    <string name="custom_directories_typed_path_hint">예: /storage/emulated/0/Download 또다는 /system/build.prop</string>
+    <string name="custom_directories_typed_path_invalid">올바른 절대 폴더 경로를 입력하세요.</string>
+    <string name="custom_directories_typed_path_not_found">폴더가 존재하지 않습니다: %1$s</string>
+    <string name="custom_directory_not_found">사용자 지정 디렉터리를 찾을 수 없음: %1$s</string>
+    <string name="custom_directories_already_added">이 디렉터리니 이미 목록에 있습니다.</string>
+    <string name="custom_directories_unresolvable">사용자 지정 디렉터리를 해석할 수 없음: %1$s</string>
+    <string name="custom_directories_section_include">Include</string>
+    <string name="custom_directories_section_exclude">Exclude</string>
+    <string name="custom_directories_exclude_description">Select subdirectories or files to exclude from the backup.</string>
+    <string name="action_exclude_subfolder">Exclude subfolder…</string>
+    <string name="warning_exclusion_conflict_header">Some exclusions may exclude files from app backups:</string>
+    <string name="warning_exclusion_conflict_show_more">Show %1$d more…</string>
+    <string name="warning_exclusion_conflict_show_less">Show less</string>
+    <string name="error_all_files_access_required">사용자 지정 디렉터리를 백업하려면 모든 파일 엇세스 귌한이 필요합니다.</string>
+    <string name="summary_all_files_access_required">모든 파일 액세스 권한을 부여한 후 다시 시도하십시오.</string>
     <string name="run_tasks_backup_subtitle">%1$d개 앱 선택됨 - %2$s</string>
     <string name="run_tasks_forget_snapshots">스냅샷 삭제</string>
     <string name="run_tasks_forget_subtitle">최근 %1$d개, 일별 %2$d개, 주별 %3$d개, 월별 %4$d개 유지</string>
@@ -65,6 +123,7 @@
     <string name="dialog_discard_changes_message">저장하지 않은 변경사항이 있습니다. 정말로 취소하시겠습니까?</string>
     <string name="action_discard">취소</string>
     <string name="error_with_message">오류: %1$s</string>
+    <string name="error_cannot_backup_repo_to_itself">저장소 자체를 백업할 사용자 지정 디렉터리로 추가할 수 없습니다.</string>
     <string name="no_snapshots_found_for_repository">선택한 저장소에서 스냅샷을 찾을 수 없습니다.</string>
     <plurals name="snapshots_count">
         <item quantity="other">스냅샷 (%1$d)</item>
@@ -82,8 +141,31 @@
     <plurals name="apps_count">
         <item quantity="other">앱 (%1$d):</item>
     </plurals>
+    <plurals name="backed_up_items_count">
+        <item quantity="other">백업됨 (%1$d):</item>
+    </plurals>
+    <plurals name="custom_directories_count">
+        <item quantity="other">사용자 지정 디렉터리 (%1$d):</item>
+    </plurals>
     <string name="no_app_info_for_snapshot">이 스냅샷에 대한 앱 정보가 없습니다.</string>
     <string name="metadata_missing_or_corrupted">메타데이터가 없거나 손상되었습니다.</string>
+    <string name="metadata_restore_success">메타데이터 복원에 성공했습니다.</string>
+    <string name="time_just_now">방금 전</string>
+    <plurals name="time_mins_ago">
+        <item quantity="other">%d분 전</item>
+    </plurals>
+    <plurals name="time_hours_ago">
+        <item quantity="other">%d시간 전</item>
+    </plurals>
+    <plurals name="time_days_ago">
+        <item quantity="other">%d일 전</item>
+    </plurals>
+    <plurals name="time_months_ago">
+        <item quantity="other">%d개월 전</item>
+    </plurals>
+    <plurals name="time_years_ago">
+        <item quantity="other">%d년 전</item>
+    </plurals>
     <string name="maintenance_task_unlock_repository">저장소 잠금 해제</string>
     <string name="maintenance_task_prune_repository">저장소 정리 (Prune)</string>
     <string name="maintenance_keep_last">최근 유지</string>
@@ -94,6 +176,9 @@
     <plurals name="snapshot_backed_up_apps_count">
         <item quantity="other">백업된 앱 (%1$d)</item>
     </plurals>
+    <plurals name="snapshot_backed_up_custom_directories_count">
+        <item quantity="other">백업된 사용자 지정 디렉터리 (%1$d)</item>
+    </plurals>
     <string name="snapshot_not_found">스냅샷을 찾을 수 없습니다.</string>
     <string name="snapshot_forgetting">스냅샷 삭제 중…</string>
     <string name="snapshot_id">ID: %1$s</string>
@@ -103,6 +188,7 @@
     <string name="dialog_forget_snapshot_message">이 작업은 스냅샷 항목을 제거합니다. 실제 데이터는 정리(Prune)를 실행한 후에만 삭제됩니다. 계속하시겠습니까?</string>
     <string name="label_password">비밀번호</string>
     <string name="label_repository_password">저장소 비밀번호</string>
+    <string name="repository_password_explanation">Restic 저장소를 암호화하고 \\ubcf원하는 데 필요합니다. SFTP 로그인과다 달립니다. 안전하게 보관하십시오. 분실하면 백업을 \\ubcf원할 수 없습니다.</string>
     <string name="label_rest_username">REST 사용자 이름</string>
     <string name="label_rest_password">REST 비밀번호</string>
     <string name="label_s3_access_key_id">S3 Access Key ID</string>
@@ -117,6 +203,7 @@
     <string name="action_done">완료</string>
     <string name="action_add">추가</string>
     <string name="action_delete">삭제</string>
+    <string name="action_restore_metadata">메타데이터 복원</string>
     <string name="action_change">변경</string>
     <string name="action_save">저장</string>
     <string name="action_grant">권한 부여</string>
@@ -124,6 +211,10 @@
     <string name="action_forget">삭제</string>
     <string name="action_try_again">다시 시도</string>
     <string name="action_disable">비활성화</string>
+    <string name="action_enable">사용</string>
+    <string name="usage_stats_permission_enabled">앱 사용 정보 액세스 권한 허용됨</string>
+    <string name="usage_stats_permission_disabled">앱 사용 기록 액세스 권한 필요</string>
+    <string name="usage_stats_permission_description">디렉터리 스캔 대신 백업 중 더 빠른 앱 크기 계산을 활성화합니다</string>
     <string name="progress_initializing">초기화 중…</string>
     <string name="progress_stopping">중지 중…</string>
     <string name="progress_operation_complete">%1$s 완료</string>
@@ -134,7 +225,6 @@
     <string name="progress_items">항목</string>
     <string name="progress_size">크기</string>
     <string name="progress_processing">처리 중:</string>
-    <string name="progress_placeholder" translatable="false">...</string>
     <string name="dialog_add_repository_title">저장소 추가</string>
     <string name="label_repository_type">저장소 유형</string>
     <string name="label_repository_specification">저장소 사양</string>
@@ -144,7 +234,6 @@
     <string name="label_sftp_password">SFTP 비밀번호</string>
     <string name="label_sftp_ssh_key">SSH 키</string>
     <string name="label_sftp_private_key">SFTP SSH 개인 키</string>
-    <string name="placeholder_sftp_private_key" translatable="false">-----BEGIN OPENSSH PRIVATE KEY-----\n...</string>
     <string name="label_sftp_key_passphrase">SSH 키 암호(Passphrase)</string>
     <string name="label_sftp_key_passphrase_optional">SSH 키 암호 (선택사항)</string>
     <string name="dialog_sftp_trust_title">SFTP 서버 신뢰</string>
@@ -153,9 +242,15 @@
     <string name="repo_backend_local">로컬 디렉토리</string>
     <string name="repo_backend_sftp">SFTP (SSH)</string>
     <string name="repo_backend_rest">HTTP REST 서버</string>
-    <string name="repo_backend_s3" translatable="false">Amazon S3 / MinIO</string>
-    <string name="repo_hint_rest" translatable="false">http://host:8000/</string>
-    <string name="repo_hint_s3" translatable="false">s3.us-east-1.amazonaws.com/bucket_name</string>
+    <string name="label_sftp_host">호스트</string>
+    <string name="label_sftp_port">포트</string>
+    <string name="label_sftp_username">사용자 이름</string>
+    <string name="label_sftp_repository_path">저장소 경로</string>
+    <string name="repo_supporting_sftp_path">절대 경로(/srv/restic-repo) 또는 홈 디렉터리 기지 상대 경로(restic-repo)</string>
+    <string name="error_sftp_host_empty">호스트니 비워 뒤 수 없습니다.</string>
+    <string name="error_sftp_username_empty">사용자 이름은 비원 수 없습니다.</string>
+    <string name="error_sftp_path_empty">저장소 경로니 비원 수 없습니다.</string>
+    <string name="error_sftp_port_invalid">포트니 1과 65535 사이의 숫자야 합니다.</string>
     <string name="label_path">경로</string>
     <string name="placeholder_select_directory">디렉토리를 선택하세요…</string>
     <string name="cd_select_folder">폴더 선택</string>
@@ -170,6 +265,9 @@
     <string name="root_access_denied">루트 권한 거부됨</string>
     <string name="checking_for_root">루트 권한 확인 중…</string>
     <string name="root_access_granted">루트 권한 허용됨</string>
+    <string name="storage_permission_enabled">모든 파일 액세스 권한 허용됨</string>
+    <string name="storage_permission_disabled">모든 파일 액세스 권한 필요</string>
+    <string name="storage_permission_description">루트 권한 없이 사용자 지정 디렉터리를 백업하기 위해 필요합니다.</string>
     <string name="dependencies_title">종속성</string>
     <string name="about_title">정보</string>
     <string name="version_label">버전</string>
@@ -225,9 +323,15 @@
     <string name="backup_stage_preparing">[%1$d/%2$d] 백업 준비 중...</string>
     <string name="backup_stage_running">[%1$d/%2$d] 앱 백업 중…</string>
     <string name="backup_stage_finalizing">[%1$d/%2$d] 백업 마무리 중…</string>
+    <string name="backup_error_no_files_selected_for_items">선택한 항목에서 백업할 파일을 찾을 수 없습니다.</string>
     <string name="backup_error_command_failed_with_code">Restic 명령이 종료 코드 %1$d(으)로 실패했습니다.</string>
     <string name="backup_warning_metadata_not_saved">경고: 로컬에 백업 메타데이터 파일을 저장할 수 없습니다.</string>
+    <plurals name="backup_summary_success_items">
+        <item quantity="other">항목 %1$d개를 백업했습니다.</item>
+    </plurals>
     <string name="error_fatal_with_message">치명적인 오류 발생: %1$s</string>
+    <string name="error_no_items_selected">선택된 항목이 없습니다.</string>
+    <string name="summary_no_items_selected">선택된 항목이 없습니다.</string>
     <string name="error_no_backup_types_selected">선택된 백업 유형이 없습니다.</string>
     <string name="summary_no_backup_types_selected">선택된 백업 유형이 없습니다.</string>
     <string name="error_restic_not_installed">Restic이 설치되어 있지 않습니다.</string>
@@ -250,9 +354,13 @@
     <string name="restore_stage_processing_apps">앱 처리 중</string>
     <string name="restore_stage_cleanup">정리</string>
     <string name="restore_error_preflight_failed">복원 전 확인에 실패했습니다.</string>
+    <string name="restore_error_no_items_selected">복원할 항목이 선택되지 않았습니다.</string>
+    <string name="restore_error_no_restore_types_selected">복원 유형이 선택되지 않았습니다.</string>
     <string name="restore_error_password_not_found">저장소 비밀번호를 찾을 수 없습니다.</string>
     <string name="restore_error_no_files_found">선택한 앱에 대한 스냅샷에서 파일을 찾을 수 없습니다.</string>
     <string name="restore_error_command_failed">Restic 복원 명령이 실패했습니다.</string>
+    <string name="restore_stage_processing_template_apps">[%1$d/%2$d] 앱 처리 중</string>
+    <string name="restore_stage_processing_template_custom_directories">[%1$d/%2$d] 사용자 지정 디렉터리 처리 중</string>
     <string name="restore_failure_install_commit">%1$s: 설치 커밋 실패: %2$s</string>
     <string name="restore_failure_write_apk_splits">%1$s: 분할 APK 쓰기 실패.</string>
     <string name="restore_failure_create_install_session">%1$s: 설치 세션 생성 실패.</string>
@@ -260,7 +368,15 @@
     <string name="restore_failure_data_restore">%1$s: 데이터 복원 실패 또는 불완전.</string>
     <string name="restore_failure_permissions_app_not_installed">%1$s: 앱이 설치되어 있지 않아 권한 복원 실패.</string>
     <string name="restore_failure_permissions_partial">%1$s: 일부 권한 복원 실패: %2$s</string>
+    <string name="restore_stage_processing_custom_directories">사용자 지정 디렉터리 처리 중…</string>
+    <string name="restore_failure_custom_directory">사용자 지정 디렉터리 %1$s 복원 실패</string>
     <string name="restore_summary_finished_in">복원 소요 시간: %1$s.</string>
+    <plurals name="restore_summary_processed_items">
+        <item quantity="other">항목 %1$d개를 성공적으로 처리했습니다.</item>
+    </plurals>
+    <plurals name="restore_summary_failed_items">
+        <item quantity="other">항목 %1$d개를 복원하지 못했습니다.</item>
+    </plurals>
     <string name="restore_summary_details">\n\n상세:\n- %1$s</string>
     <string name="maintenance_task_unlock">잠금 해제</string>
     <string name="maintenance_task_forget">삭제</string>
@@ -303,6 +419,10 @@
     <string name="channel_completed_operations">완료된 작업</string>
     <string name="channel_ongoing_description">백업 및 복원 진행 상황을 조용히 표시합니다.</string>
     <string name="channel_completed_description">백업 또는 복원이 완료되면 알립니다.</string>
+    <string name="channel_successful_operations">Successful Operations</string>
+    <string name="channel_successful_description">Alerts when a backup or restore has finished successfully.</string>
+    <string name="channel_failed_operations">Failed Operations</string>
+    <string name="channel_failed_description">Alerts when a backup or restore operation fails or encounters errors.</string>
     <plurals name="notification_files_progress">
         <item quantity="other">%1$d/%2$d 파일</item>
     </plurals>
@@ -313,6 +433,12 @@
     <string name="operation_interrupted">작업이 중단되었습니다.</string>
     <string name="dialog_stop_operation_title">작업을 중지할까요?</string>
     <string name="dialog_stop_operation_message">현재 작업을 중지하시겠습니까? 완료되지 않은 모든 작업은 취소됩니다.</string>
+    <string name="home_operation_running_title">%1$s 진행 중</string>
+    <string name="home_operation_running_default_title">작업 진행 중</string>
+    <string name="home_operation_running_tap_hint">진행 상황을 보려면 탭하세요</string>
+    <string name="action_force_stop">강제 중단</string>
+    <string name="dialog_force_stop_operation_title">작업을 강제 중단하시겠습니까?</string>
+    <string name="dialog_force_stop_operation_message">현재 진행 중인 작업을 강제 중단하시겠습니까? 완료되지 않은 작업은 취소되며 작업 상태가 초기화됩니다.</string>
     <string name="repo_error_exists">저장소가 이미 존재합니다.</string>
     <string name="repo_error_binary_not_ready">Restic 바이너리가 준비되지 않았습니다.</string>
     <string name="repo_error_invalid_password_or_corrupted">비밀번호가 틀리거나 저장소가 손상되었습니다.</string>
@@ -383,144 +509,41 @@
     <string name="license_tap_to_expand">… (탭하여 펼치기)</string>
     <string name="cd_open_link">링크 열기</string>
     <string name="cd_copy_license">라이선스 복사</string>
-    <string name="time_just_now">방금 전</string>
-    <plurals name="time_mins_ago">
-        <item quantity="other">%d분 전</item>
-    </plurals>
-    <plurals name="time_hours_ago">
-        <item quantity="other">%d시간 전</item>
-    </plurals>
-    <plurals name="time_days_ago">
-        <item quantity="other">%d일 전</item>
-    </plurals>
-    <plurals name="time_months_ago">
-        <item quantity="other">%d개월 전</item>
-    </plurals>
-    <plurals name="time_years_ago">
-        <item quantity="other">%d년 전</item>
-    </plurals>
-    <string name="backup_type_permissions">권한</string>
-    <string name="backup_types_for_selected_apps">선택한 앱의 백업 유형</string>
-    <string name="backup_types_none">없음</string>
-    <string name="backup_types_mixed">혼합</string>
-    <string name="restore_error_no_restore_types_selected">복원 유형이 선택되지 않았습니다.</string>
-    <string name="backup_type_apk_desc">애플리케이션 패키지 파일</string>
-    <string name="backup_type_data_desc">내부 앱 데이터 (/data/user/&lt;id&gt;)</string>
-    <string name="backup_type_device_protected_data_desc">기기 잠금 해제 전 액세스 가능한 데이터 (/data/user_de/&lt;id&gt;)</string>
-    <string name="backup_type_external_data_desc">외부 저장소의 앱 데이터 (/storage/emulated/&lt;id&gt;/Android/data)</string>
-    <string name="backup_type_obb_data_desc">불투명 바이너리 블롭(OBB) 파일 (/storage/emulated/&lt;id&gt;/Android/obb)</string>
-    <string name="backup_type_media_data_desc">앱 미디어 파일 (/storage/emulated/&lt;id&gt;/Android/media)</string>
-    <string name="backup_type_permissions_desc">부여된 런타임 권한</string>
-    <string name="action_enable">사용</string>
-    <string name="usage_stats_permission_enabled">앱 사용 정보 액세스 권한 허용됨</string>
-    <string name="usage_stats_permission_disabled">앱 사용 기록 액세스 권한 필요</string>
-    <string name="usage_stats_permission_description">디렉터리 스캔 대신 백업 중 더 빠른 앱 크기 계산을 활성화합니다</string>
-    <string name="metadata_restore_success">메타데이터 복원에 성공했습니다.</string>
-    <string name="action_restore_metadata">메타데이터 복원</string>
     <string name="repo_warning_metadata_restore_failed_title">메타데이터 복원 실패</string>
     <string name="repo_warning_metadata_restore_failed">저장소가 성공적으로 추가되었지만 메타데이터(일정, 세부 백업 정보) 복원에 실패했습니다. 이는 일반적으로 메타데이터 스냅샷이 없거나 저장소가 잠겨 있을 때 발생합니다. 다시 시도하려면 설정 → 저장소로 이동하여 저장소 메뉴를 탭하고 \"메타데이터 복원\"을 선택하세요.</string>
-    <string name="screen_tasks">작업</string>
-    <string name="topbar_tasks">작업</string>
-    <string name="local_network_permission_enabled">로컬 네트워크 액세스 권한 허용됨</string>
-    <string name="restore_failure_custom_directory">사용자 지정 디렉터리 %1$s 복원 실패</string>
-    <plurals name="restore_summary_failed_items">
-        <item quantity="other">항목 %1$d개를 복원하지 못했습니다.</item>
-    </plurals>
-    <plurals name="backup_summary_success_items">
-        <item quantity="other">항목 %1$d개를 백업했습니다.</item>
-    </plurals>
-    <string name="run_tasks_custom_directories">사용자 지정 디렉터리</string>
-    <string name="storage_permission_enabled">모든 파일 액세스 권한 허용됨</string>
-    <plurals name="custom_directories_count">
-        <item quantity="other">사용자 지정 디렉터리 (%1$d):</item>
-    </plurals>
-    <plurals name="backed_up_items_count">
-        <item quantity="other">백업됨 (%1$d):</item>
-    </plurals>
-    <string name="restore_stage_processing_template_apps">[%1$d/%2$d] 앱 처리 중</string>
-    <plurals name="restore_summary_processed_items">
-        <item quantity="other">항목 %1$d개를 성공적으로 처리했습니다.</item>
-    </plurals>
-    <string name="error_no_items_selected">선택된 항목이 없습니다.</string>
-    <string name="storage_permission_description">루트 권한 없이 사용자 지정 디렉터리를 백업하기 위해 필요합니다.</string>
-    <string name="restore_error_no_items_selected">복원할 항목이 선택되지 않았습니다.</string>
-    <string name="run_tasks_custom_directories_subtitle_count">%1$d개의 디렉터리 선택됨</string>
-    <string name="settings_system_permission_storage">저장소 액세스</string>
-    <string name="backup_error_no_files_selected_for_items">선택한 항목에서 백업할 파일을 찾을 수 없습니다.</string>
-    <string name="storage_permission_disabled">모든 파일 액세스 권한 필요</string>
-    <string name="restore_stage_processing_template_custom_directories">[%1$d/%2$d] 사용자 지정 디렉터리 처리 중</string>
-    <string name="settings_system_permission_local_network">로컬 네트워크 액세스</string>
-    <string name="restore_stage_processing_custom_directories">사용자 지정 디렉터리 처리 중…</string>
-    <plurals name="snapshot_backed_up_custom_directories_count">
-        <item quantity="other">백업된 사용자 지정 디렉터리 (%1$d)</item>
-    </plurals>
-    <string name="custom_directories_description">백업에 포함할 기기의 사용자 지정 디렉터리를 선택하세요.</string>
-    <string name="action_add_directory">디렉터리 추가</string>
-    <string name="run_tasks_custom_directories_subtitle_none">선택된 디렉터리 없음</string>
-    <string name="summary_no_items_selected">선택된 항목이 없습니다.</string>
-    <string name="action_run_now">지금 실행</string>
-    <string name="error_cannot_backup_repo_to_itself">저장소 자체를 백업할 사용자 지정 디렉터리로 추가할 수 없습니다.</string>
-    <string name="title_custom_directories">사용자 지정 디렉터리</string>
-    <string name="dialog_force_stop_operation_message">현재 진행 중인 작업을 강제 중단하시겠습니까? 완료되지 않은 작업은 취소되며 작업 상태가 초기화됩니다.</string>
-    <string name="action_create">생성</string>
-    <string name="tasks_guide_unlock_title">저장소 장금 해제</string>
-    <string name="label_sftp_username">사용자 이름</string>
-    <string name="home_operation_running_tap_hint">진행 상황을 보려면 탭하세요</string>
-    <string name="folder_browser_roots_title">저장소 위치</string>
-    <string name="folder_browser_empty_items">파일 또는 폴더가 없습니다.</string>
+    <!-- Tasks & Maintenance Guide -->
     <string name="cd_help">도움말</string>
-    <string name="tasks_guide_files_desc">기기 저장소에서 선택한 사용자 지정 파일과 디렉터리를 백업합니다.</string>
-    <string name="repository_password_explanation">Restic 저장소를 암호화하고 \\ubcf원하는 데 필요합니다. SFTP 로그인과다 달립니다. 안전하게 보관하십시오. 분실하면 백업을 \\ubcf원할 수 없습니다.</string>
-    <string name="folder_browser_up">상위 폴더로</string>
-    <string name="tasks_guide_prune_title">저장소 맨드릭</string>
-    <string name="tasks_guide_apps_title">애플리케이션</string>
-    <string name="dialog_force_stop_operation_title">작업을 강제 중단하시겠습니까?</string>
-    <string name="folder_browser_edit_path">경로 직접 입력</string>
-    <string name="repo_supporting_sftp_path">절대 경로(/srv/restic-repo) 또는 홈 디렉터리 기지 상대 경로(restic-repo)</string>
-    <string name="custom_directories_already_added">이 디렉터리니 이미 목록에 있습니다.</string>
-    <string name="tasks_guide_prune_desc">남은 스냅샷에서 더 이상 참조하지 않는 데이터 체킹을 저장소에서 스캐켡하여 영구적으로 삭제하고 팩을 재패킹하여 실제로 디스크 공간을 확보합니다. 맨드릭은 많은 자원을 소모하므로 주기적으로(예: 주갈 또는 월가) 실행하는 것이 종습니다.</string>
-    <string name="label_sftp_host">호스트</string>
-    <string name="summary_all_files_access_required">모든 파일 액세스 권한을 부여한 후 다시 시도하십시오.</string>
-    <string name="folder_browser_new_folder_name">폴더 이름</string>
-    <string name="home_operation_running_title">%1$s 진행 중</string>
-    <string name="action_go">이동</string>
-    <string name="action_force_stop">강제 중단</string>
-    <string name="error_sftp_host_empty">호스트니 비워 뒤 수 없습니다.</string>
-    <string name="tasks_guide_subtitle">각 백업 및 유지보수 작업이 수행하는 입이와 이들이 어떻게 연동되는지 알아보십시오.</string>
-    <string name="custom_directories_typed_path_not_found">폴더가 존재하지 않습니다: %1$s</string>
-    <string name="custom_directories_typed_path_label">파일 또다는 폴더 경로</string>
-    <string name="folder_browser_empty">하위 폴더가 없습니다.</string>
-    <string name="tasks_guide_forget_vs_prune_desc">스냅샷 정리y는 도서관 목\\ub8d에서 칼드를 빼는 것과 \\uac0타고, 저장소 맨드릭은 건물에서 필요 없는 책을 실제로 처분하는 것과 같습니다. 스냅샷 정리를 먵저 실행하여 삭제할 대샅을 선택한 듯, 저장소 맨드릭을 실행하여 스토리지 공간을 실제로 확보합니다.</string>
-    <string name="custom_directories_long_press_hint">항목을 길게 터치하여 메뉴를 열고 삭제하세요.</string>
-    <string name="tasks_guide_docs_button">공식 Restic 문서</string>
-    <string name="folder_browser_system_root">시스템 루트(/)</string>
-    <string name="label_sftp_port">포트</string>
-    <string name="tasks_guide_forget_vs_prune_title">스냅샷 정리 vs 저장소 맨드릭: 차이점이 무엇인가요?</string>
-    <string name="folder_browser_select_this_folder">이 경로 선택</string>
-    <string name="folder_browser_show_hidden_items">숨겨진 파일 및 폴더 퓜시</string>
-    <string name="tasks_guide_unlock_desc">이전 백업 또는 작업\\uc74 비정상적으로 중단되었을 때(예: 앱 종료, 기기 재시작, 네트워크 연결 끊김) 남여입니다. 이를 통해 향후 작업이 안전하겎 진행될 수 있습니다.</string>
-    <string name="folder_browser_show_hidden">숨겨진 폴더 표시</string>
-    <string name="error_sftp_path_empty">저장소 경로니 비원 수 없습니다.</string>
-    <string name="label_sftp_repository_path">저장소 경로</string>
-    <string name="folder_browser_internal_storage">내부 저장소</string>
-    <string name="folder_browser_cannot_list">이 폴더의 목\\ub8d을 결성할 싘 없습니다.</string>
-    <string name="error_sftp_port_invalid">포트니 1과 65535 사이의 숫자야 합니다.</string>
-    <string name="custom_directories_unresolvable">사용자 지정 디렉터리를 해석할 수 없음: %1$s</string>
-    <string name="custom_directories_typed_path_hint">예: /storage/emulated/0/Download 또다는 /system/build.prop</string>
-    <string name="error_sftp_username_empty">사용자 이름은 비원 수 없습니다.</string>
-    <string name="home_operation_running_default_title">작업 진행 중</string>
-    <string name="tasks_guide_check_desc">저장소 구조와 인덱스를 검사합니다. 기본적으로 저장된 파일 내용은 읽지 않습니다. 무일성 검사 설정에서 \'모든 데이터 읽기\'를 \\ud6Ȱ성화하면 데이터 팩까지 검증할 수 있습니다.</string>
-    <string name="error_all_files_access_required">사용자 지정 디렉터리를 백업하려면 모든 파일 엇세스 귌한이 필요합니다.</string>
-    <string name="tasks_guide_forget_desc">보관 정책을 적용하고(예: 야간, 주갈, 월가 스냅샷 중 \\ucdᅬ5 최근 N개 유지) 저장소 기\\ub8d에서 오래된 스냅샷 기\\ub8d을 제거합니다. 참고: 이는 스냅샷의 참조만 해죜며, 아직 원시 데이터 체킹을 삭제하지는 않습니다.</string>
-    <string name="folder_browser_create_failed">폴더를 생성할 수 없습니다.</string>
-    <string name="folder_browser_external_storage">외장 저장소 (%1$s)</string>
-    <string name="no_browser_available">링크를 열 브라우저를 찾을 싘 없습니다. URL이 클립보드에 복사되었습니다.</string>
-    <string name="folder_browser_new_folder">새 폴더</string>
-    <string name="tasks_guide_apps_desc">APK, 앱 데이터, 기기 보호 데이터, 외부 저장소 데이터를 포함하여 설치된 앱을 백업합니다.</string>
     <string name="tasks_guide_title">작업 및 유지보수 가이드</string>
-    <string name="custom_directories_typed_path_invalid">올바른 절대 폴더 경로를 입력하세요.</string>
-    <string name="tasks_guide_files_title">파일 및 폴더</string>
-    <string name="tasks_guide_check_title">무결성 검사</string>
-    <string name="custom_directory_not_found">사용자 지정 디렉터리를 찾을 수 없음: %1$s</string>
+    <string name="tasks_guide_subtitle">각 백업 및 유지보수 작업이 수행하는 입이와 이들이 어떻게 연동되는지 알아보십시오.</string>
+    <string name="tasks_guide_unlock_title">저장소 장금 해제</string>
+    <string name="tasks_guide_unlock_desc">이전 백업 또는 작업\\uc74 비정상적으로 중단되었을 때(예: 앱 종료, 기기 재시작, 네트워크 연결 끊김) 남여입니다. 이를 통해 향후 작업이 안전하겎 진행될 수 있습니다.</string>
     <string name="tasks_guide_forget_title">스냅샷 정리</string>
+    <string name="tasks_guide_forget_desc">보관 정책을 적용하고(예: 야간, 주갈, 월가 스냅샷 중 \\ucdᅬ5 최근 N개 유지) 저장소 기\\ub8d에서 오래된 스냅샷 기\\ub8d을 제거합니다. 참고: 이는 스냅샷의 참조만 해죜며, 아직 원시 데이터 체킹을 삭제하지는 않습니다.</string>
+    <string name="tasks_guide_prune_title">저장소 맨드릭</string>
+    <string name="tasks_guide_prune_desc">남은 스냅샷에서 더 이상 참조하지 않는 데이터 체킹을 저장소에서 스캐켡하여 영구적으로 삭제하고 팩을 재패킹하여 실제로 디스크 공간을 확보합니다. 맨드릭은 많은 자원을 소모하므로 주기적으로(예: 주갈 또는 월가) 실행하는 것이 종습니다.</string>
+    <string name="tasks_guide_check_title">무결성 검사</string>
+    <string name="tasks_guide_check_desc">저장소 구조와 인덱스를 검사합니다. 기본적으로 저장된 파일 내용은 읽지 않습니다. 무일성 검사 설정에서 \'모든 데이터 읽기\'를 \\ud6Ȱ성화하면 데이터 팩까지 검증할 수 있습니다.</string>
+    <string name="tasks_guide_forget_vs_prune_title">스냅샷 정리 vs 저장소 맨드릭: 차이점이 무엇인가요?</string>
+    <string name="tasks_guide_forget_vs_prune_desc">스냅샷 정리y는 도서관 목\\ub8d에서 칼드를 빼는 것과 \\uac0타고, 저장소 맨드릭은 건물에서 필요 없는 책을 실제로 처분하는 것과 같습니다. 스냅샷 정리를 먵저 실행하여 삭제할 대샅을 선택한 듯, 저장소 맨드릭을 실행하여 스토리지 공간을 실제로 확보합니다.</string>
+    <string name="tasks_guide_apps_title">애플리케이션</string>
+    <string name="tasks_guide_apps_desc">APK, 앱 데이터, 기기 보호 데이터, 외부 저장소 데이터를 포함하여 설치된 앱을 백업합니다.</string>
+    <string name="tasks_guide_files_title">파일 및 폴더</string>
+    <string name="tasks_guide_files_desc">기기 저장소에서 선택한 사용자 지정 파일과 디렉터리를 백업합니다.</string>
+    <string name="tasks_guide_docs_button">공식 Restic 문서</string>
+    <string name="no_browser_available">링크를 열 브라우저를 찾을 싘 없습니다. URL이 클립보드에 복사되었습니다.</string>
+    <!-- Operation Logs -->
+    <string name="screen_operation_logs">Operation Logs</string>
+    <string name="operation_logs_empty">No operation logs yet</string>
+    <string name="operation_logs_empty_desc">Completed backup, restore, and maintenance runs will appear here.</string>
+    <string name="operation_logs_clear">Clear logs</string>
+    <string name="operation_logs_clear_confirm_title">Clear all logs?</string>
+    <string name="operation_logs_clear_confirm_desc">This will delete all stored operation log history.</string>
+    <string name="operation_logs_duration">Duration: %1$s</string>
+    <string name="operation_logs_copied">Log copied to clipboard</string>
+    <string name="operation_status_success">Success</string>
+    <string name="operation_status_failed">Failed</string>
+    <string name="action_expand">Expand</string>
+    <string name="action_collapse">Collapse</string>
+    <string name="action_copy_log">Copy Log</string>
+    <string name="action_clear">Clear</string>
 </resources>
