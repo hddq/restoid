@@ -44,6 +44,7 @@ class ScheduleWorker(
             selectedPackageNames = if (schedule.config.backupEnabled) schedule.config.selectedPackageNames else emptyList(),
             appBackupTypes = if (schedule.config.backupEnabled) schedule.config.appBackupTypes else emptyMap(),
             customDirectories = schedule.config.customDirectories,
+            excludedCustomDirectories = schedule.config.excludedCustomDirectories,
             unlockRepo = schedule.config.unlockRepo,
             forgetSnapshots = schedule.config.forgetSnapshots,
             pruneRepo = schedule.config.pruneRepo,

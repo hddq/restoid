@@ -17,6 +17,7 @@ import io.github.hddq.restoid.model.RestoidMetadata
 import io.github.hddq.restoid.model.CustomDirectoryMetadata
 import io.github.hddq.restoid.ui.shared.OperationProgress
 import io.github.hddq.restoid.util.ResticOutputParser
+import io.github.hddq.restoid.util.buildResticExcludeFlags
 import io.github.hddq.restoid.util.buildResticOptionFlags
 import io.github.hddq.restoid.util.buildShellEnvironmentPrefix
 import io.github.hddq.restoid.util.shellQuote
@@ -122,6 +123,7 @@ class BackupOperationRunner(
                 request.backupTypes,
                 request.appBackupTypes,
                 request.customDirectories,
+                request.excludedCustomDirectories,
                 shouldStop
             )
             restoidMetadataFile = File(context.cacheDir, "restoid.json")
@@ -184,7 +186,25 @@ class BackupOperationRunner(
 
             val tags = listOf("restoid", "backup")
             val tagFlags = tags.joinToString(" ") { "--tag '$it'" }
-            val excludeFlags = excludePatterns.distinct().joinToString(" ") { pattern -> "--exclude $pattern" }
+            val effectiveExcludePatterns = if (stagingRoot != null) {
+                excludePatterns.flatMap { pattern ->
+                    val match = mediaRwRegex.matchEntire(pattern)
+                    if (match != null) {
+                        val uuid = match.groupValues[1]
+                        val subPath = match.groupValues[2].trim('/')
+                        if (subPath.isNotEmpty()) {
+                            listOf(pattern, "mnt/media_rw/$uuid/$subPath")
+                        } else {
+                            listOf(pattern, "mnt/media_rw/$uuid")
+                        }
+                    } else {
+                        listOf(pattern)
+                    }
+                }
+            } else {
+                excludePatterns
+            }
+            val excludeFlags = buildResticExcludeFlags(effectiveExcludePatterns)
             val envPrefix = buildShellEnvironmentPrefix(repositoryEnvironment)
             val resticOptionFlags = buildResticOptionFlags(repositoryResticOptions)
 
@@ -204,8 +224,10 @@ class BackupOperationRunner(
                 append(shellQuote(fileList.absolutePath))
                 append(" --json --verbose=2 ")
                 append(tagFlags)
-                append(' ')
-                append(excludeFlags)
+                if (excludeFlags.isNotEmpty()) {
+                    append(' ')
+                    append(excludeFlags)
+                }
             }
 
             val errorMessages = mutableListOf<String>()
@@ -364,6 +386,7 @@ class BackupOperationRunner(
         backupTypes: BackupTypeSelection,
         appBackupTypes: Map<String, BackupTypeSelection>,
         customDirectories: List<String>,
+        excludedCustomDirectories: List<String>,
         shouldStop: () -> Boolean
     ): Triple<MutableList<String>, List<String>, RestoidMetadata> {
         fun throwIfCancelled() {
@@ -393,11 +416,11 @@ class BackupOperationRunner(
             pathsToBackup.addAll(existingAppPaths)
 
             if (effectiveBackupTypes.data) {
-                excludePatterns.add("'/data/user/${getCurrentUserId()}/${app.packageName}/cache'")
-                excludePatterns.add("'/data/user/${getCurrentUserId()}/${app.packageName}/code_cache'")
+                excludePatterns.add("/data/user/${getCurrentUserId()}/${app.packageName}/cache")
+                excludePatterns.add("/data/user/${getCurrentUserId()}/${app.packageName}/code_cache")
             }
             if (effectiveBackupTypes.externalData) {
-                excludePatterns.add("'/storage/emulated/${getCurrentUserId()}/Android/data/${app.packageName}/cache'")
+                excludePatterns.add("/storage/emulated/${getCurrentUserId()}/Android/data/${app.packageName}/cache")
             }
 
             throwIfCancelled()
@@ -432,6 +455,12 @@ class BackupOperationRunner(
                 size = 0L,
                 isDirectory = Shell.cmd("[ -d ${shellQuote(shellPath)} ]").exec().isSuccess
             )
+        }
+        excludedCustomDirectories.forEach { dirUriStr ->
+            throwIfCancelled()
+            val realPath = io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(dirUriStr) ?: dirUriStr
+            val shellPath = io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(realPath)
+            excludePatterns.add(shellPath)
         }
         val metadata = RestoidMetadata(apps = appMetadataMap, customDirectories = customDirectoryMetadataMap)
         return Triple(pathsToBackup, excludePatterns, metadata)

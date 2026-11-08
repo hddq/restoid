@@ -35,6 +35,16 @@ fun buildResticOptionFlags(options: Map<String, String>): String {
         }
 }
 
+fun buildResticExcludeFlags(excludePatterns: List<String>): String {
+    if (excludePatterns.isEmpty()) return ""
+
+    return excludePatterns
+        .distinct()
+        .joinToString(" ") { pattern ->
+            "--exclude ${shellQuote(pattern)}"
+        }
+}
+
 fun buildCustomFileRestoreCommand(sourcePath: String, targetPath: String): String {
     val cleanTargetPath = targetPath.trimEnd('/').ifEmpty { "/" }
     val quotedSource = shellQuote(sourcePath)

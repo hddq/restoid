@@ -38,7 +38,8 @@ data class RunTasksUiState(
     val isRunning: Boolean = false,
     val progress: OperationProgress = OperationProgress(),
     val customDirectoriesBackupEnabled: Boolean = false,
-    val customDirectories: List<CustomDirectory> = emptyList()
+    val customDirectories: List<CustomDirectory> = emptyList(),
+    val excludedCustomDirectories: List<CustomDirectory> = emptyList()
 )
 
 sealed interface RunTasksUiEvent {
@@ -65,6 +66,12 @@ class RunTasksViewModel(
                 CustomDirectory(
                     uri = uri,
                     isSelected = preferencesRepository.loadCustomDirectoriesSelected().contains(uri)
+                )
+            },
+            excludedCustomDirectories = preferencesRepository.loadExcludedCustomDirectoriesAll().map { uri ->
+                CustomDirectory(
+                    uri = uri,
+                    isSelected = preferencesRepository.loadExcludedCustomDirectoriesSelected().contains(uri)
                 )
             }
         )
@@ -146,6 +153,8 @@ class RunTasksViewModel(
         val allCustomDirs = _uiState.value.customDirectories.map { it.uri }.toSet()
         val selectedCustomDirs = _uiState.value.customDirectories.filter { it.isSelected }.map { it.uri }.toSet()
         preferencesRepository.saveCustomDirectories(allCustomDirs, selectedCustomDirs)
+        val selectedExcludedCustomDirs = _uiState.value.excludedCustomDirectories.filter { it.isSelected }.map { it.uri }.toSet()
+        persistExcludedCustomDirectories()
 
         val errorState = preflightChecks()
         if (errorState != null) {
@@ -179,6 +188,7 @@ class RunTasksViewModel(
             selectedPackageNames = if (backupAppsEnabled) _uiState.value.apps.filter { it.isSelected }.map { it.packageName } else emptyList(),
             appBackupTypes = if (backupAppsEnabled) selectedAppBackupTypes().mapValues { it.value.toSelection() } else emptyMap(),
             customDirectories = if (hasCustomDirs) selectedCustomDirs.toList() else emptyList(),
+            excludedCustomDirectories = if (hasCustomDirs) selectedExcludedCustomDirs.toList() else emptyList(),
             unlockRepo = maintenance.unlockRepo,
             forgetSnapshots = maintenance.forgetSnapshots,
             pruneRepo = maintenance.pruneRepo,
@@ -375,6 +385,63 @@ class RunTasksViewModel(
         val allCustomDirs = current.map { it.uri }.toSet()
         val selectedCustomDirs = current.filter { it.isSelected }.map { it.uri }.toSet()
         preferencesRepository.saveCustomDirectories(allCustomDirs, selectedCustomDirs)
+    }
+
+    fun addExcludedCustomDirectory(uriString: String) {
+        val newKey = StorageUtils.resolveCustomDirectoryKey(uriString)
+        if (_uiState.value.excludedCustomDirectories.any { StorageUtils.resolveCustomDirectoryKey(it.uri) == newKey }) {
+            Toast.makeText(
+                application,
+                application.getString(R.string.custom_directories_already_added),
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+
+        val repoKey = repositoriesRepository.selectedRepository.value
+        val repository = repoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
+
+        if (repository != null && repository.backendType == RepositoryBackendType.LOCAL) {
+            val repoCanonicalKey = StorageUtils.resolveCustomDirectoryKey(repository.path)
+            if (repoCanonicalKey == newKey) {
+                Toast.makeText(
+                    application,
+                    application.getString(R.string.error_cannot_backup_repo_to_itself),
+                    Toast.LENGTH_LONG
+                ).show()
+                return
+            }
+        }
+
+        _uiState.update { state ->
+            state.copy(excludedCustomDirectories = state.excludedCustomDirectories + CustomDirectory(uriString))
+        }
+        persistExcludedCustomDirectories()
+    }
+
+    fun toggleExcludedCustomDirectory(uriString: String) {
+        _uiState.update { state ->
+            state.copy(
+                excludedCustomDirectories = state.excludedCustomDirectories.map {
+                    if (it.uri == uriString) it.copy(isSelected = !it.isSelected) else it
+                }
+            )
+        }
+        persistExcludedCustomDirectories()
+    }
+
+    fun removeExcludedCustomDirectory(uriString: String) {
+        _uiState.update { state ->
+            state.copy(excludedCustomDirectories = state.excludedCustomDirectories.filter { it.uri != uriString })
+        }
+        persistExcludedCustomDirectories()
+    }
+
+    private fun persistExcludedCustomDirectories() {
+        val current = _uiState.value.excludedCustomDirectories
+        val allDirs = current.map { it.uri }.toSet()
+        val selectedDirs = current.filter { it.isSelected }.map { it.uri }.toSet()
+        preferencesRepository.saveExcludedCustomDirectories(allDirs, selectedDirs)
     }
 
     fun setUnlockRepo(value: Boolean) = _uiState.update { it.copy(maintenance = it.maintenance.copy(unlockRepo = value)) }

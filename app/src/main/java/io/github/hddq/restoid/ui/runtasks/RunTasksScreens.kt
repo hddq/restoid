@@ -115,7 +115,7 @@ fun RunTasksScreen(
                     ExpressiveSegmentedSurface(index = 1, count = 2) {
                         TaskRow(
                             title = context.getString(R.string.run_tasks_custom_directories),
-                            subtitle = buildCustomDirectoriesSubtitle(uiState.customDirectories, context),
+                            subtitle = buildCustomDirectoriesSubtitle(uiState.customDirectories, uiState.excludedCustomDirectories, context),
                             icon = Icons.Outlined.Folder,
                             checked = uiState.customDirectoriesBackupEnabled,
                             onCheckedChange = viewModel::setCustomDirectoriesBackupEnabled,
@@ -244,6 +244,10 @@ fun CustomDirectoriesConfigScreen(
         onAddDirectory = viewModel::addCustomDirectory,
         onToggleDirectory = viewModel::toggleCustomDirectory,
         onRemoveDirectory = viewModel::removeCustomDirectory,
+        excludedDirectories = uiState.excludedCustomDirectories,
+        onAddExcludedDirectory = viewModel::addExcludedCustomDirectory,
+        onToggleExcludedDirectory = viewModel::toggleExcludedCustomDirectory,
+        onRemoveExcludedDirectory = viewModel::removeExcludedCustomDirectory,
         modifier = modifier
     )
 }

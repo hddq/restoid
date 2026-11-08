@@ -73,7 +73,9 @@
     <string name="run_tasks_custom_directories">Custom Files and Folders</string>
     <string name="run_tasks_custom_directories_subtitle_none">No files or folders selected</string>
     <string name="run_tasks_custom_directories_subtitle_count">%1$d paths selected</string>
+    <string name="run_tasks_custom_directories_subtitle_with_exclusions">%1$d paths selected, %2$d excluded</string>
     <string name="action_add_directory">Add File or Folder</string>
+    <string name="action_add_excluded_directory">Exclude File or Folder</string>
     <string name="folder_browser_select_this_folder">Select this path</string>
     <string name="folder_browser_show_hidden">Show hidden folders</string>
     <string name="folder_browser_show_hidden_items">Show hidden files and folders</string>
@@ -101,6 +103,10 @@
     <string name="custom_directory_not_found">Custom directory not found: %1$s</string>
     <string name="custom_directories_already_added">This directory is already in the list.</string>
     <string name="custom_directories_unresolvable">Could not resolve custom directory: %1$s</string>
+    <string name="custom_directories_section_include">Include</string>
+    <string name="custom_directories_section_exclude">Exclude</string>
+    <string name="custom_directories_exclude_description">Select subdirectories or files to exclude from the backup.</string>
+    <string name="action_exclude_subfolder">Exclude subfolder…</string>
     <string name="error_all_files_access_required">All files access is required to back up custom directories.</string>
     <string name="summary_all_files_access_required">Grant All files access, then try again.</string>
     <string name="run_tasks_backup_subtitle">%1$d apps selected - %2$s</string>

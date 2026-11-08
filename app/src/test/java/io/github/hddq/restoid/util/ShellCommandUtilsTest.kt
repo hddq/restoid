@@ -10,6 +10,38 @@ import java.nio.file.Files
 class ShellCommandUtilsTest {
 
     @Test
+    fun buildResticExcludeFlags_emptyList_returnsEmptyString() {
+        assertEquals("", buildResticExcludeFlags(emptyList()))
+    }
+
+    @Test
+    fun buildResticExcludeFlags_formatsAndQuotesPatterns() {
+        val patterns = listOf(
+            "/storage/emulated/0/DCIM/Camera2",
+            "/storage/emulated/0/DCIM/Camera 2",
+            "/storage/emulated/0/DCIM/Camera's"
+        )
+        val flags = buildResticExcludeFlags(patterns)
+        assertEquals(
+            "--exclude '/storage/emulated/0/DCIM/Camera2' --exclude '/storage/emulated/0/DCIM/Camera 2' --exclude '/storage/emulated/0/DCIM/Camera'\"'\"'s'",
+            flags
+        )
+    }
+
+    @Test
+    fun buildResticExcludeFlags_deduplicatesPatterns() {
+        val patterns = listOf(
+            "/storage/emulated/0/DCIM/Camera2",
+            "/storage/emulated/0/DCIM/Camera2"
+        )
+        val flags = buildResticExcludeFlags(patterns)
+        assertEquals(
+            "--exclude '/storage/emulated/0/DCIM/Camera2'",
+            flags
+        )
+    }
+
+    @Test
     fun customFileRestoreCommand_formatsCorrectly() {
         val command = buildCustomFileRestoreCommand("/cache/staged/file.txt", "/sdcard/Download/file.txt")
         assertEquals(

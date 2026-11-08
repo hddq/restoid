@@ -101,6 +101,7 @@ class RunTasksOperationRunner(
                     selectedPackageNames = request.selectedPackageNames,
                     appBackupTypes = request.appBackupTypes,
                     customDirectories = request.customDirectories,
+                    excludedCustomDirectories = request.excludedCustomDirectories,
                     requireUnmeteredNetwork = request.requireUnmeteredNetwork
                 )
 
