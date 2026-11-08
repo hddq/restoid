@@ -1,11 +1,12 @@
-Restoidは、クリーンでモダン、かつシンプルなユーザーインターフェースを通じて、アプリのバックアップを完全に制御できます。オープンソースの「restic」エンジンを搭載しており、堅牢かつ暗号化された重複排除バックアップを求めるユーザー向けに構築されています。
+Restoidは、クリーンでモダン、かつシンプルなユーザーインターフェースを通じて、アプリのバックアップを完全に制御できます。オープンソースの「restic」エンジンを搭載しており、堅牢かつ暗号化された重複排除バックアップを求めるユーザー向けに構築されています。 Powered by the open-source "restic" engine, it's built for users who demand robust, encrypted, and deduplicated backups.
 
-アプリケーションのプライベートデータディレクトリの読み書きには、ルートアクセスが必須です。
+Root access is only required if you want to back up apps and their data.
 
 主な機能:
 * resticエンジン搭載: resticの高速性、セキュリティ、効率性を活用し、ローカル環境で重複排除・暗号化されたバックアップを実現します。
 * 選択的バックアップ: バックアップしたいユーザーインストール済みアプリを個別に選択可能です。
-* きめ細かい管理: アプリごとに、APKファイル、ユーザーデータ、デバイス保護データ、外部データ/OBB、メディアファイルなど、含める項目を細かく指定できます。
+* Granular Control: Granularly select what to include for each app: APK files, user data, device-protected data, external/OBB, or media files (requires root).
+* Custom Directory Backup: Back up custom directories and files like DCIM, Documents, etc.
 * 柔軟なリポジトリ管理: ローカルディレクトリ、SFTP、RESTサーバー、Amazon S3/MinIOといった、restic標準のバックエンドでリポジトリを作成・管理できます。
 * スナップショット管理: 過去のバックアップスナップショットを簡単に閲覧し、バックアップ内容を確認したり、古いデータを削除してストレージを解放したりできます。
 * 選択的復元: アプリ全体の復元だけでなく、APKを上書きせずにアプリデータのみを復元するなど、特定のパーツ単位での復元が可能です。
