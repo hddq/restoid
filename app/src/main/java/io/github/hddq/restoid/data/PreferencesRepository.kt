@@ -110,6 +110,22 @@ class PreferencesRepository(context: Context) {
         return prefs.getStringSet("runtasks_custom_directories_selected", emptySet()) ?: emptySet()
     }
 
+    fun saveExcludedCustomDirectories(allUris: Set<String>, selectedUris: Set<String>) {
+        with(prefs.edit()) {
+            putStringSet("runtasks_excluded_custom_directories_all", allUris)
+            putStringSet("runtasks_excluded_custom_directories_selected", selectedUris)
+            apply()
+        }
+    }
+
+    fun loadExcludedCustomDirectoriesAll(): Set<String> {
+        return prefs.getStringSet("runtasks_excluded_custom_directories_all", emptySet()) ?: emptySet()
+    }
+
+    fun loadExcludedCustomDirectoriesSelected(): Set<String> {
+        return prefs.getStringSet("runtasks_excluded_custom_directories_selected", emptySet()) ?: emptySet()
+    }
+
     // Backup Preferences
     fun saveBackupTypes(types: BackupTypes) {
         with(prefs.edit()) {

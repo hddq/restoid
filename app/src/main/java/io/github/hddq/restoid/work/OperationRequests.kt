@@ -37,6 +37,7 @@ data class BackupWorkRequest(
     val selectedPackageNames: List<String>,
     val appBackupTypes: Map<String, BackupTypeSelection> = emptyMap(),
     val customDirectories: List<String> = emptyList(),
+    val excludedCustomDirectories: List<String> = emptyList(),
     val requireUnmeteredNetwork: Boolean = false
 )
 
@@ -72,6 +73,7 @@ data class RunTasksConfig(
     val selectedPackageNames: List<String>,
     val appBackupTypes: Map<String, BackupTypeSelection> = emptyMap(),
     val customDirectories: List<String> = emptyList(),
+    val excludedCustomDirectories: List<String> = emptyList(),
     val unlockRepo: Boolean,
     val forgetSnapshots: Boolean,
     val pruneRepo: Boolean,
@@ -91,6 +93,7 @@ data class RunTasksWorkRequest(
     val selectedPackageNames: List<String>,
     val appBackupTypes: Map<String, BackupTypeSelection> = emptyMap(),
     val customDirectories: List<String> = emptyList(),
+    val excludedCustomDirectories: List<String> = emptyList(),
     val unlockRepo: Boolean,
     val forgetSnapshots: Boolean,
     val pruneRepo: Boolean,

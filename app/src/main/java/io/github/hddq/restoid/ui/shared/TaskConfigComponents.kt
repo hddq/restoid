@@ -33,6 +33,7 @@ import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.FolderOff
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.Key
@@ -777,6 +778,26 @@ fun buildCustomDirectoriesSubtitle(directories: List<io.github.hddq.restoid.mode
     }
 }
 
+fun buildCustomDirectoriesSubtitle(
+    directories: List<io.github.hddq.restoid.model.CustomDirectory>,
+    excludedDirectories: List<io.github.hddq.restoid.model.CustomDirectory>,
+    context: android.content.Context
+): String {
+    val selectedCount = directories.count { it.isSelected }
+    val excludedCount = excludedDirectories.count { it.isSelected }
+    return when {
+        selectedCount == 0 -> {
+            context.getString(io.github.hddq.restoid.R.string.run_tasks_custom_directories_subtitle_none)
+        }
+        excludedCount > 0 -> {
+            context.getString(io.github.hddq.restoid.R.string.run_tasks_custom_directories_subtitle_with_exclusions, selectedCount, excludedCount)
+        }
+        else -> {
+            context.getString(io.github.hddq.restoid.R.string.run_tasks_custom_directories_subtitle_count, selectedCount)
+        }
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CustomDirectoriesConfigScreen(
@@ -784,10 +805,17 @@ fun CustomDirectoriesConfigScreen(
     onAddDirectory: (String) -> Unit,
     onToggleDirectory: (String) -> Unit,
     onRemoveDirectory: (String) -> Unit = {},
+    excludedDirectories: List<io.github.hddq.restoid.model.CustomDirectory> = emptyList(),
+    onAddExcludedDirectory: (String) -> Unit = {},
+    onToggleExcludedDirectory: (String) -> Unit = {},
+    onRemoveExcludedDirectory: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showFolderPicker by remember { mutableStateOf(false) }
+    var showExcludePicker by remember { mutableStateOf(false) }
+    var excludePickerInitialPath by remember { mutableStateOf<String?>(null) }
     var menuExpandedForUri by remember { mutableStateOf<String?>(null) }
+    var menuExpandedForExcludedUri by remember { mutableStateOf<String?>(null) }
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -801,7 +829,7 @@ fun CustomDirectoriesConfigScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                if (customDirectories.isNotEmpty()) {
+                if (customDirectories.isNotEmpty() || excludedDirectories.isNotEmpty()) {
                     Text(
                         text = stringResource(R.string.custom_directories_long_press_hint),
                         style = MaterialTheme.typography.bodySmall,
@@ -809,6 +837,12 @@ fun CustomDirectoriesConfigScreen(
                     )
                 }
             }
+        }
+
+        item {
+            ExpressiveSectionHeader(
+                title = stringResource(R.string.custom_directories_section_include)
+            )
         }
 
         if (customDirectories.isNotEmpty()) {
@@ -893,6 +927,22 @@ fun CustomDirectoriesConfigScreen(
                                 ) {
                                     DropdownMenuItem(
                                         text = {
+                                            Text(text = stringResource(R.string.action_exclude_subfolder))
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                imageVector = Icons.Outlined.FolderOff,
+                                                contentDescription = null
+                                            )
+                                        },
+                                        onClick = {
+                                            menuExpandedForUri = null
+                                            excludePickerInitialPath = resolvedPath ?: customDir.uri
+                                            showExcludePicker = true
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = {
                                             Text(
                                                 text = stringResource(R.string.action_delete),
                                                 color = MaterialTheme.colorScheme.error
@@ -933,6 +983,148 @@ fun CustomDirectoriesConfigScreen(
                 Text(stringResource(R.string.action_add_directory))
             }
         }
+
+        item {
+            Spacer(modifier = Modifier.height(8.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                ExpressiveSectionHeader(
+                    title = stringResource(R.string.custom_directories_section_exclude)
+                )
+                Text(
+                    text = stringResource(R.string.custom_directories_exclude_description),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        if (excludedDirectories.isNotEmpty()) {
+            item {
+                ExpressiveCardGroup {
+                    excludedDirectories.forEachIndexed { index, excludedDir ->
+                        key(excludedDir.uri) {
+                            val resolvedPath = io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(excludedDir.uri)
+                            val displayPath = resolvedPath ?: runCatching {
+                                android.net.Uri.parse(excludedDir.uri).lastPathSegment
+                            }.getOrNull() ?: excludedDir.uri
+
+                            ExpressiveSegmentedSurface(
+                                index = index,
+                                count = excludedDirectories.size
+                            ) {
+                                Box(modifier = Modifier.fillMaxWidth()) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .combinedClickable(
+                                                onClick = { onToggleExcludedDirectory(excludedDir.uri) },
+                                                onLongClick = { menuExpandedForExcludedUri = excludedDir.uri }
+                                            )
+                                            .padding(vertical = 12.dp, horizontal = 16.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        val initialIsDir = io.github.hddq.restoid.util.StorageUtils.isDirectoryFast(excludedDir.uri)
+                                        val isDirectory by produceState(
+                                            initialValue = initialIsDir ?: true,
+                                            key1 = excludedDir.uri
+                                        ) {
+                                            if (initialIsDir == null) {
+                                                value = withContext(Dispatchers.IO) {
+                                                    io.github.hddq.restoid.util.StorageUtils.isDirectoryPath(excludedDir.uri)
+                                                }
+                                            }
+                                        }
+                                        Icon(
+                                            imageVector = if (isDirectory) Icons.Outlined.FolderOff else Icons.Outlined.Description,
+                                            contentDescription = null,
+                                            tint = if (excludedDir.isSelected) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(end = 16.dp)
+                                        )
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            val title = displayPath.substringAfterLast("/")
+                                            Text(
+                                                text = title.ifEmpty { displayPath },
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                style = MaterialTheme.typography.bodyLarge
+                                            )
+                                            Text(
+                                                text = displayPath,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(16.dp))
+                                        Switch(
+                                            checked = excludedDir.isSelected,
+                                            onCheckedChange = { onToggleExcludedDirectory(excludedDir.uri) },
+                                            thumbContent = if (excludedDir.isSelected) {
+                                                {
+                                                    Icon(
+                                                        imageVector = Icons.Filled.Check,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                                                    )
+                                                }
+                                            } else {
+                                                null
+                                            }
+                                        )
+                                    }
+
+                                    DropdownMenu(
+                                        expanded = menuExpandedForExcludedUri == excludedDir.uri,
+                                        onDismissRequest = { menuExpandedForExcludedUri = null }
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(
+                                                    text = stringResource(R.string.action_delete),
+                                                    color = MaterialTheme.colorScheme.error
+                                                )
+                                            },
+                                            leadingIcon = {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.Delete,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.error
+                                                )
+                                            },
+                                            onClick = {
+                                                menuExpandedForExcludedUri = null
+                                                onRemoveExcludedDirectory(excludedDir.uri)
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            FilledTonalButton(
+                onClick = {
+                    excludePickerInitialPath = customDirectories.firstOrNull()?.let {
+                        io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(it.uri)
+                    }
+                    showExcludePicker = true
+                },
+                shape = MaterialTheme.shapes.extraLarge,
+                modifier = Modifier.padding(top = 4.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Add,
+                    contentDescription = null
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(stringResource(R.string.action_add_excluded_directory))
+            }
+        }
     }
 
     if (showFolderPicker) {
@@ -944,6 +1136,19 @@ fun CustomDirectoriesConfigScreen(
                 onAddDirectory(selectedPath)
             },
             onDismissRequest = { showFolderPicker = false }
+        )
+    }
+
+    if (showExcludePicker) {
+        io.github.hddq.restoid.ui.components.FolderPickerSheet(
+            initialPath = excludePickerInitialPath,
+            allowSystemPaths = true,
+            allowFiles = true,
+            onSelectPath = { selectedPath ->
+                showExcludePicker = false
+                onAddExcludedDirectory(selectedPath)
+            },
+            onDismissRequest = { showExcludePicker = false }
         )
     }
 }

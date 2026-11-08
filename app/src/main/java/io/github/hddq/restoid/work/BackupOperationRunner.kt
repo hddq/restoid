@@ -17,8 +17,10 @@ import io.github.hddq.restoid.model.RestoidMetadata
 import io.github.hddq.restoid.model.CustomDirectoryMetadata
 import io.github.hddq.restoid.ui.shared.OperationProgress
 import io.github.hddq.restoid.util.ResticOutputParser
+import io.github.hddq.restoid.util.buildResticExcludeFlags
 import io.github.hddq.restoid.util.buildResticOptionFlags
 import io.github.hddq.restoid.util.buildShellEnvironmentPrefix
+import io.github.hddq.restoid.util.escapeResticPattern
 import io.github.hddq.restoid.util.shellQuote
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -122,6 +124,7 @@ class BackupOperationRunner(
                 request.backupTypes,
                 request.appBackupTypes,
                 request.customDirectories,
+                request.excludedCustomDirectories,
                 shouldStop
             )
             restoidMetadataFile = File(context.cacheDir, "restoid.json")
@@ -184,7 +187,25 @@ class BackupOperationRunner(
 
             val tags = listOf("restoid", "backup")
             val tagFlags = tags.joinToString(" ") { "--tag '$it'" }
-            val excludeFlags = excludePatterns.distinct().joinToString(" ") { pattern -> "--exclude $pattern" }
+            val effectiveExcludePatterns = if (stagingRoot != null) {
+                excludePatterns.flatMap { pattern ->
+                    val match = mediaRwRegex.matchEntire(pattern)
+                    if (match != null) {
+                        val uuid = match.groupValues[1]
+                        val subPath = match.groupValues[2].trim('/')
+                        if (subPath.isNotEmpty()) {
+                            listOf(pattern, "mnt/media_rw/$uuid/$subPath")
+                        } else {
+                            listOf(pattern, "mnt/media_rw/$uuid")
+                        }
+                    } else {
+                        listOf(pattern)
+                    }
+                }
+            } else {
+                excludePatterns
+            }
+            val excludeFlags = buildResticExcludeFlags(effectiveExcludePatterns)
             val envPrefix = buildShellEnvironmentPrefix(repositoryEnvironment)
             val resticOptionFlags = buildResticOptionFlags(repositoryResticOptions)
 
@@ -204,8 +225,10 @@ class BackupOperationRunner(
                 append(shellQuote(fileList.absolutePath))
                 append(" --json --verbose=2 ")
                 append(tagFlags)
-                append(' ')
-                append(excludeFlags)
+                if (excludeFlags.isNotEmpty()) {
+                    append(' ')
+                    append(excludeFlags)
+                }
             }
 
             val errorMessages = mutableListOf<String>()
@@ -364,6 +387,7 @@ class BackupOperationRunner(
         backupTypes: BackupTypeSelection,
         appBackupTypes: Map<String, BackupTypeSelection>,
         customDirectories: List<String>,
+        excludedCustomDirectories: List<String>,
         shouldStop: () -> Boolean
     ): Triple<MutableList<String>, List<String>, RestoidMetadata> {
         fun throwIfCancelled() {
@@ -393,11 +417,11 @@ class BackupOperationRunner(
             pathsToBackup.addAll(existingAppPaths)
 
             if (effectiveBackupTypes.data) {
-                excludePatterns.add("'/data/user/${getCurrentUserId()}/${app.packageName}/cache'")
-                excludePatterns.add("'/data/user/${getCurrentUserId()}/${app.packageName}/code_cache'")
+                excludePatterns.add("/data/user/${getCurrentUserId()}/${app.packageName}/cache")
+                excludePatterns.add("/data/user/${getCurrentUserId()}/${app.packageName}/code_cache")
             }
             if (effectiveBackupTypes.externalData) {
-                excludePatterns.add("'/storage/emulated/${getCurrentUserId()}/Android/data/${app.packageName}/cache'")
+                excludePatterns.add("/storage/emulated/${getCurrentUserId()}/Android/data/${app.packageName}/cache")
             }
 
             throwIfCancelled()
@@ -432,6 +456,12 @@ class BackupOperationRunner(
                 size = 0L,
                 isDirectory = Shell.cmd("[ -d ${shellQuote(shellPath)} ]").exec().isSuccess
             )
+        }
+        excludedCustomDirectories.forEach { dirUriStr ->
+            throwIfCancelled()
+            val realPath = io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(dirUriStr) ?: dirUriStr
+            val shellPath = io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(realPath)
+            excludePatterns.add(escapeResticPattern(shellPath))
         }
         val metadata = RestoidMetadata(apps = appMetadataMap, customDirectories = customDirectoryMetadataMap)
         return Triple(pathsToBackup, excludePatterns, metadata)
@@ -480,6 +510,21 @@ class BackupOperationRunner(
                 isFinished = true,
                 error = context.getString(R.string.error_no_backup_types_selected),
                 finalSummary = context.getString(R.string.summary_no_backup_types_selected)
+            )
+        }
+
+        val conflict = findConflictingExclusion(selectedApps, request, getCurrentUserId())
+        if (conflict != null) {
+            val appDisplayName = conflict.app.name.ifBlank { conflict.app.packageName }
+            val errorMessage = context.getString(
+                R.string.error_custom_exclusion_conflicts_with_app,
+                conflict.conflictingPath,
+                appDisplayName
+            )
+            return OperationProgress(
+                isFinished = true,
+                error = errorMessage,
+                finalSummary = errorMessage
             )
         }
 
@@ -560,18 +605,65 @@ class BackupOperationRunner(
     }
 
     private fun generateFilePathsForApp(app: AppInfo, backupTypes: BackupTypeSelection): List<String> {
-        val currentUserId = getCurrentUserId()
-        return mutableListOf<String>().apply {
-            if (backupTypes.apk) {
-                app.apkPaths.firstOrNull()?.let { path ->
-                    File(path).parentFile?.absolutePath?.let { add(it) }
+        return io.github.hddq.restoid.work.generateFilePathsForApp(app, backupTypes, getCurrentUserId())
+    }
+}
+
+data class ExclusionConflict(
+    val app: AppInfo,
+    val conflictingPath: String,
+    val appPath: String
+)
+
+fun generateFilePathsForApp(app: AppInfo, backupTypes: BackupTypeSelection, currentUserId: Int): List<String> {
+    return mutableListOf<String>().apply {
+        if (backupTypes.apk) {
+            app.apkPaths.firstOrNull()?.let { path ->
+                File(path).parentFile?.absolutePath?.let { add(it) }
+            }
+        }
+        if (backupTypes.data) add("/data/user/$currentUserId/${app.packageName}")
+        if (backupTypes.deviceProtectedData) add("/data/user_de/$currentUserId/${app.packageName}")
+        if (backupTypes.externalData) add("/storage/emulated/$currentUserId/Android/data/${app.packageName}")
+        if (backupTypes.obb) add("/storage/emulated/$currentUserId/Android/obb/${app.packageName}")
+        if (backupTypes.media) add("/storage/emulated/$currentUserId/Android/media/${app.packageName}")
+    }
+}
+
+fun findConflictingExclusion(
+    selectedApps: List<AppInfo>,
+    request: BackupWorkRequest,
+    currentUserId: Int
+): ExclusionConflict? {
+    if (selectedApps.isEmpty() || request.excludedCustomDirectories.isEmpty()) return null
+
+    val resolvedExclusions = request.excludedCustomDirectories.mapNotNull { excludedUri ->
+        val realPath = io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(excludedUri) ?: excludedUri
+        val shellPath = io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(realPath).trimEnd('/')
+        if (shellPath.isNotEmpty()) shellPath else null
+    }
+
+    if (resolvedExclusions.isEmpty()) return null
+
+    for (app in selectedApps) {
+        val effectiveTypes = request.appBackupTypes[app.packageName] ?: request.backupTypes
+        val appPaths = generateFilePathsForApp(app, effectiveTypes, currentUserId)
+
+        for (appPath in appPaths) {
+            val normalizedAppPath = appPath.trimEnd('/')
+            for (exclusionPath in resolvedExclusions) {
+                if (normalizedAppPath == exclusionPath ||
+                    normalizedAppPath.startsWith("$exclusionPath/") ||
+                    exclusionPath.startsWith("$normalizedAppPath/")
+                ) {
+                    return ExclusionConflict(
+                        app = app,
+                        conflictingPath = exclusionPath,
+                        appPath = normalizedAppPath
+                    )
                 }
             }
-            if (backupTypes.data) add("/data/user/$currentUserId/${app.packageName}")
-            if (backupTypes.deviceProtectedData) add("/data/user_de/$currentUserId/${app.packageName}")
-            if (backupTypes.externalData) add("/storage/emulated/$currentUserId/Android/data/${app.packageName}")
-            if (backupTypes.obb) add("/storage/emulated/$currentUserId/Android/obb/${app.packageName}")
-            if (backupTypes.media) add("/storage/emulated/$currentUserId/Android/media/${app.packageName}")
         }
     }
+    return null
 }

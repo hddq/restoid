@@ -417,7 +417,7 @@ fun AddEditScheduleScreen(
                     ExpressiveSegmentedSurface(index = 1, count = 2) {
                         TaskRow(
                             title = stringResource(R.string.run_tasks_custom_directories),
-                            subtitle = buildCustomDirectoriesSubtitle(state.customDirectories, context),
+                            subtitle = buildCustomDirectoriesSubtitle(state.customDirectories, state.excludedCustomDirectories, context),
                             icon = Icons.Outlined.Folder,
                             checked = state.customDirectoriesBackupEnabled,
                             onCheckedChange = viewModel::setCustomDirectoriesBackupEnabled,
@@ -656,6 +656,10 @@ fun ScheduleCustomDirectoriesConfigScreen(
         onAddDirectory = viewModel::addCustomDirectory,
         onToggleDirectory = viewModel::toggleCustomDirectory,
         onRemoveDirectory = viewModel::removeCustomDirectory,
+        excludedDirectories = state.excludedCustomDirectories,
+        onAddExcludedDirectory = viewModel::addExcludedCustomDirectory,
+        onToggleExcludedDirectory = viewModel::toggleExcludedCustomDirectory,
+        onRemoveExcludedDirectory = viewModel::removeExcludedCustomDirectory,
         modifier = modifier
     )
 }

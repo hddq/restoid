@@ -16,7 +16,9 @@ import io.github.hddq.restoid.model.MaintenanceConfig
 import io.github.hddq.restoid.ui.shared.BackupTypes
 import io.github.hddq.restoid.ui.shared.toUiModel
 import io.github.hddq.restoid.util.StorageUtils
+import io.github.hddq.restoid.work.BackupWorkRequest
 import io.github.hddq.restoid.work.RunTasksConfig
+import io.github.hddq.restoid.work.findConflictingExclusion
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -49,7 +51,8 @@ data class AddEditScheduleUiState(
     val showConfirmDeleteDialog: Boolean = false,
     val showDiscardChangesDialog: Boolean = false,
     val customDirectoriesBackupEnabled: Boolean = false,
-    val customDirectories: List<io.github.hddq.restoid.model.CustomDirectory> = emptyList()
+    val customDirectories: List<io.github.hddq.restoid.model.CustomDirectory> = emptyList(),
+    val excludedCustomDirectories: List<io.github.hddq.restoid.model.CustomDirectory> = emptyList()
 )
 
 sealed interface SchedulesUiEvent {
@@ -155,7 +158,8 @@ class SchedulesViewModel(
             triggerConditions = schedule.triggerConditions,
             lastRunTimestamp = schedule.lastRunTimestamp,
             customDirectoriesBackupEnabled = schedule.config.customDirectories.isNotEmpty(),
-            customDirectories = schedule.config.customDirectories.map { io.github.hddq.restoid.model.CustomDirectory(it, true) }
+            customDirectories = schedule.config.customDirectories.map { io.github.hddq.restoid.model.CustomDirectory(it, true) },
+            excludedCustomDirectories = schedule.config.excludedCustomDirectories.map { io.github.hddq.restoid.model.CustomDirectory(it, true) }
         )
         _addEditState.value = newState
         initialState = newState
@@ -200,7 +204,8 @@ class SchedulesViewModel(
                 current.maintenance != initial.maintenance ||
                 current.triggerConditions != initial.triggerConditions ||
                 current.customDirectoriesBackupEnabled != initial.customDirectoriesBackupEnabled ||
-                current.customDirectories != initial.customDirectories
+                current.customDirectories != initial.customDirectories ||
+                current.excludedCustomDirectories != initial.excludedCustomDirectories
     }
 
     fun onBackPress() {
@@ -235,6 +240,7 @@ class SchedulesViewModel(
                 selectedPackageNames = if (actualBackupEnabled) state.apps.filter { it.isSelected }.map { it.packageName } else emptyList(),
                 appBackupTypes = if (actualBackupEnabled) selectedAppBackupTypes(state).mapValues { it.value.toSelection() } else emptyMap(),
                 customDirectories = if (state.customDirectoriesBackupEnabled) state.customDirectories.filter { it.isSelected }.map { it.uri } else emptyList(),
+                excludedCustomDirectories = if (state.customDirectoriesBackupEnabled) state.excludedCustomDirectories.filter { it.isSelected }.map { it.uri } else emptyList(),
                 unlockRepo = state.maintenance.unlockRepo,
                 forgetSnapshots = state.maintenance.forgetSnapshots,
                 pruneRepo = state.maintenance.pruneRepo,
@@ -331,6 +337,64 @@ class SchedulesViewModel(
     fun removeCustomDirectory(uriString: String) {
         _addEditState.update { state ->
             state.copy(customDirectories = state.customDirectories.filter { it.uri != uriString })
+        }
+    }
+
+    fun addExcludedCustomDirectory(uriString: String) {
+        val newKey = StorageUtils.resolveCustomDirectoryKey(uriString)
+        if (_addEditState.value.excludedCustomDirectories.any { StorageUtils.resolveCustomDirectoryKey(it.uri) == newKey }) {
+            Toast.makeText(
+                application,
+                application.getString(R.string.custom_directories_already_added),
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+
+        val selectedApps = _addEditState.value.apps.filter { it.isSelected }
+        if (selectedApps.isNotEmpty()) {
+            val effectiveBackupTypes = _addEditState.value.backupTypes.toSelection()
+            val appBackupTypes = _addEditState.value.appBackupTypes.mapValues { it.value.toSelection() }
+            val currentUserId = runCatching {
+                android.os.UserHandle::class.java.getMethod("myUserId").invoke(null) as Int
+            }.getOrElse { android.os.Process.myUid() / 100000 }
+
+            val dummyRequest = BackupWorkRequest(
+                repositoryKey = "",
+                backupTypes = effectiveBackupTypes,
+                selectedPackageNames = selectedApps.map { it.packageName },
+                appBackupTypes = appBackupTypes,
+                excludedCustomDirectories = listOf(uriString)
+            )
+            val conflict = findConflictingExclusion(selectedApps, dummyRequest, currentUserId)
+            if (conflict != null) {
+                val appName = conflict.app.name.ifBlank { conflict.app.packageName }
+                Toast.makeText(
+                    application,
+                    application.getString(R.string.warning_custom_exclusion_conflicts_with_app, conflict.conflictingPath, appName),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+
+        _addEditState.update { state ->
+            state.copy(excludedCustomDirectories = state.excludedCustomDirectories + io.github.hddq.restoid.model.CustomDirectory(uriString))
+        }
+    }
+
+    fun toggleExcludedCustomDirectory(uriString: String) {
+        _addEditState.update { state ->
+            state.copy(
+                excludedCustomDirectories = state.excludedCustomDirectories.map {
+                    if (it.uri == uriString) it.copy(isSelected = !it.isSelected) else it
+                }
+            )
+        }
+    }
+
+    fun removeExcludedCustomDirectory(uriString: String) {
+        _addEditState.update { state ->
+            state.copy(excludedCustomDirectories = state.excludedCustomDirectories.filter { it.uri != uriString })
         }
     }
 

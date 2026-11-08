@@ -148,7 +148,26 @@ fun FolderPickerSheet(
             }
         }
         storageVolumes = loadedVolumes
-        if (normalizedInitial == null) {
+
+        val resolvedRootInitial = if (normalizedInitial == null && initialPath != null && allowSystemPaths) {
+            withContext(Dispatchers.IO) {
+                StorageUtils.resolveCustomDirectoryPath(initialPath)?.let { path ->
+                    if (StorageUtils.isDirectoryPath(path)) {
+                        path
+                    } else {
+                        File(path).parent?.takeIf { StorageUtils.isDirectoryPath(it) }
+                    }
+                }
+            }
+        } else {
+            normalizedInitial
+        }
+
+        if (resolvedRootInitial != null) {
+            targetPath = resolvedRootInitial
+            targetAtRoots = false
+            manualPathInput = resolvedRootInitial
+        } else if (normalizedInitial == null) {
             if (loadedVolumes.size == 1) {
                 targetPath = loadedVolumes.first().path
                 targetAtRoots = false
