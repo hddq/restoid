@@ -17,6 +17,8 @@ import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.ui.shared.OperationProgress
 import io.github.hddq.restoid.util.ResticOutputParser
+import io.github.hddq.restoid.util.buildCustomDirectoryRestoreCommand
+import io.github.hddq.restoid.util.buildCustomFileRestoreCommand
 import io.github.hddq.restoid.util.buildResticOptionFlags
 import io.github.hddq.restoid.util.buildShellEnvironmentPrefix
 import io.github.hddq.restoid.util.shellQuote
@@ -355,15 +357,14 @@ class RestoreOperationRunner(
                         Shell.cmd("mkdir -p ${shellQuote(parent.absolutePath)}").exec()
                     }
                     
-                    if (Shell.cmd("[ -e ${shellQuote(sourcePath)} ]").exec().isSuccess) {
-                        // The restic staging directory contains the saved mode and owner. Preserve
-                        // them when copying its contents into a protected destination instead of
-                        // creating root-owned, default-mode files with cp -R. Do not replace the
-                        // destination directory: restic's default restore semantics preserve
-                        // entries which are not in the snapshot.
-                        val copyResult = Shell.cmd(
-                            "cp -a ${shellQuote("$sourcePath/.")} ${shellQuote("$targetPath/")}"
-                        ).exec()
+                    if (Shell.cmd("[ -e ${shellQuote(sourcePath)} ] || [ -L ${shellQuote(sourcePath)} ]").exec().isSuccess) {
+                        val isDirectory = Shell.cmd("[ -d ${shellQuote(sourcePath)} ] && [ ! -L ${shellQuote(sourcePath)} ]").exec().isSuccess
+                        val restoreCommand = if (isDirectory) {
+                            buildCustomDirectoryRestoreCommand(sourcePath, targetPath)
+                        } else {
+                            buildCustomFileRestoreCommand(sourcePath, targetPath)
+                        }
+                        val copyResult = Shell.cmd(restoreCommand).exec()
                         if (!copyResult.isSuccess) {
                             processSuccess = false
                             failureDetails.add(context.getString(R.string.restore_failure_custom_directory, path))
