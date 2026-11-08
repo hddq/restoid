@@ -38,6 +38,7 @@ import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
 import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
 import io.github.hddq.restoid.ui.components.TasksGuideBottomSheet
+import io.github.hddq.restoid.ui.shared.ExclusionConflictWarningCard
 import io.github.hddq.restoid.ui.shared.TaskRow
 import io.github.hddq.restoid.ui.shared.buildBackupSubtitle
 import io.github.hddq.restoid.ui.shared.buildCheckSubtitle
@@ -94,6 +95,12 @@ fun RunTasksScreen(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 88.dp, top = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        if (uiState.exclusionConflicts.isNotEmpty()) {
+            item {
+                ExclusionConflictWarningCard(conflicts = uiState.exclusionConflicts)
+            }
+        }
+
         item {
             val rootState by viewModel.rootState.collectAsState()
             val hasRoot = rootState == io.github.hddq.restoid.data.RootState.Granted

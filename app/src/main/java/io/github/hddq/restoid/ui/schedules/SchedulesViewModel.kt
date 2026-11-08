@@ -17,8 +17,9 @@ import io.github.hddq.restoid.ui.shared.BackupTypes
 import io.github.hddq.restoid.ui.shared.toUiModel
 import io.github.hddq.restoid.util.StorageUtils
 import io.github.hddq.restoid.work.BackupWorkRequest
+import io.github.hddq.restoid.work.ExclusionConflict
 import io.github.hddq.restoid.work.RunTasksConfig
-import io.github.hddq.restoid.work.findConflictingExclusion
+import io.github.hddq.restoid.work.findConflictingExclusions
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -52,7 +53,8 @@ data class AddEditScheduleUiState(
     val showDiscardChangesDialog: Boolean = false,
     val customDirectoriesBackupEnabled: Boolean = false,
     val customDirectories: List<io.github.hddq.restoid.model.CustomDirectory> = emptyList(),
-    val excludedCustomDirectories: List<io.github.hddq.restoid.model.CustomDirectory> = emptyList()
+    val excludedCustomDirectories: List<io.github.hddq.restoid.model.CustomDirectory> = emptyList(),
+    val exclusionConflicts: List<ExclusionConflict> = emptyList()
 )
 
 sealed interface SchedulesUiEvent {
@@ -161,8 +163,9 @@ class SchedulesViewModel(
             customDirectories = schedule.config.customDirectories.map { io.github.hddq.restoid.model.CustomDirectory(it, true) },
             excludedCustomDirectories = schedule.config.excludedCustomDirectories.map { io.github.hddq.restoid.model.CustomDirectory(it, true) }
         )
-        _addEditState.value = newState
-        initialState = newState
+        val withConflicts = recomputeConflicts(newState)
+        _addEditState.value = withConflicts
+        initialState = withConflicts
         loadAppsForAddEdit(schedule.config.selectedPackageNames)
     }
 
@@ -181,7 +184,7 @@ class SchedulesViewModel(
                 app.packageName to (currentTypes[app.packageName] ?: defaultTypes)
             }
             _addEditState.update { 
-                val updated = it.copy(apps = apps, appBackupTypes = appBackupTypes, isLoadingApps = false)
+                val updated = recomputeConflicts(it.copy(apps = apps, appBackupTypes = appBackupTypes, isLoadingApps = false))
                 // Update initialState if it was just set (apps are loaded asynchronously)
                 if (initialState?.apps?.isEmpty() == true && apps.isNotEmpty()) {
                     initialState = updated
@@ -280,17 +283,17 @@ class SchedulesViewModel(
 
     fun setName(name: String) = _addEditState.update { it.copy(name = name) }
     fun setIntervalHours(hours: Int) = _addEditState.update { it.copy(intervalHours = hours) }
-    fun setBackupEnabled(enabled: Boolean) = _addEditState.update { it.copy(backupEnabled = enabled) }
-    fun setBackupApk(value: Boolean) = _addEditState.update { it.copy(backupTypes = it.backupTypes.copy(apk = value)) }
-    fun setBackupData(value: Boolean) = _addEditState.update { it.copy(backupTypes = it.backupTypes.copy(data = value)) }
-    fun setBackupDeviceProtectedData(value: Boolean) = _addEditState.update { it.copy(backupTypes = it.backupTypes.copy(deviceProtectedData = value)) }
-    fun setBackupExternalData(value: Boolean) = _addEditState.update { it.copy(backupTypes = it.backupTypes.copy(externalData = value)) }
-    fun setBackupObb(value: Boolean) = _addEditState.update { it.copy(backupTypes = it.backupTypes.copy(obb = value)) }
-    fun setBackupMedia(value: Boolean) = _addEditState.update { it.copy(backupTypes = it.backupTypes.copy(media = value)) }
-    fun setBackupPermissions(value: Boolean) = _addEditState.update { it.copy(backupTypes = it.backupTypes.copy(permissions = value)) }
+    fun setBackupEnabled(enabled: Boolean) = _addEditState.update { recomputeConflicts(it.copy(backupEnabled = enabled)) }
+    fun setBackupApk(value: Boolean) = _addEditState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(apk = value))) }
+    fun setBackupData(value: Boolean) = _addEditState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(data = value))) }
+    fun setBackupDeviceProtectedData(value: Boolean) = _addEditState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(deviceProtectedData = value))) }
+    fun setBackupExternalData(value: Boolean) = _addEditState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(externalData = value))) }
+    fun setBackupObb(value: Boolean) = _addEditState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(obb = value))) }
+    fun setBackupMedia(value: Boolean) = _addEditState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(media = value))) }
+    fun setBackupPermissions(value: Boolean) = _addEditState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(permissions = value))) }
 
     fun setCustomDirectoriesBackupEnabled(enabled: Boolean) {
-        _addEditState.update { it.copy(customDirectoriesBackupEnabled = enabled) }
+        _addEditState.update { recomputeConflicts(it.copy(customDirectoriesBackupEnabled = enabled)) }
     }
 
     fun addCustomDirectory(uriString: String) {
@@ -351,60 +354,38 @@ class SchedulesViewModel(
             return
         }
 
-        val selectedApps = _addEditState.value.apps.filter { it.isSelected }
-        if (selectedApps.isNotEmpty()) {
-            val effectiveBackupTypes = _addEditState.value.backupTypes.toSelection()
-            val appBackupTypes = _addEditState.value.appBackupTypes.mapValues { it.value.toSelection() }
-            val currentUserId = runCatching {
-                android.os.UserHandle::class.java.getMethod("myUserId").invoke(null) as Int
-            }.getOrElse { android.os.Process.myUid() / 100000 }
-
-            val dummyRequest = BackupWorkRequest(
-                repositoryKey = "",
-                backupTypes = effectiveBackupTypes,
-                selectedPackageNames = selectedApps.map { it.packageName },
-                appBackupTypes = appBackupTypes,
-                excludedCustomDirectories = listOf(uriString)
-            )
-            val conflict = findConflictingExclusion(selectedApps, dummyRequest, currentUserId)
-            if (conflict != null) {
-                val appName = conflict.app.name.ifBlank { conflict.app.packageName }
-                Toast.makeText(
-                    application,
-                    application.getString(R.string.warning_custom_exclusion_conflicts_with_app, conflict.conflictingPath, appName),
-                    Toast.LENGTH_LONG
-                ).show()
-            }
-        }
-
         _addEditState.update { state ->
-            state.copy(excludedCustomDirectories = state.excludedCustomDirectories + io.github.hddq.restoid.model.CustomDirectory(uriString))
+            recomputeConflicts(state.copy(excludedCustomDirectories = state.excludedCustomDirectories + io.github.hddq.restoid.model.CustomDirectory(uriString)))
         }
     }
 
     fun toggleExcludedCustomDirectory(uriString: String) {
         _addEditState.update { state ->
-            state.copy(
-                excludedCustomDirectories = state.excludedCustomDirectories.map {
-                    if (it.uri == uriString) it.copy(isSelected = !it.isSelected) else it
-                }
+            recomputeConflicts(
+                state.copy(
+                    excludedCustomDirectories = state.excludedCustomDirectories.map {
+                        if (it.uri == uriString) it.copy(isSelected = !it.isSelected) else it
+                    }
+                )
             )
         }
     }
 
     fun removeExcludedCustomDirectory(uriString: String) {
         _addEditState.update { state ->
-            state.copy(excludedCustomDirectories = state.excludedCustomDirectories.filter { it.uri != uriString })
+            recomputeConflicts(state.copy(excludedCustomDirectories = state.excludedCustomDirectories.filter { it.uri != uriString }))
         }
     }
 
     fun toggleAppSelection(packageName: String) {
         _addEditState.update { state ->
-            state.copy(
-                apps = state.apps.map {
-                    if (it.packageName == packageName) it.copy(isSelected = !it.isSelected) else it
-                },
-                appBackupTypes = state.appBackupTypes.ensurePackage(packageName, state.backupTypes)
+            recomputeConflicts(
+                state.copy(
+                    apps = state.apps.map {
+                        if (it.packageName == packageName) it.copy(isSelected = !it.isSelected) else it
+                    },
+                    appBackupTypes = state.appBackupTypes.ensurePackage(packageName, state.backupTypes)
+                )
             )
         }
     }
@@ -413,27 +394,33 @@ class SchedulesViewModel(
         _addEditState.update { state ->
             val shouldSelectAll = state.apps.any { !it.isSelected }
             val apps = state.apps.map { it.copy(isSelected = shouldSelectAll) }
-            state.copy(
-                apps = apps,
-                appBackupTypes = apps.fold(state.appBackupTypes) { acc, app ->
-                    acc.ensurePackage(app.packageName, state.backupTypes)
-                }
+            recomputeConflicts(
+                state.copy(
+                    apps = apps,
+                    appBackupTypes = apps.fold(state.appBackupTypes) { acc, app ->
+                        acc.ensurePackage(app.packageName, state.backupTypes)
+                    }
+                )
             )
         }
     }
 
     fun setAppBackupTypes(packageName: String, backupTypes: BackupTypes) {
         _addEditState.update { state ->
-            state.copy(appBackupTypes = state.appBackupTypes + (packageName to backupTypes))
+            recomputeConflicts(
+                state.copy(appBackupTypes = state.appBackupTypes + (packageName to backupTypes))
+            )
         }
     }
 
     fun setSelectedAppsBackupTypes(backupTypes: BackupTypes) {
         _addEditState.update { state ->
             val selectedPackageNames = state.apps.filter { it.isSelected }.map { it.packageName }
-            state.copy(
-                backupTypes = backupTypes,
-                appBackupTypes = state.appBackupTypes + selectedPackageNames.associateWith { backupTypes }
+            recomputeConflicts(
+                state.copy(
+                    backupTypes = backupTypes,
+                    appBackupTypes = state.appBackupTypes + selectedPackageNames.associateWith { backupTypes }
+                )
             )
         }
     }
@@ -485,5 +472,34 @@ class SchedulesViewModel(
 
     private fun Map<String, BackupTypes>.ensurePackage(packageName: String, defaultTypes: BackupTypes): Map<String, BackupTypes> {
         return if (containsKey(packageName)) this else this + (packageName to defaultTypes)
+    }
+
+    private fun recomputeConflicts(state: AddEditScheduleUiState): AddEditScheduleUiState {
+        val selectedApps = if (state.backupEnabled) state.apps.filter { it.isSelected } else emptyList()
+        val selectedExcluded = if (state.customDirectoriesBackupEnabled) {
+            state.excludedCustomDirectories.filter { it.isSelected }.map { it.uri }
+        } else {
+            emptyList()
+        }
+
+        if (selectedApps.isEmpty() || selectedExcluded.isEmpty()) {
+            return if (state.exclusionConflicts.isEmpty()) state else state.copy(exclusionConflicts = emptyList())
+        }
+
+        val effectiveBackupTypes = state.backupTypes.toSelection()
+        val appBackupTypes = state.appBackupTypes.mapValues { it.value.toSelection() }
+        val currentUserId = runCatching {
+            android.os.UserHandle::class.java.getMethod("myUserId").invoke(null) as Int
+        }.getOrElse { android.os.Process.myUid() / 100000 }
+
+        val dummyRequest = BackupWorkRequest(
+            repositoryKey = "",
+            backupTypes = effectiveBackupTypes,
+            selectedPackageNames = selectedApps.map { it.packageName },
+            appBackupTypes = appBackupTypes,
+            excludedCustomDirectories = selectedExcluded
+        )
+        val conflicts = findConflictingExclusions(selectedApps, dummyRequest, currentUserId)
+        return state.copy(exclusionConflicts = conflicts)
     }
 }

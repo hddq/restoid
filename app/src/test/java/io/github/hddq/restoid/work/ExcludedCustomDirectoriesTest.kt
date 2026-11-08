@@ -182,4 +182,23 @@ class ExcludedCustomDirectoriesTest {
         assertEquals("/data/user/0/com.example.app/databases", conflict?.conflictingPath)
         assertEquals("/data/user/0/com.example.app", conflict?.appPath)
     }
+
+    @Test
+    fun findConflictingExclusions_detectsNavicMusicDownloadCacheExclusion() {
+        val navic = createTestApp(packageName = "paige.navic", name = "Navic")
+        val request = BackupWorkRequest(
+            repositoryKey = "local:/repo",
+            backupTypes = BackupTypeSelection(data = true),
+            selectedPackageNames = listOf(navic.packageName),
+            customDirectories = emptyList(),
+            excludedCustomDirectories = listOf("/data/user/0/paige.navic/files/downloads")
+        )
+
+        val conflicts = findConflictingExclusions(listOf(navic), request, currentUserId = 0)
+        assertEquals(1, conflicts.size)
+        val conflict = conflicts.first()
+        assertEquals("paige.navic", conflict.app.packageName)
+        assertEquals("/data/user/0/paige.navic/files/downloads", conflict.conflictingPath)
+        assertEquals("/data/user/0/paige.navic", conflict.appPath)
+    }
 }

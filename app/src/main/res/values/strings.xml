@@ -107,8 +107,8 @@
     <string name="custom_directories_section_exclude">Exclude</string>
     <string name="custom_directories_exclude_description">Select subdirectories or files to exclude from the backup.</string>
     <string name="action_exclude_subfolder">Exclude subfolder…</string>
-    <string name="error_custom_exclusion_conflicts_with_app">Custom exclusion "%1$s" conflicts with backup path for %2$s.</string>
-    <string name="warning_custom_exclusion_conflicts_with_app">Warning: exclusion "%1$s" conflicts with backup path for %2$s.</string>
+    <string name="warning_exclusion_conflict_title">Exclusion Overlap</string>
+    <string name="warning_custom_exclusion_conflicts_with_app">Exclusion "%1$s" will exclude files from %2$s backup.</string>
     <string name="error_all_files_access_required">All files access is required to back up custom directories.</string>
     <string name="summary_all_files_access_required">Grant All files access, then try again.</string>
     <string name="run_tasks_backup_subtitle">%1$d apps selected - %2$s</string>

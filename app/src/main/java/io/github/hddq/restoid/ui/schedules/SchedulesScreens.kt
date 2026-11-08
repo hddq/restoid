@@ -81,6 +81,7 @@ import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
 import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
 import io.github.hddq.restoid.ui.components.TasksGuideBottomSheet
+import io.github.hddq.restoid.ui.shared.ExclusionConflictWarningCard
 import io.github.hddq.restoid.ui.shared.TaskRow
 import io.github.hddq.restoid.ui.shared.buildBackupSubtitle
 import io.github.hddq.restoid.ui.shared.buildCheckSubtitle
@@ -393,6 +394,12 @@ fun AddEditScheduleScreen(
                         )
                     }
                 }
+            }
+        }
+
+        if (state.exclusionConflicts.isNotEmpty()) {
+            item {
+                ExclusionConflictWarningCard(conflicts = state.exclusionConflicts)
             }
         }
 
