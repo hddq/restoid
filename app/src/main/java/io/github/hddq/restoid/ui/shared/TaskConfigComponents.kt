@@ -3,6 +3,7 @@ package io.github.hddq.restoid.ui.shared
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -76,8 +77,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -1164,8 +1168,15 @@ fun ExclusionConflictWarningCard(
 ) {
     if (conflicts.isEmpty()) return
 
+    var expanded by remember { mutableStateOf(false) }
+    val maxInitial = 3
+    val hasMore = conflicts.size > maxInitial
+    val visibleConflicts = if (expanded || !hasMore) conflicts else conflicts.take(maxInitial)
+
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .animateContentSize(),
         shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.tertiaryContainer,
@@ -1187,24 +1198,42 @@ fun ExclusionConflictWarningCard(
             )
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(
-                    text = stringResource(R.string.warning_exclusion_conflict_title),
+                    text = stringResource(R.string.warning_exclusion_conflict_header),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onTertiaryContainer
                 )
-                conflicts.forEach { conflict ->
+                visibleConflicts.forEach { conflict ->
                     val appName = conflict.app.name.ifBlank { conflict.app.packageName }
                     Text(
-                        text = stringResource(
-                            R.string.warning_custom_exclusion_conflicts_with_app,
-                            conflict.conflictingPath,
-                            appName
-                        ),
+                        text = buildAnnotatedString {
+                            append("• ")
+                            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                                append(appName)
+                            }
+                            append(" — ")
+                            append(conflict.conflictingPath)
+                        },
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.85f)
+                        color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.9f)
+                    )
+                }
+                if (hasMore) {
+                    Text(
+                        text = if (!expanded) {
+                            stringResource(R.string.warning_exclusion_conflict_show_more, conflicts.size - maxInitial)
+                        } else {
+                            stringResource(R.string.warning_exclusion_conflict_show_less)
+                        },
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                        modifier = Modifier
+                            .clickable { expanded = !expanded }
+                            .padding(top = 2.dp, bottom = 2.dp)
                     )
                 }
             }
