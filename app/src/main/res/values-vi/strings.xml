@@ -2,11 +2,13 @@
 <resources>
     <string name="screen_home">Trang chủ</string>
     <string name="screen_settings">Cài đặt</string>
+    <string name="screen_tasks">Tác vụ</string>
     <string name="screen_snapshot_details">Chi tiết Snapshot</string>
     <string name="screen_restore">Khôi phục</string>
     <string name="screen_licenses">Giấy phép</string>
     <string name="screen_schedules">Lịch trình</string>
     <string name="screen_operation_progress">Tiến trình hoạt động</string>
+    <string name="topbar_tasks">Tác vụ</string>
     <string name="topbar_backup_config">Cấu hình sao lưu</string>
     <string name="topbar_forget_config">Chính sách xóa (Forget)</string>
     <string name="topbar_check_config">Kiểm tra tính toàn vẹn</string>
@@ -19,6 +21,7 @@
     <string name="topbar_restore_snapshot">Khôi phục Snapshot</string>
     <string name="cd_back">Quay lại</string>
     <string name="cd_forget_snapshot">Xóa Snapshot</string>
+    <string name="action_run_now">Chạy ngay</string>
     <string name="fab_run_tasks">Chạy tác vụ</string>
     <string name="fab_add_schedule">Thêm lịch trình</string>
     <string name="fab_restore">Khôi phục</string>
@@ -31,21 +34,76 @@
     <string name="run_tasks_phase_summary">%1$s:\n%2$s</string>
     <string name="backup_types_title">Loại sao lưu</string>
     <string name="backup_type_apk">APK</string>
+    <string name="backup_type_apk_desc">Tệp gói ứng dụng</string>
     <string name="backup_type_data">Dữ liệu</string>
+    <string name="backup_type_data_desc">Dữ liệu ứng dụng nội bộ (/data/user/&lt;id&gt;)</string>
     <string name="backup_type_device_protected_data">Dữ liệu được bảo vệ của thiết bị</string>
+    <string name="backup_type_device_protected_data_desc">Dữ liệu truy cập được trước khi mở khóa thiết bị (/data/user_de/&lt;id&gt;)</string>
     <string name="backup_type_external_data">Dữ liệu bên ngoài</string>
+    <string name="backup_type_external_data_desc">Dữ liệu ứng dụng trên bộ nhớ ngoài (/storage/emulated/&lt;id&gt;/Android/data)</string>
     <string name="backup_type_obb_data">Dữ liệu OBB</string>
+    <string name="backup_type_obb_data_desc">Tệp Opaque Binary Blob (/storage/emulated/&lt;id&gt;/Android/obb)</string>
     <string name="backup_type_media_data">Dữ liệu phương tiện</string>
+    <string name="backup_type_media_data_desc">Tệp phương tiện của ứng dụng (/storage/emulated/&lt;id&gt;/Android/media)</string>
+    <string name="settings_system_permission_storage">Truy cập Lưu trữ</string>
+    <string name="settings_system_permission_local_network">Truy cập Mạng nội bộ</string>
+    <string name="local_network_permission_enabled">Đã cấp quyền truy cập mạng nội bộ</string>
+    <string name="backup_type_permissions">Quyền</string>
+    <string name="backup_type_permissions_desc">Quyền truy cập thời gian chạy đã cấp</string>
     <string name="apps_title">Ứng dụng</string>
     <string name="toggle_all">Chọn tất cả</string>
+    <string name="backup_types_for_selected_apps">Các loại sao lưu cho ứng dụng đã chọn</string>
+    <string name="backup_types_none">Không có</string>
+    <string name="backup_types_mixed">Hỗn hợp</string>
     <string name="restore_options_title">Tùy chọn khôi phục</string>
     <string name="allow_downgrade">Cho phép hạ cấp</string>
     <string name="apps_to_restore_title">Ứng dụng cần khôi phục</string>
     <string name="no_app_data_found_in_snapshot">Không tìm thấy dữ liệu ứng dụng trong snapshot này.</string>
     <string name="restore_backup_version_with_installed">Bản sao lưu: %1$s -&gt; Đã cài đặt: %2$s</string>
     <string name="restore_backup_version_only">Bản sao lưu: %1$s</string>
-    <string name="home_title" translatable="false">Restoid</string>
     <string name="run_tasks_applications">Các ứng dụng</string>
+    <string name="run_tasks_custom_directories">Thư mục tùy chỉnh</string>
+    <string name="run_tasks_custom_directories_subtitle_none">Chưa chọn thư mục nào</string>
+    <string name="run_tasks_custom_directories_subtitle_count">%1$d thư mục đã chọn</string>
+    <string name="run_tasks_custom_directories_subtitle_with_exclusions">%1$d paths selected, %2$d excluded</string>
+    <string name="action_add_directory">Thêm thư mục</string>
+    <string name="action_add_excluded_directory">Exclude File or Folder</string>
+    <string name="folder_browser_select_this_folder">Chọn đường dẫn này</string>
+    <string name="folder_browser_show_hidden">Hiện thư mục ẩn</string>
+    <string name="folder_browser_show_hidden_items">Hiển thị các tệp và thư mục ẩn</string>
+    <string name="folder_browser_cannot_list">Không thể liệt kê thư mục này.</string>
+    <string name="folder_browser_empty">Không có thư mục con.</string>
+    <string name="folder_browser_empty_items">Không có tệp hoặc thư mục nào.</string>
+    <string name="folder_browser_up">Lên thư mục cha</string>
+    <string name="folder_browser_roots_title">Vị trí lưu trữ</string>
+    <string name="folder_browser_internal_storage">Bộ nhớ trong</string>
+    <string name="folder_browser_system_root">Gốc hệ thống (/)</string>
+    <string name="folder_browser_external_storage">Bộ nhớ ngoài (%1$s)</string>
+    <string name="folder_browser_edit_path">Nhập thủ công đường dẫn</string>
+    <string name="folder_browser_new_folder">Thư mục mới</string>
+    <string name="folder_browser_new_folder_name">Tên thư mục</string>
+    <string name="folder_browser_create_failed">Không thể tạo thư mục.</string>
+    <string name="action_create">Tạo</string>
+    <string name="action_go">Đi</string>
+    <string name="title_custom_directories">Thư mục tùy chỉnh</string>
+    <string name="custom_directories_description">Chọn các thư mục tùy chỉnh trên thiết bị của bạn để bao gồm trong bản sao lưu.</string>
+    <string name="custom_directories_long_press_hint">Chạm và giữ một mục để mở menu và xóa nó.</string>
+    <string name="custom_directories_typed_path_label">Đường dẫn tệp hoặc thư mục</string>
+    <string name="custom_directories_typed_path_hint">ví dụ: /storage/emulated/0/Download hoặc /system/build.prop</string>
+    <string name="custom_directories_typed_path_invalid">Vui lòng nhập đường dẫn thư mục tuyệt đối hợp lệ.</string>
+    <string name="custom_directories_typed_path_not_found">Thư mục không tồn tại: %1$s</string>
+    <string name="custom_directory_not_found">Không tìm thấy thư mục tùy chỉnh: %1$s</string>
+    <string name="custom_directories_already_added">Thư mục này đã có trong danh sách.</string>
+    <string name="custom_directories_unresolvable">Không thể phân giải thư mục tùy chỉnh: %1$s</string>
+    <string name="custom_directories_section_include">Include</string>
+    <string name="custom_directories_section_exclude">Exclude</string>
+    <string name="custom_directories_exclude_description">Select subdirectories or files to exclude from the backup.</string>
+    <string name="action_exclude_subfolder">Exclude subfolder…</string>
+    <string name="warning_exclusion_conflict_header">Some exclusions may exclude files from app backups:</string>
+    <string name="warning_exclusion_conflict_show_more">Show %1$d more…</string>
+    <string name="warning_exclusion_conflict_show_less">Show less</string>
+    <string name="error_all_files_access_required">Yêu cầu quyền truy cập tất cả tệp để sao lưu các thư mục tùy chỉnh.</string>
+    <string name="summary_all_files_access_required">Cấp quyền truy cập tất cả tệp rồi thử lại.</string>
     <string name="run_tasks_backup_subtitle">Đã chọn %1$d ứng dụng - %2$s</string>
     <string name="run_tasks_forget_snapshots">Xóa Snapshots</string>
     <string name="run_tasks_forget_subtitle">Giữ lại %1$d bản mới nhất, %2$d ngày, %3$d tuần, %4$d tháng</string>
@@ -65,6 +123,7 @@
     <string name="dialog_discard_changes_message">Bạn có thay đổi chưa lưu. Bạn có chắc muốn hủy bỏ chúng không?</string>
     <string name="action_discard">Hủy bỏ</string>
     <string name="error_with_message">Lỗi: %1$s</string>
+    <string name="error_cannot_backup_repo_to_itself">Không thể thêm chính kho lưu trữ làm thư mục tùy chỉnh để sao lưu.</string>
     <string name="no_snapshots_found_for_repository">Không tìm thấy snapshot nào cho kho lưu trữ đã chọn.</string>
     <plurals name="snapshots_count">
         <item quantity="other">Snapshots (%1$d)</item>
@@ -82,8 +141,31 @@
     <plurals name="apps_count">
         <item quantity="other">Ứng dụng (%1$d):</item>
     </plurals>
+    <plurals name="backed_up_items_count">
+        <item quantity="other">Đã sao lưu (%1$d):</item>
+    </plurals>
+    <plurals name="custom_directories_count">
+        <item quantity="other">Thư mục tùy chỉnh (%1$d):</item>
+    </plurals>
     <string name="no_app_info_for_snapshot">Không có thông tin ứng dụng cho snapshot này.</string>
     <string name="metadata_missing_or_corrupted">Siêu dữ liệu bị thiếu hoặc bị hỏng.</string>
+    <string name="metadata_restore_success">Khôi phục siêu dữ liệu thành công.</string>
+    <string name="time_just_now">vừa xong</string>
+    <plurals name="time_mins_ago">
+        <item quantity="other">%d phút trước</item>
+    </plurals>
+    <plurals name="time_hours_ago">
+        <item quantity="other">%d giờ trước</item>
+    </plurals>
+    <plurals name="time_days_ago">
+        <item quantity="other">%d ngày trước</item>
+    </plurals>
+    <plurals name="time_months_ago">
+        <item quantity="other">%d tháng trước</item>
+    </plurals>
+    <plurals name="time_years_ago">
+        <item quantity="other">%d năm trước</item>
+    </plurals>
     <string name="maintenance_task_unlock_repository">Mở khóa kho lưu trữ</string>
     <string name="maintenance_task_prune_repository">Dọn dẹp kho lưu trữ (Prune)</string>
     <string name="maintenance_keep_last">Giữ bản mới nhất</string>
@@ -94,6 +176,9 @@
     <plurals name="snapshot_backed_up_apps_count">
         <item quantity="other">Ứng dụng đã sao lưu (%1$d)</item>
     </plurals>
+    <plurals name="snapshot_backed_up_custom_directories_count">
+        <item quantity="other">Thư mục tùy chỉnh đã sao lưu (%1$d)</item>
+    </plurals>
     <string name="snapshot_not_found">Không tìm thấy snapshot nào.</string>
     <string name="snapshot_forgetting">Đang xóa snapshot…</string>
     <string name="snapshot_id">ID: %1$s</string>
@@ -103,6 +188,7 @@
     <string name="dialog_forget_snapshot_message">Hành động này sẽ xóa bản ghi snapshot. Dữ liệu thực tế chỉ bị xóa khi chạy lệnh dọn dẹp (Prune). Bạn có chắc chắn?</string>
     <string name="label_password">Mật khẩu</string>
     <string name="label_repository_password">Mật khẩu kho lưu trữ</string>
+    <string name="repository_password_explanation">Bắt buộc để mã hóa và khôi phục kho lưu trữ Restic này. Khác với thông tin đăng nhập SFTP của bạn. Hãy giữ an toàn: nếu mất mật khẩu, bạn sẽ không thể khôi phục các bản sao lưu của mình.</string>
     <string name="label_rest_username">Tên người dùng REST</string>
     <string name="label_rest_password">Mật khẩu REST</string>
     <string name="label_s3_access_key_id">S3 Access Key ID</string>
@@ -117,6 +203,7 @@
     <string name="action_done">Xong</string>
     <string name="action_add">Thêm</string>
     <string name="action_delete">Xóa</string>
+    <string name="action_restore_metadata">Khôi phục siêu dữ liệu</string>
     <string name="action_change">Thay đổi</string>
     <string name="action_save">Lưu</string>
     <string name="action_grant">Cấp quyền</string>
@@ -124,6 +211,10 @@
     <string name="action_forget">Xóa</string>
     <string name="action_try_again">Thử lại</string>
     <string name="action_disable">Vô hiệu hóa</string>
+    <string name="action_enable">Bật</string>
+    <string name="usage_stats_permission_enabled">Đã cấp quyền truy cập sử dụng ứng dụng</string>
+    <string name="usage_stats_permission_disabled">Yêu cầu quyền truy cập vào mức sử dụng ứng dụng</string>
+    <string name="usage_stats_permission_description">Cho phép tính toán kích thước ứng dụng nhanh hơn trong quá trình sao lưu thay vì quét thư mục</string>
     <string name="progress_initializing">Đang khởi tạo…</string>
     <string name="progress_stopping">Đang dừng…</string>
     <string name="progress_operation_complete">%1$s hoàn tất</string>
@@ -134,7 +225,6 @@
     <string name="progress_items">Mục</string>
     <string name="progress_size">Kích thước</string>
     <string name="progress_processing">Đang xử lý:</string>
-    <string name="progress_placeholder" translatable="false">...</string>
     <string name="dialog_add_repository_title">Thêm kho lưu trữ</string>
     <string name="label_repository_type">Loại kho lưu trữ</string>
     <string name="label_repository_specification">Đặc tả kho lưu trữ</string>
@@ -144,7 +234,6 @@
     <string name="label_sftp_password">Mật khẩu SFTP</string>
     <string name="label_sftp_ssh_key">Khóa SSH</string>
     <string name="label_sftp_private_key">Khóa riêng SSH SFTP</string>
-    <string name="placeholder_sftp_private_key" translatable="false">-----BEGIN OPENSSH PRIVATE KEY-----\n...</string>
     <string name="label_sftp_key_passphrase">Mật khẩu khóa SSH (Passphrase)</string>
     <string name="label_sftp_key_passphrase_optional">Mật khẩu khóa SSH (Tùy chọn)</string>
     <string name="dialog_sftp_trust_title">Tin cậy máy chủ SFTP</string>
@@ -153,9 +242,15 @@
     <string name="repo_backend_local">Thư mục cục bộ</string>
     <string name="repo_backend_sftp">SFTP (SSH)</string>
     <string name="repo_backend_rest">Máy chủ HTTP REST</string>
-    <string name="repo_backend_s3" translatable="false">Amazon S3 / MinIO</string>
-    <string name="repo_hint_rest" translatable="false">http://host:8000/</string>
-    <string name="repo_hint_s3" translatable="false">s3.us-east-1.amazonaws.com/bucket_name</string>
+    <string name="label_sftp_host">Máy chủ</string>
+    <string name="label_sftp_port">Cổng</string>
+    <string name="label_sftp_username">Tên người dùng</string>
+    <string name="label_sftp_repository_path">Đường dẫn kho lưu trữ</string>
+    <string name="repo_supporting_sftp_path">Đường dẫn tuyệt đối (/srv/restic-repo) hoặc tương đối so với thư mục chính (restic-repo)</string>
+    <string name="error_sftp_host_empty">Máy chủ không được để trống</string>
+    <string name="error_sftp_username_empty">Tên người dùng không được để trống</string>
+    <string name="error_sftp_path_empty">Đường dẫn kho lưu trữ không được để trống</string>
+    <string name="error_sftp_port_invalid">Cổng phải là số từ 1 đến 65535</string>
     <string name="label_path">Đường dẫn</string>
     <string name="placeholder_select_directory">Chọn một thư mục…</string>
     <string name="cd_select_folder">Chọn Thư mục</string>
@@ -170,6 +265,9 @@
     <string name="root_access_denied">Từ chối quyền Root</string>
     <string name="checking_for_root">Đang kiểm tra quyền root…</string>
     <string name="root_access_granted">Đã cấp quyền Root</string>
+    <string name="storage_permission_enabled">Đã cấp quyền truy cập tất cả tệp tin</string>
+    <string name="storage_permission_disabled">Yêu cầu quyền truy cập tất cả tệp tin</string>
+    <string name="storage_permission_description">Cần thiết để sao lưu các thư mục tùy chỉnh mà không cần quyền root.</string>
     <string name="dependencies_title">Thành phần phụ thuộc</string>
     <string name="about_title">Giới thiệu</string>
     <string name="version_label">Phiên bản</string>
@@ -225,9 +323,15 @@
     <string name="backup_stage_preparing">[%1$d/%2$d] Đang chuẩn bị sao lưu...</string>
     <string name="backup_stage_running">[%1$d/%2$d] Đang sao lưu các mục…</string>
     <string name="backup_stage_finalizing">[%1$d/%2$d] Đang hoàn tất sao lưu…</string>
+    <string name="backup_error_no_files_selected_for_items">Không tìm thấy tập tin nào để sao lưu cho các mục đã chọn.</string>
     <string name="backup_error_command_failed_with_code">Lệnh Restic thất bại với mã thoát %1$d.</string>
     <string name="backup_warning_metadata_not_saved">Cảnh báo: Không thể lưu tệp siêu dữ liệu sao lưu cục bộ.</string>
+    <plurals name="backup_summary_success_items">
+        <item quantity="other">Đã sao lưu %1$d mục.</item>
+    </plurals>
     <string name="error_fatal_with_message">Đã xảy ra lỗi nghiêm trọng: %1$s</string>
+    <string name="error_no_items_selected">Chưa chọn mục nào.</string>
+    <string name="summary_no_items_selected">Chưa có mục nào được chọn.</string>
     <string name="error_no_backup_types_selected">Chưa chọn loại sao lưu nào.</string>
     <string name="summary_no_backup_types_selected">Chưa có loại sao lưu nào được chọn.</string>
     <string name="error_restic_not_installed">Restic chưa được cài đặt.</string>
@@ -250,9 +354,13 @@
     <string name="restore_stage_processing_apps">Đang xử lý ứng dụng</string>
     <string name="restore_stage_cleanup">Dọn dẹp</string>
     <string name="restore_error_preflight_failed">Kiểm tra trước khi khôi phục thất bại.</string>
+    <string name="restore_error_no_items_selected">Không có mục nào được chọn để khôi phục.</string>
+    <string name="restore_error_no_restore_types_selected">Chưa chọn loại khôi phục nào.</string>
     <string name="restore_error_password_not_found">Không tìm thấy mật khẩu cho kho lưu trữ.</string>
     <string name="restore_error_no_files_found">Không tìm thấy tập tin nào trong bản sao chụp cho các mục đã chọn.</string>
     <string name="restore_error_command_failed">Lệnh khôi phục Restic thất bại.</string>
+    <string name="restore_stage_processing_template_apps">[%1$d/%2$d] Đang xử lý Ứng dụng</string>
+    <string name="restore_stage_processing_template_custom_directories">[%1$d/%2$d] Đang xử lý Thư mục tùy chỉnh</string>
     <string name="restore_failure_install_commit">%1$s: Tiến trình cài đặt thất bại: %2$s</string>
     <string name="restore_failure_write_apk_splits">%1$s: Ghi các phần APK thất bại.</string>
     <string name="restore_failure_create_install_session">%1$s: Không thể tạo phiên cài đặt.</string>
@@ -260,7 +368,15 @@
     <string name="restore_failure_data_restore">%1$s: Khôi phục dữ liệu thất bại hoặc chưa hoàn tất.</string>
     <string name="restore_failure_permissions_app_not_installed">%1$s: Khôi phục quyền thất bại vì ứng dụng chưa được cài đặt.</string>
     <string name="restore_failure_permissions_partial">%1$s: Không thể khôi phục một số quyền: %2$s</string>
+    <string name="restore_stage_processing_custom_directories">Đang xử lý Thư mục tùy chỉnh…</string>
+    <string name="restore_failure_custom_directory">Không thể khôi phục thư mục tùy chỉnh %1$s</string>
     <string name="restore_summary_finished_in">Khôi phục xong trong %1$s.</string>
+    <plurals name="restore_summary_processed_items">
+        <item quantity="other">Đã xử lý thành công %1$d mục.</item>
+    </plurals>
+    <plurals name="restore_summary_failed_items">
+        <item quantity="other">Không thể khôi phục %1$d mục.</item>
+    </plurals>
     <string name="restore_summary_details">\n\nChi tiết:\n- %1$s</string>
     <string name="maintenance_task_unlock">Mở khóa</string>
     <string name="maintenance_task_forget">Xóa</string>
@@ -303,6 +419,10 @@
     <string name="channel_completed_operations">Các tác vụ đã hoàn tất</string>
     <string name="channel_ongoing_description">Hiển thị tiến trình sao lưu và khôi phục trong nền.</string>
     <string name="channel_completed_description">Cảnh báo khi tác vụ sao lưu hoặc khôi phục đã xong.</string>
+    <string name="channel_successful_operations">Successful Operations</string>
+    <string name="channel_successful_description">Alerts when a backup or restore has finished successfully.</string>
+    <string name="channel_failed_operations">Failed Operations</string>
+    <string name="channel_failed_description">Alerts when a backup or restore operation fails or encounters errors.</string>
     <plurals name="notification_files_progress">
         <item quantity="other">%1$d/%2$d tệp</item>
     </plurals>
@@ -313,6 +433,12 @@
     <string name="operation_interrupted">Tác vụ đã bị gián đoạn.</string>
     <string name="dialog_stop_operation_title">Dừng tác vụ?</string>
     <string name="dialog_stop_operation_message">Bạn có muốn dừng tác vụ hiện tại không? Bất kỳ công việc nào chưa hoàn thành sẽ bị hủy.</string>
+    <string name="home_operation_running_title">%1$s đang thực hiện</string>
+    <string name="home_operation_running_default_title">Thao tác đang thực hiện</string>
+    <string name="home_operation_running_tap_hint">Chạm để xem tiến trình</string>
+    <string name="action_force_stop">Buộc dừng</string>
+    <string name="dialog_force_stop_operation_title">Buộc dừng thao tác?</string>
+    <string name="dialog_force_stop_operation_message">Bạn có muốn buộc dừng thao tác hiện tại không? Mọi công việc chưa hoàn thành sẽ bị hủy và trạng thái thao tác sẽ được đặt lại.</string>
     <string name="repo_error_exists">Kho lưu trữ đã tồn tại.</string>
     <string name="repo_error_binary_not_ready">Binary Restic chưa sẵn sàng.</string>
     <string name="repo_error_invalid_password_or_corrupted">Mật khẩu không hợp lệ hoặc kho bị hỏng.</string>
@@ -383,144 +509,41 @@
     <string name="license_tap_to_expand">… (nhấn để mở rộng)</string>
     <string name="cd_open_link">Mở liên kết</string>
     <string name="cd_copy_license">Sao chép Giấy phép</string>
-    <string name="time_just_now">vừa xong</string>
-    <plurals name="time_mins_ago">
-        <item quantity="other">%d phút trước</item>
-    </plurals>
-    <plurals name="time_hours_ago">
-        <item quantity="other">%d giờ trước</item>
-    </plurals>
-    <plurals name="time_days_ago">
-        <item quantity="other">%d ngày trước</item>
-    </plurals>
-    <plurals name="time_months_ago">
-        <item quantity="other">%d tháng trước</item>
-    </plurals>
-    <plurals name="time_years_ago">
-        <item quantity="other">%d năm trước</item>
-    </plurals>
-    <string name="backup_type_permissions">Quyền</string>
-    <string name="backup_types_for_selected_apps">Các loại sao lưu cho ứng dụng đã chọn</string>
-    <string name="backup_types_none">Không có</string>
-    <string name="backup_types_mixed">Hỗn hợp</string>
-    <string name="restore_error_no_restore_types_selected">Chưa chọn loại khôi phục nào.</string>
-    <string name="backup_type_apk_desc">Tệp gói ứng dụng</string>
-    <string name="backup_type_data_desc">Dữ liệu ứng dụng nội bộ (/data/user/&lt;id&gt;)</string>
-    <string name="backup_type_device_protected_data_desc">Dữ liệu truy cập được trước khi mở khóa thiết bị (/data/user_de/&lt;id&gt;)</string>
-    <string name="backup_type_external_data_desc">Dữ liệu ứng dụng trên bộ nhớ ngoài (/storage/emulated/&lt;id&gt;/Android/data)</string>
-    <string name="backup_type_obb_data_desc">Tệp Opaque Binary Blob (/storage/emulated/&lt;id&gt;/Android/obb)</string>
-    <string name="backup_type_media_data_desc">Tệp phương tiện của ứng dụng (/storage/emulated/&lt;id&gt;/Android/media)</string>
-    <string name="backup_type_permissions_desc">Quyền truy cập thời gian chạy đã cấp</string>
-    <string name="action_enable">Bật</string>
-    <string name="usage_stats_permission_enabled">Đã cấp quyền truy cập sử dụng ứng dụng</string>
-    <string name="usage_stats_permission_disabled">Yêu cầu quyền truy cập vào mức sử dụng ứng dụng</string>
-    <string name="usage_stats_permission_description">Cho phép tính toán kích thước ứng dụng nhanh hơn trong quá trình sao lưu thay vì quét thư mục</string>
-    <string name="metadata_restore_success">Khôi phục siêu dữ liệu thành công.</string>
-    <string name="action_restore_metadata">Khôi phục siêu dữ liệu</string>
     <string name="repo_warning_metadata_restore_failed_title">Khôi phục siêu dữ liệu thất bại</string>
     <string name="repo_warning_metadata_restore_failed">Kho lưu trữ đã được thêm thành công, nhưng việc khôi phục siêu dữ liệu (lịch biểu, thông tin sao lưu chi tiết) đã thất bại. Điều này thường có nghĩa là ảnh chụp nhanh siêu dữ liệu bị thiếu hoặc kho lưu trữ đã bị khóa. Để thử lại, hãy mở Cài đặt → Kho lưu trữ, nhấn vào menu kho lưu trữ và chọn \"Khôi phục siêu dữ liệu\".</string>
-    <string name="screen_tasks">Tác vụ</string>
-    <string name="topbar_tasks">Tác vụ</string>
-    <string name="run_tasks_custom_directories">Thư mục tùy chỉnh</string>
-    <string name="run_tasks_custom_directories_subtitle_none">Chưa chọn thư mục nào</string>
-    <string name="run_tasks_custom_directories_subtitle_count">%1$d thư mục đã chọn</string>
-    <string name="action_add_directory">Thêm thư mục</string>
-    <string name="title_custom_directories">Thư mục tùy chỉnh</string>
-    <string name="custom_directories_description">Chọn các thư mục tùy chỉnh trên thiết bị của bạn để bao gồm trong bản sao lưu.</string>
-    <string name="error_cannot_backup_repo_to_itself">Không thể thêm chính kho lưu trữ làm thư mục tùy chỉnh để sao lưu.</string>
-    <plurals name="backed_up_items_count">
-        <item quantity="other">Đã sao lưu (%1$d):</item>
-    </plurals>
-    <plurals name="custom_directories_count">
-        <item quantity="other">Thư mục tùy chỉnh (%1$d):</item>
-    </plurals>
-    <plurals name="snapshot_backed_up_custom_directories_count">
-        <item quantity="other">Thư mục tùy chỉnh đã sao lưu (%1$d)</item>
-    </plurals>
-    <string name="backup_error_no_files_selected_for_items">Không tìm thấy tập tin nào để sao lưu cho các mục đã chọn.</string>
-    <plurals name="backup_summary_success_items">
-        <item quantity="other">Đã sao lưu %1$d mục.</item>
-    </plurals>
-    <string name="error_no_items_selected">Chưa chọn mục nào.</string>
-    <string name="summary_no_items_selected">Chưa có mục nào được chọn.</string>
-    <string name="restore_error_no_items_selected">Không có mục nào được chọn để khôi phục.</string>
-    <string name="restore_stage_processing_template_apps">[%1$d/%2$d] Đang xử lý Ứng dụng</string>
-    <string name="restore_stage_processing_template_custom_directories">[%1$d/%2$d] Đang xử lý Thư mục tùy chỉnh</string>
-    <string name="restore_stage_processing_custom_directories">Đang xử lý Thư mục tùy chỉnh…</string>
-    <string name="restore_failure_custom_directory">Không thể khôi phục thư mục tùy chỉnh %1$s</string>
-    <plurals name="restore_summary_processed_items">
-        <item quantity="other">Đã xử lý thành công %1$d mục.</item>
-    </plurals>
-    <plurals name="restore_summary_failed_items">
-        <item quantity="other">Không thể khôi phục %1$d mục.</item>
-    </plurals>
-    <string name="action_run_now">Chạy ngay</string>
-    <string name="storage_permission_enabled">Đã cấp quyền truy cập tất cả tệp tin</string>
-    <string name="storage_permission_disabled">Yêu cầu quyền truy cập tất cả tệp tin</string>
-    <string name="storage_permission_description">Cần thiết để sao lưu các thư mục tùy chỉnh mà không cần quyền root.</string>
-    <string name="settings_system_permission_storage">Truy cập Lưu trữ</string>
-    <string name="settings_system_permission_local_network">Truy cập Mạng nội bộ</string>
-    <string name="local_network_permission_enabled">Đã cấp quyền truy cập mạng nội bộ</string>
-    <string name="dialog_force_stop_operation_message">Bạn có muốn buộc dừng thao tác hiện tại không? Mọi công việc chưa hoàn thành sẽ bị hủy và trạng thái thao tác sẽ được đặt lại.</string>
-    <string name="action_create">Tạo</string>
-    <string name="tasks_guide_unlock_title">Mở khóa kho lưu trữ</string>
-    <string name="label_sftp_username">Tên người dùng</string>
-    <string name="home_operation_running_tap_hint">Chạm để xem tiến trình</string>
-    <string name="folder_browser_roots_title">Vị trí lưu trữ</string>
-    <string name="folder_browser_empty_items">Không có tệp hoặc thư mục nào.</string>
+    <!-- Tasks & Maintenance Guide -->
     <string name="cd_help">Trợ giúp</string>
-    <string name="tasks_guide_files_desc">Sao lưu các tệp và thư mục tùy chỉnh được chọn từ bộ nhớ thiết bị.</string>
-    <string name="repository_password_explanation">Bắt buộc để mã hóa và khôi phục kho lưu trữ Restic này. Khác với thông tin đăng nhập SFTP của bạn. Hãy giữ an toàn: nếu mất mật khẩu, bạn sẽ không thể khôi phục các bản sao lưu của mình.</string>
-    <string name="folder_browser_up">Lên thư mục cha</string>
-    <string name="tasks_guide_prune_title">Dọn dẹp kho lưu trữ (Prune)</string>
-    <string name="tasks_guide_apps_title">Ứng dụng</string>
-    <string name="dialog_force_stop_operation_title">Buộc dừng thao tác?</string>
-    <string name="folder_browser_edit_path">Nhập thủ công đường dẫn</string>
-    <string name="repo_supporting_sftp_path">Đường dẫn tuyệt đối (/srv/restic-repo) hoặc tương đối so với thư mục chính (restic-repo)</string>
-    <string name="custom_directories_already_added">Thư mục này đã có trong danh sách.</string>
-    <string name="tasks_guide_prune_desc">Quét kho lưu trữ để tìm các khối dữ liệu không còn được tham chiếu bởi bất kỳ bản chụp nào còn lại, xóa vĩnh viễn chúng và đóng gói lại các gói để thực sự giải phóng dung lượng đĩa. Quét dọn tốn nhiều tài nguyên và tốt nhất nên chạy định kỳ (ví dụ: hàng tuần hoặc hàng tháng).</string>
-    <string name="label_sftp_host">Máy chủ</string>
-    <string name="summary_all_files_access_required">Cấp quyền truy cập tất cả tệp rồi thử lại.</string>
-    <string name="folder_browser_new_folder_name">Tên thư mục</string>
-    <string name="home_operation_running_title">%1$s đang thực hiện</string>
-    <string name="action_go">Đi</string>
-    <string name="action_force_stop">Buộc dừng</string>
-    <string name="error_sftp_host_empty">Máy chủ không được để trống</string>
-    <string name="tasks_guide_subtitle">Tìm hiểu xem mỗi tác vụ sao lưu và bảo trì làm gì và cách chúng phối hợp với nhau.</string>
-    <string name="custom_directories_typed_path_not_found">Thư mục không tồn tại: %1$s</string>
-    <string name="custom_directories_typed_path_label">Đường dẫn tệp hoặc thư mục</string>
-    <string name="folder_browser_empty">Không có thư mục con.</string>
-    <string name="tasks_guide_forget_vs_prune_desc">Hãy nghĩ Quên (Forget) giống như việc gỡ bỏ thẻ danh mục khỏi chỉ mục thư viện, còn Dọn dẹp (Prune) giống như thực sự mang những cuốn sách không cần thiết ra khỏi tòa nhà. Bạn chạy Quên trước để chọn những gì cần xóa, và Dọn dẹp sau đó để thực sự giải phóng không gian lưu trữ.</string>
-    <string name="custom_directories_long_press_hint">Chạm và giữ một mục để mở menu và xóa nó.</string>
-    <string name="tasks_guide_docs_button">Tài liệu Restic chính thức</string>
-    <string name="folder_browser_system_root">Gốc hệ thống (/)</string>
-    <string name="label_sftp_port">Cổng</string>
-    <string name="tasks_guide_forget_vs_prune_title">Quên (Forget) so với Dọn dẹp (Prune): Sự khác biệt là gì?</string>
-    <string name="folder_browser_select_this_folder">Chọn đường dẫn này</string>
-    <string name="folder_browser_show_hidden_items">Hiển thị các tệp và thư mục ẩn</string>
-    <string name="tasks_guide_unlock_desc">Xóa các khóa cũ còn sót lại khi một bản sao lưu hoặc tác vụ trước đó bị ngắt quãng bất ngờ (ví dụ: ứng dụng bị đóng, thiết bị khởi động lại hoặc mất kết nối). Điều này giúp các tác vụ trong tương lai tiếp tục một cách an toàn.</string>
-    <string name="folder_browser_show_hidden">Hiện thư mục ẩn</string>
-    <string name="error_sftp_path_empty">Đường dẫn kho lưu trữ không được để trống</string>
-    <string name="label_sftp_repository_path">Đường dẫn kho lưu trữ</string>
-    <string name="folder_browser_internal_storage">Bộ nhớ trong</string>
-    <string name="folder_browser_cannot_list">Không thể liệt kê thư mục này.</string>
-    <string name="error_sftp_port_invalid">Cổng phải là số từ 1 đến 65535</string>
-    <string name="custom_directories_unresolvable">Không thể phân giải thư mục tùy chỉnh: %1$s</string>
-    <string name="custom_directories_typed_path_hint">ví dụ: /storage/emulated/0/Download hoặc /system/build.prop</string>
-    <string name="error_sftp_username_empty">Tên người dùng không được để trống</string>
-    <string name="home_operation_running_default_title">Thao tác đang thực hiện</string>
-    <string name="tasks_guide_check_desc">Kiểm tra cấu trúc và chỉ mục của kho lưu trữ. Theo mặc định, nội dung tệp được lưu trữ không bị đọc. Bật Đọc toàn bộ dữ liệu trong cài đặt Kiểm tra tính toàn vẹn để xác minh cả các gói dữ liệu.</string>
-    <string name="error_all_files_access_required">Yêu cầu quyền truy cập tất cả tệp để sao lưu các thư mục tùy chỉnh.</string>
-    <string name="tasks_guide_forget_desc">Áp dụng chính sách lưu giữ của bạn (ví dụ: giữ lại N bản chụp hàng ngày, hàng tuần hoặc hàng tháng cuối cùng) và xóa các bản ghi bản chụp cũ khỏi lịch sử kho lưu trữ. Lưu ý: Thao tác này chỉ hủy tham chiếu các bản chụp; nó chưa xóa các khối dữ liệu thô.</string>
-    <string name="folder_browser_create_failed">Không thể tạo thư mục.</string>
-    <string name="folder_browser_external_storage">Bộ nhớ ngoài (%1$s)</string>
-    <string name="no_browser_available">Không tìm thấy trình duyệt để mở liên kết. Đã sao chép URL vào khay nhớ tạm.</string>
-    <string name="folder_browser_new_folder">Thư mục mới</string>
-    <string name="tasks_guide_apps_desc">Sao lưu các ứng dụng đã cài đặt, bao gồm APK, dữ liệu ứng dụng, dữ liệu được bảo vệ trên thiết bị và dữ liệu bộ nhớ ngoài.</string>
     <string name="tasks_guide_title">Hướng dẫn Tác vụ &amp; Bảo trì</string>
-    <string name="custom_directories_typed_path_invalid">Vui lòng nhập đường dẫn thư mục tuyệt đối hợp lệ.</string>
-    <string name="tasks_guide_files_title">Tệp &amp; Thư mục</string>
-    <string name="tasks_guide_check_title">Kiểm tra tính toàn vẹn</string>
-    <string name="custom_directory_not_found">Không tìm thấy thư mục tùy chỉnh: %1$s</string>
+    <string name="tasks_guide_subtitle">Tìm hiểu xem mỗi tác vụ sao lưu và bảo trì làm gì và cách chúng phối hợp với nhau.</string>
+    <string name="tasks_guide_unlock_title">Mở khóa kho lưu trữ</string>
+    <string name="tasks_guide_unlock_desc">Xóa các khóa cũ còn sót lại khi một bản sao lưu hoặc tác vụ trước đó bị ngắt quãng bất ngờ (ví dụ: ứng dụng bị đóng, thiết bị khởi động lại hoặc mất kết nối). Điều này giúp các tác vụ trong tương lai tiếp tục một cách an toàn.</string>
     <string name="tasks_guide_forget_title">Quên bản chụp (Forget)</string>
+    <string name="tasks_guide_forget_desc">Áp dụng chính sách lưu giữ của bạn (ví dụ: giữ lại N bản chụp hàng ngày, hàng tuần hoặc hàng tháng cuối cùng) và xóa các bản ghi bản chụp cũ khỏi lịch sử kho lưu trữ. Lưu ý: Thao tác này chỉ hủy tham chiếu các bản chụp; nó chưa xóa các khối dữ liệu thô.</string>
+    <string name="tasks_guide_prune_title">Dọn dẹp kho lưu trữ (Prune)</string>
+    <string name="tasks_guide_prune_desc">Quét kho lưu trữ để tìm các khối dữ liệu không còn được tham chiếu bởi bất kỳ bản chụp nào còn lại, xóa vĩnh viễn chúng và đóng gói lại các gói để thực sự giải phóng dung lượng đĩa. Quét dọn tốn nhiều tài nguyên và tốt nhất nên chạy định kỳ (ví dụ: hàng tuần hoặc hàng tháng).</string>
+    <string name="tasks_guide_check_title">Kiểm tra tính toàn vẹn</string>
+    <string name="tasks_guide_check_desc">Kiểm tra cấu trúc và chỉ mục của kho lưu trữ. Theo mặc định, nội dung tệp được lưu trữ không bị đọc. Bật Đọc toàn bộ dữ liệu trong cài đặt Kiểm tra tính toàn vẹn để xác minh cả các gói dữ liệu.</string>
+    <string name="tasks_guide_forget_vs_prune_title">Quên (Forget) so với Dọn dẹp (Prune): Sự khác biệt là gì?</string>
+    <string name="tasks_guide_forget_vs_prune_desc">Hãy nghĩ Quên (Forget) giống như việc gỡ bỏ thẻ danh mục khỏi chỉ mục thư viện, còn Dọn dẹp (Prune) giống như thực sự mang những cuốn sách không cần thiết ra khỏi tòa nhà. Bạn chạy Quên trước để chọn những gì cần xóa, và Dọn dẹp sau đó để thực sự giải phóng không gian lưu trữ.</string>
+    <string name="tasks_guide_apps_title">Ứng dụng</string>
+    <string name="tasks_guide_apps_desc">Sao lưu các ứng dụng đã cài đặt, bao gồm APK, dữ liệu ứng dụng, dữ liệu được bảo vệ trên thiết bị và dữ liệu bộ nhớ ngoài.</string>
+    <string name="tasks_guide_files_title">Tệp &amp; Thư mục</string>
+    <string name="tasks_guide_files_desc">Sao lưu các tệp và thư mục tùy chỉnh được chọn từ bộ nhớ thiết bị.</string>
+    <string name="tasks_guide_docs_button">Tài liệu Restic chính thức</string>
+    <string name="no_browser_available">Không tìm thấy trình duyệt để mở liên kết. Đã sao chép URL vào khay nhớ tạm.</string>
+    <!-- Operation Logs -->
+    <string name="screen_operation_logs">Operation Logs</string>
+    <string name="operation_logs_empty">No operation logs yet</string>
+    <string name="operation_logs_empty_desc">Completed backup, restore, and maintenance runs will appear here.</string>
+    <string name="operation_logs_clear">Clear logs</string>
+    <string name="operation_logs_clear_confirm_title">Clear all logs?</string>
+    <string name="operation_logs_clear_confirm_desc">This will delete all stored operation log history.</string>
+    <string name="operation_logs_duration">Duration: %1$s</string>
+    <string name="operation_logs_copied">Log copied to clipboard</string>
+    <string name="operation_status_success">Success</string>
+    <string name="operation_status_failed">Failed</string>
+    <string name="action_expand">Expand</string>
+    <string name="action_collapse">Collapse</string>
+    <string name="action_copy_log">Copy Log</string>
+    <string name="action_clear">Clear</string>
 </resources>
