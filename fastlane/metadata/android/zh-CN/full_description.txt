@@ -1,11 +1,12 @@
-Restoid 通过干净、现代且简单的用户界面，让你完全掌控应用备份。它由开源的“restic”引擎驱动，专为需要强大、加密和去重备份的用户而打造。
+Restoid 通过干净、现代且简单的用户界面，让你完全掌控应用备份。它由开源的“restic”引擎驱动，专为需要强大、加密和去重备份的用户而打造。 Powered by the open-source "restic" engine, it's built for users who demand robust, encrypted, and deduplicated backups.
 
-严格要求 Root 权限，以便读取和写入私有应用数据目录。
+Root access is only required if you want to back up apps and their data.
 
 功能：
-* Restic 驱动：利用 restic 的速度、安全性和效率，进行本地、去重和加密的备份。
+* Restic-Powered: Leverages the speed, security, and efficiency of restic for local, deduplicated, and encrypted backups.
 * 选择性备份：精确选择你想备份的用户安装应用。
 * 细粒度控制：针对每个应用进行细粒度的包含选择：APK 文件、用户数据、设备保护数据、外部/OBB 或媒体文件。
+* Custom Directory Backup: Back up custom directories and files like DCIM, Documents, etc.
 * 灵活的存储库管理：通过原生 restic 后端创建和管理存储库：本地目录、SFTP、REST 服务器和 Amazon S3/MinIO。
 * 快照管理：轻松浏览历史备份快照，查看已备份内容的详细信息，并移除旧数据以节省空间。
 * 精准恢复：完全恢复整个应用，或仅恢复特定部分（比如只恢复应用数据而不覆盖 APK）。
