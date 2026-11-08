@@ -3,6 +3,10 @@ name: Crowdin Synchronization
 on:
   workflow_dispatch:
 
+concurrency:
+  group: crowdin-translation-sync
+  cancel-in-progress: false
+
 permissions:
   contents: write
   pull-requests: write
