@@ -513,6 +513,21 @@ class BackupOperationRunner(
             )
         }
 
+        val conflict = findConflictingExclusion(selectedApps, request, getCurrentUserId())
+        if (conflict != null) {
+            val appDisplayName = conflict.app.name.ifBlank { conflict.app.packageName }
+            val errorMessage = context.getString(
+                R.string.error_custom_exclusion_conflicts_with_app,
+                conflict.conflictingPath,
+                appDisplayName
+            )
+            return OperationProgress(
+                isFinished = true,
+                error = errorMessage,
+                finalSummary = errorMessage
+            )
+        }
+
         if (resticBinaryManager.resticState.value !is ResticState.Installed) {
             return OperationProgress(
                 isFinished = true,
@@ -590,18 +605,65 @@ class BackupOperationRunner(
     }
 
     private fun generateFilePathsForApp(app: AppInfo, backupTypes: BackupTypeSelection): List<String> {
-        val currentUserId = getCurrentUserId()
-        return mutableListOf<String>().apply {
-            if (backupTypes.apk) {
-                app.apkPaths.firstOrNull()?.let { path ->
-                    File(path).parentFile?.absolutePath?.let { add(it) }
+        return io.github.hddq.restoid.work.generateFilePathsForApp(app, backupTypes, getCurrentUserId())
+    }
+}
+
+data class ExclusionConflict(
+    val app: AppInfo,
+    val conflictingPath: String,
+    val appPath: String
+)
+
+fun generateFilePathsForApp(app: AppInfo, backupTypes: BackupTypeSelection, currentUserId: Int): List<String> {
+    return mutableListOf<String>().apply {
+        if (backupTypes.apk) {
+            app.apkPaths.firstOrNull()?.let { path ->
+                File(path).parentFile?.absolutePath?.let { add(it) }
+            }
+        }
+        if (backupTypes.data) add("/data/user/$currentUserId/${app.packageName}")
+        if (backupTypes.deviceProtectedData) add("/data/user_de/$currentUserId/${app.packageName}")
+        if (backupTypes.externalData) add("/storage/emulated/$currentUserId/Android/data/${app.packageName}")
+        if (backupTypes.obb) add("/storage/emulated/$currentUserId/Android/obb/${app.packageName}")
+        if (backupTypes.media) add("/storage/emulated/$currentUserId/Android/media/${app.packageName}")
+    }
+}
+
+fun findConflictingExclusion(
+    selectedApps: List<AppInfo>,
+    request: BackupWorkRequest,
+    currentUserId: Int
+): ExclusionConflict? {
+    if (selectedApps.isEmpty() || request.excludedCustomDirectories.isEmpty()) return null
+
+    val resolvedExclusions = request.excludedCustomDirectories.mapNotNull { excludedUri ->
+        val realPath = io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(excludedUri) ?: excludedUri
+        val shellPath = io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(realPath).trimEnd('/')
+        if (shellPath.isNotEmpty()) shellPath else null
+    }
+
+    if (resolvedExclusions.isEmpty()) return null
+
+    for (app in selectedApps) {
+        val effectiveTypes = request.appBackupTypes[app.packageName] ?: request.backupTypes
+        val appPaths = generateFilePathsForApp(app, effectiveTypes, currentUserId)
+
+        for (appPath in appPaths) {
+            val normalizedAppPath = appPath.trimEnd('/')
+            for (exclusionPath in resolvedExclusions) {
+                if (normalizedAppPath == exclusionPath ||
+                    normalizedAppPath.startsWith("$exclusionPath/") ||
+                    exclusionPath.startsWith("$normalizedAppPath/")
+                ) {
+                    return ExclusionConflict(
+                        app = app,
+                        conflictingPath = exclusionPath,
+                        appPath = normalizedAppPath
+                    )
                 }
             }
-            if (backupTypes.data) add("/data/user/$currentUserId/${app.packageName}")
-            if (backupTypes.deviceProtectedData) add("/data/user_de/$currentUserId/${app.packageName}")
-            if (backupTypes.externalData) add("/storage/emulated/$currentUserId/Android/data/${app.packageName}")
-            if (backupTypes.obb) add("/storage/emulated/$currentUserId/Android/obb/${app.packageName}")
-            if (backupTypes.media) add("/storage/emulated/$currentUserId/Android/media/${app.packageName}")
         }
     }
+    return null
 }

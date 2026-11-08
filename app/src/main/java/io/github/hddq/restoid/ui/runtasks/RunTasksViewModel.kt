@@ -14,8 +14,10 @@ import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.ui.shared.BackupTypes
 import io.github.hddq.restoid.ui.shared.OperationProgress
 import io.github.hddq.restoid.util.StorageUtils
+import io.github.hddq.restoid.work.BackupWorkRequest
 import io.github.hddq.restoid.work.OperationWorkRepository
 import io.github.hddq.restoid.work.RunTasksWorkRequest
+import io.github.hddq.restoid.work.findConflictingExclusion
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -396,6 +398,32 @@ class RunTasksViewModel(
                 Toast.LENGTH_LONG
             ).show()
             return
+        }
+
+        val selectedApps = _uiState.value.apps.filter { it.isSelected }
+        if (selectedApps.isNotEmpty()) {
+            val effectiveBackupTypes = _uiState.value.backupTypes.toSelection()
+            val appBackupTypes = selectedAppBackupTypes().mapValues { it.value.toSelection() }
+            val currentUserId = runCatching {
+                android.os.UserHandle::class.java.getMethod("myUserId").invoke(null) as Int
+            }.getOrElse { android.os.Process.myUid() / 100000 }
+
+            val dummyRequest = BackupWorkRequest(
+                repositoryKey = "",
+                backupTypes = effectiveBackupTypes,
+                selectedPackageNames = selectedApps.map { it.packageName },
+                appBackupTypes = appBackupTypes,
+                excludedCustomDirectories = listOf(uriString)
+            )
+            val conflict = findConflictingExclusion(selectedApps, dummyRequest, currentUserId)
+            if (conflict != null) {
+                val appName = conflict.app.name.ifBlank { conflict.app.packageName }
+                Toast.makeText(
+                    application,
+                    application.getString(R.string.warning_custom_exclusion_conflicts_with_app, conflict.conflictingPath, appName),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
         }
 
         _uiState.update { state ->

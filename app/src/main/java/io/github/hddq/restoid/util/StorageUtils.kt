@@ -121,6 +121,8 @@ object StorageUtils {
         if (isRoot) {
             val checkDir = runCatching { Shell.cmd("[ -d ${shellQuote(path)} ]").exec().isSuccess }.getOrDefault(false)
             if (checkDir) return true
+            val exists = runCatching { Shell.cmd("[ -e ${shellQuote(path)} ]").exec().isSuccess }.getOrDefault(false)
+            if (!exists) return false
             val checkFile = runCatching { Shell.cmd("[ -f ${shellQuote(path)} ]").exec().isSuccess }.getOrDefault(false)
             if (checkFile) return false
         }

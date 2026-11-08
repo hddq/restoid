@@ -1,10 +1,17 @@
 package io.github.hddq.restoid.work
 
+import android.graphics.Canvas
+import android.graphics.ColorFilter
+import android.graphics.PixelFormat
+import android.graphics.drawable.Drawable
+import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.util.buildResticExcludeFlags
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -102,5 +109,77 @@ class ExcludedCustomDirectoriesTest {
         val excluded = listOf("/storage/emulated/0/DCIM/Camera2")
         val flags = buildResticExcludeFlags(excluded)
         assertEquals("--exclude '/storage/emulated/0/DCIM/Camera2'", flags)
+    }
+
+    private fun createTestApp(
+        packageName: String = "com.example.app",
+        name: String = "Example App"
+    ): AppInfo {
+        val dummyDrawable = object : Drawable() {
+            override fun draw(canvas: Canvas) {}
+            override fun setAlpha(alpha: Int) {}
+            override fun setColorFilter(colorFilter: ColorFilter?) {}
+            @Deprecated("Deprecated in Java")
+            override fun getOpacity(): Int = PixelFormat.UNKNOWN
+        }
+        return AppInfo(
+            name = name,
+            packageName = packageName,
+            versionName = "1.0",
+            versionCode = 1L,
+            icon = dummyDrawable,
+            apkPaths = emptyList()
+        )
+    }
+
+    @Test
+    fun findConflictingExclusion_detectsExclusionCoveringAppExternalData() {
+        val app = createTestApp(packageName = "com.example.app")
+        val request = BackupWorkRequest(
+            repositoryKey = "local:/repo",
+            backupTypes = BackupTypeSelection(externalData = true),
+            selectedPackageNames = listOf(app.packageName),
+            customDirectories = listOf("/storage/emulated/0"),
+            excludedCustomDirectories = listOf("/storage/emulated/0/Android/data")
+        )
+
+        val conflict = findConflictingExclusion(listOf(app), request, currentUserId = 0)
+        assertNotNull(conflict)
+        assertEquals(app.packageName, conflict?.app?.packageName)
+        assertEquals("/storage/emulated/0/Android/data", conflict?.conflictingPath)
+        assertEquals("/storage/emulated/0/Android/data/com.example.app", conflict?.appPath)
+    }
+
+    @Test
+    fun findConflictingExclusion_noConflictWhenExclusionIsUnrelated() {
+        val app = createTestApp(packageName = "com.example.app")
+        val request = BackupWorkRequest(
+            repositoryKey = "local:/repo",
+            backupTypes = BackupTypeSelection(externalData = true),
+            selectedPackageNames = listOf(app.packageName),
+            customDirectories = listOf("/storage/emulated/0"),
+            excludedCustomDirectories = listOf("/storage/emulated/0/DCIM/Camera2")
+        )
+
+        val conflict = findConflictingExclusion(listOf(app), request, currentUserId = 0)
+        assertNull(conflict)
+    }
+
+    @Test
+    fun findConflictingExclusion_detectsExclusionInsideAppData() {
+        val app = createTestApp(packageName = "com.example.app")
+        val request = BackupWorkRequest(
+            repositoryKey = "local:/repo",
+            backupTypes = BackupTypeSelection(data = true),
+            selectedPackageNames = listOf(app.packageName),
+            customDirectories = listOf("/"),
+            excludedCustomDirectories = listOf("/data/user/0/com.example.app/databases")
+        )
+
+        val conflict = findConflictingExclusion(listOf(app), request, currentUserId = 0)
+        assertNotNull(conflict)
+        assertEquals(app.packageName, conflict?.app?.packageName)
+        assertEquals("/data/user/0/com.example.app/databases", conflict?.conflictingPath)
+        assertEquals("/data/user/0/com.example.app", conflict?.appPath)
     }
 }

@@ -16,7 +16,9 @@ import io.github.hddq.restoid.model.MaintenanceConfig
 import io.github.hddq.restoid.ui.shared.BackupTypes
 import io.github.hddq.restoid.ui.shared.toUiModel
 import io.github.hddq.restoid.util.StorageUtils
+import io.github.hddq.restoid.work.BackupWorkRequest
 import io.github.hddq.restoid.work.RunTasksConfig
+import io.github.hddq.restoid.work.findConflictingExclusion
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -347,6 +349,32 @@ class SchedulesViewModel(
                 Toast.LENGTH_LONG
             ).show()
             return
+        }
+
+        val selectedApps = _addEditState.value.apps.filter { it.isSelected }
+        if (selectedApps.isNotEmpty()) {
+            val effectiveBackupTypes = _addEditState.value.backupTypes.toSelection()
+            val appBackupTypes = _addEditState.value.appBackupTypes.mapValues { it.value.toSelection() }
+            val currentUserId = runCatching {
+                android.os.UserHandle::class.java.getMethod("myUserId").invoke(null) as Int
+            }.getOrElse { android.os.Process.myUid() / 100000 }
+
+            val dummyRequest = BackupWorkRequest(
+                repositoryKey = "",
+                backupTypes = effectiveBackupTypes,
+                selectedPackageNames = selectedApps.map { it.packageName },
+                appBackupTypes = appBackupTypes,
+                excludedCustomDirectories = listOf(uriString)
+            )
+            val conflict = findConflictingExclusion(selectedApps, dummyRequest, currentUserId)
+            if (conflict != null) {
+                val appName = conflict.app.name.ifBlank { conflict.app.packageName }
+                Toast.makeText(
+                    application,
+                    application.getString(R.string.warning_custom_exclusion_conflicts_with_app, conflict.conflictingPath, appName),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
         }
 
         _addEditState.update { state ->
