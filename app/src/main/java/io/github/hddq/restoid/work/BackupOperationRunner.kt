@@ -20,6 +20,7 @@ import io.github.hddq.restoid.util.ResticOutputParser
 import io.github.hddq.restoid.util.buildResticExcludeFlags
 import io.github.hddq.restoid.util.buildResticOptionFlags
 import io.github.hddq.restoid.util.buildShellEnvironmentPrefix
+import io.github.hddq.restoid.util.escapeResticPattern
 import io.github.hddq.restoid.util.shellQuote
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -460,7 +461,7 @@ class BackupOperationRunner(
             throwIfCancelled()
             val realPath = io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(dirUriStr) ?: dirUriStr
             val shellPath = io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(realPath)
-            excludePatterns.add(shellPath)
+            excludePatterns.add(escapeResticPattern(shellPath))
         }
         val metadata = RestoidMetadata(apps = appMetadataMap, customDirectories = customDirectoryMetadataMap)
         return Triple(pathsToBackup, excludePatterns, metadata)

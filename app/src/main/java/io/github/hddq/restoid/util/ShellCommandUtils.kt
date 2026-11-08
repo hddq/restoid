@@ -15,6 +15,11 @@ fun shellQuote(value: String): String {
     return "'" + value.replace("'", "'\"'\"'") + "'"
 }
 
+/** Escapes a filesystem path so restic's filepath.Match-based filters treat it literally. */
+fun escapeResticPattern(path: String): String {
+    return path.replace(Regex("([\\\\*?\\[\\]])"), "\\\\$1")
+}
+
 fun buildShellEnvironmentPrefix(environmentVariables: Map<String, String>): String {
     if (environmentVariables.isEmpty()) return ""
 

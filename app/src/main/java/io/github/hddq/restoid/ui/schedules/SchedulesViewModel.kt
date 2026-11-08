@@ -349,21 +349,6 @@ class SchedulesViewModel(
             return
         }
 
-        val repoKey = _uiState.value.selectedRepoKey
-        val repository = repoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
-
-        if (repository != null && repository.backendType == RepositoryBackendType.LOCAL) {
-            val repoCanonicalKey = StorageUtils.resolveCustomDirectoryKey(repository.path)
-            if (repoCanonicalKey == newKey) {
-                Toast.makeText(
-                    application,
-                    application.getString(R.string.error_cannot_backup_repo_to_itself),
-                    Toast.LENGTH_LONG
-                ).show()
-                return
-            }
-        }
-
         _addEditState.update { state ->
             state.copy(excludedCustomDirectories = state.excludedCustomDirectories + io.github.hddq.restoid.model.CustomDirectory(uriString))
         }

@@ -42,6 +42,13 @@ class ShellCommandUtilsTest {
     }
 
     @Test
+    fun escapeResticPattern_escapesSpecialWildcardCharacters() {
+        assertEquals("/storage/emulated/0/DCIM/Camera2", escapeResticPattern("/storage/emulated/0/DCIM/Camera2"))
+        assertEquals("/storage/emulated/0/Music/\\[Albums\\]", escapeResticPattern("/storage/emulated/0/Music/[Albums]"))
+        assertEquals("/storage/emulated/0/Photos/test\\*file\\?", escapeResticPattern("/storage/emulated/0/Photos/test*file?"))
+    }
+
+    @Test
     fun customFileRestoreCommand_formatsCorrectly() {
         val command = buildCustomFileRestoreCommand("/cache/staged/file.txt", "/sdcard/Download/file.txt")
         assertEquals(
