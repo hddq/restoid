@@ -1,13 +1,14 @@
-Restoid memberi kamu kontrol penuh atas backup aplikasi melalui antarmuka pengguna yang bersih, modern, dan simpel. Ditenagai oleh engine open-source "restic", aplikasi ini dibangun untuk pengguna yang membutuhkan backup yang tangguh, terenkripsi, dan terdeduplikasi.
+Restoid gives you complete control over your backups through a clean, modern, and simple user interface. Powered by the open-source "restic" engine, it's built for users who demand robust, encrypted, and deduplicated backups.
 
-Akses root sangat diwajibkan untuk membaca dan menulis direktori data aplikasi privat.
+Root access is only required if you want to back up apps and their data.
 
-Fitur:
-* Ditenagai Restic: Memanfaatkan kecepatan, keamanan, dan efisiensi restic untuk backup lokal, terdeduplikasi, dan terenkripsi.
-* Backup Selektif: Pilih dengan pasti aplikasi terinstal mana yang ingin kamu simpan.
-* Kontrol Granular: Pilih secara detail apa yang akan dimasukkan untuk setiap aplikasi: file APK, data pengguna, data yang dilindungi perangkat, eksternal/OBB, atau file media.
-* Manajemen Repositori Fleksibel: Buat dan kelola repositori di berbagai backend restic asli: Direktori lokal, SFTP, server REST, dan Amazon S3/MinIO.
-* Manajemen Snapshot: Telusuri riwayat snapshot backup dengan mudah, lihat detail apa yang telah di-backup, dan hapus data lama untuk menghemat ruang.
-* Pemulihan Presisi: Pulihkan seluruh aplikasi secara lengkap, atau hanya bagian tertentu (seperti hanya memulihkan data aplikasi tanpa menimpa APK).
-* Jadwal Otomatis: Siapkan backup berulang dengan interval yang bisa disesuaikan dan kondisi pemicu (baterai, status pengisian daya, dan jaringan).
-* Perlindungan Downgrade: Mencegah kamu menimpa versi aplikasi yang lebih baru dengan versi yang lebih lama saat pemulihan.
+Features:
+* Restic-Powered: Leverages the speed, security, and efficiency of restic for local, deduplicated, and encrypted backups.
+* Selective App Backup: Choose exactly which user-installed applications you want to save (requires root).
+* Granular Control: Granularly select what to include for each app: APK files, user data, device-protected data, external/OBB, or media files (requires root).
+* Custom Directory Backup: Back up custom directories and files like DCIM, Documents, etc.
+* Flexible Repository Management: Create and manage repositories across native restic backends: Local directory, SFTP, REST server, and Amazon S3/MinIO.
+* Snapshot Management: Easily browse historical backup snapshots, view details of what was backed up, and forget old data to save space.
+* Surgical Restore: Restore entire apps completely, or just specific parts (like restoring only app data without overwriting the APK).
+* Automated Schedules: Set up recurring backups with customizable intervals and trigger conditions (battery, charging, and network status).
+* Downgrade Protection: Prevents you from accidentally restoring an older app version over a newer one.
