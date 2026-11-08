@@ -81,6 +81,7 @@ import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
 import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
 import io.github.hddq.restoid.ui.components.TasksGuideBottomSheet
+import io.github.hddq.restoid.ui.shared.ExclusionConflictWarningCard
 import io.github.hddq.restoid.ui.shared.TaskRow
 import io.github.hddq.restoid.ui.shared.buildBackupSubtitle
 import io.github.hddq.restoid.ui.shared.buildCheckSubtitle
@@ -401,6 +402,7 @@ fun AddEditScheduleScreen(
             val hasRoot = rootState == io.github.hddq.restoid.data.RootState.Granted
 
             Column(modifier = Modifier.fillMaxWidth()) {
+                ExclusionConflictWarningCard(conflicts = state.exclusionConflicts)
                 ExpressiveSectionHeader(title = stringResource(R.string.operation_backup))
                 ExpressiveCardGroup {
                     ExpressiveSegmentedSurface(index = 0, count = 2) {

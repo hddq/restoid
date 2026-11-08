@@ -1,6 +1,7 @@
 package io.github.hddq.restoid.work
 
 import android.content.Context
+import android.util.Log
 import com.topjohnwu.superuser.CallbackList
 import com.topjohnwu.superuser.Shell
 import io.github.hddq.restoid.R
@@ -22,6 +23,8 @@ import io.github.hddq.restoid.util.buildResticOptionFlags
 import io.github.hddq.restoid.util.buildShellEnvironmentPrefix
 import io.github.hddq.restoid.util.escapeResticPattern
 import io.github.hddq.restoid.util.shellQuote
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import java.io.File
 
@@ -513,19 +516,14 @@ class BackupOperationRunner(
             )
         }
 
-        val conflict = findConflictingExclusion(selectedApps, request, getCurrentUserId())
-        if (conflict != null) {
-            val appDisplayName = conflict.app.name.ifBlank { conflict.app.packageName }
-            val errorMessage = context.getString(
-                R.string.error_custom_exclusion_conflicts_with_app,
-                conflict.conflictingPath,
-                appDisplayName
-            )
-            return OperationProgress(
-                isFinished = true,
-                error = errorMessage,
-                finalSummary = errorMessage
-            )
+        val conflicts = findConflictingExclusions(selectedApps, request, getCurrentUserId())
+        if (conflicts.isNotEmpty()) {
+            conflicts.forEach { conflict ->
+                Log.w(
+                    "BackupOperationRunner",
+                    "Custom exclusion '${conflict.conflictingPath}' overlaps with backup path '${conflict.appPath}' for app ${conflict.app.packageName}"
+                )
+            }
         }
 
         if (resticBinaryManager.resticState.value !is ResticState.Installed) {
@@ -630,40 +628,58 @@ fun generateFilePathsForApp(app: AppInfo, backupTypes: BackupTypeSelection, curr
     }
 }
 
-fun findConflictingExclusion(
+suspend fun resolveExclusionPaths(excludedUris: List<String>): List<String> = withContext(Dispatchers.IO) {
+    excludedUris.mapNotNull { excludedUri ->
+        val realPath = io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(excludedUri) ?: excludedUri
+        val shellPath = io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(realPath).trimEnd('/')
+        if (shellPath.isNotEmpty()) shellPath else null
+    }
+}
+
+fun findConflictingExclusions(
     selectedApps: List<AppInfo>,
     request: BackupWorkRequest,
-    currentUserId: Int
-): ExclusionConflict? {
-    if (selectedApps.isEmpty() || request.excludedCustomDirectories.isEmpty()) return null
+    currentUserId: Int,
+    resolvedExclusions: List<String>? = null
+): List<ExclusionConflict> {
+    if (selectedApps.isEmpty() || request.excludedCustomDirectories.isEmpty()) return emptyList()
 
-    val resolvedExclusions = request.excludedCustomDirectories.mapNotNull { excludedUri ->
+    val exclusions = resolvedExclusions ?: request.excludedCustomDirectories.mapNotNull { excludedUri ->
         val realPath = io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(excludedUri) ?: excludedUri
         val shellPath = io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(realPath).trimEnd('/')
         if (shellPath.isNotEmpty()) shellPath else null
     }
 
-    if (resolvedExclusions.isEmpty()) return null
+    if (exclusions.isEmpty()) return emptyList()
 
+    val conflicts = mutableListOf<ExclusionConflict>()
     for (app in selectedApps) {
         val effectiveTypes = request.appBackupTypes[app.packageName] ?: request.backupTypes
         val appPaths = generateFilePathsForApp(app, effectiveTypes, currentUserId)
 
         for (appPath in appPaths) {
             val normalizedAppPath = appPath.trimEnd('/')
-            for (exclusionPath in resolvedExclusions) {
+            for (exclusionPath in exclusions) {
                 if (normalizedAppPath == exclusionPath ||
                     normalizedAppPath.startsWith("$exclusionPath/") ||
                     exclusionPath.startsWith("$normalizedAppPath/")
                 ) {
-                    return ExclusionConflict(
-                        app = app,
-                        conflictingPath = exclusionPath,
-                        appPath = normalizedAppPath
+                    conflicts.add(
+                        ExclusionConflict(
+                            app = app,
+                            conflictingPath = exclusionPath,
+                            appPath = normalizedAppPath
+                        )
                     )
                 }
             }
         }
     }
-    return null
+    return conflicts.distinctBy { it.conflictingPath to it.app.packageName }
 }
+
+fun findConflictingExclusion(
+    selectedApps: List<AppInfo>,
+    request: BackupWorkRequest,
+    currentUserId: Int
+): ExclusionConflict? = findConflictingExclusions(selectedApps, request, currentUserId).firstOrNull()

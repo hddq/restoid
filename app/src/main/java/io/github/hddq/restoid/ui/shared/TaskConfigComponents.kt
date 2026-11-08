@@ -1,5 +1,11 @@
 package io.github.hddq.restoid.ui.shared
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -44,7 +50,10 @@ import androidx.compose.material.icons.outlined.SelectAll
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Today
+import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -73,8 +82,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -83,6 +95,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.rememberAsyncImagePainter
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.model.AppInfo
+import io.github.hddq.restoid.work.ExclusionConflict
 import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
 import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
@@ -1150,5 +1163,102 @@ fun CustomDirectoriesConfigScreen(
             },
             onDismissRequest = { showExcludePicker = false }
         )
+    }
+}
+
+@Composable
+fun ExclusionConflictWarningCard(
+    conflicts: List<ExclusionConflict>,
+    modifier: Modifier = Modifier
+) {
+    var lastNonEmptyConflicts by remember { mutableStateOf(conflicts) }
+    if (conflicts.isNotEmpty()) {
+        lastNonEmptyConflicts = conflicts
+    }
+
+    AnimatedVisibility(
+        visible = conflicts.isNotEmpty(),
+        enter = fadeIn() + expandVertically(),
+        exit = fadeOut() + shrinkVertically(),
+        modifier = modifier
+    ) {
+        val displayConflicts = lastNonEmptyConflicts
+        var expanded by remember { mutableStateOf(false) }
+        val maxInitial = 3
+        val hasMore = displayConflicts.size > maxInitial
+        val visibleConflicts = if (expanded || !hasMore) displayConflicts else displayConflicts.take(maxInitial)
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+                .animateContentSize()
+                .then(
+                    if (hasMore) {
+                        Modifier.clickable { expanded = !expanded }
+                    } else {
+                        Modifier
+                    }
+                ),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+            )
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.WarningAmber,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                    modifier = Modifier.size(24.dp)
+                )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.warning_exclusion_conflict_header),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                    visibleConflicts.forEach { conflict ->
+                        val appName = conflict.app.name.ifBlank { conflict.app.packageName }
+                        Text(
+                            text = buildAnnotatedString {
+                                append("• ")
+                                withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                                    append(appName)
+                                }
+                                append(" — ")
+                                append(conflict.conflictingPath)
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.9f)
+                        )
+                    }
+                    if (hasMore) {
+                        Text(
+                            text = if (!expanded) {
+                                stringResource(R.string.warning_exclusion_conflict_show_more, displayConflicts.size - maxInitial)
+                            } else {
+                                stringResource(R.string.warning_exclusion_conflict_show_less)
+                            },
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                            modifier = Modifier.padding(top = 2.dp, bottom = 2.dp)
+                        )
+                    }
+                }
+            }
+        }
     }
 }

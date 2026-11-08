@@ -15,10 +15,13 @@ import io.github.hddq.restoid.ui.shared.BackupTypes
 import io.github.hddq.restoid.ui.shared.OperationProgress
 import io.github.hddq.restoid.util.StorageUtils
 import io.github.hddq.restoid.work.BackupWorkRequest
+import io.github.hddq.restoid.work.ExclusionConflict
 import io.github.hddq.restoid.work.OperationWorkRepository
 import io.github.hddq.restoid.work.RunTasksWorkRequest
-import io.github.hddq.restoid.work.findConflictingExclusion
+import io.github.hddq.restoid.work.findConflictingExclusions
+import io.github.hddq.restoid.work.resolveExclusionPaths
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -41,7 +44,8 @@ data class RunTasksUiState(
     val progress: OperationProgress = OperationProgress(),
     val customDirectoriesBackupEnabled: Boolean = false,
     val customDirectories: List<CustomDirectory> = emptyList(),
-    val excludedCustomDirectories: List<CustomDirectory> = emptyList()
+    val excludedCustomDirectories: List<CustomDirectory> = emptyList(),
+    val exclusionConflicts: List<ExclusionConflict> = emptyList()
 )
 
 sealed interface RunTasksUiEvent {
@@ -57,6 +61,8 @@ class RunTasksViewModel(
     private val preferencesRepository: io.github.hddq.restoid.data.PreferencesRepository,
     private val operationWorkRepository: OperationWorkRepository
 ) : ViewModel() {
+
+    val rootState = rootRepository.rootState
 
     private val _uiState = MutableStateFlow(
         RunTasksUiState(
@@ -80,17 +86,36 @@ class RunTasksViewModel(
     )
     val uiState = _uiState.asStateFlow()
 
-    val rootState = rootRepository.rootState
-
     private val _operationBlocked = MutableStateFlow(false)
     val operationBlocked = _operationBlocked.asStateFlow()
 
     private val _uiEvents = MutableSharedFlow<RunTasksUiEvent>(extraBufferCapacity = 1)
     val uiEvents: SharedFlow<RunTasksUiEvent> = _uiEvents.asSharedFlow()
 
+    private var cachedRawExclusions: List<String> = emptyList()
+    private var cachedResolvedExclusions: List<String> = emptyList()
+    private var conflictResolutionJob: Job? = null
+
     init {
         loadInstalledApps()
         observeOperationState()
+        observeRootState()
+        val initialExcluded = if (_uiState.value.customDirectoriesBackupEnabled) {
+            _uiState.value.excludedCustomDirectories.filter { it.isSelected }.map { it.uri }
+        } else {
+            emptyList()
+        }
+        if (initialExcluded.isNotEmpty()) {
+            triggerBackgroundExclusionResolution(initialExcluded)
+        }
+    }
+
+    private fun observeRootState() {
+        viewModelScope.launch {
+            rootRepository.rootState.collect {
+                _uiState.update { recomputeConflicts(it) }
+            }
+        }
     }
 
     fun refreshAppsList() {
@@ -123,7 +148,7 @@ class RunTasksViewModel(
                             ?: defaultBackupTypes
                         )
             }
-            _uiState.update { it.copy(apps = apps, appBackupTypes = appBackupTypes, isLoadingApps = false) }
+            _uiState.update { recomputeConflicts(it.copy(apps = apps, appBackupTypes = appBackupTypes, isLoadingApps = false)) }
         }
     }
 
@@ -324,11 +349,11 @@ class RunTasksViewModel(
     }
 
     fun setBackupEnabled(enabled: Boolean) {
-        _uiState.update { it.copy(backupEnabled = enabled) }
+        _uiState.update { recomputeConflicts(it.copy(backupEnabled = enabled)) }
     }
 
     fun setCustomDirectoriesBackupEnabled(enabled: Boolean) {
-        _uiState.update { it.copy(customDirectoriesBackupEnabled = enabled) }
+        _uiState.update { recomputeConflicts(it.copy(customDirectoriesBackupEnabled = enabled)) }
         preferencesRepository.saveCustomDirectoriesBackupEnabled(enabled)
     }
 
@@ -400,44 +425,20 @@ class RunTasksViewModel(
             return
         }
 
-        val selectedApps = _uiState.value.apps.filter { it.isSelected }
-        if (selectedApps.isNotEmpty()) {
-            val effectiveBackupTypes = _uiState.value.backupTypes.toSelection()
-            val appBackupTypes = selectedAppBackupTypes().mapValues { it.value.toSelection() }
-            val currentUserId = runCatching {
-                android.os.UserHandle::class.java.getMethod("myUserId").invoke(null) as Int
-            }.getOrElse { android.os.Process.myUid() / 100000 }
-
-            val dummyRequest = BackupWorkRequest(
-                repositoryKey = "",
-                backupTypes = effectiveBackupTypes,
-                selectedPackageNames = selectedApps.map { it.packageName },
-                appBackupTypes = appBackupTypes,
-                excludedCustomDirectories = listOf(uriString)
-            )
-            val conflict = findConflictingExclusion(selectedApps, dummyRequest, currentUserId)
-            if (conflict != null) {
-                val appName = conflict.app.name.ifBlank { conflict.app.packageName }
-                Toast.makeText(
-                    application,
-                    application.getString(R.string.warning_custom_exclusion_conflicts_with_app, conflict.conflictingPath, appName),
-                    Toast.LENGTH_LONG
-                ).show()
-            }
-        }
-
         _uiState.update { state ->
-            state.copy(excludedCustomDirectories = state.excludedCustomDirectories + CustomDirectory(uriString))
+            recomputeConflicts(state.copy(excludedCustomDirectories = state.excludedCustomDirectories + CustomDirectory(uriString)))
         }
         persistExcludedCustomDirectories()
     }
 
     fun toggleExcludedCustomDirectory(uriString: String) {
         _uiState.update { state ->
-            state.copy(
-                excludedCustomDirectories = state.excludedCustomDirectories.map {
-                    if (it.uri == uriString) it.copy(isSelected = !it.isSelected) else it
-                }
+            recomputeConflicts(
+                state.copy(
+                    excludedCustomDirectories = state.excludedCustomDirectories.map {
+                        if (it.uri == uriString) it.copy(isSelected = !it.isSelected) else it
+                    }
+                )
             )
         }
         persistExcludedCustomDirectories()
@@ -445,7 +446,7 @@ class RunTasksViewModel(
 
     fun removeExcludedCustomDirectory(uriString: String) {
         _uiState.update { state ->
-            state.copy(excludedCustomDirectories = state.excludedCustomDirectories.filter { it.uri != uriString })
+            recomputeConflicts(state.copy(excludedCustomDirectories = state.excludedCustomDirectories.filter { it.uri != uriString }))
         }
         persistExcludedCustomDirectories()
     }
@@ -469,11 +470,13 @@ class RunTasksViewModel(
 
     fun toggleAppSelection(packageName: String) {
         _uiState.update { state ->
-            state.copy(
-                apps = state.apps.map { app ->
-                    if (app.packageName == packageName) app.copy(isSelected = !app.isSelected) else app
-                },
-                appBackupTypes = state.appBackupTypes.ensurePackage(packageName, state.backupTypes)
+            recomputeConflicts(
+                state.copy(
+                    apps = state.apps.map { app ->
+                        if (app.packageName == packageName) app.copy(isSelected = !app.isSelected) else app
+                    },
+                    appBackupTypes = state.appBackupTypes.ensurePackage(packageName, state.backupTypes)
+                )
             )
         }
     }
@@ -482,38 +485,95 @@ class RunTasksViewModel(
         _uiState.update { state ->
             val shouldSelectAll = state.apps.any { !it.isSelected }
             val apps = state.apps.map { it.copy(isSelected = shouldSelectAll) }
-            state.copy(
-                apps = apps,
-                appBackupTypes = apps.fold(state.appBackupTypes) { acc, app ->
-                    acc.ensurePackage(app.packageName, state.backupTypes)
-                }
+            recomputeConflicts(
+                state.copy(
+                    apps = apps,
+                    appBackupTypes = apps.fold(state.appBackupTypes) { acc, app ->
+                        acc.ensurePackage(app.packageName, state.backupTypes)
+                    }
+                )
             )
         }
     }
 
     fun setAppBackupTypes(packageName: String, backupTypes: BackupTypes) {
         _uiState.update { state ->
-            state.copy(appBackupTypes = state.appBackupTypes + (packageName to backupTypes))
+            recomputeConflicts(
+                state.copy(appBackupTypes = state.appBackupTypes + (packageName to backupTypes))
+            )
         }
     }
 
     fun setSelectedAppsBackupTypes(backupTypes: BackupTypes) {
         _uiState.update { state ->
             val selectedPackageNames = state.apps.filter { it.isSelected }.map { it.packageName }
-            state.copy(
-                backupTypes = backupTypes,
-                appBackupTypes = state.appBackupTypes + selectedPackageNames.associateWith { backupTypes }
+            recomputeConflicts(
+                state.copy(
+                    backupTypes = backupTypes,
+                    appBackupTypes = state.appBackupTypes + selectedPackageNames.associateWith { backupTypes }
+                )
             )
         }
     }
 
-    fun setBackupApk(value: Boolean) = _uiState.update { it.copy(backupTypes = it.backupTypes.copy(apk = value)) }
-    fun setBackupData(value: Boolean) = _uiState.update { it.copy(backupTypes = it.backupTypes.copy(data = value)) }
-    fun setBackupDeviceProtectedData(value: Boolean) = _uiState.update { it.copy(backupTypes = it.backupTypes.copy(deviceProtectedData = value)) }
-    fun setBackupExternalData(value: Boolean) = _uiState.update { it.copy(backupTypes = it.backupTypes.copy(externalData = value)) }
-    fun setBackupObb(value: Boolean) = _uiState.update { it.copy(backupTypes = it.backupTypes.copy(obb = value)) }
-    fun setBackupMedia(value: Boolean) = _uiState.update { it.copy(backupTypes = it.backupTypes.copy(media = value)) }
-    fun setBackupPermissions(value: Boolean) = _uiState.update { it.copy(backupTypes = it.backupTypes.copy(permissions = value)) }
+    fun setBackupApk(value: Boolean) = _uiState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(apk = value))) }
+    fun setBackupData(value: Boolean) = _uiState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(data = value))) }
+    fun setBackupDeviceProtectedData(value: Boolean) = _uiState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(deviceProtectedData = value))) }
+    fun setBackupExternalData(value: Boolean) = _uiState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(externalData = value))) }
+    fun setBackupObb(value: Boolean) = _uiState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(obb = value))) }
+    fun setBackupMedia(value: Boolean) = _uiState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(media = value))) }
+    fun setBackupPermissions(value: Boolean) = _uiState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(permissions = value))) }
+
+    private fun recomputeConflicts(state: RunTasksUiState): RunTasksUiState {
+        val hasRoot = rootState.value == io.github.hddq.restoid.data.RootState.Granted
+        val selectedApps = if (state.backupEnabled && hasRoot) state.apps.filter { it.isSelected } else emptyList()
+        val selectedExcluded = if (state.customDirectoriesBackupEnabled) {
+            state.excludedCustomDirectories.filter { it.isSelected }.map { it.uri }
+        } else {
+            emptyList()
+        }
+
+        if (selectedApps.isEmpty() || selectedExcluded.isEmpty()) {
+            return if (state.exclusionConflicts.isEmpty()) state else state.copy(exclusionConflicts = emptyList())
+        }
+
+        if (selectedExcluded != cachedRawExclusions) {
+            triggerBackgroundExclusionResolution(selectedExcluded)
+        }
+
+        val effectiveBackupTypes = state.backupTypes.toSelection()
+        val appBackupTypes = state.appBackupTypes.mapValues { it.value.toSelection() }
+        val currentUserId = runCatching {
+            android.os.UserHandle::class.java.getMethod("myUserId").invoke(null) as Int
+        }.getOrElse { android.os.Process.myUid() / 100000 }
+
+        val dummyRequest = BackupWorkRequest(
+            repositoryKey = "",
+            backupTypes = effectiveBackupTypes,
+            selectedPackageNames = selectedApps.map { it.packageName },
+            appBackupTypes = appBackupTypes,
+            excludedCustomDirectories = selectedExcluded
+        )
+        val resolved = if (selectedExcluded == cachedRawExclusions) {
+            cachedResolvedExclusions
+        } else {
+            selectedExcluded.mapNotNull { uri ->
+                (StorageUtils.resolveCustomDirectoryPath(uri) ?: uri).trimEnd('/')
+            }
+        }
+        val conflicts = findConflictingExclusions(selectedApps, dummyRequest, currentUserId, resolved)
+        return state.copy(exclusionConflicts = conflicts)
+    }
+
+    private fun triggerBackgroundExclusionResolution(selectedExcluded: List<String>) {
+        conflictResolutionJob?.cancel()
+        conflictResolutionJob = viewModelScope.launch {
+            val resolved = resolveExclusionPaths(selectedExcluded)
+            cachedRawExclusions = selectedExcluded
+            cachedResolvedExclusions = resolved
+            _uiState.update { recomputeConflicts(it) }
+        }
+    }
 
     private fun selectedAppBackupTypes(): Map<String, BackupTypes> {
         val state = _uiState.value
