@@ -26,7 +26,7 @@ jobs:
           upload_translations: false
           upload_sources: true
           download_translations: true
-          localization_branch_name: l10n_crowdin
+          localization_branch_name: crowdin
           create_pull_request: true
           pull_request_title: 'i18n: translations update from Crowdin'
           pull_request_body: 'New translations synchronized from Crowdin.'
