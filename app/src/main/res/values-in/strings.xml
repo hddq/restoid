@@ -2,11 +2,13 @@
 <resources>
     <string name="screen_home">Beranda</string>
     <string name="screen_settings">Pengaturan</string>
+    <string name="screen_tasks">Tugas</string>
     <string name="screen_snapshot_details">Detail Snapshot</string>
     <string name="screen_restore">Pulihkan</string>
     <string name="screen_licenses">Lisensi</string>
     <string name="screen_schedules">Jadwal</string>
     <string name="screen_operation_progress">Kemajuan</string>
+    <string name="topbar_tasks">Tugas</string>
     <string name="topbar_backup_config">Konfigurasi Backup</string>
     <string name="topbar_forget_config">Kebijakan Retensi (Lupakan)</string>
     <string name="topbar_check_config">Cek Integritas</string>
@@ -19,6 +21,7 @@
     <string name="topbar_restore_snapshot">Pulihkan Snapshot</string>
     <string name="cd_back">Kembali</string>
     <string name="cd_forget_snapshot">Lupakan Snapshot</string>
+    <string name="action_run_now">Jalankan sekarang</string>
     <string name="fab_run_tasks">Jalankan Tugas</string>
     <string name="fab_add_schedule">Tambah Jadwal</string>
     <string name="fab_restore">Pulihkan</string>
@@ -31,21 +34,76 @@
     <string name="run_tasks_phase_summary">%1$s:\n%2$s</string>
     <string name="backup_types_title">Tipe Backup</string>
     <string name="backup_type_apk">APK</string>
+    <string name="backup_type_apk_desc">File paket aplikasi</string>
     <string name="backup_type_data">Data</string>
+    <string name="backup_type_data_desc">Data aplikasi internal (/data/user/&lt;id&gt;)</string>
     <string name="backup_type_device_protected_data">Data Terlindungi Perangkat</string>
+    <string name="backup_type_device_protected_data_desc">Data yang dapat diakses sebelum perangkat tidak terkunci (/data/user_de/&lt;id&gt;)</string>
     <string name="backup_type_external_data">Data Eksternal</string>
+    <string name="backup_type_external_data_desc">Data aplikasi pada penyimpanan eksternal (/storage/emulated/&lt;id&gt;/Android/data)</string>
     <string name="backup_type_obb_data">Data OBB</string>
+    <string name="backup_type_obb_data_desc">File Opaque Binary Blob (/storage/emulated/&lt;id&gt;/Android/obb)</string>
     <string name="backup_type_media_data">Data Media</string>
+    <string name="backup_type_media_data_desc">File media aplikasi (/storage/emulated/&lt;id&gt;/Android/media)</string>
+    <string name="settings_system_permission_storage">Akses Penyimpanan</string>
+    <string name="settings_system_permission_local_network">Akses Jaringan Lokal</string>
+    <string name="local_network_permission_enabled">Akses jaringan lokal diberikan</string>
+    <string name="backup_type_permissions">Izin</string>
+    <string name="backup_type_permissions_desc">Izin runtime yang diberikan</string>
     <string name="apps_title">Aplikasi</string>
     <string name="toggle_all">Pilih Semua</string>
+    <string name="backup_types_for_selected_apps">Jenis cadangan untuk aplikasi yang dipilih</string>
+    <string name="backup_types_none">Tidak ada</string>
+    <string name="backup_types_mixed">Campuran</string>
     <string name="restore_options_title">Opsi Pemulihan</string>
     <string name="allow_downgrade">Izinkan Downgrade</string>
     <string name="apps_to_restore_title">Aplikasi yang Dipulihkan</string>
     <string name="no_app_data_found_in_snapshot">Tidak ada data aplikasi di snapshot ini.</string>
     <string name="restore_backup_version_with_installed">Backup: %1$s -&gt; Terinstal: %2$s</string>
     <string name="restore_backup_version_only">Backup: %1$s</string>
-    <string name="home_title" translatable="false">Restoid</string>
     <string name="run_tasks_applications">Aplikasi</string>
+    <string name="run_tasks_custom_directories">Direktori Kustom</string>
+    <string name="run_tasks_custom_directories_subtitle_none">Tidak ada direktori yang dipilih</string>
+    <string name="run_tasks_custom_directories_subtitle_count">%1$d direktori dipilih</string>
+    <string name="run_tasks_custom_directories_subtitle_with_exclusions">%1$d paths selected, %2$d excluded</string>
+    <string name="action_add_directory">Tambah Direktori</string>
+    <string name="action_add_excluded_directory">Exclude File or Folder</string>
+    <string name="folder_browser_select_this_folder">Pilih jalur ini</string>
+    <string name="folder_browser_show_hidden">Tampilkan folder tersembunyi</string>
+    <string name="folder_browser_show_hidden_items">Tampilkan file dan folder tersembunyi</string>
+    <string name="folder_browser_cannot_list">Tidak dapat memuat daftar folder ini.</string>
+    <string name="folder_browser_empty">Tidak ada subfolder.</string>
+    <string name="folder_browser_empty_items">Tidak ada file atau folder.</string>
+    <string name="folder_browser_up">Naik ke folder induk</string>
+    <string name="folder_browser_roots_title">Lokasi penyimpanan</string>
+    <string name="folder_browser_internal_storage">Penyimpanan Internal</string>
+    <string name="folder_browser_system_root">Root sistem (/)</string>
+    <string name="folder_browser_external_storage">Penyimpanan Eksternal (%1$s)</string>
+    <string name="folder_browser_edit_path">Masukkan jalur secara manual</string>
+    <string name="folder_browser_new_folder">Folder baru</string>
+    <string name="folder_browser_new_folder_name">Nama folder</string>
+    <string name="folder_browser_create_failed">Gagal membuat folder.</string>
+    <string name="action_create">Buat</string>
+    <string name="action_go">Buka</string>
+    <string name="title_custom_directories">Direktori Kustom</string>
+    <string name="custom_directories_description">Pilih direktori kustom di perangkat Anda untuk disertakan dalam cadangan.</string>
+    <string name="custom_directories_long_press_hint">Sentuh dan tahan entri untuk membuka menu dan menghapusnya.</string>
+    <string name="custom_directories_typed_path_label">Jalur file atau folder</string>
+    <string name="custom_directories_typed_path_hint">contoh: /storage/emulated/0/Download atau /system/build.prop</string>
+    <string name="custom_directories_typed_path_invalid">Masukkan jalur folder absolut yang valid.</string>
+    <string name="custom_directories_typed_path_not_found">Folder tidak ada: %1$s</string>
+    <string name="custom_directory_not_found">Direktori kustom tidak ditemukan: %1$s</string>
+    <string name="custom_directories_already_added">Direktori ini sudah ada di dalam daftar.</string>
+    <string name="custom_directories_unresolvable">Tidak dapat meresolusi direktori kustom: %1$s</string>
+    <string name="custom_directories_section_include">Include</string>
+    <string name="custom_directories_section_exclude">Exclude</string>
+    <string name="custom_directories_exclude_description">Select subdirectories or files to exclude from the backup.</string>
+    <string name="action_exclude_subfolder">Exclude subfolder…</string>
+    <string name="warning_exclusion_conflict_header">Some exclusions may exclude files from app backups:</string>
+    <string name="warning_exclusion_conflict_show_more">Show %1$d more…</string>
+    <string name="warning_exclusion_conflict_show_less">Show less</string>
+    <string name="error_all_files_access_required">Akses semua file diperlukan untuk mencadangkan direktori kustom.</string>
+    <string name="summary_all_files_access_required">Berikan akses semua file, lalu coba lagi.</string>
     <string name="run_tasks_backup_subtitle">%1$d aplikasi dipilih - %2$s</string>
     <string name="run_tasks_forget_snapshots">Lupakan Snapshot</string>
     <string name="run_tasks_forget_subtitle">Simpan %1$d terakhir, harian %2$d, mingguan %3$d, bulanan %4$d</string>
@@ -65,6 +123,7 @@
     <string name="dialog_discard_changes_message">Ada perubahan yang belum disimpan. Yakin ingin membuangnya?</string>
     <string name="action_discard">Buang</string>
     <string name="error_with_message">Error: %1$s</string>
+    <string name="error_cannot_backup_repo_to_itself">Tidak dapat menambahkan repositori itu sendiri sebagai direktori kustom untuk dicadangkan.</string>
     <string name="no_snapshots_found_for_repository">Tidak ada snapshot yang ditemukan di repositori ini.</string>
     <plurals name="snapshots_count">
         <item quantity="other">Snapshot (%1$d)</item>
@@ -82,8 +141,31 @@
     <plurals name="apps_count">
         <item quantity="other">Aplikasi (%1$d):</item>
     </plurals>
+    <plurals name="backed_up_items_count">
+        <item quantity="other">Dicadangkan (%1$d):</item>
+    </plurals>
+    <plurals name="custom_directories_count">
+        <item quantity="other">Direktori Kustom (%1$d):</item>
+    </plurals>
     <string name="no_app_info_for_snapshot">Tidak ada info aplikasi untuk snapshot ini.</string>
     <string name="metadata_missing_or_corrupted">Metadata hilang atau rusak.</string>
+    <string name="metadata_restore_success">Metadata berhasil dipulihkan.</string>
+    <string name="time_just_now">baru saja</string>
+    <plurals name="time_mins_ago">
+        <item quantity="other">%d menit yang lalu</item>
+    </plurals>
+    <plurals name="time_hours_ago">
+        <item quantity="other">%d jam yang lalu</item>
+    </plurals>
+    <plurals name="time_days_ago">
+        <item quantity="other">%d hari yang lalu</item>
+    </plurals>
+    <plurals name="time_months_ago">
+        <item quantity="other">%d bulan yang lalu</item>
+    </plurals>
+    <plurals name="time_years_ago">
+        <item quantity="other">%d tahun yang lalu</item>
+    </plurals>
     <string name="maintenance_task_unlock_repository">Buka kunci repositori</string>
     <string name="maintenance_task_prune_repository">Bersihkan repositori (Prune)</string>
     <string name="maintenance_keep_last">Simpan Terakhir</string>
@@ -94,6 +176,9 @@
     <plurals name="snapshot_backed_up_apps_count">
         <item quantity="other">Aplikasi di-backup (%1$d)</item>
     </plurals>
+    <plurals name="snapshot_backed_up_custom_directories_count">
+        <item quantity="other">Direktori Kustom yang Dicadangkan (%1$d)</item>
+    </plurals>
     <string name="snapshot_not_found">Tidak ada snapshot yang ditemukan.</string>
     <string name="snapshot_forgetting">Melupakan snapshot…</string>
     <string name="snapshot_id">ID: %1$s</string>
@@ -103,6 +188,7 @@
     <string name="dialog_forget_snapshot_message">Tindakan ini akan menghapus entri snapshot. Data sebenarnya baru akan terhapus setelah proses pembersihan (Prune). Yakin?</string>
     <string name="label_password">Password</string>
     <string name="label_repository_password">Password repositori</string>
+    <string name="repository_password_explanation">Diperlukan untuk mengenkripsi dan memulihkan repositori Restic ini. Berbeda dari login SFTP Anda. Simpan dengan aman: jika hilang, Anda tidak dapat memulihkan cadangan Anda.</string>
     <string name="label_rest_username">Username REST</string>
     <string name="label_rest_password">Password REST</string>
     <string name="label_s3_access_key_id">S3 Access Key ID</string>
@@ -117,6 +203,7 @@
     <string name="action_done">Selesai</string>
     <string name="action_add">Tambah</string>
     <string name="action_delete">Hapus</string>
+    <string name="action_restore_metadata">Pulihkan metadata</string>
     <string name="action_change">Ubah</string>
     <string name="action_save">Simpan</string>
     <string name="action_grant">Izinkan</string>
@@ -124,6 +211,10 @@
     <string name="action_forget">Lupakan</string>
     <string name="action_try_again">Coba Lagi</string>
     <string name="action_disable">Nonaktifkan</string>
+    <string name="action_enable">Aktifkan</string>
+    <string name="usage_stats_permission_enabled">Akses penggunaan aplikasi diberikan</string>
+    <string name="usage_stats_permission_disabled">Akses penggunaan aplikasi diperlukan</string>
+    <string name="usage_stats_permission_description">Memungkinkan perhitungan ukuran aplikasi yang lebih cepat selama pencadangan alih-alih memindai direktori</string>
     <string name="progress_initializing">Menginisialisasi…</string>
     <string name="progress_stopping">Menghentikan…</string>
     <string name="progress_operation_complete">%1$s Selesai</string>
@@ -134,7 +225,6 @@
     <string name="progress_items">Item</string>
     <string name="progress_size">Ukuran</string>
     <string name="progress_processing">Memproses:</string>
-    <string name="progress_placeholder" translatable="false">...</string>
     <string name="dialog_add_repository_title">Tambah Repositori</string>
     <string name="label_repository_type">Tipe repositori</string>
     <string name="label_repository_specification">Spesifikasi repositori</string>
@@ -144,7 +234,6 @@
     <string name="label_sftp_password">Password SFTP</string>
     <string name="label_sftp_ssh_key">Kunci SSH</string>
     <string name="label_sftp_private_key">Kunci Privat SSH SFTP</string>
-    <string name="placeholder_sftp_private_key" translatable="false">-----BEGIN OPENSSH PRIVATE KEY-----\n...</string>
     <string name="label_sftp_key_passphrase">Passphrase Kunci SSH</string>
     <string name="label_sftp_key_passphrase_optional">Passphrase Kunci SSH (opsional)</string>
     <string name="dialog_sftp_trust_title">Percayai server SFTP</string>
@@ -153,9 +242,15 @@
     <string name="repo_backend_local">Direktori lokal</string>
     <string name="repo_backend_sftp">SFTP (SSH)</string>
     <string name="repo_backend_rest">Server HTTP REST</string>
-    <string name="repo_backend_s3" translatable="false">Amazon S3 / MinIO</string>
-    <string name="repo_hint_rest" translatable="false">http://host:8000/</string>
-    <string name="repo_hint_s3" translatable="false">s3.us-east-1.amazonaws.com/nama_bucket</string>
+    <string name="label_sftp_host">Host</string>
+    <string name="label_sftp_port">Port</string>
+    <string name="label_sftp_username">Username</string>
+    <string name="label_sftp_repository_path">Jalur repositori</string>
+    <string name="repo_supporting_sftp_path">Absolut (/srv/restic-repo) atau relatif terhadap direktori home Anda (restic-repo)</string>
+    <string name="error_sftp_host_empty">Host tidak boleh kosong</string>
+    <string name="error_sftp_username_empty">Username tidak boleh kosong</string>
+    <string name="error_sftp_path_empty">Jalur repositori tidak boleh kosong</string>
+    <string name="error_sftp_port_invalid">Port harus berupa angka antara 1 dan 65535</string>
     <string name="label_path">Path</string>
     <string name="placeholder_select_directory">Pilih direktori…</string>
     <string name="cd_select_folder">Pilih Folder</string>
@@ -170,6 +265,9 @@
     <string name="root_access_denied">Akses root ditolak</string>
     <string name="checking_for_root">Mengecek root…</string>
     <string name="root_access_granted">Akses root diberikan</string>
+    <string name="storage_permission_enabled">Akses semua file diberikan</string>
+    <string name="storage_permission_disabled">Akses semua file diperlukan</string>
+    <string name="storage_permission_description">Diperlukan untuk mencadangkan direktori kustom tanpa akses root.</string>
     <string name="dependencies_title">Dependensi</string>
     <string name="about_title">Tentang</string>
     <string name="version_label">Versi</string>
@@ -225,9 +323,15 @@
     <string name="backup_stage_preparing">[%1$d/%2$d] Menyiapkan backup...</string>
     <string name="backup_stage_running">[%1$d/%2$d] Mem-backup aplikasi…</string>
     <string name="backup_stage_finalizing">[%1$d/%2$d] Menyelesaikan backup…</string>
+    <string name="backup_error_no_files_selected_for_items">Tidak ada file yang ditemukan untuk dicadangkan pada item yang dipilih.</string>
     <string name="backup_error_command_failed_with_code">Perintah restic gagal dengan kode exit %1$d.</string>
     <string name="backup_warning_metadata_not_saved">Peringatan: Gagal menyimpan file metadata backup secara lokal.</string>
+    <plurals name="backup_summary_success_items">
+        <item quantity="other">Dicadangkan %1$d item.</item>
+    </plurals>
     <string name="error_fatal_with_message">Terjadi error fatal: %1$s</string>
+    <string name="error_no_items_selected">Tidak ada item yang dipilih.</string>
+    <string name="summary_no_items_selected">Tidak ada item yang dipilih.</string>
     <string name="error_no_backup_types_selected">Tipe backup belum dipilih.</string>
     <string name="summary_no_backup_types_selected">Tidak ada tipe backup yang dipilih.</string>
     <string name="error_restic_not_installed">Restic belum diinstal.</string>
@@ -250,9 +354,13 @@
     <string name="restore_stage_processing_apps">Memproses Aplikasi</string>
     <string name="restore_stage_cleanup">Pembersihan</string>
     <string name="restore_error_preflight_failed">Pengecekan pra-pemulihan gagal.</string>
+    <string name="restore_error_no_items_selected">Tidak ada item yang dipilih untuk dipulihkan.</string>
+    <string name="restore_error_no_restore_types_selected">Tidak ada jenis pemulihan yang dipilih.</string>
     <string name="restore_error_password_not_found">Password repositori tidak ditemukan.</string>
     <string name="restore_error_no_files_found">Tidak ada file yang ditemukan dalam snapshot untuk aplikasi yang dipilih.</string>
     <string name="restore_error_command_failed">Perintah pemulihan restic gagal.</string>
+    <string name="restore_stage_processing_template_apps">[%1$d/%2$d] Memproses Aplikasi</string>
+    <string name="restore_stage_processing_template_custom_directories">[%1$d/%2$d] Memproses Direktori Kustom</string>
     <string name="restore_failure_install_commit">%1$s: Commit instalasi gagal: %2$s</string>
     <string name="restore_failure_write_apk_splits">%1$s: Gagal menulis bagian-bagian APK.</string>
     <string name="restore_failure_create_install_session">%1$s: Gagal membuat sesi instalasi.</string>
@@ -260,7 +368,15 @@
     <string name="restore_failure_data_restore">%1$s: Pemulihan data gagal atau tidak lengkap.</string>
     <string name="restore_failure_permissions_app_not_installed">%1$s: Gagal memulihkan izin karena aplikasi belum terinstal.</string>
     <string name="restore_failure_permissions_partial">%1$s: Gagal memulihkan beberapa izin: %2$s</string>
+    <string name="restore_stage_processing_custom_directories">Memproses Direktori Kustom…</string>
+    <string name="restore_failure_custom_directory">Gagal memulihkan direktori kustom %1$s</string>
     <string name="restore_summary_finished_in">Pemulihan selesai dalam %1$s.</string>
+    <plurals name="restore_summary_processed_items">
+        <item quantity="other">Berhasil memproses %1$d item.</item>
+    </plurals>
+    <plurals name="restore_summary_failed_items">
+        <item quantity="other">Gagal memulihkan %1$d item.</item>
+    </plurals>
     <string name="restore_summary_details">\n\nDetail:\n- %1$s</string>
     <string name="maintenance_task_unlock">Buka Kunci</string>
     <string name="maintenance_task_forget">Lupakan</string>
@@ -303,6 +419,10 @@
     <string name="channel_completed_operations">Operasi Selesai</string>
     <string name="channel_ongoing_description">Menampilkan kemajuan backup dan pemulihan secara diam-diam.</string>
     <string name="channel_completed_description">Memberi peringatan saat backup atau pemulihan selesai.</string>
+    <string name="channel_successful_operations">Successful Operations</string>
+    <string name="channel_successful_description">Alerts when a backup or restore has finished successfully.</string>
+    <string name="channel_failed_operations">Failed Operations</string>
+    <string name="channel_failed_description">Alerts when a backup or restore operation fails or encounters errors.</string>
     <plurals name="notification_files_progress">
         <item quantity="other">%1$d/%2$d file</item>
     </plurals>
@@ -313,6 +433,12 @@
     <string name="operation_interrupted">Operasi terputus.</string>
     <string name="dialog_stop_operation_title">Hentikan operasi?</string>
     <string name="dialog_stop_operation_message">Ingin menghentikan operasi saat ini? Semua pekerjaan yang belum selesai akan dibatalkan.</string>
+    <string name="home_operation_running_title">%1$s sedang berjalan</string>
+    <string name="home_operation_running_default_title">Operasi sedang berjalan</string>
+    <string name="home_operation_running_tap_hint">Ketuk untuk melihat progres</string>
+    <string name="action_force_stop">Paksa berhenti</string>
+    <string name="dialog_force_stop_operation_title">Paksa berhenti operasi?</string>
+    <string name="dialog_force_stop_operation_message">Apakah Anda ingin memaksa penghentian operasi saat ini? Pekerjaan yang belum selesai akan dibatalkan dan status operasi akan diatur ulang.</string>
     <string name="repo_error_exists">Repositori sudah ada.</string>
     <string name="repo_error_binary_not_ready">Binary Restic belum siap.</string>
     <string name="repo_error_invalid_password_or_corrupted">Password tidak valid atau repositori rusak.</string>
@@ -383,144 +509,41 @@
     <string name="license_tap_to_expand">… (ketuk untuk perluas)</string>
     <string name="cd_open_link">Buka Tautan</string>
     <string name="cd_copy_license">Salin Lisensi</string>
-    <string name="time_just_now">baru saja</string>
-    <plurals name="time_mins_ago">
-        <item quantity="other">%d menit yang lalu</item>
-    </plurals>
-    <plurals name="time_hours_ago">
-        <item quantity="other">%d jam yang lalu</item>
-    </plurals>
-    <plurals name="time_days_ago">
-        <item quantity="other">%d hari yang lalu</item>
-    </plurals>
-    <plurals name="time_months_ago">
-        <item quantity="other">%d bulan yang lalu</item>
-    </plurals>
-    <plurals name="time_years_ago">
-        <item quantity="other">%d tahun yang lalu</item>
-    </plurals>
-    <string name="backup_type_permissions">Izin</string>
-    <string name="backup_types_for_selected_apps">Jenis cadangan untuk aplikasi yang dipilih</string>
-    <string name="backup_types_none">Tidak ada</string>
-    <string name="backup_types_mixed">Campuran</string>
-    <string name="restore_error_no_restore_types_selected">Tidak ada jenis pemulihan yang dipilih.</string>
-    <string name="backup_type_apk_desc">File paket aplikasi</string>
-    <string name="backup_type_data_desc">Data aplikasi internal (/data/user/&lt;id&gt;)</string>
-    <string name="backup_type_device_protected_data_desc">Data yang dapat diakses sebelum perangkat tidak terkunci (/data/user_de/&lt;id&gt;)</string>
-    <string name="backup_type_external_data_desc">Data aplikasi pada penyimpanan eksternal (/storage/emulated/&lt;id&gt;/Android/data)</string>
-    <string name="backup_type_obb_data_desc">File Opaque Binary Blob (/storage/emulated/&lt;id&gt;/Android/obb)</string>
-    <string name="backup_type_media_data_desc">File media aplikasi (/storage/emulated/&lt;id&gt;/Android/media)</string>
-    <string name="backup_type_permissions_desc">Izin runtime yang diberikan</string>
-    <string name="action_enable">Aktifkan</string>
-    <string name="usage_stats_permission_enabled">Akses penggunaan aplikasi diberikan</string>
-    <string name="usage_stats_permission_disabled">Akses penggunaan aplikasi diperlukan</string>
-    <string name="usage_stats_permission_description">Memungkinkan perhitungan ukuran aplikasi yang lebih cepat selama pencadangan alih-alih memindai direktori</string>
-    <string name="metadata_restore_success">Metadata berhasil dipulihkan.</string>
-    <string name="action_restore_metadata">Pulihkan metadata</string>
     <string name="repo_warning_metadata_restore_failed_title">Pemulihan Metadata Gagal</string>
     <string name="repo_warning_metadata_restore_failed">Repositori berhasil ditambahkan, tetapi pemulihan metadatanya (jadwal, info cadangan terperinci) gagal. Ini biasanya berarti snapshot metadata hilang atau repositori terkunci. Untuk mencoba lagi, buka Pengaturan → Repositori, ketuk menu repo, dan pilih “Pulihkan metadata”.</string>
-    <string name="screen_tasks">Tugas</string>
-    <string name="topbar_tasks">Tugas</string>
-    <string name="run_tasks_custom_directories">Direktori Kustom</string>
-    <string name="run_tasks_custom_directories_subtitle_none">Tidak ada direktori yang dipilih</string>
-    <string name="run_tasks_custom_directories_subtitle_count">%1$d direktori dipilih</string>
-    <string name="action_add_directory">Tambah Direktori</string>
-    <string name="title_custom_directories">Direktori Kustom</string>
-    <string name="custom_directories_description">Pilih direktori kustom di perangkat Anda untuk disertakan dalam cadangan.</string>
-    <string name="error_cannot_backup_repo_to_itself">Tidak dapat menambahkan repositori itu sendiri sebagai direktori kustom untuk dicadangkan.</string>
-    <plurals name="backed_up_items_count">
-        <item quantity="other">Dicadangkan (%1$d):</item>
-    </plurals>
-    <plurals name="custom_directories_count">
-        <item quantity="other">Direktori Kustom (%1$d):</item>
-    </plurals>
-    <plurals name="snapshot_backed_up_custom_directories_count">
-        <item quantity="other">Direktori Kustom yang Dicadangkan (%1$d)</item>
-    </plurals>
-    <string name="backup_error_no_files_selected_for_items">Tidak ada file yang ditemukan untuk dicadangkan pada item yang dipilih.</string>
-    <plurals name="backup_summary_success_items">
-        <item quantity="other">Dicadangkan %1$d item.</item>
-    </plurals>
-    <string name="error_no_items_selected">Tidak ada item yang dipilih.</string>
-    <string name="summary_no_items_selected">Tidak ada item yang dipilih.</string>
-    <string name="restore_error_no_items_selected">Tidak ada item yang dipilih untuk dipulihkan.</string>
-    <string name="restore_stage_processing_template_apps">[%1$d/%2$d] Memproses Aplikasi</string>
-    <string name="restore_stage_processing_template_custom_directories">[%1$d/%2$d] Memproses Direktori Kustom</string>
-    <string name="restore_stage_processing_custom_directories">Memproses Direktori Kustom…</string>
-    <string name="restore_failure_custom_directory">Gagal memulihkan direktori kustom %1$s</string>
-    <plurals name="restore_summary_processed_items">
-        <item quantity="other">Berhasil memproses %1$d item.</item>
-    </plurals>
-    <plurals name="restore_summary_failed_items">
-        <item quantity="other">Gagal memulihkan %1$d item.</item>
-    </plurals>
-    <string name="action_run_now">Jalankan sekarang</string>
-    <string name="storage_permission_enabled">Akses semua file diberikan</string>
-    <string name="storage_permission_disabled">Akses semua file diperlukan</string>
-    <string name="storage_permission_description">Diperlukan untuk mencadangkan direktori kustom tanpa akses root.</string>
-    <string name="settings_system_permission_storage">Akses Penyimpanan</string>
-    <string name="settings_system_permission_local_network">Akses Jaringan Lokal</string>
-    <string name="local_network_permission_enabled">Akses jaringan lokal diberikan</string>
-    <string name="dialog_force_stop_operation_message">Apakah Anda ingin memaksa penghentian operasi saat ini? Pekerjaan yang belum selesai akan dibatalkan dan status operasi akan diatur ulang.</string>
-    <string name="action_create">Buat</string>
-    <string name="tasks_guide_unlock_title">Buka kunci repositori</string>
-    <string name="label_sftp_username">Username</string>
-    <string name="home_operation_running_tap_hint">Ketuk untuk melihat progres</string>
-    <string name="folder_browser_roots_title">Lokasi penyimpanan</string>
-    <string name="folder_browser_empty_items">Tidak ada file atau folder.</string>
+    <!-- Tasks & Maintenance Guide -->
     <string name="cd_help">Bantuan</string>
-    <string name="tasks_guide_files_desc">Mencadangkan file dan direktori kustom yang dipilih dari penyimpanan perangkat.</string>
-    <string name="repository_password_explanation">Diperlukan untuk mengenkripsi dan memulihkan repositori Restic ini. Berbeda dari login SFTP Anda. Simpan dengan aman: jika hilang, Anda tidak dapat memulihkan cadangan Anda.</string>
-    <string name="folder_browser_up">Naik ke folder induk</string>
-    <string name="tasks_guide_prune_title">Pangkas repositori</string>
-    <string name="tasks_guide_apps_title">Aplikasi</string>
-    <string name="dialog_force_stop_operation_title">Paksa berhenti operasi?</string>
-    <string name="folder_browser_edit_path">Masukkan jalur secara manual</string>
-    <string name="repo_supporting_sftp_path">Absolut (/srv/restic-repo) atau relatif terhadap direktori home Anda (restic-repo)</string>
-    <string name="custom_directories_already_added">Direktori ini sudah ada di dalam daftar.</string>
-    <string name="tasks_guide_prune_desc">Memindai repositori untuk mencari potongan data yang tidak lagi direferensikan oleh snapshot yang tersisa, menghapusnya secara permanen, dan mempaketkan ulang untuk benar-benar mengosongkan ruang disk. Pemangkasan membutuhkan banyak sumber daya dan paling baik dijalankan secara berkala (mis. mingguan atau bulanan).</string>
-    <string name="label_sftp_host">Host</string>
-    <string name="summary_all_files_access_required">Berikan akses semua file, lalu coba lagi.</string>
-    <string name="folder_browser_new_folder_name">Nama folder</string>
-    <string name="home_operation_running_title">%1$s sedang berjalan</string>
-    <string name="action_go">Buka</string>
-    <string name="action_force_stop">Paksa berhenti</string>
-    <string name="error_sftp_host_empty">Host tidak boleh kosong</string>
-    <string name="tasks_guide_subtitle">Pelajari fungsi setiap tugas pencadangan dan pemeliharaan serta cara kerjanya bersama-sama.</string>
-    <string name="custom_directories_typed_path_not_found">Folder tidak ada: %1$s</string>
-    <string name="custom_directories_typed_path_label">Jalur file atau folder</string>
-    <string name="folder_browser_empty">Tidak ada subfolder.</string>
-    <string name="tasks_guide_forget_vs_prune_desc">Bayangkan Lupakan sebagai menghapus kartu katalog dari indeks perpustakaan, dan Pangkas sebagai benar-benar menyingkirkan buku yang tidak diperlukan dari gedung. Anda menjalankan Lupakan terlebih dahulu untuk memilih apa yang akan dihapus, lalu Pangkas sesudahnya untuk benar-benar mengosongkan ruang penyimpanan.</string>
-    <string name="custom_directories_long_press_hint">Sentuh dan tahan entri untuk membuka menu dan menghapusnya.</string>
-    <string name="tasks_guide_docs_button">Dokumentasi Resmi Restic</string>
-    <string name="folder_browser_system_root">Root sistem (/)</string>
-    <string name="label_sftp_port">Port</string>
-    <string name="tasks_guide_forget_vs_prune_title">Lupakan vs. Pangkas: Apa perbedaannya?</string>
-    <string name="folder_browser_select_this_folder">Pilih jalur ini</string>
-    <string name="folder_browser_show_hidden_items">Tampilkan file dan folder tersembunyi</string>
-    <string name="tasks_guide_unlock_desc">Menghapus kunci kedaluwarsa yang tertinggal saat pencadangan atau tugas sebelumnya terganggu secara tidak terduga (mis. aplikasi ditutup, perangkat dimulai ulang, atau koneksi terputus). Ini memungkinkan tugas berikutnya berjalan dengan aman.</string>
-    <string name="folder_browser_show_hidden">Tampilkan folder tersembunyi</string>
-    <string name="error_sftp_path_empty">Jalur repositori tidak boleh kosong</string>
-    <string name="label_sftp_repository_path">Jalur repositori</string>
-    <string name="folder_browser_internal_storage">Penyimpanan Internal</string>
-    <string name="folder_browser_cannot_list">Tidak dapat memuat daftar folder ini.</string>
-    <string name="error_sftp_port_invalid">Port harus berupa angka antara 1 dan 65535</string>
-    <string name="custom_directories_unresolvable">Tidak dapat meresolusi direktori kustom: %1$s</string>
-    <string name="custom_directories_typed_path_hint">contoh: /storage/emulated/0/Download atau /system/build.prop</string>
-    <string name="error_sftp_username_empty">Username tidak boleh kosong</string>
-    <string name="home_operation_running_default_title">Operasi sedang berjalan</string>
-    <string name="tasks_guide_check_desc">Memeriksa struktur dan indeks repositori. Secara default, konten file yang disimpan tidak dibaca. Aktifkan Baca semua data di pengaturan Periksa Integritas untuk memverifikasi paket data juga.</string>
-    <string name="error_all_files_access_required">Akses semua file diperlukan untuk mencadangkan direktori kustom.</string>
-    <string name="tasks_guide_forget_desc">Menerapkan kebijakan retensi Anda (mis. menyimpan N snapshot harian, mingguan, atau bulanan terakhir) dan menghapus catatan snapshot lama dari riwayat repositori. Catatan: Ini hanya menghapus referensi snapshot; belum menghapus potongan data mentah.</string>
-    <string name="folder_browser_create_failed">Gagal membuat folder.</string>
-    <string name="folder_browser_external_storage">Penyimpanan Eksternal (%1$s)</string>
-    <string name="no_browser_available">Tidak ada peramban yang ditemukan untuk membuka tautan. URL disalin ke papan klip.</string>
-    <string name="folder_browser_new_folder">Folder baru</string>
-    <string name="tasks_guide_apps_desc">Mencadangkan aplikasi yang terinstal, termasuk APK, data aplikasi, data yang dilindungi perangkat, dan data penyimpanan eksternal.</string>
     <string name="tasks_guide_title">Panduan Tugas &amp; Pemeliharaan</string>
-    <string name="custom_directories_typed_path_invalid">Masukkan jalur folder absolut yang valid.</string>
-    <string name="tasks_guide_files_title">File &amp; Folder</string>
-    <string name="tasks_guide_check_title">Periksa integritas</string>
-    <string name="custom_directory_not_found">Direktori kustom tidak ditemukan: %1$s</string>
+    <string name="tasks_guide_subtitle">Pelajari fungsi setiap tugas pencadangan dan pemeliharaan serta cara kerjanya bersama-sama.</string>
+    <string name="tasks_guide_unlock_title">Buka kunci repositori</string>
+    <string name="tasks_guide_unlock_desc">Menghapus kunci kedaluwarsa yang tertinggal saat pencadangan atau tugas sebelumnya terganggu secara tidak terduga (mis. aplikasi ditutup, perangkat dimulai ulang, atau koneksi terputus). Ini memungkinkan tugas berikutnya berjalan dengan aman.</string>
     <string name="tasks_guide_forget_title">Lupakan snapshot</string>
+    <string name="tasks_guide_forget_desc">Menerapkan kebijakan retensi Anda (mis. menyimpan N snapshot harian, mingguan, atau bulanan terakhir) dan menghapus catatan snapshot lama dari riwayat repositori. Catatan: Ini hanya menghapus referensi snapshot; belum menghapus potongan data mentah.</string>
+    <string name="tasks_guide_prune_title">Pangkas repositori</string>
+    <string name="tasks_guide_prune_desc">Memindai repositori untuk mencari potongan data yang tidak lagi direferensikan oleh snapshot yang tersisa, menghapusnya secara permanen, dan mempaketkan ulang untuk benar-benar mengosongkan ruang disk. Pemangkasan membutuhkan banyak sumber daya dan paling baik dijalankan secara berkala (mis. mingguan atau bulanan).</string>
+    <string name="tasks_guide_check_title">Periksa integritas</string>
+    <string name="tasks_guide_check_desc">Memeriksa struktur dan indeks repositori. Secara default, konten file yang disimpan tidak dibaca. Aktifkan Baca semua data di pengaturan Periksa Integritas untuk memverifikasi paket data juga.</string>
+    <string name="tasks_guide_forget_vs_prune_title">Lupakan vs. Pangkas: Apa perbedaannya?</string>
+    <string name="tasks_guide_forget_vs_prune_desc">Bayangkan Lupakan sebagai menghapus kartu katalog dari indeks perpustakaan, dan Pangkas sebagai benar-benar menyingkirkan buku yang tidak diperlukan dari gedung. Anda menjalankan Lupakan terlebih dahulu untuk memilih apa yang akan dihapus, lalu Pangkas sesudahnya untuk benar-benar mengosongkan ruang penyimpanan.</string>
+    <string name="tasks_guide_apps_title">Aplikasi</string>
+    <string name="tasks_guide_apps_desc">Mencadangkan aplikasi yang terinstal, termasuk APK, data aplikasi, data yang dilindungi perangkat, dan data penyimpanan eksternal.</string>
+    <string name="tasks_guide_files_title">File &amp; Folder</string>
+    <string name="tasks_guide_files_desc">Mencadangkan file dan direktori kustom yang dipilih dari penyimpanan perangkat.</string>
+    <string name="tasks_guide_docs_button">Dokumentasi Resmi Restic</string>
+    <string name="no_browser_available">Tidak ada peramban yang ditemukan untuk membuka tautan. URL disalin ke papan klip.</string>
+    <!-- Operation Logs -->
+    <string name="screen_operation_logs">Operation Logs</string>
+    <string name="operation_logs_empty">No operation logs yet</string>
+    <string name="operation_logs_empty_desc">Completed backup, restore, and maintenance runs will appear here.</string>
+    <string name="operation_logs_clear">Clear logs</string>
+    <string name="operation_logs_clear_confirm_title">Clear all logs?</string>
+    <string name="operation_logs_clear_confirm_desc">This will delete all stored operation log history.</string>
+    <string name="operation_logs_duration">Duration: %1$s</string>
+    <string name="operation_logs_copied">Log copied to clipboard</string>
+    <string name="operation_status_success">Success</string>
+    <string name="operation_status_failed">Failed</string>
+    <string name="action_expand">Expand</string>
+    <string name="action_collapse">Collapse</string>
+    <string name="action_copy_log">Copy Log</string>
+    <string name="action_clear">Clear</string>
 </resources>
