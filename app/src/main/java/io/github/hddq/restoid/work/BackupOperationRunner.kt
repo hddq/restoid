@@ -23,6 +23,8 @@ import io.github.hddq.restoid.util.buildResticOptionFlags
 import io.github.hddq.restoid.util.buildShellEnvironmentPrefix
 import io.github.hddq.restoid.util.escapeResticPattern
 import io.github.hddq.restoid.util.shellQuote
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import java.io.File
 
@@ -626,20 +628,29 @@ fun generateFilePathsForApp(app: AppInfo, backupTypes: BackupTypeSelection, curr
     }
 }
 
+suspend fun resolveExclusionPaths(excludedUris: List<String>): List<String> = withContext(Dispatchers.IO) {
+    excludedUris.mapNotNull { excludedUri ->
+        val realPath = io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(excludedUri) ?: excludedUri
+        val shellPath = io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(realPath).trimEnd('/')
+        if (shellPath.isNotEmpty()) shellPath else null
+    }
+}
+
 fun findConflictingExclusions(
     selectedApps: List<AppInfo>,
     request: BackupWorkRequest,
-    currentUserId: Int
+    currentUserId: Int,
+    resolvedExclusions: List<String>? = null
 ): List<ExclusionConflict> {
     if (selectedApps.isEmpty() || request.excludedCustomDirectories.isEmpty()) return emptyList()
 
-    val resolvedExclusions = request.excludedCustomDirectories.mapNotNull { excludedUri ->
+    val exclusions = resolvedExclusions ?: request.excludedCustomDirectories.mapNotNull { excludedUri ->
         val realPath = io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(excludedUri) ?: excludedUri
         val shellPath = io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(realPath).trimEnd('/')
         if (shellPath.isNotEmpty()) shellPath else null
     }
 
-    if (resolvedExclusions.isEmpty()) return emptyList()
+    if (exclusions.isEmpty()) return emptyList()
 
     val conflicts = mutableListOf<ExclusionConflict>()
     for (app in selectedApps) {
@@ -648,7 +659,7 @@ fun findConflictingExclusions(
 
         for (appPath in appPaths) {
             val normalizedAppPath = appPath.trimEnd('/')
-            for (exclusionPath in resolvedExclusions) {
+            for (exclusionPath in exclusions) {
                 if (normalizedAppPath == exclusionPath ||
                     normalizedAppPath.startsWith("$exclusionPath/") ||
                     exclusionPath.startsWith("$normalizedAppPath/")

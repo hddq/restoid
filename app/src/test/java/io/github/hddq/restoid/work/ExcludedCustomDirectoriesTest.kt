@@ -201,4 +201,53 @@ class ExcludedCustomDirectoriesTest {
         assertEquals("/data/user/0/paige.navic/files/downloads", conflict.conflictingPath)
         assertEquals("/data/user/0/paige.navic", conflict.appPath)
     }
+
+    @Test
+    fun findConflictingExclusions_multipleAppsAndExclusionsWithDuplicates() {
+        val app1 = createTestApp(packageName = "com.app.one", name = "App One")
+        val app2 = createTestApp(packageName = "com.app.two", name = "App Two")
+        val app3 = createTestApp(packageName = "com.app.three", name = "App Three")
+        val request = BackupWorkRequest(
+            repositoryKey = "local:/repo",
+            backupTypes = BackupTypeSelection(data = true),
+            selectedPackageNames = listOf(app1.packageName, app2.packageName, app3.packageName),
+            customDirectories = emptyList(),
+            excludedCustomDirectories = listOf(
+                "/data/user/0/com.app.one/cache",
+                "/data/user/0/com.app.one/cache", // duplicate exclusion
+                "/data/user/0/com.app.two/files/temp",
+                "/storage/emulated/0/DCIM/Camera2" // unrelated
+            )
+        )
+
+        val conflicts = findConflictingExclusions(listOf(app1, app2, app3), request, currentUserId = 0)
+        assertEquals(2, conflicts.size)
+        assertEquals(setOf("com.app.one", "com.app.two"), conflicts.map { it.app.packageName }.toSet())
+        val app1Conflict = conflicts.first { it.app.packageName == "com.app.one" }
+        assertEquals("/data/user/0/com.app.one/cache", app1Conflict.conflictingPath)
+        val app2Conflict = conflicts.first { it.app.packageName == "com.app.two" }
+        assertEquals("/data/user/0/com.app.two/files/temp", app2Conflict.conflictingPath)
+    }
+
+    @Test
+    fun findConflictingExclusions_reusesResolvedExclusions() {
+        val app = createTestApp(packageName = "com.example.app")
+        val request = BackupWorkRequest(
+            repositoryKey = "local:/repo",
+            backupTypes = BackupTypeSelection(data = true),
+            selectedPackageNames = listOf(app.packageName),
+            customDirectories = emptyList(),
+            excludedCustomDirectories = listOf("raw_uri_that_wont_match")
+        )
+        val preResolved = listOf("/data/user/0/com.example.app/cache")
+
+        val conflicts = findConflictingExclusions(
+            selectedApps = listOf(app),
+            request = request,
+            currentUserId = 0,
+            resolvedExclusions = preResolved
+        )
+        assertEquals(1, conflicts.size)
+        assertEquals("/data/user/0/com.example.app/cache", conflicts.first().conflictingPath)
+    }
 }

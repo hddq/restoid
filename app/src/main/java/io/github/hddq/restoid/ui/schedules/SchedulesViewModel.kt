@@ -20,6 +20,8 @@ import io.github.hddq.restoid.work.BackupWorkRequest
 import io.github.hddq.restoid.work.ExclusionConflict
 import io.github.hddq.restoid.work.RunTasksConfig
 import io.github.hddq.restoid.work.findConflictingExclusions
+import io.github.hddq.restoid.work.resolveExclusionPaths
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -81,6 +83,10 @@ class SchedulesViewModel(
 
     private val _uiEvents = MutableSharedFlow<SchedulesUiEvent>(extraBufferCapacity = 1)
     val uiEvents: SharedFlow<SchedulesUiEvent> = _uiEvents.asSharedFlow()
+
+    private var cachedRawExclusions: List<String> = emptyList()
+    private var cachedResolvedExclusions: List<String> = emptyList()
+    private var conflictResolutionJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -486,6 +492,10 @@ class SchedulesViewModel(
             return if (state.exclusionConflicts.isEmpty()) state else state.copy(exclusionConflicts = emptyList())
         }
 
+        if (selectedExcluded != cachedRawExclusions) {
+            triggerBackgroundExclusionResolution(selectedExcluded)
+        }
+
         val effectiveBackupTypes = state.backupTypes.toSelection()
         val appBackupTypes = state.appBackupTypes.mapValues { it.value.toSelection() }
         val currentUserId = runCatching {
@@ -499,7 +509,24 @@ class SchedulesViewModel(
             appBackupTypes = appBackupTypes,
             excludedCustomDirectories = selectedExcluded
         )
-        val conflicts = findConflictingExclusions(selectedApps, dummyRequest, currentUserId)
+        val resolved = if (selectedExcluded == cachedRawExclusions) {
+            cachedResolvedExclusions
+        } else {
+            selectedExcluded.mapNotNull { uri ->
+                (io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(uri) ?: uri).trimEnd('/')
+            }
+        }
+        val conflicts = findConflictingExclusions(selectedApps, dummyRequest, currentUserId, resolved)
         return state.copy(exclusionConflicts = conflicts)
+    }
+
+    private fun triggerBackgroundExclusionResolution(selectedExcluded: List<String>) {
+        conflictResolutionJob?.cancel()
+        conflictResolutionJob = viewModelScope.launch {
+            val resolved = resolveExclusionPaths(selectedExcluded)
+            cachedRawExclusions = selectedExcluded
+            cachedResolvedExclusions = resolved
+            _addEditState.update { recomputeConflicts(it) }
+        }
     }
 }

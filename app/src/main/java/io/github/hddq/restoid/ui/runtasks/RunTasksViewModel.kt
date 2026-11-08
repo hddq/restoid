@@ -19,7 +19,9 @@ import io.github.hddq.restoid.work.ExclusionConflict
 import io.github.hddq.restoid.work.OperationWorkRepository
 import io.github.hddq.restoid.work.RunTasksWorkRequest
 import io.github.hddq.restoid.work.findConflictingExclusions
+import io.github.hddq.restoid.work.resolveExclusionPaths
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -92,9 +94,21 @@ class RunTasksViewModel(
     private val _uiEvents = MutableSharedFlow<RunTasksUiEvent>(extraBufferCapacity = 1)
     val uiEvents: SharedFlow<RunTasksUiEvent> = _uiEvents.asSharedFlow()
 
+    private var cachedRawExclusions: List<String> = emptyList()
+    private var cachedResolvedExclusions: List<String> = emptyList()
+    private var conflictResolutionJob: Job? = null
+
     init {
         loadInstalledApps()
         observeOperationState()
+        val initialExcluded = if (_uiState.value.customDirectoriesBackupEnabled) {
+            _uiState.value.excludedCustomDirectories.filter { it.isSelected }.map { it.uri }
+        } else {
+            emptyList()
+        }
+        if (initialExcluded.isNotEmpty()) {
+            triggerBackgroundExclusionResolution(initialExcluded)
+        }
     }
 
     fun refreshAppsList() {
@@ -515,6 +529,10 @@ class RunTasksViewModel(
             return if (state.exclusionConflicts.isEmpty()) state else state.copy(exclusionConflicts = emptyList())
         }
 
+        if (selectedExcluded != cachedRawExclusions) {
+            triggerBackgroundExclusionResolution(selectedExcluded)
+        }
+
         val effectiveBackupTypes = state.backupTypes.toSelection()
         val appBackupTypes = state.appBackupTypes.mapValues { it.value.toSelection() }
         val currentUserId = runCatching {
@@ -528,8 +546,25 @@ class RunTasksViewModel(
             appBackupTypes = appBackupTypes,
             excludedCustomDirectories = selectedExcluded
         )
-        val conflicts = findConflictingExclusions(selectedApps, dummyRequest, currentUserId)
+        val resolved = if (selectedExcluded == cachedRawExclusions) {
+            cachedResolvedExclusions
+        } else {
+            selectedExcluded.mapNotNull { uri ->
+                (StorageUtils.resolveCustomDirectoryPath(uri) ?: uri).trimEnd('/')
+            }
+        }
+        val conflicts = findConflictingExclusions(selectedApps, dummyRequest, currentUserId, resolved)
         return state.copy(exclusionConflicts = conflicts)
+    }
+
+    private fun triggerBackgroundExclusionResolution(selectedExcluded: List<String>) {
+        conflictResolutionJob?.cancel()
+        conflictResolutionJob = viewModelScope.launch {
+            val resolved = resolveExclusionPaths(selectedExcluded)
+            cachedRawExclusions = selectedExcluded
+            cachedResolvedExclusions = resolved
+            _uiState.update { recomputeConflicts(it) }
+        }
     }
 
     private fun selectedAppBackupTypes(): Map<String, BackupTypes> {
