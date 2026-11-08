@@ -95,17 +95,12 @@ fun RunTasksScreen(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 88.dp, top = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        if (uiState.exclusionConflicts.isNotEmpty()) {
-            item {
-                ExclusionConflictWarningCard(conflicts = uiState.exclusionConflicts)
-            }
-        }
-
         item {
             val rootState by viewModel.rootState.collectAsState()
             val hasRoot = rootState == io.github.hddq.restoid.data.RootState.Granted
 
             Column(modifier = Modifier.fillMaxWidth()) {
+                ExclusionConflictWarningCard(conflicts = uiState.exclusionConflicts)
                 ExpressiveSectionHeader(title = context.getString(R.string.operation_backup))
                 ExpressiveCardGroup {
                     ExpressiveSegmentedSurface(index = 0, count = 2) {

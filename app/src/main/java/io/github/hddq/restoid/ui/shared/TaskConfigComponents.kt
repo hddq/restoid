@@ -1,9 +1,14 @@
 package io.github.hddq.restoid.ui.shared
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -1166,75 +1171,92 @@ fun ExclusionConflictWarningCard(
     conflicts: List<ExclusionConflict>,
     modifier: Modifier = Modifier
 ) {
-    if (conflicts.isEmpty()) return
+    var lastNonEmptyConflicts by remember { mutableStateOf(conflicts) }
+    if (conflicts.isNotEmpty()) {
+        lastNonEmptyConflicts = conflicts
+    }
 
-    var expanded by remember { mutableStateOf(false) }
-    val maxInitial = 3
-    val hasMore = conflicts.size > maxInitial
-    val visibleConflicts = if (expanded || !hasMore) conflicts else conflicts.take(maxInitial)
-
-    Card(
+    AnimatedVisibility(
+        visible = conflicts.isNotEmpty(),
+        enter = fadeIn() + expandVertically(),
+        exit = fadeOut() + shrinkVertically(),
         modifier = modifier
-            .fillMaxWidth()
-            .animateContentSize(),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-            contentColor = MaterialTheme.colorScheme.onTertiaryContainer
-        )
     ) {
-        Row(
+        val displayConflicts = lastNonEmptyConflicts
+        var expanded by remember { mutableStateOf(false) }
+        val maxInitial = 3
+        val hasMore = displayConflicts.size > maxInitial
+        val visibleConflicts = if (expanded || !hasMore) displayConflicts else displayConflicts.take(maxInitial)
+
+        Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.Top,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.WarningAmber,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onTertiaryContainer,
-                modifier = Modifier.size(24.dp)
+                .padding(bottom = 16.dp)
+                .animateContentSize()
+                .then(
+                    if (hasMore) {
+                        Modifier.clickable { expanded = !expanded }
+                    } else {
+                        Modifier
+                    }
+                ),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                contentColor = MaterialTheme.colorScheme.onTertiaryContainer
             )
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text(
-                    text = stringResource(R.string.warning_exclusion_conflict_header),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                Icon(
+                    imageVector = Icons.Outlined.WarningAmber,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                    modifier = Modifier.size(24.dp)
                 )
-                visibleConflicts.forEach { conflict ->
-                    val appName = conflict.app.name.ifBlank { conflict.app.packageName }
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     Text(
-                        text = buildAnnotatedString {
-                            append("• ")
-                            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                                append(appName)
-                            }
-                            append(" — ")
-                            append(conflict.conflictingPath)
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.9f)
-                    )
-                }
-                if (hasMore) {
-                    Text(
-                        text = if (!expanded) {
-                            stringResource(R.string.warning_exclusion_conflict_show_more, conflicts.size - maxInitial)
-                        } else {
-                            stringResource(R.string.warning_exclusion_conflict_show_less)
-                        },
-                        style = MaterialTheme.typography.labelMedium,
+                        text = stringResource(R.string.warning_exclusion_conflict_header),
+                        style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer,
-                        modifier = Modifier
-                            .clickable { expanded = !expanded }
-                            .padding(top = 2.dp, bottom = 2.dp)
+                        color = MaterialTheme.colorScheme.onTertiaryContainer
                     )
+                    visibleConflicts.forEach { conflict ->
+                        val appName = conflict.app.name.ifBlank { conflict.app.packageName }
+                        Text(
+                            text = buildAnnotatedString {
+                                append("• ")
+                                withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                                    append(appName)
+                                }
+                                append(" — ")
+                                append(conflict.conflictingPath)
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.9f)
+                        )
+                    }
+                    if (hasMore) {
+                        Text(
+                            text = if (!expanded) {
+                                stringResource(R.string.warning_exclusion_conflict_show_more, displayConflicts.size - maxInitial)
+                            } else {
+                                stringResource(R.string.warning_exclusion_conflict_show_less)
+                            },
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                            modifier = Modifier.padding(top = 2.dp, bottom = 2.dp)
+                        )
+                    }
                 }
             }
         }

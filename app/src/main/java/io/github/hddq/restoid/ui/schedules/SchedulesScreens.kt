@@ -397,17 +397,12 @@ fun AddEditScheduleScreen(
             }
         }
 
-        if (state.exclusionConflicts.isNotEmpty()) {
-            item {
-                ExclusionConflictWarningCard(conflicts = state.exclusionConflicts)
-            }
-        }
-
         item {
             val rootState by viewModel.rootState.collectAsState()
             val hasRoot = rootState == io.github.hddq.restoid.data.RootState.Granted
 
             Column(modifier = Modifier.fillMaxWidth()) {
+                ExclusionConflictWarningCard(conflicts = state.exclusionConflicts)
                 ExpressiveSectionHeader(title = stringResource(R.string.operation_backup))
                 ExpressiveCardGroup {
                     ExpressiveSegmentedSurface(index = 0, count = 2) {
