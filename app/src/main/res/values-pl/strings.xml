@@ -524,4 +524,5 @@
     <string name="folder_browser_select_this_folder">Wybierz tę ścieżkę</string>
     <string name="folder_browser_show_hidden">Pokaż ukryte foldery</string>
     <string name="folder_browser_show_hidden_items">Pokaż ukryte pliki i foldery</string>
+    <string name="error_cannot_backup_repo_to_itself"></string>
 </resources>
