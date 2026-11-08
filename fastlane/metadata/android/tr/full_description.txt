@@ -6,6 +6,7 @@ Gizli uygulama veri dizinlerini okumak ve yazmak için Root erişimi kesinlikle 
 * Restic Altyapısı: Yerel, tekilleştirilmiş ve şifrelenmiş yedeklemeler için restic'in hızından, güvenliğinden ve verimliliğinden yararlanır.
 * Seçici Yedekleme: Kullanıcı tarafından yüklenen uygulamalardan hangilerini kaydetmek istediğinizi tam olarak seçin.
 * İnce Ayar Kontrolü: Her uygulama için nelerin dahil edileceğini ayrıntılı olarak seçin: APK dosyaları, kullanıcı verileri, cihaz korumalı veriler, harici/OBB veya medya dosyaları.
+* Custom Directory Backup: Back up custom directories and files like DCIM, Documents, etc.
 * Esnek Depo Yönetimi: Restic'in yerel arka uçları üzerinden depolar oluşturun ve yönetin: Yerel Dizin, SFTP, REST sunucusu ve Amazon S3/MinIO.
 * Snapshot Yönetimi: Geçmiş yedekleme snapshot'larına kolayca göz atın, nelerin yedeklendiğine dair detayları görüntüleyin ve alan tasarrufu yapmak için eski verileri silin.
 * Hassas Geri Yükleme: Uygulamaları tamamen geri yükleyin veya yalnızca belirli parçalarını geri yükleyin (örneğin APK'nın üzerine yazmadan sadece uygulama verisini geri yüklemek).
