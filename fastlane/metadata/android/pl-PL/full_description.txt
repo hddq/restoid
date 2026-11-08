@@ -6,8 +6,9 @@ Funkcje:
 * Oparte na silniku Restic: Wykorzystuje szybkość, bezpieczeństwo i wydajność restic do lokalnych, deduplikowanych i szyfrowanych kopii zapasowych.
 * Selektywna kopia zapasowa: Wybierz dokładnie, które aplikacje zainstalowane przez użytkownika chcesz zapisać.
 * Szczegółowa kontrola: Precyzyjnie wybieraj elementy dla każdej aplikacji: pliki APK, dane użytkownika, dane chronione urządzeniem, pliki zewnętrzne/OBB lub pliki multimedialne.
+* Custom Directory Backup: Back up custom directories and files like DCIM, Documents, etc.
 * Elastyczne zarządzanie repozytoriami: Twórz i zarządzaj repozytoriami w natywnych backendach restic: katalog lokalny, SFTP, serwer REST oraz Amazon S3/MinIO.
 * Zarządzanie migawkami: Łatwo przeglądaj historyczne migawki kopii zapasowych, sprawdzaj szczegóły zawartości i usuwaj stare dane, aby zaoszczędzić miejsce.
-* Precyzyjne przywracanie: Przywracaj całe aplikacje lub tylko ich wybrane części (np. przywracanie samych danych bez nadpisywania pliku APK).
+* Precyzyjne przywracanie: Przywracaj całe aplikacje lub tylko ich wybrane części (np.
 * Automatyczne harmonogramy: Konfiguruj cykliczne kopie zapasowe z dostosowywanymi interwałami i warunkami wyzwalania (stan baterii, ładowanie i status sieci).
 * Ochrona przed starszą wersją: Zapobiega przypadkowemu przywróceniu starszej wersji aplikacji na nowszą.
