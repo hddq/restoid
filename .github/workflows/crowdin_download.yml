@@ -25,6 +25,7 @@ jobs:
       - name: Download translations
         uses: crowdin/github-action@v3
         with:
+          crowdin_branch_name: master
           upload_translations: false
           upload_sources: false
           download_translations: true
