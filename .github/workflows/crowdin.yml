@@ -23,6 +23,7 @@ jobs:
       - name: Sync Translations
         uses: crowdin/github-action@v3
         with:
+          crowdin_branch_name: master
           upload_translations: false
           upload_sources: true
           download_translations: true
