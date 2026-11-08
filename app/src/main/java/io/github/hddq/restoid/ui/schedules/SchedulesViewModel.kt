@@ -95,6 +95,11 @@ class SchedulesViewModel(
                 loadSchedules()
             }
         }
+        viewModelScope.launch {
+            rootRepository.rootState.collect {
+                _addEditState.update { recomputeConflicts(it) }
+            }
+        }
     }
 
     fun loadSchedules() {
@@ -481,7 +486,8 @@ class SchedulesViewModel(
     }
 
     private fun recomputeConflicts(state: AddEditScheduleUiState): AddEditScheduleUiState {
-        val selectedApps = if (state.backupEnabled) state.apps.filter { it.isSelected } else emptyList()
+        val hasRoot = rootState.value == io.github.hddq.restoid.data.RootState.Granted
+        val selectedApps = if (state.backupEnabled && hasRoot) state.apps.filter { it.isSelected } else emptyList()
         val selectedExcluded = if (state.customDirectoriesBackupEnabled) {
             state.excludedCustomDirectories.filter { it.isSelected }.map { it.uri }
         } else {

@@ -62,31 +62,29 @@ class RunTasksViewModel(
     private val operationWorkRepository: OperationWorkRepository
 ) : ViewModel() {
 
+    val rootState = rootRepository.rootState
+
     private val _uiState = MutableStateFlow(
-        recomputeConflicts(
-            RunTasksUiState(
-                backupEnabled = preferencesRepository.loadRunTasksBackupEnabled(),
-                backupTypes = preferencesRepository.loadBackupTypes(),
-                maintenance = preferencesRepository.loadMaintenanceState(),
-                customDirectoriesBackupEnabled = preferencesRepository.loadCustomDirectoriesBackupEnabled(),
-                customDirectories = preferencesRepository.loadCustomDirectoriesAll().map { uri ->
-                    CustomDirectory(
-                        uri = uri,
-                        isSelected = preferencesRepository.loadCustomDirectoriesSelected().contains(uri)
-                    )
-                },
-                excludedCustomDirectories = preferencesRepository.loadExcludedCustomDirectoriesAll().map { uri ->
-                    CustomDirectory(
-                        uri = uri,
-                        isSelected = preferencesRepository.loadExcludedCustomDirectoriesSelected().contains(uri)
-                    )
-                }
-            )
+        RunTasksUiState(
+            backupEnabled = preferencesRepository.loadRunTasksBackupEnabled(),
+            backupTypes = preferencesRepository.loadBackupTypes(),
+            maintenance = preferencesRepository.loadMaintenanceState(),
+            customDirectoriesBackupEnabled = preferencesRepository.loadCustomDirectoriesBackupEnabled(),
+            customDirectories = preferencesRepository.loadCustomDirectoriesAll().map { uri ->
+                CustomDirectory(
+                    uri = uri,
+                    isSelected = preferencesRepository.loadCustomDirectoriesSelected().contains(uri)
+                )
+            },
+            excludedCustomDirectories = preferencesRepository.loadExcludedCustomDirectoriesAll().map { uri ->
+                CustomDirectory(
+                    uri = uri,
+                    isSelected = preferencesRepository.loadExcludedCustomDirectoriesSelected().contains(uri)
+                )
+            }
         )
     )
     val uiState = _uiState.asStateFlow()
-
-    val rootState = rootRepository.rootState
 
     private val _operationBlocked = MutableStateFlow(false)
     val operationBlocked = _operationBlocked.asStateFlow()
@@ -101,6 +99,7 @@ class RunTasksViewModel(
     init {
         loadInstalledApps()
         observeOperationState()
+        observeRootState()
         val initialExcluded = if (_uiState.value.customDirectoriesBackupEnabled) {
             _uiState.value.excludedCustomDirectories.filter { it.isSelected }.map { it.uri }
         } else {
@@ -108,6 +107,14 @@ class RunTasksViewModel(
         }
         if (initialExcluded.isNotEmpty()) {
             triggerBackgroundExclusionResolution(initialExcluded)
+        }
+    }
+
+    private fun observeRootState() {
+        viewModelScope.launch {
+            rootRepository.rootState.collect {
+                _uiState.update { recomputeConflicts(it) }
+            }
         }
     }
 
@@ -518,7 +525,8 @@ class RunTasksViewModel(
     fun setBackupPermissions(value: Boolean) = _uiState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(permissions = value))) }
 
     private fun recomputeConflicts(state: RunTasksUiState): RunTasksUiState {
-        val selectedApps = if (state.backupEnabled) state.apps.filter { it.isSelected } else emptyList()
+        val hasRoot = rootState.value == io.github.hddq.restoid.data.RootState.Granted
+        val selectedApps = if (state.backupEnabled && hasRoot) state.apps.filter { it.isSelected } else emptyList()
         val selectedExcluded = if (state.customDirectoriesBackupEnabled) {
             state.excludedCustomDirectories.filter { it.isSelected }.map { it.uri }
         } else {
