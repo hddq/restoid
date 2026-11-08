@@ -2,11 +2,13 @@
 <resources>
     <string name="screen_home">Ana Sayfa</string>
     <string name="screen_settings">Ayarlar</string>
+    <string name="screen_tasks">Görevler</string>
     <string name="screen_snapshot_details">Anlık Görüntü Detayları</string>
     <string name="screen_restore">Geri Yükle</string>
     <string name="screen_licenses">Lisanslar</string>
     <string name="screen_schedules">Zamanlamalar</string>
     <string name="screen_operation_progress">İşlem İlerlemesi</string>
+    <string name="topbar_tasks">Görevler</string>
     <string name="topbar_backup_config">Yedekleme Yapılandırması</string>
     <string name="topbar_forget_config">İlkeyi Unut</string>
     <string name="topbar_check_config">Bütünlüğü Denetle</string>
@@ -19,6 +21,7 @@
     <string name="topbar_restore_snapshot">Anlık Görüntüyü Geri Yükle</string>
     <string name="cd_back">Geri</string>
     <string name="cd_forget_snapshot">Anlık Görüntüyü Unut</string>
+    <string name="action_run_now">Şimdi çalıştır</string>
     <string name="fab_run_tasks">Görevleri Çalıştır</string>
     <string name="fab_add_schedule">Zamanlama Ekle</string>
     <string name="fab_restore">Geri Yükle</string>
@@ -31,21 +34,76 @@
     <string name="run_tasks_phase_summary">%1$s:\n%2$s</string>
     <string name="backup_types_title">Yedekleme Türleri</string>
     <string name="backup_type_apk">APK</string>
+    <string name="backup_type_apk_desc">Uygulama paket dosyası</string>
     <string name="backup_type_data">Veri</string>
+    <string name="backup_type_data_desc">Dahili uygulama verileri (/data/data)</string>
     <string name="backup_type_device_protected_data">Cihaz Korumalı Veri</string>
+    <string name="backup_type_device_protected_data_desc">Cihaz kilidi açılmadan önce erişilebilir veriler (/data/user_de)</string>
     <string name="backup_type_external_data">Harici Veri</string>
+    <string name="backup_type_external_data_desc">Harici depolamadaki uygulama verileri (/sdcard/Android/data)</string>
     <string name="backup_type_obb_data">OBB Verisi</string>
+    <string name="backup_type_obb_data_desc">Opaque Binary Blob dosyaları (/sdcard/Android/obb)</string>
     <string name="backup_type_media_data">Medya Verisi</string>
+    <string name="backup_type_media_data_desc">Uygulama medya dosyaları (/sdcard/Android/media)</string>
+    <string name="settings_system_permission_storage">Depolama Erişimi</string>
+    <string name="settings_system_permission_local_network">Yerel Ağ Erişimi</string>
+    <string name="local_network_permission_enabled">Yerel ağ erişimi verildi</string>
+    <string name="backup_type_permissions">İzinler</string>
+    <string name="backup_type_permissions_desc">İzin verilen çalışma zamanı izinleri</string>
     <string name="apps_title">Uygulamalar</string>
     <string name="toggle_all">Tümünü Değiştir</string>
+    <string name="backup_types_for_selected_apps">Seçili uygulamalar için yedekleme türleri</string>
+    <string name="backup_types_none">Hiçbiri</string>
+    <string name="backup_types_mixed">Karışık</string>
     <string name="restore_options_title">Geri Yükleme Seçenekleri</string>
     <string name="allow_downgrade">Sürüm Düşürmeye İzin Ver</string>
     <string name="apps_to_restore_title">Geri Yüklenecek Uygulamalar</string>
     <string name="no_app_data_found_in_snapshot">Bu anlık görüntüde hiçbir uygulama verisi bulunamadı.</string>
     <string name="restore_backup_version_with_installed">Yedek: %1$s -&gt; Yüklü: %2$s</string>
     <string name="restore_backup_version_only">Yedek: %1$s</string>
-    <string name="home_title" translatable="false">Restoid</string>
     <string name="run_tasks_applications">Uygulamalar</string>
+    <string name="run_tasks_custom_directories">Özel Dizinler</string>
+    <string name="run_tasks_custom_directories_subtitle_none">Dizin seçilmedi</string>
+    <string name="run_tasks_custom_directories_subtitle_count">%1$d dizin seçildi</string>
+    <string name="run_tasks_custom_directories_subtitle_with_exclusions">%1$d paths selected, %2$d excluded</string>
+    <string name="action_add_directory">Dizin Ekle</string>
+    <string name="action_add_excluded_directory">Exclude File or Folder</string>
+    <string name="folder_browser_select_this_folder">Bu klasörü seç</string>
+    <string name="folder_browser_show_hidden">Gizli klasörleri göster</string>
+    <string name="folder_browser_show_hidden_items">Gizli dosya ve klasörleri göster</string>
+    <string name="folder_browser_cannot_list">Bu klasör listelenemiyor.</string>
+    <string name="folder_browser_empty">Alt klasör yok.</string>
+    <string name="folder_browser_empty_items">Dosya veya klasör yok.</string>
+    <string name="folder_browser_up">Üst klasöre git</string>
+    <string name="folder_browser_roots_title">Depolama konumları</string>
+    <string name="folder_browser_internal_storage">Dahili Depolama</string>
+    <string name="folder_browser_system_root">Sistem kök dizini (/)</string>
+    <string name="folder_browser_external_storage">Harici Depolama (%1$s)</string>
+    <string name="folder_browser_edit_path">Yolu manuel gir</string>
+    <string name="folder_browser_new_folder">Yeni klasör</string>
+    <string name="folder_browser_new_folder_name">Klasör adı</string>
+    <string name="folder_browser_create_failed">Klasör oluşturulamadı.</string>
+    <string name="action_create">Oluştur</string>
+    <string name="action_go">Git</string>
+    <string name="title_custom_directories">Özel Dizinler</string>
+    <string name="custom_directories_description">Yedeklemeye dahil etmek için cihazınızdaki özel dizinleri seçin.</string>
+    <string name="custom_directories_long_press_hint">Menüyü açmak ve silmek için bir girişe dokunup basılı tutun.</string>
+    <string name="custom_directories_typed_path_label">Klasör yolu</string>
+    <string name="custom_directories_typed_path_hint">örn. /storage/emulated/0/Download</string>
+    <string name="custom_directories_typed_path_invalid">Geçerli bir mutlak klasör yolu girin.</string>
+    <string name="custom_directories_typed_path_not_found">Klasör mevcut değil: %1$s</string>
+    <string name="custom_directory_not_found">Özel dizin bulunamadı: %1$s</string>
+    <string name="custom_directories_already_added">Bu dizin zaten listede.</string>
+    <string name="custom_directories_unresolvable">Özel dizin çözülemedi: %1$s</string>
+    <string name="custom_directories_section_include">Include</string>
+    <string name="custom_directories_section_exclude">Exclude</string>
+    <string name="custom_directories_exclude_description">Select subdirectories or files to exclude from the backup.</string>
+    <string name="action_exclude_subfolder">Exclude subfolder…</string>
+    <string name="warning_exclusion_conflict_header">Some exclusions may exclude files from app backups:</string>
+    <string name="warning_exclusion_conflict_show_more">Show %1$d more…</string>
+    <string name="warning_exclusion_conflict_show_less">Show less</string>
+    <string name="error_all_files_access_required">Özel dizinleri yedeklemek için tüm dosyalara erişim gereklidir.</string>
+    <string name="summary_all_files_access_required">Tüm dosyalara erişim izni verin ve tekrar deneyin.</string>
     <string name="run_tasks_backup_subtitle">%1$d uygulama seçildi - %2$s</string>
     <string name="run_tasks_forget_snapshots">Anlık Görüntüleri Unut</string>
     <string name="run_tasks_forget_subtitle">Son %1$d, günlük %2$d, haftalık %3$d, aylık %4$d tut</string>
@@ -65,6 +123,7 @@
     <string name="dialog_discard_changes_message">Kaydedilmemiş değişiklikleriniz var. Bunları iptal etmek istediğinizden emin misiniz?</string>
     <string name="action_discard">İptal</string>
     <string name="error_with_message">Hata: %1$s</string>
+    <string name="error_cannot_backup_repo_to_itself">Yedekleme için deponun kendisi bir özel dizin olarak eklenemez.</string>
     <string name="no_snapshots_found_for_repository">Seçili depo için hiçbir anlık görüntü bulunamadı.</string>
     <plurals name="snapshots_count">
         <item quantity="one">Anlık Görüntü (%1$d)</item>
@@ -84,8 +143,38 @@
         <item quantity="one">Uygulama (%1$d):</item>
         <item quantity="other">Uygulamalar (%1$d):</item>
     </plurals>
+    <plurals name="backed_up_items_count">
+        <item quantity="one">Yedeklendi (%1$d):</item>
+        <item quantity="other">Yedeklendi (%1$d):</item>
+    </plurals>
+    <plurals name="custom_directories_count">
+        <item quantity="one">Özel Dizin (%1$d):</item>
+        <item quantity="other">Özel Dizinler (%1$d):</item>
+    </plurals>
     <string name="no_app_info_for_snapshot">Bu anlık görüntü için uygulama bilgisi mevcut değil.</string>
     <string name="metadata_missing_or_corrupted">Üst veri eksik veya bozuk.</string>
+    <string name="metadata_restore_success">Meta veriler başarıyla geri yüklendi.</string>
+    <string name="time_just_now">az önce</string>
+    <plurals name="time_mins_ago">
+        <item quantity="one">%d dakika önce</item>
+        <item quantity="other">%d dakika önce</item>
+    </plurals>
+    <plurals name="time_hours_ago">
+        <item quantity="one">%d saat önce</item>
+        <item quantity="other">%d saat önce</item>
+    </plurals>
+    <plurals name="time_days_ago">
+        <item quantity="one">%d gün önce</item>
+        <item quantity="other">%d gün önce</item>
+    </plurals>
+    <plurals name="time_months_ago">
+        <item quantity="one">%d ay önce</item>
+        <item quantity="other">%d ay önce</item>
+    </plurals>
+    <plurals name="time_years_ago">
+        <item quantity="one">%d yıl önce</item>
+        <item quantity="other">%d yıl önce</item>
+    </plurals>
     <string name="maintenance_task_unlock_repository">Depoyu kilidini aç</string>
     <string name="maintenance_task_prune_repository">Depoyu buda</string>
     <string name="maintenance_keep_last">Sonuncuyu tut</string>
@@ -97,6 +186,10 @@
         <item quantity="one">Yedeklenen Uygulama (%1$d)</item>
         <item quantity="other">Yedeklenen Uygulamalar (%1$d)</item>
     </plurals>
+    <plurals name="snapshot_backed_up_custom_directories_count">
+        <item quantity="one">Yedeklenen Özel Dizin (%1$d)</item>
+        <item quantity="other">Yedeklenen Özel Dizinler (%1$d)</item>
+    </plurals>
     <string name="snapshot_not_found">Anlık görüntü bulunamadı.</string>
     <string name="snapshot_forgetting">Anlık görüntü unutuluyor…</string>
     <string name="snapshot_id">Kimlik: %1$s</string>
@@ -106,6 +199,7 @@
     <string name="dialog_forget_snapshot_message">Bu, anlık görüntü girdisini kaldıracaktır. Asıl veriler yalnızca budama işlemi çalıştırıldıktan sonra silinecektir. Emin misiniz?</string>
     <string name="label_password">Parola</string>
     <string name="label_repository_password">Depo parolası</string>
+    <string name="repository_password_explanation">Bu Restic deposunu şifrelemek ve geri yüklemek için gereklidir. SFTP girişinizden farklıdır. Gözünüz gibi koruyun: kaybederseniz yedeklerinizi geri yükleyemezsiniz.</string>
     <string name="label_rest_username">REST kullanıcı adı</string>
     <string name="label_rest_password">REST parolası</string>
     <string name="label_s3_access_key_id">S3 erişim anahtarı kimliği</string>
@@ -120,6 +214,7 @@
     <string name="action_done">Bitti</string>
     <string name="action_add">Ekle</string>
     <string name="action_delete">Sil</string>
+    <string name="action_restore_metadata">Meta verileri geri yükle</string>
     <string name="action_change">Değiştir</string>
     <string name="action_save">Kaydet</string>
     <string name="action_grant">Ver</string>
@@ -127,6 +222,10 @@
     <string name="action_forget">Unut</string>
     <string name="action_try_again">Tekrar Dene</string>
     <string name="action_disable">Devre dışı bırak</string>
+    <string name="action_enable">Etkinleştir</string>
+    <string name="usage_stats_permission_enabled">Uygulama kullanım erişimi verildi</string>
+    <string name="usage_stats_permission_disabled">Uygulama kullanım erişimi gerekli</string>
+    <string name="usage_stats_permission_description">Yedeklemeler sırasında dizinleri taramak yerine daha hızlı uygulama boyutu hesaplamasını sağlar</string>
     <string name="progress_initializing">Başlatılıyor…</string>
     <string name="progress_stopping">Durduruluyor…</string>
     <string name="progress_operation_complete">%1$s Tamamlandı</string>
@@ -137,7 +236,6 @@
     <string name="progress_items">Öğeler</string>
     <string name="progress_size">Boyut</string>
     <string name="progress_processing">İşleniyor:</string>
-    <string name="progress_placeholder" translatable="false">...</string>
     <string name="dialog_add_repository_title">Depo Ekle</string>
     <string name="label_repository_type">Depo türü</string>
     <string name="label_repository_specification">Depo belirtimi</string>
@@ -147,7 +245,6 @@
     <string name="label_sftp_password">SFTP parolası</string>
     <string name="label_sftp_ssh_key">SSH anahtarı</string>
     <string name="label_sftp_private_key">SFTP SSH özel anahtarı</string>
-    <string name="placeholder_sftp_private_key" translatable="false">-----BEGIN OPENSSH PRIVATE KEY-----\n...</string>
     <string name="label_sftp_key_passphrase">SSH anahtarı parolası</string>
     <string name="label_sftp_key_passphrase_optional">SSH anahtarı parolası (isteğe bağlı)</string>
     <string name="dialog_sftp_trust_title">SFTP sunucusuna güven</string>
@@ -156,9 +253,15 @@
     <string name="repo_backend_local">Yerel dizin</string>
     <string name="repo_backend_sftp">SFTP (SSH)</string>
     <string name="repo_backend_rest">HTTP REST sunucusu</string>
-    <string name="repo_backend_s3" translatable="false">Amazon S3 / MinIO</string>
-    <string name="repo_hint_rest" translatable="false">http://host:8000/</string>
-    <string name="repo_hint_s3" translatable="false">s3.us-east-1.amazonaws.com/bucket_adi</string>
+    <string name="label_sftp_host">Sunucu</string>
+    <string name="label_sftp_port">Bağlantı Noktası</string>
+    <string name="label_sftp_username">Kullanıcı adı</string>
+    <string name="label_sftp_repository_path">Depo yolu</string>
+    <string name="repo_supporting_sftp_path">Mutlak (/srv/restic-repo) veya ev dizininize göre göreli (restic-repo)</string>
+    <string name="error_sftp_host_empty">Sunucu adı boş bırakılamaz</string>
+    <string name="error_sftp_username_empty">Kullanıcı adı boş bırakılamaz</string>
+    <string name="error_sftp_path_empty">Depo yolu boş bırakılamaz</string>
+    <string name="error_sftp_port_invalid">Bağlantı noktası 1 ile 65535 arasında bir sayı olmalıdır</string>
     <string name="label_path">Yol</string>
     <string name="placeholder_select_directory">Bir dizin seçin…</string>
     <string name="cd_select_folder">Klasör Seç</string>
@@ -173,6 +276,9 @@
     <string name="root_access_denied">Root erişimi reddedildi</string>
     <string name="checking_for_root">Root kontrol ediliyor…</string>
     <string name="root_access_granted">Root erişimi sağlandı</string>
+    <string name="storage_permission_enabled">Tüm dosyalara erişim izni verildi</string>
+    <string name="storage_permission_disabled">Tüm dosyalara erişim gerekli</string>
+    <string name="storage_permission_description">Root erişimi olmadan özel dizinleri yedeklemek için gereklidir.</string>
     <string name="dependencies_title">Bağımlılıklar</string>
     <string name="about_title">Hakkında</string>
     <string name="version_label">Sürüm</string>
@@ -228,9 +334,16 @@
     <string name="backup_stage_preparing">[%1$d/%2$d] Yedekleme hazırlanıyor...</string>
     <string name="backup_stage_running">[%1$d/%2$d] Ögeler yedekleniyor…</string>
     <string name="backup_stage_finalizing">[%1$d/%2$d] Yedekleme sonlandırılıyor…</string>
+    <string name="backup_error_no_files_selected_for_items">Seçilen ögeler için yedeklenecek dosya bulunamadı.</string>
     <string name="backup_error_command_failed_with_code">Restic komutu %1$d çıkış koduyla başarısız oldu.</string>
     <string name="backup_warning_metadata_not_saved">Uyarı: Yedekleme meta veri dosyası yerel olarak kaydedilemedi.</string>
+    <plurals name="backup_summary_success_items">
+        <item quantity="one">Yedeklenen öge sayısı: %1$d.</item>
+        <item quantity="other">Yedeklenen öge sayısı: %1$d.</item>
+    </plurals>
     <string name="error_fatal_with_message">Kritik bir hata oluştu: %1$s</string>
+    <string name="error_no_items_selected">Hiçbir öge seçilmedi.</string>
+    <string name="summary_no_items_selected">Hiçbir öge seçilmedi.</string>
     <string name="error_no_backup_types_selected">Yedekleme türü seçilmedi.</string>
     <string name="summary_no_backup_types_selected">Hiçbir yedekleme türü seçilmedi.</string>
     <string name="error_restic_not_installed">Restic yüklü değil.</string>
@@ -253,9 +366,13 @@
     <string name="restore_stage_processing_apps">Uygulamalar İşleniyor</string>
     <string name="restore_stage_cleanup">Temizlik</string>
     <string name="restore_error_preflight_failed">Geri yükleme öncesi kontroller başarısız oldu.</string>
+    <string name="restore_error_no_items_selected">Geri yükleme için hiçbir öge seçilmedi.</string>
+    <string name="restore_error_no_restore_types_selected">Geri yükleme türü seçilmedi.</string>
     <string name="restore_error_password_not_found">Depo için parola bulunamadı.</string>
     <string name="restore_error_no_files_found">Seçili ögeler için anlık görüntüde (snapshot) hiçbir dosya bulunamadı.</string>
     <string name="restore_error_command_failed">Restic geri yükleme komutu başarısız oldu.</string>
+    <string name="restore_stage_processing_template_apps">[%1$d/%2$d] Uygulamalar işleniyor</string>
+    <string name="restore_stage_processing_template_custom_directories">[%1$d/%2$d] Özel Dizinler işleniyor</string>
     <string name="restore_failure_install_commit">%1$s: Yükleme işleme başarısız: %2$s</string>
     <string name="restore_failure_write_apk_splits">%1$s: APK bölümleri yazılamadı.</string>
     <string name="restore_failure_create_install_session">%1$s: Yükleme oturumu oluşturulamadı.</string>
@@ -263,7 +380,17 @@
     <string name="restore_failure_data_restore">%1$s: Veri geri yükleme başarısız veya eksik.</string>
     <string name="restore_failure_permissions_app_not_installed">%1$s: Uygulama yüklü olmadığı için izinler geri yüklenemedi.</string>
     <string name="restore_failure_permissions_partial">%1$s: Bazı izinler geri yüklenemedi: %2$s</string>
+    <string name="restore_stage_processing_custom_directories">Özel Dizinler işleniyor…</string>
+    <string name="restore_failure_custom_directory">Özel dizin geri yüklenemedi: %1$s</string>
     <string name="restore_summary_finished_in">Geri yükleme %1$s içinde tamamlandı.</string>
+    <plurals name="restore_summary_processed_items">
+        <item quantity="one">Başarıyla işlenen öge sayısı: %1$d.</item>
+        <item quantity="other">Başarıyla işlenen öge sayısı: %1$d.</item>
+    </plurals>
+    <plurals name="restore_summary_failed_items">
+        <item quantity="one">%1$d öge geri yüklenemedi.</item>
+        <item quantity="other">%1$d öge geri yüklenemedi.</item>
+    </plurals>
     <string name="restore_summary_details">\n\nAyrıntılar:\n- %1$s</string>
     <string name="maintenance_task_unlock">Kilidi Aç</string>
     <string name="maintenance_task_forget">Unut</string>
@@ -306,6 +433,10 @@
     <string name="channel_completed_operations">Tamamlanan İşlemler</string>
     <string name="channel_ongoing_description">Devam eden yedekleme ve geri yükleme ilerlemesini sessizce gösterir.</string>
     <string name="channel_completed_description">Bir yedekleme veya geri yükleme tamamlandığında uyarır.</string>
+    <string name="channel_successful_operations">Successful Operations</string>
+    <string name="channel_successful_description">Alerts when a backup or restore has finished successfully.</string>
+    <string name="channel_failed_operations">Failed Operations</string>
+    <string name="channel_failed_description">Alerts when a backup or restore operation fails or encounters errors.</string>
     <plurals name="notification_files_progress">
         <item quantity="one">%1$d/%2$d dosya</item>
         <item quantity="other">%1$d/%2$d dosya</item>
@@ -317,6 +448,12 @@
     <string name="operation_interrupted">İşlem kesintiye uğradı.</string>
     <string name="dialog_stop_operation_title">İşlem durdurulsun mu?</string>
     <string name="dialog_stop_operation_message">Şu anki işlemi durdurmak istiyor musunuz? Tamamlanmamış tüm işler iptal edilecektir.</string>
+    <string name="home_operation_running_title">%1$s işlemi devam ediyor</string>
+    <string name="home_operation_running_default_title">İşlem devam ediyor</string>
+    <string name="home_operation_running_tap_hint">Durumu görmek için dokunun</string>
+    <string name="action_force_stop">Zorla durdur</string>
+    <string name="dialog_force_stop_operation_title">İşlem zorla durdurulsun mu?</string>
+    <string name="dialog_force_stop_operation_message">Mevcut işlemi zorla durdurmak istiyor musunuz? Tamamlanmamış işler iptal edilecek ve işlem durumu sıfırlanacaktır.</string>
     <string name="repo_error_exists">Depo zaten mevcut.</string>
     <string name="repo_error_binary_not_ready">Restic ikili dosyası hazır değil.</string>
     <string name="repo_error_invalid_password_or_corrupted">Geçersiz parola veya bozuk depo.</string>
@@ -390,155 +527,41 @@
     <string name="license_tap_to_expand">… (genişletmek için dokunun)</string>
     <string name="cd_open_link">Bağlantıyı Aç</string>
     <string name="cd_copy_license">Lisansı Kopyala</string>
-    <string name="backup_type_permissions">İzinler</string>
-    <string name="backup_types_for_selected_apps">Seçili uygulamalar için yedekleme türleri</string>
-    <string name="backup_types_none">Hiçbiri</string>
-    <string name="backup_types_mixed">Karışık</string>
-    <string name="time_just_now">az önce</string>
-    <plurals name="time_mins_ago">
-        <item quantity="one">%d dakika önce</item>
-        <item quantity="other">%d dakika önce</item>
-    </plurals>
-    <plurals name="time_days_ago">
-        <item quantity="one">%d gün önce</item>
-        <item quantity="other">%d gün önce</item>
-    </plurals>
-    <plurals name="time_months_ago">
-        <item quantity="one">%d ay önce</item>
-        <item quantity="other">%d ay önce</item>
-    </plurals>
-    <string name="backup_type_apk_desc">Uygulama paket dosyası</string>
-    <string name="backup_type_data_desc">Dahili uygulama verileri (/data/data)</string>
-    <string name="backup_type_device_protected_data_desc">Cihaz kilidi açılmadan önce erişilebilir veriler (/data/user_de)</string>
-    <string name="backup_type_external_data_desc">Harici depolamadaki uygulama verileri (/sdcard/Android/data)</string>
-    <string name="backup_type_obb_data_desc">Opaque Binary Blob dosyaları (/sdcard/Android/obb)</string>
-    <string name="backup_type_media_data_desc">Uygulama medya dosyaları (/sdcard/Android/media)</string>
-    <string name="backup_type_permissions_desc">İzin verilen çalışma zamanı izinleri</string>
-    <plurals name="time_hours_ago">
-        <item quantity="one">%d saat önce</item>
-        <item quantity="other">%d saat önce</item>
-    </plurals>
-    <plurals name="time_years_ago">
-        <item quantity="one">%d yıl önce</item>
-        <item quantity="other">%d yıl önce</item>
-    </plurals>
-    <string name="restore_error_no_restore_types_selected">Geri yükleme türü seçilmedi.</string>
-    <string name="action_enable">Etkinleştir</string>
-    <string name="usage_stats_permission_enabled">Uygulama kullanım erişimi verildi</string>
-    <string name="usage_stats_permission_disabled">Uygulama kullanım erişimi gerekli</string>
-    <string name="usage_stats_permission_description">Yedeklemeler sırasında dizinleri taramak yerine daha hızlı uygulama boyutu hesaplamasını sağlar</string>
-    <string name="metadata_restore_success">Meta veriler başarıyla geri yüklendi.</string>
-    <string name="action_restore_metadata">Meta verileri geri yükle</string>
     <string name="repo_warning_metadata_restore_failed_title">Meta veri Geri Yükleme Başarısız</string>
     <string name="repo_warning_metadata_restore_failed">Depo başarıyla eklendi ancak meta verileri (zamanlamalar, ayrıntılı yedekleme bilgileri) geri yüklenemedi. Bu durum genellikle meta veri anlık görüntüsünün eksik olduğu veya deponun kilitli olduğu anlamına gelir. Yeniden denemek için Ayarlar → Depolar\'ı açın, depo menüsüne dokunun ve \"Meta verileri geri yükle\" seçeneğini belirleyin.</string>
-    <string name="screen_tasks">Görevler</string>
-    <string name="topbar_tasks">Görevler</string>
-    <string name="run_tasks_custom_directories">Özel Dizinler</string>
-    <string name="run_tasks_custom_directories_subtitle_none">Dizin seçilmedi</string>
-    <string name="run_tasks_custom_directories_subtitle_count">%1$d dizin seçildi</string>
-    <string name="action_add_directory">Dizin Ekle</string>
-    <string name="title_custom_directories">Özel Dizinler</string>
-    <string name="custom_directories_description">Yedeklemeye dahil etmek için cihazınızdaki özel dizinleri seçin.</string>
-    <string name="error_cannot_backup_repo_to_itself">Yedekleme için deponun kendisi bir özel dizin olarak eklenemez.</string>
-    <plurals name="backed_up_items_count">
-        <item quantity="one">Yedeklendi (%1$d):</item>
-        <item quantity="other">Yedeklendi (%1$d):</item>
-    </plurals>
-    <plurals name="custom_directories_count">
-        <item quantity="one">Özel Dizin (%1$d):</item>
-        <item quantity="other">Özel Dizinler (%1$d):</item>
-    </plurals>
-    <plurals name="snapshot_backed_up_custom_directories_count">
-        <item quantity="one">Yedeklenen Özel Dizin (%1$d)</item>
-        <item quantity="other">Yedeklenen Özel Dizinler (%1$d)</item>
-    </plurals>
-    <string name="backup_error_no_files_selected_for_items">Seçilen ögeler için yedeklenecek dosya bulunamadı.</string>
-    <plurals name="backup_summary_success_items">
-        <item quantity="one">Yedeklenen öge sayısı: %1$d.</item>
-        <item quantity="other">Yedeklenen öge sayısı: %1$d.</item>
-    </plurals>
-    <string name="error_no_items_selected">Hiçbir öge seçilmedi.</string>
-    <string name="summary_no_items_selected">Hiçbir öge seçilmedi.</string>
-    <string name="restore_error_no_items_selected">Geri yükleme için hiçbir öge seçilmedi.</string>
-    <string name="restore_stage_processing_template_apps">[%1$d/%2$d] Uygulamalar işleniyor</string>
-    <string name="restore_stage_processing_template_custom_directories">[%1$d/%2$d] Özel Dizinler işleniyor</string>
-    <string name="restore_stage_processing_custom_directories">Özel Dizinler işleniyor…</string>
-    <string name="restore_failure_custom_directory">Özel dizin geri yüklenemedi: %1$s</string>
-    <plurals name="restore_summary_processed_items">
-        <item quantity="one">Başarıyla işlenen öge sayısı: %1$d.</item>
-        <item quantity="other">Başarıyla işlenen öge sayısı: %1$d.</item>
-    </plurals>
-    <plurals name="restore_summary_failed_items">
-        <item quantity="one">%1$d öge geri yüklenemedi.</item>
-        <item quantity="other">%1$d öge geri yüklenemedi.</item>
-    </plurals>
-    <string name="action_run_now">Şimdi çalıştır</string>
-    <string name="storage_permission_enabled">Tüm dosyalara erişim izni verildi</string>
-    <string name="storage_permission_disabled">Tüm dosyalara erişim gerekli</string>
-    <string name="storage_permission_description">Root erişimi olmadan özel dizinleri yedeklemek için gereklidir.</string>
-    <string name="settings_system_permission_storage">Depolama Erişimi</string>
-    <string name="settings_system_permission_local_network">Yerel Ağ Erişimi</string>
-    <string name="local_network_permission_enabled">Yerel ağ erişimi verildi</string>
-    <string name="home_operation_running_title">%1$s işlemi devam ediyor</string>
-    <string name="home_operation_running_default_title">İşlem devam ediyor</string>
-    <string name="home_operation_running_tap_hint">Durumu görmek için dokunun</string>
-    <string name="action_force_stop">Zorla durdur</string>
-    <string name="dialog_force_stop_operation_title">İşlem zorla durdurulsun mu?</string>
-    <string name="dialog_force_stop_operation_message">Mevcut işlemi zorla durdurmak istiyor musunuz? Tamamlanmamış işler iptal edilecek ve işlem durumu sıfırlanacaktır.</string>
-    <string name="folder_browser_select_this_folder">Bu klasörü seç</string>
-    <string name="folder_browser_show_hidden">Gizli klasörleri göster</string>
-    <string name="folder_browser_cannot_list">Bu klasör listelenemiyor.</string>
-    <string name="folder_browser_empty">Alt klasör yok.</string>
-    <string name="folder_browser_up">Üst klasöre git</string>
-    <string name="folder_browser_roots_title">Depolama konumları</string>
-    <string name="folder_browser_internal_storage">Dahili Depolama</string>
-    <string name="folder_browser_edit_path">Yolu manuel gir</string>
-    <string name="folder_browser_new_folder_name">Klasör adı</string>
-    <string name="folder_browser_create_failed">Klasör oluşturulamadı.</string>
-    <string name="action_create">Oluştur</string>
-    <string name="action_go">Git</string>
-    <string name="custom_directories_long_press_hint">Menüyü açmak ve silmek için bir girişe dokunup basılı tutun.</string>
-    <string name="custom_directories_typed_path_label">Klasör yolu</string>
-    <string name="custom_directories_typed_path_hint">örn. /storage/emulated/0/Download</string>
-    <string name="custom_directories_typed_path_not_found">Klasör mevcut değil: %1$s</string>
-    <string name="custom_directories_already_added">Bu dizin zaten listede.</string>
-    <string name="custom_directories_unresolvable">Özel dizin çözülemedi: %1$s</string>
-    <string name="error_all_files_access_required">Özel dizinleri yedeklemek için tüm dosyalara erişim gereklidir.</string>
-    <string name="summary_all_files_access_required">Tüm dosyalara erişim izni verin ve tekrar deneyin.</string>
-    <string name="tasks_guide_unlock_title">Depo kilidini aç</string>
-    <string name="label_sftp_username">Kullanıcı adı</string>
-    <string name="folder_browser_empty_items">Dosya veya klasör yok.</string>
+    <!-- Tasks & Maintenance Guide -->
     <string name="cd_help">Yardım</string>
-    <string name="tasks_guide_files_desc">Cihaz depolamasından seçilen özel dosyaları ve dizinleri yedekler.</string>
-    <string name="repository_password_explanation">Bu Restic deposunu şifrelemek ve geri yüklemek için gereklidir. SFTP girişinizden farklıdır. Gözünüz gibi koruyun: kaybederseniz yedeklerinizi geri yükleyemezsiniz.</string>
-    <string name="tasks_guide_prune_title">Depoyu buda</string>
-    <string name="tasks_guide_apps_title">Uygulamalar</string>
-    <string name="repo_supporting_sftp_path">Mutlak (/srv/restic-repo) veya ev dizininize göre göreli (restic-repo)</string>
-    <string name="tasks_guide_prune_desc">Depoyu, artık herhangi bir anlık görüntü tarafından referans verilmeyen veri yınıtları için tarar, bunları kalıcı olarak siler ve disk alanı kazanmak için paketleri yeniden düzenler. Budama (Prune) kaynak açısından yoğundur ve periyodik olarak (haftalık veya aylık) çalıştırılması önerilir.</string>
-    <string name="label_sftp_host">Sunucu</string>
-    <string name="error_sftp_host_empty">Sunucu adı boş bırakılamaz</string>
-    <string name="tasks_guide_subtitle">Her bir yedekleme ve bakım görevinin ne yaptığını ve nasıl birlikte çalıştıklarını öğrenin.</string>
-    <string name="tasks_guide_forget_vs_prune_desc">Unutma işlemini bir kütüphane dizininden katalog kartlarını kaldırmak, Budama işlemini ise gereksiz kitapları binadan fiziki olarak çıkarmak gibi düşünün. Önce nelerin silineceğine karar vermek için \"Unut\"u, ardından depolama alanını fiilen boşaltmak için \"Buda\"yı çalıştırırsınız.</string>
-    <string name="tasks_guide_docs_button">Resmi Restic Belgeleri</string>
-    <string name="folder_browser_system_root">Sistem kök dizini (/)</string>
-    <string name="label_sftp_port">Bağlantı Noktası</string>
-    <string name="tasks_guide_forget_vs_prune_title">Unut (Forget) vs. Buda (Prune): Fark nedir?</string>
-    <string name="folder_browser_show_hidden_items">Gizli dosya ve klasörleri göster</string>
-    <string name="tasks_guide_unlock_desc">Önceki bir yedekleme veya görev beklenmedik bir şekilde kesintiye uğradığında (uygulamanın kapanması, cihazın yeniden başlatılması veya bağlantının kopması gibi) geride kalan eski kilitleri kaldırır. Bu, sonraki görevlerin güvenli bir şekilde devam etmesini sağlar.</string>
-    <string name="error_sftp_path_empty">Depo yolu boş bırakılamaz</string>
-    <string name="label_sftp_repository_path">Depo yolu</string>
-    <string name="error_sftp_port_invalid">Bağlantı noktası 1 ile 65535 arasında bir sayı olmalıdır</string>
-    <string name="error_sftp_username_empty">Kullanıcı adı boş bırakılamaz</string>
-    <string name="tasks_guide_check_desc">Depo yapısını ve dizinleri kontrol eder. Varsayılan olarak depolanan dosya içerikleri okunmaz. Veri paketlerini de doğrulamak için Bütünlük Denetimi ayarlarından \"Tüm verileri oku\" seçeneğini etkinleştirin.</string>
-    <string name="tasks_guide_forget_desc">Saklama politikanızı uygular (örn. son N günlük, haftalık veya aylık anlık görüntüyü tut) ve depo geçmişinden eski anlık görüntü kayıtlarını siler. Not: Bu işlem yalnızca anlık görüntülerin referansını kaldırır; ham veri yınıtlarını henüz silmez.</string>
-    <string name="folder_browser_external_storage">Harici Depolama (%1$s)</string>
-    <string name="no_browser_available">Bağlantıyı açacak bir tarayıcı bulunamadı. URL panoya kopyalandı.</string>
-    <string name="folder_browser_new_folder">Yeni klasör</string>
-    <string name="tasks_guide_apps_desc">APK\'ler, uygulama verileri, cihaz korumalı veriler ve harici depolama verileri dahil olmak üzere yüklü uygulamaları yedekler.</string>
     <string name="tasks_guide_title">Görevler ve Bakım Kılavuzu</string>
-    <string name="custom_directories_typed_path_invalid">Geçerli bir mutlak klasör yolu girin.</string>
-    <string name="tasks_guide_files_title">Dosyalar ve Klasörler</string>
-    <string name="tasks_guide_check_title">Bütünlükü denetle</string>
-    <string name="custom_directory_not_found">Özel dizin bulunamadı: %1$s</string>
+    <string name="tasks_guide_subtitle">Her bir yedekleme ve bakım görevinin ne yaptığını ve nasıl birlikte çalıştıklarını öğrenin.</string>
+    <string name="tasks_guide_unlock_title">Depo kilidini aç</string>
+    <string name="tasks_guide_unlock_desc">Önceki bir yedekleme veya görev beklenmedik bir şekilde kesintiye uğradığında (uygulamanın kapanması, cihazın yeniden başlatılması veya bağlantının kopması gibi) geride kalan eski kilitleri kaldırır. Bu, sonraki görevlerin güvenli bir şekilde devam etmesini sağlar.</string>
     <string name="tasks_guide_forget_title">Anlık görüntüleri unut</string>
+    <string name="tasks_guide_forget_desc">Saklama politikanızı uygular (örn. son N günlük, haftalık veya aylık anlık görüntüyü tut) ve depo geçmişinden eski anlık görüntü kayıtlarını siler. Not: Bu işlem yalnızca anlık görüntülerin referansını kaldırır; ham veri yınıtlarını henüz silmez.</string>
+    <string name="tasks_guide_prune_title">Depoyu buda</string>
+    <string name="tasks_guide_prune_desc">Depoyu, artık herhangi bir anlık görüntü tarafından referans verilmeyen veri yınıtları için tarar, bunları kalıcı olarak siler ve disk alanı kazanmak için paketleri yeniden düzenler. Budama (Prune) kaynak açısından yoğundur ve periyodik olarak (haftalık veya aylık) çalıştırılması önerilir.</string>
+    <string name="tasks_guide_check_title">Bütünlükü denetle</string>
+    <string name="tasks_guide_check_desc">Depo yapısını ve dizinleri kontrol eder. Varsayılan olarak depolanan dosya içerikleri okunmaz. Veri paketlerini de doğrulamak için Bütünlük Denetimi ayarlarından \"Tüm verileri oku\" seçeneğini etkinleştirin.</string>
+    <string name="tasks_guide_forget_vs_prune_title">Unut (Forget) vs. Buda (Prune): Fark nedir?</string>
+    <string name="tasks_guide_forget_vs_prune_desc">Unutma işlemini bir kütüphane dizininden katalog kartlarını kaldırmak, Budama işlemini ise gereksiz kitapları binadan fiziki olarak çıkarmak gibi düşünün. Önce nelerin silineceğine karar vermek için \"Unut\"u, ardından depolama alanını fiilen boşaltmak için \"Buda\"yı çalıştırırsınız.</string>
+    <string name="tasks_guide_apps_title">Uygulamalar</string>
+    <string name="tasks_guide_apps_desc">APK\'ler, uygulama verileri, cihaz korumalı veriler ve harici depolama verileri dahil olmak üzere yüklü uygulamaları yedekler.</string>
+    <string name="tasks_guide_files_title">Dosyalar ve Klasörler</string>
+    <string name="tasks_guide_files_desc">Cihaz depolamasından seçilen özel dosyaları ve dizinleri yedekler.</string>
+    <string name="tasks_guide_docs_button">Resmi Restic Belgeleri</string>
+    <string name="no_browser_available">Bağlantıyı açacak bir tarayıcı bulunamadı. URL panoya kopyalandı.</string>
+    <!-- Operation Logs -->
+    <string name="screen_operation_logs">Operation Logs</string>
+    <string name="operation_logs_empty">No operation logs yet</string>
+    <string name="operation_logs_empty_desc">Completed backup, restore, and maintenance runs will appear here.</string>
+    <string name="operation_logs_clear">Clear logs</string>
+    <string name="operation_logs_clear_confirm_title">Clear all logs?</string>
+    <string name="operation_logs_clear_confirm_desc">This will delete all stored operation log history.</string>
+    <string name="operation_logs_duration">Duration: %1$s</string>
+    <string name="operation_logs_copied">Log copied to clipboard</string>
+    <string name="operation_status_success">Success</string>
+    <string name="operation_status_failed">Failed</string>
+    <string name="action_expand">Expand</string>
+    <string name="action_collapse">Collapse</string>
+    <string name="action_copy_log">Copy Log</string>
+    <string name="action_clear">Clear</string>
 </resources>
