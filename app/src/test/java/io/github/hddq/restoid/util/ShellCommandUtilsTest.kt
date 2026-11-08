@@ -35,6 +35,14 @@ class ShellCommandUtilsTest {
     }
 
     @Test
+    fun customDirectoryRestoreCommand_preservesRootSlash() {
+        val command = buildCustomDirectoryRestoreCommand("/cache/staged", "/")
+        assertTrue(command.contains("mkdir -p '/'"))
+        assertTrue(command.contains("cp -a '/cache/staged/.' '/'"))
+        assertFalse(command.contains("mkdir -p ''"))
+    }
+
+    @Test
     fun customFileRestore_executesSuccessfullyUnderShell() {
         val tempDir = Files.createTempDirectory("file_restore_test").toFile()
         try {
@@ -161,6 +169,29 @@ class ShellCommandUtilsTest {
 
             // externalDir must be unharmed
             assertEquals("original external", File(externalDir, "external_file.txt").readText())
+        } finally {
+            tempDir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun customDirectoryRestore_handlesSavedSymlinkToDirectoryOverExistingDirectory() {
+        val tempDir = Files.createTempDirectory("saved_symlink_test").toFile()
+        try {
+            val sourceDir = File(tempDir, "src").apply { mkdirs() }
+            val realTargetInSnapshot = File(sourceDir, "real_dir").apply { mkdirs(); File(this, "f.txt").writeText("data") }
+            val symlinkInSnapshot = File(sourceDir, "link_to_dir")
+            Files.createSymbolicLink(symlinkInSnapshot.toPath(), realTargetInSnapshot.toPath())
+
+            val destDir = File(tempDir, "dst").apply { mkdirs() }
+            val dirAtDest = File(destDir, "link_to_dir").apply { mkdirs(); File(this, "old.txt").writeText("old") }
+
+            val command = buildCustomDirectoryRestoreCommand(sourceDir.absolutePath, destDir.absolutePath)
+            val exitCode = ProcessBuilder("/bin/sh", "-c", command).start().waitFor()
+            assertEquals(0, exitCode)
+
+            val destLink = File(destDir, "link_to_dir")
+            assertTrue(Files.isSymbolicLink(destLink.toPath()))
         } finally {
             tempDir.deleteRecursively()
         }

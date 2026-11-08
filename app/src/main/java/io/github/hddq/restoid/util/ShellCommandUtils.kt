@@ -36,18 +36,18 @@ fun buildResticOptionFlags(options: Map<String, String>): String {
 }
 
 fun buildCustomFileRestoreCommand(sourcePath: String, targetPath: String): String {
-    val cleanTargetPath = targetPath.trimEnd('/')
+    val cleanTargetPath = targetPath.trimEnd('/').ifEmpty { "/" }
     val quotedSource = shellQuote(sourcePath)
     val quotedTarget = shellQuote(cleanTargetPath)
     return "rm -rf $quotedTarget && cp -a $quotedSource $quotedTarget"
 }
 
 fun buildCustomDirectoryRestoreCommand(sourcePath: String, targetPath: String): String {
-    val cleanTargetPath = targetPath.trimEnd('/')
+    val cleanTargetPath = targetPath.trimEnd('/').ifEmpty { "/" }
     val quotedSource = shellQuote(sourcePath)
     val quotedTarget = shellQuote(cleanTargetPath)
-    val quotedSourceContents = shellQuote("${sourcePath.trimEnd('/')}/.")
-    val quotedTargetDir = shellQuote("$cleanTargetPath/")
+    val quotedSourceContents = shellQuote("${sourcePath.trimEnd('/').ifEmpty { "" }}/.")
+    val quotedTargetDir = shellQuote(if (cleanTargetPath == "/") "/" else "$cleanTargetPath/")
 
     val cleanupScript = buildString {
         append("dst_base=\"\$1\"; shift; ")
@@ -55,7 +55,7 @@ fun buildCustomDirectoryRestoreCommand(sourcePath: String, targetPath: String): 
         append("target=\"\$dst_base/\$rel\"; ")
         append("if [ -L \"\$target\" ]; then ")
         append("rm -rf \"\$target\"; ")
-        append("elif [ -d \"\$rel\" ]; then ")
+        append("elif [ -d \"\$rel\" ] && [ ! -L \"\$rel\" ]; then ")
         append("if [ -e \"\$target\" ] && [ ! -d \"\$target\" ]; then ")
         append("rm -rf \"\$target\"; ")
         append("fi; ")
