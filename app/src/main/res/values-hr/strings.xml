@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="screen_home">Početna</string>
     <string name="screen_settings">Postavke</string>
+    <string name="screen_tasks">Zadaci</string>
+    <string name="screen_snapshot_details">Detalji snapshota</string>
     <string name="screen_restore">Restore</string>
     <string name="screen_licenses">Licence</string>
-    <string name="screen_operation_progress">Napredak Operacije</string>
-    <string name="topbar_backup_config">Konfiguracija Sigurnosne Kopije</string>
-    <string name="topbar_check_config">Provjeri Integritet</string>
-    <string name="cd_back">Natrag</string>
-    <string name="screen_home">Početna</string>
-    <string name="screen_snapshot_details">Detalji snapshota</string>
     <string name="screen_schedules">Rasporedi</string>
+    <string name="screen_operation_progress">Napredak Operacije</string>
+    <string name="topbar_tasks">Zadaci</string>
+    <string name="topbar_backup_config">Konfiguracija Sigurnosne Kopije</string>
     <string name="topbar_forget_config">Pravila brisanja (Forget)</string>
+    <string name="topbar_check_config">Provjeri Integritet</string>
     <string name="topbar_schedules">Rasporedi</string>
     <string name="topbar_add_schedule">Dodaj raspored</string>
     <string name="topbar_edit_schedule">Uredi raspored</string>
@@ -18,7 +19,9 @@
     <string name="topbar_open_source_licenses">Open Source licence</string>
     <string name="topbar_snapshot_details">Detalji snapshota</string>
     <string name="topbar_restore_snapshot">Vrati snapshot</string>
+    <string name="cd_back">Natrag</string>
     <string name="cd_forget_snapshot">Ukloni snapshot</string>
+    <string name="action_run_now">Pokreni odmah</string>
     <string name="fab_run_tasks">Pokreni zadatke</string>
     <string name="fab_add_schedule">Dodaj raspored</string>
     <string name="fab_restore">Restore</string>
@@ -31,21 +34,76 @@
     <string name="run_tasks_phase_summary">%1$s:\n%2$s</string>
     <string name="backup_types_title">Vrste backupa</string>
     <string name="backup_type_apk">APK</string>
+    <string name="backup_type_apk_desc">Datoteka paketa aplikacije</string>
     <string name="backup_type_data">Podaci</string>
+    <string name="backup_type_data_desc">Interni podaci aplikacije (/data/user/&lt;id&gt;)</string>
     <string name="backup_type_device_protected_data">Podaci zaštićeni uređajem</string>
+    <string name="backup_type_device_protected_data_desc">Podaci dostupni prije otključavanja uređaja (/data/user_de/&lt;id&gt;)</string>
     <string name="backup_type_external_data">Vanjski podaci</string>
+    <string name="backup_type_external_data_desc">Podaci aplikacije na vanjskoj pohrani (/storage/emulated/&lt;id&gt;/Android/data)</string>
     <string name="backup_type_obb_data">OBB podaci</string>
+    <string name="backup_type_obb_data_desc">Opaque Binary Blob datoteke (/storage/emulated/&lt;id&gt;/Android/obb)</string>
     <string name="backup_type_media_data">Medijski podaci</string>
+    <string name="backup_type_media_data_desc">Medijske datoteke aplikacije (/storage/emulated/&lt;id&gt;/Android/media)</string>
+    <string name="settings_system_permission_storage">Pristup pohrani</string>
+    <string name="settings_system_permission_local_network">Pristup lokalnoj mreži</string>
+    <string name="local_network_permission_enabled">Pristup lokalnoj mreži odobren</string>
+    <string name="backup_type_permissions">Dozvole</string>
+    <string name="backup_type_permissions_desc">Odobrene runtime dozvole</string>
     <string name="apps_title">Aplikacije</string>
     <string name="toggle_all">Odaberi sve</string>
+    <string name="backup_types_for_selected_apps">Vrste sigurnosnih kopija za odabrane aplikacije</string>
+    <string name="backup_types_none">Nijedna</string>
+    <string name="backup_types_mixed">Mješovito</string>
     <string name="restore_options_title">Opcije vraćanja</string>
     <string name="allow_downgrade">Dopusti downgrade</string>
     <string name="apps_to_restore_title">Aplikacije za vraćanje</string>
     <string name="no_app_data_found_in_snapshot">U ovom snapshotu nisu pronađeni podaci aplikacije.</string>
     <string name="restore_backup_version_with_installed">Backup: %1$s -&gt; Instalirano: %2$s</string>
     <string name="restore_backup_version_only">Backup: %1$s</string>
-    <string name="home_title" translatable="false">Restoid</string>
     <string name="run_tasks_applications">Aplikacije</string>
+    <string name="run_tasks_custom_directories">Prilagođeni direktoriji</string>
+    <string name="run_tasks_custom_directories_subtitle_none">Nijedan direktorij nije odabran</string>
+    <string name="run_tasks_custom_directories_subtitle_count">%1$d odabranih direktorija</string>
+    <string name="run_tasks_custom_directories_subtitle_with_exclusions">%1$d paths selected, %2$d excluded</string>
+    <string name="action_add_directory">Dodaj direktorij</string>
+    <string name="action_add_excluded_directory">Exclude File or Folder</string>
+    <string name="folder_browser_select_this_folder">Odaberi ovu putanju</string>
+    <string name="folder_browser_show_hidden">Prikaži skrivene mape</string>
+    <string name="folder_browser_show_hidden_items">Prikaži skrivene datoteke i mape</string>
+    <string name="folder_browser_cannot_list">Nije moguće izlistati ovu mapu.</string>
+    <string name="folder_browser_empty">Nema podmapa.</string>
+    <string name="folder_browser_empty_items">Nema datoteka ili mapa.</string>
+    <string name="folder_browser_up">Natrag u roditeljsku mapu</string>
+    <string name="folder_browser_roots_title">Lokacije pohrane</string>
+    <string name="folder_browser_internal_storage">Interna pohrana</string>
+    <string name="folder_browser_system_root">Sustavni korijen (/)</string>
+    <string name="folder_browser_external_storage">Vanjska pohrana (%1$s)</string>
+    <string name="folder_browser_edit_path">Ručni unos putanje</string>
+    <string name="folder_browser_new_folder">Nova mapa</string>
+    <string name="folder_browser_new_folder_name">Naziv mape</string>
+    <string name="folder_browser_create_failed">Stvaranje mape nije uspjelo.</string>
+    <string name="action_create">Stvori</string>
+    <string name="action_go">Idi</string>
+    <string name="title_custom_directories">Prilagođeni direktoriji</string>
+    <string name="custom_directories_description">Odaberite prilagođene direktorije na uređaju koje želite uključiti u sigurnosnu kopiju.</string>
+    <string name="custom_directories_long_press_hint">Dodirnite i držite unos za otvaranje izbornika i brisanje.</string>
+    <string name="custom_directories_typed_path_label">Putanja do datoteke ili mape</string>
+    <string name="custom_directories_typed_path_hint">npr. /storage/emulated/0/Download ili /system/build.prop</string>
+    <string name="custom_directories_typed_path_invalid">Unesite važeću apsolutnu putanju mape.</string>
+    <string name="custom_directories_typed_path_not_found">Mapa ne postoji: %1$s</string>
+    <string name="custom_directory_not_found">Prilagođena mapa nije pronađena: %1$s</string>
+    <string name="custom_directories_already_added">Ova se mapa već nalazi na popisu.</string>
+    <string name="custom_directories_unresolvable">Nije moguće razriješiti prilagođenu mapu: %1$s</string>
+    <string name="custom_directories_section_include">Include</string>
+    <string name="custom_directories_section_exclude">Exclude</string>
+    <string name="custom_directories_exclude_description">Select subdirectories or files to exclude from the backup.</string>
+    <string name="action_exclude_subfolder">Exclude subfolder…</string>
+    <string name="warning_exclusion_conflict_header">Some exclusions may exclude files from app backups:</string>
+    <string name="warning_exclusion_conflict_show_more">Show %1$d more…</string>
+    <string name="warning_exclusion_conflict_show_less">Show less</string>
+    <string name="error_all_files_access_required">Pristup svim datotekama je obavezan za izradu sigurnosne kopije prilagođenih mapa.</string>
+    <string name="summary_all_files_access_required">Odobrite pristup svim datotekama, a zatim pokušajte ponovno.</string>
     <string name="run_tasks_backup_subtitle">Odabrano %1$d aplikacija - %2$s</string>
     <string name="run_tasks_forget_snapshots">Ukloni snapshotove</string>
     <string name="run_tasks_forget_subtitle">Zadrži zadnjih %1$d, dnevnih %2$d, tjednih %3$d, mjesečnih %4$d</string>
@@ -65,6 +123,7 @@
     <string name="dialog_discard_changes_message">Imaš nespremljene promjene. Jesi li siguran da ih želiš odbaciti?</string>
     <string name="action_discard">Odbaci</string>
     <string name="error_with_message">Greška: %1$s</string>
+    <string name="error_cannot_backup_repo_to_itself">Nije moguće dodati sam repozitorij kao prilagođeni direktorij za sigurnosnu kopiju.</string>
     <string name="no_snapshots_found_for_repository">Nema snapshotova za odabrani repozitorij.</string>
     <plurals name="snapshots_count">
         <item quantity="one">Snapshot (%1$d)</item>
@@ -86,8 +145,45 @@
         <item quantity="few">Aplikacije (%1$d):</item>
         <item quantity="other">Aplikacija (%1$d):</item>
     </plurals>
+    <plurals name="backed_up_items_count">
+        <item quantity="one">Sigurnosno kopirano (%1$d):</item>
+        <item quantity="few">Sigurnosno kopirano (%1$d stavki):</item>
+        <item quantity="other">Sigurnosno kopirano (%1$d stavki):</item>
+    </plurals>
+    <plurals name="custom_directories_count">
+        <item quantity="one">Prilagođeni direktoriji (%1$d):</item>
+        <item quantity="few">Prilagođeni direktoriji (%1$d):</item>
+        <item quantity="other">Prilagođeni direktoriji (%1$d):</item>
+    </plurals>
     <string name="no_app_info_for_snapshot">Nema informacija o aplikaciji za ovaj snapshot.</string>
     <string name="metadata_missing_or_corrupted">Metapodaci nedostaju ili su oštećeni.</string>
+    <string name="metadata_restore_success">Metapodaci su uspješno vraćeni.</string>
+    <string name="time_just_now">upravo sada</string>
+    <plurals name="time_mins_ago">
+        <item quantity="one">prije %d minute</item>
+        <item quantity="few">Prije %d minuta</item>
+        <item quantity="other">Prije %d minuta</item>
+    </plurals>
+    <plurals name="time_hours_ago">
+        <item quantity="one">prije %d sati</item>
+        <item quantity="few">Prije %d sati</item>
+        <item quantity="other">Prije %d sati</item>
+    </plurals>
+    <plurals name="time_days_ago">
+        <item quantity="one">prije %d dana</item>
+        <item quantity="few">Prije %d dana</item>
+        <item quantity="other">Prije %d dana</item>
+    </plurals>
+    <plurals name="time_months_ago">
+        <item quantity="one">prije %d mjeseca</item>
+        <item quantity="few">Prije %d mjeseci</item>
+        <item quantity="other">Prije %d mjeseci</item>
+    </plurals>
+    <plurals name="time_years_ago">
+        <item quantity="one">prije %d godine</item>
+        <item quantity="few">Prije %d godina</item>
+        <item quantity="other">Prije %d godina</item>
+    </plurals>
     <string name="maintenance_task_unlock_repository">Otključaj repozitorij</string>
     <string name="maintenance_task_prune_repository">Očisti repozitorij (Prune)</string>
     <string name="maintenance_keep_last">Zadrži zadnje</string>
@@ -100,6 +196,11 @@
         <item quantity="few">Backupirane aplikacije (%1$d)</item>
         <item quantity="other">Backupiranih aplikacija (%1$d)</item>
     </plurals>
+    <plurals name="snapshot_backed_up_custom_directories_count">
+        <item quantity="one">Sigurnosno kopirani prilagođeni direktoriji (%1$d)</item>
+        <item quantity="few">Sigurnosno kopirani prilagođeni direktoriji (%1$d)</item>
+        <item quantity="other">Sigurnosno kopirani prilagođeni direktoriji (%1$d)</item>
+    </plurals>
     <string name="snapshot_not_found">Snapshot nije pronađen.</string>
     <string name="snapshot_forgetting">Uklanjanje snapshota…</string>
     <string name="snapshot_id">ID: %1$s</string>
@@ -109,6 +210,7 @@
     <string name="dialog_forget_snapshot_message">Ovo će ukloniti unos snapshota. Stvarni podaci bit će izbrisani tek nakon čišćenja (Prune). Jesi li siguran?</string>
     <string name="label_password">Lozinka</string>
     <string name="label_repository_password">Lozinka repozitorija</string>
+    <string name="repository_password_explanation">Potrebno za enkripciju i vraćanje ovog Restic repozitorija. Razlikuje se od vaše SFTP prijave. Čuvajte ga na sigurnom: ako ga izgubite, nećete moći vratiti svoje sigurnosne kopije.</string>
     <string name="label_rest_username">REST korisničko ime</string>
     <string name="label_rest_password">REST lozinka</string>
     <string name="label_s3_access_key_id">S3 Access Key ID</string>
@@ -123,6 +225,7 @@
     <string name="action_done">Gotovo</string>
     <string name="action_add">Dodaj</string>
     <string name="action_delete">Obriši</string>
+    <string name="action_restore_metadata">Vrati metapodatke</string>
     <string name="action_change">Promijeni</string>
     <string name="action_save">Spremi</string>
     <string name="action_grant">Dopusti</string>
@@ -130,6 +233,10 @@
     <string name="action_forget">Ukloni</string>
     <string name="action_try_again">Pokušaj ponovno</string>
     <string name="action_disable">Onemogući</string>
+    <string name="action_enable">Omogući</string>
+    <string name="usage_stats_permission_enabled">Pristup uporabi aplikacije je omogućen</string>
+    <string name="usage_stats_permission_disabled">Potreban je pristup uporabi aplikacije</string>
+    <string name="usage_stats_permission_description">Omogućuje brži izračun veličine aplikacija tijekom izrade sigurnosnih kopija umjesto skeniranja direktorija</string>
     <string name="progress_initializing">Inicijalizacija…</string>
     <string name="progress_stopping">Zaustavljanje…</string>
     <string name="progress_operation_complete">%1$s završeno</string>
@@ -140,7 +247,6 @@
     <string name="progress_items">Stavke</string>
     <string name="progress_size">Veličina</string>
     <string name="progress_processing">Obrađujem:</string>
-    <string name="progress_placeholder" translatable="false">...</string>
     <string name="dialog_add_repository_title">Dodaj repozitorij</string>
     <string name="label_repository_type">Vrsta repozitorija</string>
     <string name="label_repository_specification">Specifikacija repozitorija</string>
@@ -150,7 +256,6 @@
     <string name="label_sftp_password">SFTP lozinka</string>
     <string name="label_sftp_ssh_key">SSH ključ</string>
     <string name="label_sftp_private_key">SFTP SSH privatni ključ</string>
-    <string name="placeholder_sftp_private_key" translatable="false">-----BEGIN OPENSSH PRIVATE KEY-----\n...</string>
     <string name="label_sftp_key_passphrase">Passphrase SSH ključa</string>
     <string name="label_sftp_key_passphrase_optional">Passphrase SSH ključa (opcionalno)</string>
     <string name="dialog_sftp_trust_title">Vjeruj SFTP serveru</string>
@@ -159,9 +264,15 @@
     <string name="repo_backend_local">Lokalni direktorij</string>
     <string name="repo_backend_sftp">SFTP (SSH)</string>
     <string name="repo_backend_rest">HTTP REST server</string>
-    <string name="repo_backend_s3" translatable="false">Amazon S3 / MinIO</string>
-    <string name="repo_hint_rest" translatable="false">http://host:8000/</string>
-    <string name="repo_hint_s3" translatable="false">s3.us-east-1.amazonaws.com/ime_bucketa</string>
+    <string name="label_sftp_host">Domaćin</string>
+    <string name="label_sftp_port">Port</string>
+    <string name="label_sftp_username">Korisničko ime</string>
+    <string name="label_sftp_repository_path">Putanja repozitorija</string>
+    <string name="repo_supporting_sftp_path">Apsolutna (/srv/restic-repo) ili relativna u odnosu na vaš početni direktorij (restic-repo)</string>
+    <string name="error_sftp_host_empty">Host ne može biti prazan</string>
+    <string name="error_sftp_username_empty">Korisničko ime ne može biti prazno</string>
+    <string name="error_sftp_path_empty">Putanja repozitorija ne može biti prazna</string>
+    <string name="error_sftp_port_invalid">Port mora biti broj između 1 i 65535</string>
     <string name="label_path">Putanja</string>
     <string name="placeholder_select_directory">Odaberi direktorij…</string>
     <string name="cd_select_folder">Odaberi mapu</string>
@@ -176,6 +287,9 @@
     <string name="root_access_denied">Root pristup odbijen</string>
     <string name="checking_for_root">Provjera root pristupa…</string>
     <string name="root_access_granted">Root pristup odobren</string>
+    <string name="storage_permission_enabled">Pristup svim datotekama odobren</string>
+    <string name="storage_permission_disabled">Potreban pristup svim datotekama</string>
+    <string name="storage_permission_description">Potrebno za izradu sigurnosnih kopija prilagođenih direktorija bez root pristupa.</string>
     <string name="dependencies_title">Ovisnosti</string>
     <string name="about_title">O aplikaciji</string>
     <string name="version_label">Verzija</string>
@@ -231,9 +345,17 @@
     <string name="backup_stage_preparing">[%1$d/%2$d] Priprema backupa...</string>
     <string name="backup_stage_running">[%1$d/%2$d] Sigurnosno kopiranje stavki…</string>
     <string name="backup_stage_finalizing">[%1$d/%2$d] Završavanje backupa…</string>
+    <string name="backup_error_no_files_selected_for_items">Nisu pronađene datoteke za sigurnosnu kopiju za odabrane stavke.</string>
     <string name="backup_error_command_failed_with_code">Restic naredba nije uspjela (izlazni kod %1$d).</string>
     <string name="backup_warning_metadata_not_saved">Upozorenje: Nije bilo moguće lokalno spremiti datoteku metapodataka backupa.</string>
+    <plurals name="backup_summary_success_items">
+        <item quantity="one">Sigurnosno kopirano %1$d stavki.</item>
+        <item quantity="few">Sigurnosno kopirano %1$d stavki.</item>
+        <item quantity="other">Sigurnosno kopirano %1$d stavki.</item>
+    </plurals>
     <string name="error_fatal_with_message">Dogodila se fatalna greška: %1$s</string>
+    <string name="error_no_items_selected">Nijedna stavka nije odabrana.</string>
+    <string name="summary_no_items_selected">Nijedna stavka nije bila odabrana.</string>
     <string name="error_no_backup_types_selected">Nisu odabrane vrste backupa.</string>
     <string name="summary_no_backup_types_selected">Nijedna vrsta backupa nije odabrana.</string>
     <string name="error_restic_not_installed">Restic nije instaliran.</string>
@@ -256,9 +378,13 @@
     <string name="restore_stage_processing_apps">Obrada aplikacija</string>
     <string name="restore_stage_cleanup">Čišćenje</string>
     <string name="restore_error_preflight_failed">Provjere prije vraćanja nisu uspjele.</string>
+    <string name="restore_error_no_items_selected">Nijedna stavka nije odabrana za vraćanje.</string>
+    <string name="restore_error_no_restore_types_selected">Nisu odabrane vrste vraćanja.</string>
     <string name="restore_error_password_not_found">Lozinka repozitorija nije pronađena.</string>
     <string name="restore_error_no_files_found">U snimci nije pronađena nijedna datoteka za odabrane stavke.</string>
     <string name="restore_error_command_failed">Restic naredba za vraćanje nije uspjela.</string>
+    <string name="restore_stage_processing_template_apps">[%1$d/%2$d] Obrada aplikacija</string>
+    <string name="restore_stage_processing_template_custom_directories">[%1$d/%2$d] Obrada prilagođenih direktorija</string>
     <string name="restore_failure_install_commit">%1$s: Install commit nije uspio: %2$s</string>
     <string name="restore_failure_write_apk_splits">%1$s: Zapisivanje APK splitova nije uspjelo.</string>
     <string name="restore_failure_create_install_session">%1$s: Stvaranje instalacijske sesije nije uspjelo.</string>
@@ -266,7 +392,19 @@
     <string name="restore_failure_data_restore">%1$s: Vraćanje podataka nije uspjelo ili je nepotpuno.</string>
     <string name="restore_failure_permissions_app_not_installed">%1$s: Vraćanje dopuštenja nije uspjelo jer aplikacija nije instalirana.</string>
     <string name="restore_failure_permissions_partial">%1$s: Vraćanje nekih dopuštenja nije uspjelo: %2$s</string>
+    <string name="restore_stage_processing_custom_directories">Obrada prilagođenih direktorija…</string>
+    <string name="restore_failure_custom_directory">Nije uspjelo vraćanje prilagođenog direktorija %1$s</string>
     <string name="restore_summary_finished_in">Vraćanje završeno za %1$s.</string>
+    <plurals name="restore_summary_processed_items">
+        <item quantity="one">Uspješno obrađeno %1$d stavki.</item>
+        <item quantity="few">Uspješno obrađeno %1$d stavki.</item>
+        <item quantity="other">Uspješno obrađeno %1$d stavki.</item>
+    </plurals>
+    <plurals name="restore_summary_failed_items">
+        <item quantity="one">Neuspjelo vraćanje %1$d stavki.</item>
+        <item quantity="few">Neuspjelo vraćanje %1$d stavki.</item>
+        <item quantity="other">Neuspjelo vraćanje %1$d stavki.</item>
+    </plurals>
     <string name="restore_summary_details">\n\nDetalji:\n- %1$s</string>
     <string name="maintenance_task_unlock">Otključaj</string>
     <string name="maintenance_task_forget">Ukloni</string>
@@ -309,6 +447,10 @@
     <string name="channel_completed_operations">Završene operacije</string>
     <string name="channel_ongoing_description">Tiho prikazuje napredak backupa i vraćanja.</string>
     <string name="channel_completed_description">Šalje upozorenje kad backup ili vraćanje završi.</string>
+    <string name="channel_successful_operations">Successful Operations</string>
+    <string name="channel_successful_description">Alerts when a backup or restore has finished successfully.</string>
+    <string name="channel_failed_operations">Failed Operations</string>
+    <string name="channel_failed_description">Alerts when a backup or restore operation fails or encounters errors.</string>
     <plurals name="notification_files_progress">
         <item quantity="one">%1$d/%2$d datoteka</item>
         <item quantity="few">%1$d/%2$d datoteke</item>
@@ -321,6 +463,12 @@
     <string name="operation_interrupted">Operacija prekinuta.</string>
     <string name="dialog_stop_operation_title">Zaustavi operaciju?</string>
     <string name="dialog_stop_operation_message">Želiš li zaustaviti trenutnu operaciju? Sav nezavršeni posao bit će otkazan.</string>
+    <string name="home_operation_running_title">%1$s je u tijeku</string>
+    <string name="home_operation_running_default_title">Operacija u tijeku</string>
+    <string name="home_operation_running_tap_hint">Dodirnite za prikaz napretka</string>
+    <string name="action_force_stop">Prisilno zaustavi</string>
+    <string name="dialog_force_stop_operation_title">Prisilno zaustaviti operaciju?</string>
+    <string name="dialog_force_stop_operation_message">Želite li prisilno zaustaviti trenutnu operaciju? Sav nedovršeni posao bit će poništen, a stanje operacije vraćeno na početno.</string>
     <string name="repo_error_exists">Repozitorij već postoji.</string>
     <string name="repo_error_binary_not_ready">Restic binarna datoteka nije spremna.</string>
     <string name="repo_error_invalid_password_or_corrupted">Nevažeća lozinka ili oštećen repozitorij.</string>
@@ -397,155 +545,41 @@
     <string name="license_tap_to_expand">… (dodirni za proširenje)</string>
     <string name="cd_open_link">Otvori poveznicu</string>
     <string name="cd_copy_license">Kopiraj licencu</string>
-    <string name="time_just_now">upravo sada</string>
-    <plurals name="time_mins_ago">
-        <item quantity="few">prije %d minute</item>
-        <item quantity="other">Prije %d minuta</item>
-    </plurals>
-    <plurals name="time_hours_ago">
-        <item quantity="few">prije %d sati</item>
-        <item quantity="other">Prije %d sati</item>
-    </plurals>
-    <plurals name="time_days_ago">
-        <item quantity="few">prije %d dana</item>
-        <item quantity="other">Prije %d dana</item>
-    </plurals>
-    <plurals name="time_months_ago">
-        <item quantity="few">prije %d mjeseca</item>
-        <item quantity="other">Prije %d mjeseci</item>
-    </plurals>
-    <plurals name="time_years_ago">
-        <item quantity="few">prije %d godine</item>
-        <item quantity="other">Prije %d godina</item>
-    </plurals>
-    <string name="backup_type_permissions">Dozvole</string>
-    <string name="backup_types_for_selected_apps">Vrste sigurnosnih kopija za odabrane aplikacije</string>
-    <string name="backup_types_none">Nijedna</string>
-    <string name="backup_types_mixed">Mješovito</string>
-    <string name="restore_error_no_restore_types_selected">Nisu odabrane vrste vraćanja.</string>
-    <string name="backup_type_apk_desc">Datoteka paketa aplikacije</string>
-    <string name="backup_type_data_desc">Interni podaci aplikacije (/data/user/&lt;id&gt;)</string>
-    <string name="backup_type_device_protected_data_desc">Podaci dostupni prije otključavanja uređaja (/data/user_de/&lt;id&gt;)</string>
-    <string name="backup_type_external_data_desc">Podaci aplikacije na vanjskoj pohrani (/storage/emulated/&lt;id&gt;/Android/data)</string>
-    <string name="backup_type_obb_data_desc">Opaque Binary Blob datoteke (/storage/emulated/&lt;id&gt;/Android/obb)</string>
-    <string name="backup_type_media_data_desc">Medijske datoteke aplikacije (/storage/emulated/&lt;id&gt;/Android/media)</string>
-    <string name="backup_type_permissions_desc">Odobrene runtime dozvole</string>
-    <string name="action_enable">Omogući</string>
-    <string name="usage_stats_permission_enabled">Pristup uporabi aplikacije je omogućen</string>
-    <string name="usage_stats_permission_disabled">Potreban je pristup uporabi aplikacije</string>
-    <string name="usage_stats_permission_description">Omogućuje brži izračun veličine aplikacija tijekom izrade sigurnosnih kopija umjesto skeniranja direktorija</string>
-    <string name="metadata_restore_success">Metapodaci su uspješno vraćeni.</string>
-    <string name="action_restore_metadata">Vrati metapodatke</string>
     <string name="repo_warning_metadata_restore_failed_title">Neuspjelo vraćanje metapodataka</string>
     <string name="repo_warning_metadata_restore_failed">Repozitorij je uspješno dodan, ali vraćanje njegovih metapodataka (rasporedi, detaljne informacije o sigurnosnim kopijama) nije uspjelo. To obično znači da nedostaje snimka metapodataka ili je repozitorij zaključan. Kako biste pokušali ponovo, otvorite Postavke → Repozitoriji, dodirnite izbornik repozitorija i odaberite „Vrati metapodatke“.</string>
-    <string name="screen_tasks">Zadaci</string>
-    <string name="topbar_tasks">Zadaci</string>
-    <string name="run_tasks_custom_directories">Prilagođeni direktoriji</string>
-    <string name="run_tasks_custom_directories_subtitle_none">Nijedan direktorij nije odabran</string>
-    <string name="run_tasks_custom_directories_subtitle_count">%1$d odabranih direktorija</string>
-    <string name="action_add_directory">Dodaj direktorij</string>
-    <string name="title_custom_directories">Prilagođeni direktoriji</string>
-    <string name="custom_directories_description">Odaberite prilagođene direktorije na uređaju koje želite uključiti u sigurnosnu kopiju.</string>
-    <string name="error_cannot_backup_repo_to_itself">Nije moguće dodati sam repozitorij kao prilagođeni direktorij za sigurnosnu kopiju.</string>
-    <plurals name="backed_up_items_count">
-        <item quantity="few">Sigurnosno kopirano (%1$d):</item>
-        <item quantity="other">Sigurnosno kopirano (%1$d stavki):</item>
-    </plurals>
-    <plurals name="custom_directories_count">
-        <item quantity="few">Prilagođeni direktoriji (%1$d):</item>
-        <item quantity="other">Prilagođeni direktoriji (%1$d):</item>
-    </plurals>
-    <plurals name="snapshot_backed_up_custom_directories_count">
-        <item quantity="few">Sigurnosno kopirani prilagođeni direktoriji (%1$d)</item>
-        <item quantity="other">Sigurnosno kopirani prilagođeni direktoriji (%1$d)</item>
-    </plurals>
-    <string name="backup_error_no_files_selected_for_items">Nisu pronađene datoteke za sigurnosnu kopiju za odabrane stavke.</string>
-    <plurals name="backup_summary_success_items">
-        <item quantity="few">Sigurnosno kopirano %1$d stavki.</item>
-        <item quantity="other">Sigurnosno kopirano %1$d stavki.</item>
-    </plurals>
-    <string name="error_no_items_selected">Nijedna stavka nije odabrana.</string>
-    <string name="summary_no_items_selected">Nijedna stavka nije bila odabrana.</string>
-    <string name="restore_error_no_items_selected">Nijedna stavka nije odabrana za vraćanje.</string>
-    <string name="restore_stage_processing_template_apps">[%1$d/%2$d] Obrada aplikacija</string>
-    <string name="restore_stage_processing_template_custom_directories">[%1$d/%2$d] Obrada prilagođenih direktorija</string>
-    <string name="restore_stage_processing_custom_directories">Obrada prilagođenih direktorija…</string>
-    <string name="restore_failure_custom_directory">Nije uspjelo vraćanje prilagođenog direktorija %1$s</string>
-    <plurals name="restore_summary_processed_items">
-        <item quantity="few">Uspješno obrađeno %1$d stavki.</item>
-        <item quantity="other">Uspješno obrađeno %1$d stavki.</item>
-    </plurals>
-    <plurals name="restore_summary_failed_items">
-        <item quantity="few">Neuspjelo vraćanje %1$d stavki.</item>
-        <item quantity="other">Neuspjelo vraćanje %1$d stavki.</item>
-    </plurals>
-    <string name="action_run_now">Pokreni odmah</string>
-    <string name="storage_permission_enabled">Pristup svim datotekama odobren</string>
-    <string name="storage_permission_disabled">Potreban pristup svim datotekama</string>
-    <string name="storage_permission_description">Potrebno za izradu sigurnosnih kopija prilagođenih direktorija bez root pristupa.</string>
-    <string name="settings_system_permission_storage">Pristup pohrani</string>
-    <string name="settings_system_permission_local_network">Pristup lokalnoj mreži</string>
-    <string name="local_network_permission_enabled">Pristup lokalnoj mreži odobren</string>
-    <string name="dialog_force_stop_operation_message">Želite li prisilno zaustaviti trenutnu operaciju? Sav nedovršeni posao bit će poništen, a stanje operacije vraćeno na početno.</string>
-    <string name="action_create">Stvori</string>
-    <string name="tasks_guide_unlock_title">Otključaj spremište</string>
-    <string name="label_sftp_username">Korisničko ime</string>
-    <string name="home_operation_running_tap_hint">Dodirnite za prikaz napretka</string>
-    <string name="folder_browser_roots_title">Lokacije pohrane</string>
-    <string name="folder_browser_empty_items">Nema datoteka ili mapa.</string>
+    <!-- Tasks & Maintenance Guide -->
     <string name="cd_help">Pomoć</string>
-    <string name="tasks_guide_files_desc">Stvara sigurnosnu kopiju prilagođenih datoteka i direktorija odabranih s pohrane uređaja.</string>
-    <string name="repository_password_explanation">Potrebno za enkripciju i vraćanje ovog Restic repozitorija. Razlikuje se od vaše SFTP prijave. Čuvajte ga na sigurnom: ako ga izgubite, nećete moći vratiti svoje sigurnosne kopije.</string>
-    <string name="folder_browser_up">Natrag u roditeljsku mapu</string>
-    <string name="tasks_guide_prune_title">Očisti spremište</string>
-    <string name="tasks_guide_apps_title">Aplikacije</string>
-    <string name="dialog_force_stop_operation_title">Prisilno zaustaviti operaciju?</string>
-    <string name="folder_browser_edit_path">Ručni unos putanje</string>
-    <string name="repo_supporting_sftp_path">Apsolutna (/srv/restic-repo) ili relativna u odnosu na vaš početni direktorij (restic-repo)</string>
-    <string name="custom_directories_already_added">Ova se mapa već nalazi na popisu.</string>
-    <string name="tasks_guide_prune_desc">Skenira spremište u potrazi za dijelovima podataka na koje više ne upućuje nijedna preostala snimka, trajno ih briše i prepakira pakete kako bi se stvarno oslobodio prostor na disku. Čišćenje zahtijeva mnogo resursa i najbolje ga je pokretati periodično (npr. tjedno ili mjesečno).</string>
-    <string name="label_sftp_host">Domaćin</string>
-    <string name="summary_all_files_access_required">Odobrite pristup svim datotekama, a zatim pokušajte ponovno.</string>
-    <string name="folder_browser_new_folder_name">Naziv mape</string>
-    <string name="home_operation_running_title">%1$s je u tijeku</string>
-    <string name="action_go">Idi</string>
-    <string name="action_force_stop">Prisilno zaustavi</string>
-    <string name="error_sftp_host_empty">Host ne može biti prazan</string>
-    <string name="tasks_guide_subtitle">Saznajte što pojedini zadatak sigurnosne kopije i održavanja radi i kako međusobno surađuju.</string>
-    <string name="custom_directories_typed_path_not_found">Mapa ne postoji: %1$s</string>
-    <string name="custom_directories_typed_path_label">Putanja do datoteke ili mape</string>
-    <string name="folder_browser_empty">Nema podmapa.</string>
-    <string name="tasks_guide_forget_vs_prune_desc">Zamislite \"Zaboravi\" kao uklanjanje kataložnih kartica iz knjižničnog indeksa, a \"Očisti\" kao stvarno uklanjanje nepotrebnih knjiga iz zgrade. Prvo pokrećete \"Zaboravi\" kako biste odabrali što ćete izbrisati, a zatim \"Očisti\" kako biste stvarno oslobodili prostor za pohranu.</string>
-    <string name="custom_directories_long_press_hint">Dodirnite i držite unos za otvaranje izbornika i brisanje.</string>
-    <string name="tasks_guide_docs_button">Službena Restic dokumentacija</string>
-    <string name="folder_browser_system_root">Sustavni korijen (/)</string>
-    <string name="label_sftp_port">Port</string>
-    <string name="tasks_guide_forget_vs_prune_title">Zaboravi vs. Očisti: U čemu je razlika?</string>
-    <string name="folder_browser_select_this_folder">Odaberi ovu putanju</string>
-    <string name="folder_browser_show_hidden_items">Prikaži skrivene datoteke i mape</string>
-    <string name="tasks_guide_unlock_desc">Uklanja zaostala zaključavanja preostala nakon neočekivanog prekida prethodne sigurnosne kopije ili zadatka (npr. zatvorena aplikacija, ponovno pokrenut uređaj ili prekinuta veza). To omogućuje siguran nastavak budućih zadataka.</string>
-    <string name="folder_browser_show_hidden">Prikaži skrivene mape</string>
-    <string name="error_sftp_path_empty">Putanja repozitorija ne može biti prazna</string>
-    <string name="label_sftp_repository_path">Putanja repozitorija</string>
-    <string name="folder_browser_internal_storage">Interna pohrana</string>
-    <string name="folder_browser_cannot_list">Nije moguće izlistati ovu mapu.</string>
-    <string name="error_sftp_port_invalid">Port mora biti broj između 1 i 65535</string>
-    <string name="custom_directories_unresolvable">Nije moguće razriješiti prilagođenu mapu: %1$s</string>
-    <string name="custom_directories_typed_path_hint">npr. /storage/emulated/0/Download ili /system/build.prop</string>
-    <string name="error_sftp_username_empty">Korisničko ime ne može biti prazno</string>
-    <string name="home_operation_running_default_title">Operacija u tijeku</string>
-    <string name="tasks_guide_check_desc">Provjerava strukturu spremišta i indekse. Prema zadanim postavkama sadržaj pohranjenih datoteka se ne čita. Omogućite opciju Čitaj sve podatke u postavkama provjere integriteta kako biste provjerili i podatkovne pakete.</string>
-    <string name="error_all_files_access_required">Pristup svim datotekama je obavezan za izradu sigurnosne kopije prilagođenih mapa.</string>
-    <string name="tasks_guide_forget_desc">Primjenjuje vašu politiku zadržavanja (npr. zadrži posljednjih N dnevnih, tjednih ili mjesečnih snimaka) i uklanja stare zapise snimaka iz povijesti spremišta. Napomena: Ovo samo uklanja referencu na snimke; još uvijek ne briše sirove dijelove podataka.</string>
-    <string name="folder_browser_create_failed">Stvaranje mape nije uspjelo.</string>
-    <string name="folder_browser_external_storage">Vanjska pohrana (%1$s)</string>
-    <string name="no_browser_available">Preglednik nije pronađen za otvaranje poveznice. URL je kopiran u međuspremnik.</string>
-    <string name="folder_browser_new_folder">Nova mapa</string>
-    <string name="tasks_guide_apps_desc">Stvara sigurnosnu kopiju instaliranih aplikacija, uključujući APK-ove, podatke aplikacija, podatke zaštićene uređajem i podatke s vanjske pohrane.</string>
     <string name="tasks_guide_title">Vodič za zadatke i održavanje</string>
-    <string name="custom_directories_typed_path_invalid">Unesite važeću apsolutnu putanju mape.</string>
-    <string name="tasks_guide_files_title">Datoteke i mape</string>
-    <string name="tasks_guide_check_title">Provjeri integritet</string>
-    <string name="custom_directory_not_found">Prilagođena mapa nije pronađena: %1$s</string>
+    <string name="tasks_guide_subtitle">Saznajte što pojedini zadatak sigurnosne kopije i održavanja radi i kako međusobno surađuju.</string>
+    <string name="tasks_guide_unlock_title">Otključaj spremište</string>
+    <string name="tasks_guide_unlock_desc">Uklanja zaostala zaključavanja preostala nakon neočekivanog prekida prethodne sigurnosne kopije ili zadatka (npr. zatvorena aplikacija, ponovno pokrenut uređaj ili prekinuta veza). To omogućuje siguran nastavak budućih zadataka.</string>
     <string name="tasks_guide_forget_title">Zaboravi snimke</string>
+    <string name="tasks_guide_forget_desc">Primjenjuje vašu politiku zadržavanja (npr. zadrži posljednjih N dnevnih, tjednih ili mjesečnih snimaka) i uklanja stare zapise snimaka iz povijesti spremišta. Napomena: Ovo samo uklanja referencu na snimke; još uvijek ne briše sirove dijelove podataka.</string>
+    <string name="tasks_guide_prune_title">Očisti spremište</string>
+    <string name="tasks_guide_prune_desc">Skenira spremište u potrazi za dijelovima podataka na koje više ne upućuje nijedna preostala snimka, trajno ih briše i prepakira pakete kako bi se stvarno oslobodio prostor na disku. Čišćenje zahtijeva mnogo resursa i najbolje ga je pokretati periodično (npr. tjedno ili mjesečno).</string>
+    <string name="tasks_guide_check_title">Provjeri integritet</string>
+    <string name="tasks_guide_check_desc">Provjerava strukturu spremišta i indekse. Prema zadanim postavkama sadržaj pohranjenih datoteka se ne čita. Omogućite opciju Čitaj sve podatke u postavkama provjere integriteta kako biste provjerili i podatkovne pakete.</string>
+    <string name="tasks_guide_forget_vs_prune_title">Zaboravi vs. Očisti: U čemu je razlika?</string>
+    <string name="tasks_guide_forget_vs_prune_desc">Zamislite \"Zaboravi\" kao uklanjanje kataložnih kartica iz knjižničnog indeksa, a \"Očisti\" kao stvarno uklanjanje nepotrebnih knjiga iz zgrade. Prvo pokrećete \"Zaboravi\" kako biste odabrali što ćete izbrisati, a zatim \"Očisti\" kako biste stvarno oslobodili prostor za pohranu.</string>
+    <string name="tasks_guide_apps_title">Aplikacije</string>
+    <string name="tasks_guide_apps_desc">Stvara sigurnosnu kopiju instaliranih aplikacija, uključujući APK-ove, podatke aplikacija, podatke zaštićene uređajem i podatke s vanjske pohrane.</string>
+    <string name="tasks_guide_files_title">Datoteke i mape</string>
+    <string name="tasks_guide_files_desc">Stvara sigurnosnu kopiju prilagođenih datoteka i direktorija odabranih s pohrane uređaja.</string>
+    <string name="tasks_guide_docs_button">Službena Restic dokumentacija</string>
+    <string name="no_browser_available">Preglednik nije pronađen za otvaranje poveznice. URL je kopiran u međuspremnik.</string>
+    <!-- Operation Logs -->
+    <string name="screen_operation_logs">Operation Logs</string>
+    <string name="operation_logs_empty">No operation logs yet</string>
+    <string name="operation_logs_empty_desc">Completed backup, restore, and maintenance runs will appear here.</string>
+    <string name="operation_logs_clear">Clear logs</string>
+    <string name="operation_logs_clear_confirm_title">Clear all logs?</string>
+    <string name="operation_logs_clear_confirm_desc">This will delete all stored operation log history.</string>
+    <string name="operation_logs_duration">Duration: %1$s</string>
+    <string name="operation_logs_copied">Log copied to clipboard</string>
+    <string name="operation_status_success">Success</string>
+    <string name="operation_status_failed">Failed</string>
+    <string name="action_expand">Expand</string>
+    <string name="action_collapse">Collapse</string>
+    <string name="action_copy_log">Copy Log</string>
+    <string name="action_clear">Clear</string>
 </resources>
