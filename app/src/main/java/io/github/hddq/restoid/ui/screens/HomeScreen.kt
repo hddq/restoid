@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,10 +16,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.outlined.ChevronRight
@@ -59,10 +60,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
 import io.github.hddq.restoid.R
+import io.github.hddq.restoid.data.OperationRuntimeState
 import io.github.hddq.restoid.data.OperationType
 import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.model.AppInfo
-import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
 import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
 import io.github.hddq.restoid.ui.components.PasswordDialog
@@ -109,120 +110,58 @@ fun HomeScreen(
         }
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+    PullToRefreshBox(
+        isRefreshing = uiState.isRefreshing,
+        onRefresh = onRefresh,
+        modifier = modifier.fillMaxSize()
     ) {
-        if (isOperationActive) {
-            val opLabel = when (activeOp.operationType) {
-                OperationType.BACKUP -> stringResource(R.string.operation_backup)
-                OperationType.RUN_TASKS -> stringResource(R.string.operation_run_tasks)
-                OperationType.RESTORE -> stringResource(R.string.operation_restore)
-                OperationType.MAINTENANCE -> stringResource(R.string.operation_maintenance)
-                null -> null
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 88.dp)
+        ) {
+            if (isOperationActive) {
+                item(key = "active_operation") {
+                    ActiveOperationBanner(
+                        activeOp = activeOp,
+                        onOpenOperationProgress = onOpenOperationProgress,
+                        onForceStopClick = { showForceStopDialog = true }
+                    )
+                }
             }
-            val cardTitle = if (opLabel != null) {
-                stringResource(R.string.home_operation_running_title, opLabel)
-            } else {
-                stringResource(R.string.home_operation_running_default_title)
-            }
-            val stageSubtitle = activeOp.progress.stageTitle.takeIf { it.isNotBlank() }
 
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp)
-                    .clip(RoundedCornerShape(24.dp))
-                    .clickable(onClick = onOpenOperationProgress),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.secondaryContainer
-                )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        LoadingIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
-                        Column {
-                            Text(
-                                text = cardTitle,
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                            if (stageSubtitle != null) {
-                                Text(
-                                    text = stageSubtitle,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
-                                )
-                            }
-                            Text(
-                                text = stringResource(R.string.home_operation_running_tap_hint),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
-                            )
-                        }
-                    }
-                    TextButton(
-                        onClick = { showForceStopDialog = true }
-                    ) {
+            when {
+                uiState.selectedRepo == null -> {
+                    item(key = "no_repo_selected") {
                         Text(
-                            text = stringResource(R.string.action_force_stop),
+                            text = stringResource(R.string.no_repository_selected),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                uiState.resticState !is ResticState.Installed -> {
+                    item(key = "restic_not_available") {
+                        Text(
+                            text = stringResource(R.string.restic_not_available_check_settings),
+                            style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.error
                         )
                     }
                 }
-            }
-        }
-
-        // Refreshable Content Area
-        PullToRefreshBox(
-            isRefreshing = uiState.isRefreshing,
-            onRefresh = onRefresh,
-            modifier = Modifier.fillMaxSize()
-        ) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                when {
-                    uiState.selectedRepo == null -> {
-                        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                            Text(
-                                stringResource(R.string.no_repository_selected),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    uiState.resticState !is ResticState.Installed -> {
-                        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                            Text(
-                                stringResource(R.string.restic_not_available_check_settings),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        }
-                    }
-                    uiState.isLoading -> {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                uiState.isLoading && !uiState.isRefreshing -> {
+                    item(key = "loading") {
+                        Box(
+                            modifier = Modifier.fillParentMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
                             LoadingIndicator()
                         }
                     }
-                    uiState.error != null -> {
-                        val errorMessage = uiState.error
-                        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                }
+                uiState.error != null -> {
+                    val errorMessage = uiState.error
+                    item(key = "error_content") {
+                        Column {
                             Text(
                                 text = stringResource(R.string.error_with_message, errorMessage),
                                 style = MaterialTheme.typography.bodyLarge,
@@ -258,8 +197,10 @@ fun HomeScreen(
                             }
                         }
                     }
-                    uiState.openPrompt != null -> {
-                        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                }
+                uiState.openPrompt != null -> {
+                    item(key = "open_prompt") {
+                        Column {
                             Text(
                                 text = stringResource(R.string.home_open_needed_message),
                                 style = MaterialTheme.typography.bodyLarge,
@@ -290,41 +231,42 @@ fun HomeScreen(
                             }
                         }
                     }
-                    uiState.snapshotsWithMetadata.isEmpty() -> {
-                        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                            Text(
-                                text = stringResource(R.string.no_snapshots_found_for_repository),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                }
+                uiState.snapshotsWithMetadata.isEmpty() -> {
+                    item(key = "empty_snapshots") {
+                        Text(
+                            text = stringResource(R.string.no_snapshots_found_for_repository),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
-                    else -> {
-                        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                            ExpressiveSectionHeader(
-                                title = pluralStringResource(
-                                    R.plurals.snapshots_count,
-                                    uiState.snapshotsWithMetadata.size,
-                                    uiState.snapshotsWithMetadata.size
-                                )
+                }
+                else -> {
+                    val snapshots = uiState.snapshotsWithMetadata.sortedByDescending { it.snapshotInfo.time }
+                    item(key = "snapshots_header") {
+                        ExpressiveSectionHeader(
+                            title = pluralStringResource(
+                                R.plurals.snapshots_count,
+                                snapshots.size,
+                                snapshots.size
                             )
-                            val snapshots = uiState.snapshotsWithMetadata.sortedByDescending { it.snapshotInfo.time }
-                            ExpressiveCardGroup {
-                                snapshots.forEachIndexed { index, item ->
-                                    ExpressiveSegmentedSurface(
-                                        index = index,
-                                        count = snapshots.size
-                                    ) {
-                                        SnapshotItem(
-                                            snapshotWithMetadata = item,
-                                            apps = uiState.appInfoMap[item.snapshotInfo.id],
-                                            onClick = { onSnapshotClick(item.snapshotInfo.id) }
-                                        )
-                                    }
-                                }
-                            }
-
-                            Spacer(Modifier.height(88.dp))
+                        )
+                    }
+                    itemsIndexed(
+                        items = snapshots,
+                        key = { _, item -> item.snapshotInfo.id },
+                        contentType = { _, _ -> "snapshot_item" }
+                    ) { index, item ->
+                        ExpressiveSegmentedSurface(
+                            index = index,
+                            count = snapshots.size,
+                            modifier = Modifier.padding(bottom = if (index < snapshots.size - 1) 2.dp else 0.dp)
+                        ) {
+                            SnapshotItem(
+                                snapshotWithMetadata = item,
+                                apps = uiState.appInfoMap[item.snapshotInfo.id],
+                                onClick = { onSnapshotClick(item.snapshotInfo.id) }
+                            )
                         }
                     }
                 }
@@ -484,6 +426,88 @@ fun HomeScreen(
             onDismiss = onDismissS3CredentialsDialog,
             saveCredentialsLabel = stringResource(homeCredentialsSaveLabel(HomeCredentialPrompt.S3_CREDENTIALS))
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun ActiveOperationBanner(
+    activeOp: OperationRuntimeState,
+    onOpenOperationProgress: () -> Unit,
+    onForceStopClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val opLabel = when (activeOp.operationType) {
+        OperationType.BACKUP -> stringResource(R.string.operation_backup)
+        OperationType.RUN_TASKS -> stringResource(R.string.operation_run_tasks)
+        OperationType.RESTORE -> stringResource(R.string.operation_restore)
+        OperationType.MAINTENANCE -> stringResource(R.string.operation_maintenance)
+        null -> null
+    }
+    val cardTitle = if (opLabel != null) {
+        stringResource(R.string.home_operation_running_title, opLabel)
+    } else {
+        stringResource(R.string.home_operation_running_default_title)
+    }
+    val stageSubtitle = activeOp.progress.stageTitle.takeIf { it.isNotBlank() }
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .clickable(onClick = onOpenOperationProgress),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                LoadingIndicator(
+                    modifier = Modifier.size(24.dp),
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                Column {
+                    Text(
+                        text = cardTitle,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    if (stageSubtitle != null) {
+                        Text(
+                            text = stageSubtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                        )
+                    }
+                    Text(
+                        text = stringResource(R.string.home_operation_running_tap_hint),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                    )
+                }
+            }
+            TextButton(
+                onClick = onForceStopClick
+            ) {
+                Text(
+                    text = stringResource(R.string.action_force_stop),
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        }
     }
 }
 
