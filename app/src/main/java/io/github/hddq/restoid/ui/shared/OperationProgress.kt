@@ -12,14 +12,18 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -33,6 +37,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -48,8 +53,11 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.hddq.restoid.R
+import io.github.hddq.restoid.ui.theme.RestoidTheme
+import java.text.NumberFormat
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
@@ -186,7 +194,15 @@ fun ProgressScreenContent(
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
                 ) {
-                    Text(text = stageTitle, style = MaterialTheme.typography.titleLarge)
+                    Text(
+                        text = stageTitle,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp)
+                    )
                     Spacer(Modifier.height(24.dp))
 
                     Card(
@@ -197,67 +213,179 @@ fun ProgressScreenContent(
                         )
                     ) {
                         Column(Modifier.padding(16.dp)) {
-                            Text(stringResource(R.string.progress_overall), style = MaterialTheme.typography.labelMedium)
+                            val overallPercent = (progress.overallPercentage.coerceIn(0f, 1f) * 100).toInt()
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.progress_overall),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text = "$overallPercent%",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
                             Spacer(Modifier.height(8.dp))
                             LinearWavyProgressIndicator(
                                 progress = { progress.overallPercentage },
                                 modifier = Modifier.fillMaxWidth()
                             )
-                            Spacer(Modifier.height(20.dp))
+                            Spacer(Modifier.height(16.dp))
 
-                            Text(stringResource(R.string.progress_stage), style = MaterialTheme.typography.labelMedium)
+                            val stagePercent = (progress.stagePercentage.coerceIn(0f, 1f) * 100).toInt()
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.progress_stage),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    text = "$stagePercent%",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
                             Spacer(Modifier.height(8.dp))
                             LinearWavyProgressIndicator(
                                 progress = { progress.stagePercentage },
                                 modifier = Modifier.fillMaxWidth()
                             )
-                            Spacer(Modifier.height(24.dp))
+                            Spacer(Modifier.height(20.dp))
 
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceAround
-                            ) {
-                                ProgressStat(label = stringResource(R.string.progress_elapsed), value = formatElapsedTime(progress.elapsedTime))
-                                ProgressStat(
-                                    label = stringResource(R.string.progress_items),
-                                    value = "${progress.filesProcessed}/${progress.totalFiles}"
-                                )
-                                if (progress.totalBytes > 0) {
-                                    ProgressStat(
-                                        label = stringResource(R.string.progress_size),
-                                        value = "${Formatter.formatFileSize(context, progress.bytesProcessed)} / ${
-                                            Formatter.formatFileSize(
-                                                context,
-                                                progress.totalBytes
-                                            )
-                                        }"
+                            val numberFormat = remember { NumberFormat.getIntegerInstance() }
+                            val formattedProcessed = numberFormat.format(progress.filesProcessed)
+                            val formattedTotal = numberFormat.format(progress.totalFiles)
+                            val itemsValue = "$formattedProcessed / $formattedTotal"
+                            val hasBytes = progress.totalBytes > 0
+                            val sizeValue = if (hasBytes) {
+                                "${Formatter.formatFileSize(context, progress.bytesProcessed)} / ${
+                                    Formatter.formatFileSize(
+                                        context,
+                                        progress.totalBytes
                                     )
+                                }"
+                            } else ""
+
+                            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                                val isWide = maxWidth >= 440.dp && hasBytes
+                                if (isWide) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(IntrinsicSize.Min),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        ProgressStatCard(
+                                            label = stringResource(R.string.progress_elapsed),
+                                            value = formatElapsedTime(progress.elapsedTime),
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .fillMaxHeight()
+                                        )
+                                        ProgressStatCard(
+                                            label = stringResource(R.string.progress_items),
+                                            value = itemsValue,
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .fillMaxHeight()
+                                        )
+                                        ProgressStatCard(
+                                            label = stringResource(R.string.progress_size),
+                                            value = sizeValue,
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .fillMaxHeight()
+                                        )
+                                    }
+                                } else {
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(IntrinsicSize.Min),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            ProgressStatCard(
+                                                label = stringResource(R.string.progress_elapsed),
+                                                value = formatElapsedTime(progress.elapsedTime),
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .fillMaxHeight()
+                                            )
+                                            ProgressStatCard(
+                                                label = stringResource(R.string.progress_items),
+                                                value = itemsValue,
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .fillMaxHeight()
+                                            )
+                                        }
+                                        if (hasBytes) {
+                                            ProgressStatCard(
+                                                label = stringResource(R.string.progress_size),
+                                                value = sizeValue,
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                        }
+                                    }
                                 }
                             }
-                            Spacer(Modifier.height(16.dp))
 
                             if (operationType == stringResource(R.string.operation_backup) && progress.currentFile.isNotBlank()) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        stringResource(R.string.progress_processing),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    AnimatedContent(
-                                        targetState = progress.currentFile,
-                                        label = "CurrentFileAnimation",
-                                        transitionSpec = {
-                                            slideInVertically { height -> height } togetherWith
-                                                slideOutVertically { height -> -height }
-                                        }
-                                    ) { targetFile ->
+                                Spacer(Modifier.height(12.dp))
+                                Surface(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                                    ) {
                                         Text(
-                                            text = targetFile.ifEmpty { stringResource(R.string.progress_placeholder) },
-                                            style = MaterialTheme.typography.bodySmall,
-                                            fontFamily = FontFamily.Monospace,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
+                                            text = stringResource(R.string.progress_processing).trimEnd(' ', ':'),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
+                                        Spacer(Modifier.height(2.dp))
+                                        AnimatedContent(
+                                            targetState = progress.currentFile,
+                                            label = "CurrentFileAnimation",
+                                            transitionSpec = {
+                                                slideInVertically { height -> height } togetherWith
+                                                    slideOutVertically { height -> -height }
+                                            }
+                                        ) { targetFile ->
+                                            Text(
+                                                text = targetFile.ifEmpty { stringResource(R.string.progress_placeholder) },
+                                                style = MaterialTheme.typography.bodySmall,
+                                                fontFamily = FontFamily.Monospace,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -270,12 +398,45 @@ fun ProgressScreenContent(
 }
 
 @Composable
-fun ProgressStat(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(2.dp))
-        Text(text = value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+fun ProgressStatCard(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center
+            )
+        }
     }
+}
+
+@Composable
+fun ProgressStat(label: String, value: String, modifier: Modifier = Modifier) {
+    ProgressStatCard(label = label, value = value, modifier = modifier)
 }
 
 private fun formatElapsedTime(seconds: Long): String {
@@ -286,5 +447,91 @@ private fun formatElapsedTime(seconds: Long): String {
         String.format("%02d:%02d:%02d", hours, minutes, secs)
     } else {
         String.format("%02d:%02d", minutes, secs)
+    }
+}
+
+@Preview(name = "Compact Low DPI (320dp)", widthDp = 320)
+@Composable
+private fun ProgressScreenCompactPreview() {
+    RestoidTheme(dynamicColor = false) {
+        ProgressScreenContent(
+            progress = OperationProgress(
+                stageTitle = "[2/4] Backing up items...",
+                overallPercentage = 0.48f,
+                stagePercentage = 0.75f,
+                filesProcessed = 3241,
+                totalFiles = 6954,
+                bytesProcessed = 2210000000L,
+                totalBytes = 3280000000L,
+                currentFile = "/storage/emulated/0/DCIM/Camera/IMG_20261109_023411.jpg",
+                elapsedTime = 2
+            ),
+            operationType = "Backup",
+            onDone = {}
+        )
+    }
+}
+
+@Preview(name = "Standard Phone (412dp)", widthDp = 412)
+@Composable
+private fun ProgressScreenStandardPreview() {
+    RestoidTheme(dynamicColor = false) {
+        ProgressScreenContent(
+            progress = OperationProgress(
+                stageTitle = "[2/4] Backing up items...",
+                overallPercentage = 0.48f,
+                stagePercentage = 0.75f,
+                filesProcessed = 3241,
+                totalFiles = 6954,
+                bytesProcessed = 2210000000L,
+                totalBytes = 3280000000L,
+                currentFile = "/storage/emulated/0/DCIM/Camera/IMG_20261109_023411.jpg",
+                elapsedTime = 125
+            ),
+            operationType = "Backup",
+            onDone = {}
+        )
+    }
+}
+
+@Preview(name = "Wide / Tablet (600dp)", widthDp = 600)
+@Composable
+private fun ProgressScreenWidePreview() {
+    RestoidTheme(dynamicColor = false) {
+        ProgressScreenContent(
+            progress = OperationProgress(
+                stageTitle = "[2/4] Backing up items...",
+                overallPercentage = 0.48f,
+                stagePercentage = 0.75f,
+                filesProcessed = 3241,
+                totalFiles = 6954,
+                bytesProcessed = 2210000000L,
+                totalBytes = 3280000000L,
+                currentFile = "/storage/emulated/0/DCIM/Camera/IMG_20261109_023411.jpg",
+                elapsedTime = 3665
+            ),
+            operationType = "Backup",
+            onDone = {}
+        )
+    }
+}
+
+@Preview(name = "No Bytes / Restore", widthDp = 360)
+@Composable
+private fun ProgressScreenNoBytesPreview() {
+    RestoidTheme(dynamicColor = false) {
+        ProgressScreenContent(
+            progress = OperationProgress(
+                stageTitle = "Restoring Files",
+                overallPercentage = 0.30f,
+                stagePercentage = 0.60f,
+                filesProcessed = 150,
+                totalFiles = 500,
+                totalBytes = 0,
+                elapsedTime = 42
+            ),
+            operationType = "Restore",
+            onDone = {}
+        )
     }
 }
