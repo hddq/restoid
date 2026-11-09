@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   build-debug:
-    if: github.head_ref != 'weblate'
+    if: github.head_ref != 'crowdin'
     runs-on: ubuntu-latest
     env:
       JAVA_VERSION: "21"
