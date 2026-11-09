@@ -231,7 +231,7 @@ jobs:
           AuthorName: hddq
           SourceCode: https://github.com/hddq/restoid
           IssueTracker: https://github.com/hddq/restoid/issues
-          Translation: https://hosted.weblate.org/projects/restoid
+          Translation: https://crowdin.com/project/restoid
           EOF
 
           for apk in release-assets/*.apk; do
