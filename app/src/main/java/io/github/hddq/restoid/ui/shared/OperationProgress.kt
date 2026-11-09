@@ -14,13 +14,16 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -219,13 +222,17 @@ fun ProgressScreenContent(
                                 Text(
                                     text = stringResource(R.string.progress_overall),
                                     style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.weight(1f)
                                 )
+                                Spacer(Modifier.width(8.dp))
                                 Text(
                                     text = "$overallPercent%",
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = MaterialTheme.colorScheme.primary,
+                                    maxLines = 1,
+                                    softWrap = false
                                 )
                             }
                             Spacer(Modifier.height(8.dp))
@@ -244,13 +251,17 @@ fun ProgressScreenContent(
                                 Text(
                                     text = stringResource(R.string.progress_stage),
                                     style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.weight(1f)
                                 )
+                                Spacer(Modifier.width(8.dp))
                                 Text(
                                     text = "$stagePercent%",
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = MaterialTheme.colorScheme.primary,
+                                    maxLines = 1,
+                                    softWrap = false
                                 )
                             }
                             Spacer(Modifier.height(8.dp))
@@ -278,23 +289,31 @@ fun ProgressScreenContent(
                                 val isWide = maxWidth >= 440.dp && hasBytes
                                 if (isWide) {
                                     Row(
-                                        modifier = Modifier.fillMaxWidth(),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(IntrinsicSize.Min),
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         ProgressStatCard(
                                             label = stringResource(R.string.progress_elapsed),
                                             value = formatElapsedTime(progress.elapsedTime),
-                                            modifier = Modifier.weight(1f)
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .fillMaxHeight()
                                         )
                                         ProgressStatCard(
                                             label = stringResource(R.string.progress_items),
                                             value = itemsValue,
-                                            modifier = Modifier.weight(1f)
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .fillMaxHeight()
                                         )
                                         ProgressStatCard(
                                             label = stringResource(R.string.progress_size),
                                             value = sizeValue,
-                                            modifier = Modifier.weight(1f)
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .fillMaxHeight()
                                         )
                                     }
                                 } else {
@@ -303,18 +322,24 @@ fun ProgressScreenContent(
                                         verticalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         Row(
-                                            modifier = Modifier.fillMaxWidth(),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(IntrinsicSize.Min),
                                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                                         ) {
                                             ProgressStatCard(
                                                 label = stringResource(R.string.progress_elapsed),
                                                 value = formatElapsedTime(progress.elapsedTime),
-                                                modifier = Modifier.weight(1f)
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .fillMaxHeight()
                                             )
                                             ProgressStatCard(
                                                 label = stringResource(R.string.progress_items),
                                                 value = itemsValue,
-                                                modifier = Modifier.weight(1f)
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .fillMaxHeight()
                                             )
                                         }
                                         if (hasBytes) {
@@ -403,8 +428,7 @@ fun ProgressStatCard(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                textAlign = TextAlign.Center
             )
         }
     }
