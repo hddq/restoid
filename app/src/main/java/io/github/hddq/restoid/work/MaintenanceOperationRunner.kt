@@ -35,7 +35,11 @@ class MaintenanceOperationRunner(
         }
 
         val startTime = System.currentTimeMillis()
-        var progressState = OperationProgress(stageTitle = context.getString(R.string.progress_initializing))
+        var progressState = OperationProgress(
+            stageTitle = context.getString(R.string.progress_initializing),
+            isStageIndeterminate = true,
+            isOverallIndeterminate = true
+        )
         onProgress(progressState)
         throwIfCancelled()
 
@@ -90,7 +94,22 @@ class MaintenanceOperationRunner(
             if (request.pruneRepo) {
                 tasksToRun.add(
                     context.getString(R.string.maintenance_task_prune) to {
-                        resticRepository.prune(selectedRepoPath, password, repositoryEnvironment, repositoryResticOptions)
+                        resticRepository.prune(
+                            selectedRepoPath,
+                            password,
+                            repositoryEnvironment,
+                            repositoryResticOptions,
+                            onOutputLine = { line ->
+                                val trimmed = line.trim()
+                                if (trimmed.isNotBlank()) {
+                                    progressState = progressState.copy(
+                                        currentActivity = trimmed,
+                                        elapsedTime = (System.currentTimeMillis() - startTime) / 1000
+                                    )
+                                    onProgress(progressState)
+                                }
+                            }
+                        )
                     }
                 )
             }
@@ -102,7 +121,17 @@ class MaintenanceOperationRunner(
                             password,
                             request.readData,
                             repositoryEnvironment,
-                            repositoryResticOptions
+                            repositoryResticOptions,
+                            onOutputLine = { line ->
+                                val trimmed = line.trim()
+                                if (trimmed.isNotBlank()) {
+                                    progressState = progressState.copy(
+                                        currentActivity = trimmed,
+                                        elapsedTime = (System.currentTimeMillis() - startTime) / 1000
+                                    )
+                                    onProgress(progressState)
+                                }
+                            }
                         )
                     }
                 )
@@ -110,6 +139,7 @@ class MaintenanceOperationRunner(
 
             if (tasksToRun.isEmpty()) throw IllegalStateException(context.getString(R.string.maintenance_error_no_tasks_selected))
 
+            val isSingleTask = stageContext.totalStages == 1
             tasksToRun.forEachIndexed { index, (taskName, taskAction) ->
                 throwIfCancelled()
                 val stageTitle = context.getString(
@@ -122,6 +152,9 @@ class MaintenanceOperationRunner(
                     stageTitle = stageTitle,
                     overallPercentage = index.toFloat() / tasksToRun.size,
                     stagePercentage = 0f,
+                    isStageIndeterminate = true,
+                    isOverallIndeterminate = isSingleTask,
+                    currentActivity = "",
                     isFinished = false,
                     elapsedTime = (System.currentTimeMillis() - startTime) / 1000
                 )
@@ -133,6 +166,9 @@ class MaintenanceOperationRunner(
                 progressState = progressState.copy(
                     overallPercentage = (index + 1f) / tasksToRun.size,
                     stagePercentage = 1f,
+                    isStageIndeterminate = false,
+                    isOverallIndeterminate = false,
+                    currentActivity = "",
                     elapsedTime = (System.currentTimeMillis() - startTime) / 1000
                 )
                 onProgress(progressState)

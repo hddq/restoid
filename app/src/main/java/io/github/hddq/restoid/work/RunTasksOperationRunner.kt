@@ -72,18 +72,23 @@ class RunTasksOperationRunner(
 
         val startTime = System.currentTimeMillis()
         var completedTaskUnits = 0
-        var progressState = OperationProgress(stageTitle = context.getString(R.string.progress_initializing))
+        var progressState = OperationProgress(
+            stageTitle = context.getString(R.string.progress_initializing),
+            isStageIndeterminate = true
+        )
         val summaries = mutableListOf<String>()
         var overallSuccess = true
         var wasCancelled = false
 
         fun mapChildProgress(child: OperationProgress, spanTasks: Int): OperationProgress {
+            val isSingleTask = totalEnabledTasks == 1
             val remappedOverall = (
                 completedTaskUnits + (child.overallPercentage.coerceIn(0f, 1f) * spanTasks)
             ) / totalEnabledTasks.toFloat()
 
             return child.copy(
                 overallPercentage = remappedOverall,
+                isOverallIndeterminate = isSingleTask && child.isOverallIndeterminate,
                 elapsedTime = (System.currentTimeMillis() - startTime) / 1000,
                 isFinished = false,
                 error = null,

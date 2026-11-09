@@ -46,7 +46,10 @@ class RestoreOperationRunner(
         }
 
         val startTime = System.currentTimeMillis()
-        var progressState = OperationProgress(stageTitle = context.getString(R.string.progress_initializing))
+        var progressState = OperationProgress(
+            stageTitle = context.getString(R.string.progress_initializing),
+            isStageIndeterminate = true
+        )
         onProgress(progressState)
         throwIfCancelled()
 
@@ -176,6 +179,8 @@ class RestoreOperationRunner(
                                     stageTitle = restoreStageTitle,
                                     stagePercentage = 1f,
                                     overallPercentage = currentStageNum.toFloat() / totalStages.toFloat(),
+                                    isStageIndeterminate = false,
+                                    isOverallIndeterminate = false,
                                     elapsedTime = elapsedTime,
                                     finalSummary = ""
                                 )
@@ -205,6 +210,8 @@ class RestoreOperationRunner(
                     stageTitle = restoreStageTitle,
                     stagePercentage = 1f,
                     overallPercentage = currentStageNum.toFloat() / totalStages.toFloat(),
+                    isStageIndeterminate = false,
+                    isOverallIndeterminate = false,
                     elapsedTime = (System.currentTimeMillis() - startTime) / 1000,
                     isFinished = false
                 )
@@ -226,6 +233,8 @@ class RestoreOperationRunner(
                         stageTitle = processingStageTitle,
                         stagePercentage = processProgress,
                         overallPercentage = (processingAppsStageIndex + processProgress) / totalStages.toFloat(),
+                        isStageIndeterminate = false,
+                        isOverallIndeterminate = false,
                         currentFile = appName,
                         filesProcessed = index + 1,
                         totalFiles = selectedAppPackages.size + request.selectedCustomDirectories.size,
@@ -339,6 +348,8 @@ class RestoreOperationRunner(
                         stageTitle = processingStageTitle,
                         stagePercentage = processProgress,
                         overallPercentage = (customDirsStageIndex + processProgress) / totalStages.toFloat(),
+                        isStageIndeterminate = false,
+                        isOverallIndeterminate = false,
                         currentFile = path.substringAfterLast("/").ifEmpty { path },
                         filesProcessed = successes + 1,
                         totalFiles = selectedAppPackages.size + request.selectedCustomDirectories.size,

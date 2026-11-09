@@ -71,6 +71,8 @@ data class OperationProgress(
     val stageTitle: String = "", // e.g., "Stage 1/2: Restoring Files"
     val stagePercentage: Float = 0f, // progress of the current stage (0.0 to 1.0)
     val overallPercentage: Float = 0f, // overall progress (0.0 to 1.0)
+    val isStageIndeterminate: Boolean = false,
+    val isOverallIndeterminate: Boolean = false,
 
     // Details for the current stage
     val totalFiles: Int = 0,
@@ -78,6 +80,7 @@ data class OperationProgress(
     val totalBytes: Long = 0,
     val bytesProcessed: Long = 0,
     val currentFile: String = "",
+    val currentActivity: String = "",
 
     // General Info
     val elapsedTime: Long = 0, // in seconds
@@ -227,7 +230,11 @@ fun ProgressScreenContent(
                                 )
                                 Spacer(Modifier.width(8.dp))
                                 Text(
-                                    text = "$overallPercent%",
+                                    text = if (progress.isOverallIndeterminate) {
+                                        stringResource(R.string.progress_in_progress)
+                                    } else {
+                                        "$overallPercent%"
+                                    },
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.primary,
@@ -236,10 +243,16 @@ fun ProgressScreenContent(
                                 )
                             }
                             Spacer(Modifier.height(8.dp))
-                            LinearWavyProgressIndicator(
-                                progress = { progress.overallPercentage },
-                                modifier = Modifier.fillMaxWidth()
-                            )
+                            if (progress.isOverallIndeterminate) {
+                                LinearWavyProgressIndicator(
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            } else {
+                                LinearWavyProgressIndicator(
+                                    progress = { progress.overallPercentage },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
                             Spacer(Modifier.height(16.dp))
 
                             val stagePercent = (progress.stagePercentage.coerceIn(0f, 1f) * 100).toInt()
@@ -256,7 +269,11 @@ fun ProgressScreenContent(
                                 )
                                 Spacer(Modifier.width(8.dp))
                                 Text(
-                                    text = "$stagePercent%",
+                                    text = if (progress.isStageIndeterminate) {
+                                        stringResource(R.string.progress_in_progress)
+                                    } else {
+                                        "$stagePercent%"
+                                    },
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.primary,
@@ -265,16 +282,23 @@ fun ProgressScreenContent(
                                 )
                             }
                             Spacer(Modifier.height(8.dp))
-                            LinearWavyProgressIndicator(
-                                progress = { progress.stagePercentage },
-                                modifier = Modifier.fillMaxWidth()
-                            )
+                            if (progress.isStageIndeterminate) {
+                                LinearWavyProgressIndicator(
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            } else {
+                                LinearWavyProgressIndicator(
+                                    progress = { progress.stagePercentage },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
                             Spacer(Modifier.height(20.dp))
 
                             val numberFormat = remember { NumberFormat.getIntegerInstance() }
                             val formattedProcessed = numberFormat.format(progress.filesProcessed)
                             val formattedTotal = numberFormat.format(progress.totalFiles)
                             val itemsValue = "$formattedProcessed / $formattedTotal"
+                            val hasItems = progress.totalFiles > 0
                             val hasBytes = progress.totalBytes > 0
                             val sizeValue = if (hasBytes) {
                                 "${Formatter.formatFileSize(context, progress.bytesProcessed)} / ${
@@ -286,41 +310,15 @@ fun ProgressScreenContent(
                             } else ""
 
                             BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                                val isWide = maxWidth >= 440.dp && hasBytes
-                                if (isWide) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(IntrinsicSize.Min),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        ProgressStatCard(
-                                            label = stringResource(R.string.progress_elapsed),
-                                            value = formatElapsedTime(progress.elapsedTime),
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .fillMaxHeight()
-                                        )
-                                        ProgressStatCard(
-                                            label = stringResource(R.string.progress_items),
-                                            value = itemsValue,
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .fillMaxHeight()
-                                        )
-                                        ProgressStatCard(
-                                            label = stringResource(R.string.progress_size),
-                                            value = sizeValue,
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .fillMaxHeight()
-                                        )
-                                    }
+                                if (!hasItems && !hasBytes) {
+                                    ProgressStatCard(
+                                        label = stringResource(R.string.progress_elapsed),
+                                        value = formatElapsedTime(progress.elapsedTime),
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
                                 } else {
-                                    Column(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
+                                    val isWide = maxWidth >= 440.dp && hasBytes
+                                    if (isWide) {
                                         Row(
                                             modifier = Modifier
                                                 .fillMaxWidth()
@@ -341,19 +339,54 @@ fun ProgressScreenContent(
                                                     .weight(1f)
                                                     .fillMaxHeight()
                                             )
-                                        }
-                                        if (hasBytes) {
                                             ProgressStatCard(
                                                 label = stringResource(R.string.progress_size),
                                                 value = sizeValue,
-                                                modifier = Modifier.fillMaxWidth()
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .fillMaxHeight()
                                             )
+                                        }
+                                    } else {
+                                        Column(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .height(IntrinsicSize.Min),
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                ProgressStatCard(
+                                                    label = stringResource(R.string.progress_elapsed),
+                                                    value = formatElapsedTime(progress.elapsedTime),
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .fillMaxHeight()
+                                                )
+                                                ProgressStatCard(
+                                                    label = stringResource(R.string.progress_items),
+                                                    value = itemsValue,
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .fillMaxHeight()
+                                                )
+                                            }
+                                            if (hasBytes) {
+                                                ProgressStatCard(
+                                                    label = stringResource(R.string.progress_size),
+                                                    value = sizeValue,
+                                                    modifier = Modifier.fillMaxWidth()
+                                                )
+                                            }
                                         }
                                     }
                                 }
                             }
 
-                            if (operationType == stringResource(R.string.operation_backup) && progress.currentFile.isNotBlank()) {
+                            val activeItem = progress.currentFile.ifBlank { progress.currentActivity }
+                            if (activeItem.isNotBlank()) {
                                 Spacer(Modifier.height(12.dp))
                                 Surface(
                                     modifier = Modifier.fillMaxWidth(),
@@ -370,15 +403,15 @@ fun ProgressScreenContent(
                                         )
                                         Spacer(Modifier.height(2.dp))
                                         AnimatedContent(
-                                            targetState = progress.currentFile,
-                                            label = "CurrentFileAnimation",
+                                            targetState = activeItem,
+                                            label = "CurrentActivityAnimation",
                                             transitionSpec = {
                                                 slideInVertically { height -> height } togetherWith
                                                     slideOutVertically { height -> -height }
                                             }
-                                        ) { targetFile ->
+                                        ) { targetText ->
                                             Text(
-                                                text = targetFile.ifEmpty { stringResource(R.string.progress_placeholder) },
+                                                text = targetText.ifEmpty { stringResource(R.string.progress_placeholder) },
                                                 style = MaterialTheme.typography.bodySmall,
                                                 fontFamily = FontFamily.Monospace,
                                                 maxLines = 1,
@@ -531,6 +564,24 @@ private fun ProgressScreenNoBytesPreview() {
                 elapsedTime = 42
             ),
             operationType = "Restore",
+            onDone = {}
+        )
+    }
+}
+
+@Preview(name = "Indeterminate Maintenance / Prune", widthDp = 360)
+@Composable
+private fun ProgressScreenIndeterminatePreview() {
+    RestoidTheme(dynamicColor = false) {
+        ProgressScreenContent(
+            progress = OperationProgress(
+                stageTitle = "[3/4] Running 'Prune'…",
+                overallPercentage = 0.50f,
+                isStageIndeterminate = true,
+                currentActivity = "repacking packs...",
+                elapsedTime = 45
+            ),
+            operationType = "Maintenance",
             onDone = {}
         )
     }

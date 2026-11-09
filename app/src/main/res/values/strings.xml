@@ -240,6 +240,7 @@
     <string name="usage_stats_permission_description">Enables faster application size calculation during backups instead of scanning directories</string>
 
     <string name="progress_initializing">Initializing…</string>
+    <string name="progress_in_progress">Running…</string>
     <string name="progress_stopping">Stopping…</string>
     <string name="progress_operation_complete">%1$s Complete</string>
     <string name="progress_operation_failed">%1$s Failed</string>

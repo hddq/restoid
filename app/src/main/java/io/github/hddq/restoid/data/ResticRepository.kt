@@ -75,16 +75,25 @@ class ResticRepository(
         password: String,
         readAllData: Boolean,
         environmentVariables: Map<String, String> = emptyMap(),
-        resticOptions: Map<String, String> = emptyMap()
+        resticOptions: Map<String, String> = emptyMap(),
+        onOutputLine: ((String) -> Unit)? = null
     ): Result<String> {
         val args = if (readAllData) "check --read-data" else "check"
+        val stdoutCallback = onOutputLine?.let { cb ->
+            object : CallbackList<String>(Runnable::run, ArrayList()) {
+                override fun onAddElement(line: String) {
+                    cb(line)
+                }
+            }
+        }
         return executor.execute(
             repoPath,
             password,
             args,
             context.getString(R.string.restic_failure_check_repository),
             environmentVariables = environmentVariables,
-            resticOptions = resticOptions
+            resticOptions = resticOptions,
+            stdoutCallback = stdoutCallback
         )
     }
 
@@ -92,15 +101,24 @@ class ResticRepository(
         repoPath: String,
         password: String,
         environmentVariables: Map<String, String> = emptyMap(),
-        resticOptions: Map<String, String> = emptyMap()
+        resticOptions: Map<String, String> = emptyMap(),
+        onOutputLine: ((String) -> Unit)? = null
     ): Result<String> {
+        val stdoutCallback = onOutputLine?.let { cb ->
+            object : CallbackList<String>(Runnable::run, ArrayList()) {
+                override fun onAddElement(line: String) {
+                    cb(line)
+                }
+            }
+        }
         return executor.execute(
             repoPath,
             password,
             "prune",
             context.getString(R.string.restic_failure_prune_repository),
             environmentVariables = environmentVariables,
-            resticOptions = resticOptions
+            resticOptions = resticOptions,
+            stdoutCallback = stdoutCallback
         )
     }
 
