@@ -107,6 +107,7 @@ class NotificationRepository(private val context: Context) {
     }
 
     fun buildOperationProgressNotification(operationName: String, progress: OperationProgress): Notification {
+        val isOverallIndeterminate = progress.isOverallIndeterminate
         val overallPercent = (progress.overallPercentage.coerceIn(0f, 1f) * 100).toInt()
         val stagePercent = (progress.stagePercentage.coerceIn(0f, 1f) * 100).toInt()
         
@@ -119,20 +120,26 @@ class NotificationRepository(private val context: Context) {
             progress.totalFiles
         )
 
-        val contentText = if (progress.totalFiles > 0) {
-            "$filesText | $processedSize / $totalSize"
-        } else {
-            context.getString(R.string.notification_scanning_files)
+        val contentText = when {
+            progress.totalFiles > 0 -> "$filesText | $processedSize / $totalSize"
+            progress.currentActivity.isNotBlank() -> progress.currentActivity
+            progress.currentFile.isNotBlank() -> progress.currentFile
+            progress.isStageIndeterminate || progress.isOverallIndeterminate -> context.getString(R.string.progress_in_progress)
+            else -> context.getString(R.string.notification_scanning_files)
         }
 
-        val title = progress.stageTitle.let { "$it ($stagePercent%)" }
+        val title = if (progress.isStageIndeterminate) {
+            progress.stageTitle
+        } else {
+            "${progress.stageTitle} ($stagePercent%)"
+        }
 
         val match = Regex("^\\[(\\d+)/(\\d+)\\]").find(progress.stageTitle)
         val currentStage = match?.groupValues?.get(1)?.toIntOrNull() ?: 1
         val totalStages = match?.groupValues?.get(2)?.toIntOrNull() ?: 1
 
         val progressStyle = NotificationCompat.ProgressStyle()
-        if (totalStages > 1) {
+        if (totalStages > 1 && !isOverallIndeterminate) {
             val segments = mutableListOf<NotificationCompat.ProgressStyle.Segment>()
             val points = mutableListOf<NotificationCompat.ProgressStyle.Point>()
             val weight = 100 / totalStages
@@ -152,25 +159,36 @@ class NotificationRepository(private val context: Context) {
             progressStyle.setProgressPoints(points)
         }
         
-        // Ensure the ProgressStyle itself knows the current progress
-        progressStyle.setProgress(overallPercent)
+        if (!isOverallIndeterminate) {
+            progressStyle.setProgress(overallPercent)
+        }
 
-        return NotificationCompat.Builder(context, PROGRESS_CHANNEL_ID)
+        val tickerText = if (isOverallIndeterminate) {
+            context.getString(R.string.progress_in_progress)
+        } else {
+            "$overallPercent%"
+        }
+
+        val builder = NotificationCompat.Builder(context, PROGRESS_CHANNEL_ID)
             .setContentTitle(title)
             .setContentText(contentText)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            .setProgress(100, overallPercent, false)
-            .setStyle(progressStyle)
-            .setTicker("$overallPercent%")
-            .setShortCriticalText("$overallPercent%")
+            .setProgress(100, overallPercent, isOverallIndeterminate)
+            .setTicker(tickerText)
+            .setShortCriticalText(tickerText)
             .addExtras(android.os.Bundle().apply {
                 putBoolean(Notification.EXTRA_REQUEST_PROMOTED_ONGOING, true)
             })
             .setContentIntent(createPendingIntent())
-            .build()
+
+        if (!isOverallIndeterminate) {
+            builder.setStyle(progressStyle)
+        }
+
+        return builder.build()
     }
 
     fun buildOperationFinishedNotification(

@@ -80,7 +80,7 @@ class ResticRepository(
     ): Result<String> {
         val args = if (readAllData) "check --read-data" else "check"
         val stdoutCallback = onOutputLine?.let { cb ->
-            object : CallbackList<String>(Runnable::run) {
+            object : CallbackList<String>(Runnable::run, ArrayList()) {
                 override fun onAddElement(line: String) {
                     cb(line)
                 }
@@ -105,7 +105,7 @@ class ResticRepository(
         onOutputLine: ((String) -> Unit)? = null
     ): Result<String> {
         val stdoutCallback = onOutputLine?.let { cb ->
-            object : CallbackList<String>(Runnable::run) {
+            object : CallbackList<String>(Runnable::run, ArrayList()) {
                 override fun onAddElement(line: String) {
                     cb(line)
                 }
