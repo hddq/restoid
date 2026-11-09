@@ -40,7 +40,7 @@ fun AboutSettings(onNavigateToLicenses: () -> Unit) {
         }
     }
     val githubIntent = remember { Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/hddq/restoid")) }
-    val weblateIntent = remember { Intent(Intent.ACTION_VIEW, Uri.parse("https://hosted.weblate.org/projects/restoid/")) }
+    val crowdinIntent = remember { Intent(Intent.ACTION_VIEW, Uri.parse("https://crowdin.com/project/restoid")) }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         ExpressiveSectionHeader(title = stringResource(R.string.about_title))
@@ -67,7 +67,7 @@ fun AboutSettings(onNavigateToLicenses: () -> Unit) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { context.startActivity(weblateIntent) }
+                        .clickable { context.startActivity(crowdinIntent) }
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
