@@ -46,7 +46,10 @@ class RestoreOperationRunner(
         }
 
         val startTime = System.currentTimeMillis()
-        var progressState = OperationProgress(stageTitle = context.getString(R.string.progress_initializing))
+        var progressState = OperationProgress(
+            stageTitle = context.getString(R.string.progress_initializing),
+            isStageIndeterminate = true
+        )
         onProgress(progressState)
         throwIfCancelled()
 

@@ -15,11 +15,14 @@ object OperationWorkContract {
     private const val KEY_STAGE_TITLE = "stage_title"
     private const val KEY_STAGE_PERCENTAGE = "stage_percentage"
     private const val KEY_OVERALL_PERCENTAGE = "overall_percentage"
+    private const val KEY_IS_STAGE_INDETERMINATE = "is_stage_indeterminate"
+    private const val KEY_IS_OVERALL_INDETERMINATE = "is_overall_indeterminate"
     private const val KEY_TOTAL_FILES = "total_files"
     private const val KEY_FILES_PROCESSED = "files_processed"
     private const val KEY_TOTAL_BYTES = "total_bytes"
     private const val KEY_BYTES_PROCESSED = "bytes_processed"
     private const val KEY_CURRENT_FILE = "current_file"
+    private const val KEY_CURRENT_ACTIVITY = "current_activity"
     private const val KEY_ELAPSED_TIME = "elapsed_time"
     private const val KEY_ERROR = "error"
     private const val KEY_IS_FINISHED = "is_finished"
@@ -43,11 +46,14 @@ object OperationWorkContract {
             .putString(KEY_STAGE_TITLE, progress.stageTitle)
             .putFloat(KEY_STAGE_PERCENTAGE, progress.stagePercentage)
             .putFloat(KEY_OVERALL_PERCENTAGE, progress.overallPercentage)
+            .putBoolean(KEY_IS_STAGE_INDETERMINATE, progress.isStageIndeterminate)
+            .putBoolean(KEY_IS_OVERALL_INDETERMINATE, progress.isOverallIndeterminate)
             .putInt(KEY_TOTAL_FILES, progress.totalFiles)
             .putInt(KEY_FILES_PROCESSED, progress.filesProcessed)
             .putLong(KEY_TOTAL_BYTES, progress.totalBytes)
             .putLong(KEY_BYTES_PROCESSED, progress.bytesProcessed)
             .putString(KEY_CURRENT_FILE, progress.currentFile)
+            .putString(KEY_CURRENT_ACTIVITY, progress.currentActivity)
             .putLong(KEY_ELAPSED_TIME, progress.elapsedTime)
             .putString(KEY_ERROR, progress.error)
             .putBoolean(KEY_IS_FINISHED, progress.isFinished)
@@ -76,11 +82,14 @@ object OperationWorkContract {
             stageTitle = data.getString(KEY_STAGE_TITLE).orEmpty(),
             stagePercentage = data.getFloat(KEY_STAGE_PERCENTAGE, 0f),
             overallPercentage = data.getFloat(KEY_OVERALL_PERCENTAGE, 0f),
+            isStageIndeterminate = data.getBoolean(KEY_IS_STAGE_INDETERMINATE, false),
+            isOverallIndeterminate = data.getBoolean(KEY_IS_OVERALL_INDETERMINATE, false),
             totalFiles = data.getInt(KEY_TOTAL_FILES, 0),
             filesProcessed = data.getInt(KEY_FILES_PROCESSED, 0),
             totalBytes = data.getLong(KEY_TOTAL_BYTES, 0L),
             bytesProcessed = data.getLong(KEY_BYTES_PROCESSED, 0L),
             currentFile = data.getString(KEY_CURRENT_FILE).orEmpty(),
+            currentActivity = data.getString(KEY_CURRENT_ACTIVITY).orEmpty(),
             elapsedTime = data.getLong(KEY_ELAPSED_TIME, 0L),
             error = data.getString(KEY_ERROR),
             isFinished = data.getBoolean(KEY_IS_FINISHED, false),

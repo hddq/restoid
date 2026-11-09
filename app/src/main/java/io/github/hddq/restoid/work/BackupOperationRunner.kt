@@ -100,11 +100,12 @@ class BackupOperationRunner(
             repoPath = currentRepoPath
             password = currentPassword
 
-            val emitStageProgress: (String, Float, Float) -> Unit = { stageTitle, stagePercentage, overallPercentage ->
+            val emitStageProgress: (String, Float, Float, Boolean) -> Unit = { stageTitle, stagePercentage, overallPercentage, isStageIndeterminate ->
                 progressState = progressState.copy(
                     stageTitle = stageTitle,
                     stagePercentage = stagePercentage,
                     overallPercentage = overallPercentage,
+                    isStageIndeterminate = isStageIndeterminate,
                     elapsedTime = (System.currentTimeMillis() - startTime) / 1000,
                     isFinished = false
                 )
@@ -118,7 +119,8 @@ class BackupOperationRunner(
                     stageContext.totalStages
                 ),
                 0f,
-                0f
+                0f,
+                true
             )
             throwIfCancelled()
 
@@ -145,7 +147,7 @@ class BackupOperationRunner(
                 stageContext.absoluteStage(currentStage),
                 stageContext.totalStages
             )
-            emitStageProgress(stage2Title, 0f, (currentStage - 1f) / totalStages)
+            emitStageProgress(stage2Title, 0f, (currentStage - 1f) / totalStages, false)
             throwIfCancelled()
 
             val mediaRwRegex = Regex("^/mnt/media_rw/([A-Fa-f0-9-]+)(?:/(.*))?$")
@@ -263,6 +265,7 @@ class BackupOperationRunner(
                         progressState = progressUpdate.copy(
                             isFinished = false,
                             stageTitle = stage2Title,
+                            isStageIndeterminate = false,
                             overallPercentage = (currentStage - 1 + progressUpdate.stagePercentage) / totalStages,
                             elapsedTime = (System.currentTimeMillis() - startTime) / 1000
                         )
@@ -298,7 +301,7 @@ class BackupOperationRunner(
                 stageContext.absoluteStage(currentStage),
                 stageContext.totalStages
             )
-            emitStageProgress(stage3Title, 0f, (currentStage - 1f) / totalStages)
+            emitStageProgress(stage3Title, 0f, (currentStage - 1f) / totalStages, true)
             throwIfCancelled()
 
             try {
@@ -335,7 +338,7 @@ class BackupOperationRunner(
                 repositoryResticOptions
             )
             throwIfCancelled()
-            emitStageProgress(stage3Title, 1f, 1f)
+            emitStageProgress(stage3Title, 1f, 1f, false)
 
             isSuccess = true
             summary = finalSummaryProgress?.finalSummary
