@@ -51,17 +51,15 @@ All contributions are welcome!
 
 ## 🌐 Translations
 
-Translations for Restoid are managed via Weblate. If you'd like to help translate the app, [please visit the project page](https://hosted.weblate.org/projects/restoid/)
+Translations for Restoid are managed via Crowdin. If you'd like to help translate the app into your language, [please visit the project page](https://crowdin.com/project/restoid).
 
-<a href="https://hosted.weblate.org/engage/restoid/"><img src="https://hosted.weblate.org/widget/restoid/multi-auto.svg?threshold=0" alt="Translation status"></a>
+<a href="https://crowdin.com/project/restoid"><img src="https://badges.crowdin.net/restoid/localized.svg" alt="Translation status"></a>
 
 ### 🌍 How to contribute translations:
 
-- Create an account on Weblate (if you don't already have one).
-- Pick a language and translate strings using Weblate's web interface.
-- Submitted translations will be reviewed by the maintainers and integrated into the project.
-
-If you prefer to contribute translations through GitHub (by editing Android string resources directly), open a pull request.
+- Create an account on [Crowdin](https://crowdin.com/) (if you don't already have one).
+- Join the Restoid project, pick a language, and translate strings using Crowdin's web editor.
+- Translated strings are automatically synchronized with the repository via GitHub Actions.
 
 ## 📜 License
 
