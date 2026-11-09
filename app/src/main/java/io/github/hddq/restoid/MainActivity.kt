@@ -63,6 +63,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -309,7 +310,7 @@ class MainActivity : FragmentActivity() {
                     val homeViewModel: HomeViewModel = viewModel(
                         factory = HomeViewModelFactory(app, app.repositoriesRepository, app.resticBinaryManager, app.resticRepository, app.appInfoRepository, app.metadataRepository, app.operationWorkRepository)
                     )
-                    val homeUiState by homeViewModel.uiState.collectAsState()
+                    val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
 
                     val isNavigationAllowed = isAppUnlocked || !app.preferencesRepository.loadRequireAppUnlock()
 
