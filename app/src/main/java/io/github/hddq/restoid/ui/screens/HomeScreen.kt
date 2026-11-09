@@ -110,54 +110,54 @@ fun HomeScreen(
         }
     }
 
-    PullToRefreshBox(
-        isRefreshing = uiState.isRefreshing,
-        onRefresh = onRefresh,
-        modifier = modifier.fillMaxSize()
-    ) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 88.dp)
-        ) {
-            if (isOperationActive) {
-                item(key = "active_operation") {
-                    ActiveOperationBanner(
-                        activeOp = activeOp,
-                        onOpenOperationProgress = onOpenOperationProgress,
-                        onForceStopClick = { showForceStopDialog = true }
-                    )
-                }
-            }
+    Column(modifier = modifier.fillMaxSize()) {
+        if (isOperationActive) {
+            ActiveOperationBanner(
+                activeOp = activeOp,
+                onOpenOperationProgress = onOpenOperationProgress,
+                onForceStopClick = { showForceStopDialog = true },
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp)
+            )
+        }
 
-            when {
-                uiState.selectedRepo == null -> {
-                    item(key = "no_repo_selected") {
-                        Text(
-                            text = stringResource(R.string.no_repository_selected),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                uiState.resticState !is ResticState.Installed -> {
-                    item(key = "restic_not_available") {
-                        Text(
-                            text = stringResource(R.string.restic_not_available_check_settings),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
-                }
-                uiState.isLoading && !uiState.isRefreshing -> {
-                    item(key = "loading") {
-                        Box(
-                            modifier = Modifier.fillParentMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            LoadingIndicator()
+        PullToRefreshBox(
+            isRefreshing = uiState.isRefreshing,
+            onRefresh = onRefresh,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 88.dp)
+            ) {
+                when {
+                    uiState.selectedRepo == null -> {
+                        item(key = "no_repo_selected") {
+                            Text(
+                                text = stringResource(R.string.no_repository_selected),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
-                }
+                    uiState.resticState !is ResticState.Installed -> {
+                        item(key = "restic_not_available") {
+                            Text(
+                                text = stringResource(R.string.restic_not_available_check_settings),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                    uiState.isLoading && (uiState.snapshotsWithMetadata.isEmpty() || !uiState.isRefreshing) -> {
+                        item(key = "loading") {
+                            Box(
+                                modifier = Modifier.fillParentMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                LoadingIndicator()
+                            }
+                        }
+                    }
                 uiState.error != null -> {
                     val errorMessage = uiState.error
                     item(key = "error_content") {
@@ -273,6 +273,7 @@ fun HomeScreen(
             }
         }
     }
+}
 
     if (showForceStopDialog && isOperationActive) {
         AlertDialog(
@@ -454,7 +455,6 @@ private fun ActiveOperationBanner(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(bottom = 16.dp)
             .clip(RoundedCornerShape(24.dp))
             .clickable(onClick = onOpenOperationProgress),
         shape = RoundedCornerShape(24.dp),
