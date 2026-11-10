@@ -29,7 +29,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SuggestionChip
@@ -49,6 +48,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -94,13 +95,16 @@ fun SnapshotDetailsScreen(
     val forgetResult by viewModel.forgetResult.collectAsState()
 
     val appBarActions = LocalAppBarActions.current
-    DisposableEffect(snapshotId) {
+    DisposableEffect(snapshotId, isForgetting) {
         appBarActions.value = {
-            IconButton(onClick = { viewModel.onForgetSnapshot() }) {
+            IconButton(
+                onClick = { viewModel.onForgetSnapshot() },
+                enabled = !isForgetting
+            ) {
                 Icon(
                     Icons.Outlined.Delete,
                     contentDescription = stringResource(R.string.cd_forget_snapshot),
-                    tint = MaterialTheme.colorScheme.error
+                    tint = if (isForgetting) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) else MaterialTheme.colorScheme.error
                 )
             }
         }
@@ -121,6 +125,7 @@ fun SnapshotDetailsScreen(
 
     if (showConfirmDialog) {
         ConfirmForgetDialog(
+            isForgetting = isForgetting,
             onConfirm = {
                 viewModel.confirmForgetSnapshot()
             },
@@ -212,13 +217,6 @@ fun SnapshotDetailsScreen(
             }
             else -> if (!isLoading) Text(stringResource(R.string.snapshot_not_found))
         }
-
-        if (isForgetting) {
-            Spacer(Modifier.height(16.dp))
-            LinearWavyProgressIndicator(modifier = Modifier.fillMaxWidth())
-            Text(stringResource(R.string.snapshot_forgetting), modifier = Modifier.align(Alignment.CenterHorizontally))
-            Spacer(Modifier.height(16.dp))
-        }
     }
 }
 
@@ -300,25 +298,56 @@ fun BackedUpAppItem(detail: BackupDetail) {
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun ConfirmForgetDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+fun ConfirmForgetDialog(
+    isForgetting: Boolean,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val forgettingDescription = stringResource(R.string.snapshot_forgetting)
+
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = {
+            if (!isForgetting) {
+                onDismiss()
+            }
+        },
         title = { Text(stringResource(R.string.dialog_forget_snapshot_title)) },
         text = { Text(stringResource(R.string.dialog_forget_snapshot_message)) },
         confirmButton = {
             Button(
                 onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                enabled = !isForgetting,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                modifier = if (isForgetting) {
+                    Modifier.semantics { contentDescription = forgettingDescription }
+                } else {
+                    Modifier
+                }
             ) {
-                Text(stringResource(R.string.action_forget))
+                if (isForgetting) {
+                    LoadingIndicator(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .semantics { contentDescription = forgettingDescription },
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                } else {
+                    Text(stringResource(R.string.action_forget))
+                }
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                enabled = !isForgetting
+            ) {
                 Text(stringResource(R.string.action_cancel))
             }
-        }
+        },
+        modifier = modifier
     )
 }
 
