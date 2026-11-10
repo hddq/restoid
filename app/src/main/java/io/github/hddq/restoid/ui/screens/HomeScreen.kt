@@ -49,7 +49,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -124,24 +123,25 @@ fun HomeScreen(
         val sortedSnapshots = remember(uiState.snapshotsWithMetadata) {
             uiState.snapshotsWithMetadata.sortedByDescending { it.snapshotInfo.time }
         }
-        val screenWidthDp = LocalConfiguration.current.screenWidthDp.dp
-        val maxIconsPossible = remember(screenWidthDp) {
-            val contentWidth = (screenWidthDp - 64.dp).coerceAtLeast(32.dp)
-            val iconSize = 32.dp
-            val spacing = 8.dp
-            ((contentWidth + spacing) / (iconSize + spacing)).toInt().coerceAtLeast(1)
-        }
 
-        PullToRefreshBox(
-            isRefreshing = uiState.isRefreshing,
-            onRefresh = onRefresh,
-            modifier = Modifier.fillMaxSize()
-        ) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 88.dp)
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            val maxIconsPossible = remember(maxWidth) {
+                val contentWidth = (maxWidth - 64.dp).coerceAtLeast(32.dp)
+                val iconSize = 32.dp
+                val spacing = 8.dp
+                ((contentWidth + spacing) / (iconSize + spacing)).toInt().coerceAtLeast(1)
+            }
+
+            PullToRefreshBox(
+                isRefreshing = uiState.isRefreshing,
+                onRefresh = onRefresh,
+                modifier = Modifier.fillMaxSize()
             ) {
-                when {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 88.dp)
+                ) {
+                    when {
                     uiState.selectedRepo == null -> {
                         item(key = "no_repo_selected") {
                             Text(
@@ -277,8 +277,9 @@ fun HomeScreen(
                                 snapshotWithMetadata = item,
                                 apps = uiState.appInfoMap[item.snapshotInfo.id],
                                 maxIconsPossible = maxIconsPossible,
-                                onClick = { onSnapshotClick(item.snapshotInfo.id) }
-                            )
+                                    onClick = { onSnapshotClick(item.snapshotInfo.id) }
+                                )
+                            }
                         }
                     }
                 }

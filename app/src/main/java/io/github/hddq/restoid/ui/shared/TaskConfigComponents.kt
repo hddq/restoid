@@ -544,17 +544,9 @@ fun BackupConfigScreen(
     val context = LocalContext.current
 
     DisposableEffect(lifecycleOwner) {
-        var hasPaused = false
         val observer = LifecycleEventObserver { _, event ->
-            when (event) {
-                Lifecycle.Event.ON_PAUSE -> hasPaused = true
-                Lifecycle.Event.ON_RESUME -> {
-                    if (hasPaused || (apps.isEmpty() && !isLoadingApps)) {
-                        hasPaused = false
-                        onRefreshApps()
-                    }
-                }
-                else -> Unit
+            if (event == Lifecycle.Event.ON_RESUME) {
+                onRefreshApps()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -578,7 +570,7 @@ fun BackupConfigScreen(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp, top = 8.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
-        if (isLoadingApps && apps.isEmpty()) {
+        if (isLoadingApps) {
             item(key = "loading", contentType = "loading") {
                 Box(
                     modifier = Modifier

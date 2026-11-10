@@ -984,12 +984,12 @@ class RepositoriesRepository(
                         Shell.cmd("chown -R $owner ${shellQuote(tempRestoreDir.absolutePath)}").exec()
                         Shell.cmd("chmod -R u+rwX ${shellQuote(tempRestoreDir.absolutePath)}").exec()
                         val cpResult = Shell.cmd("cp -a ${shellQuote(tempRestoreDir.absolutePath + "/.")} ${shellQuote(finalMetadataParentDir.absolutePath + "/")}").exec()
-                        Shell.cmd("chown -R $owner ${shellQuote(finalMetadataParentDir.absolutePath)}").exec()
-                        Shell.cmd("chmod -R u+rwX ${shellQuote(finalMetadataParentDir.absolutePath)}").exec()
-                        if (cpResult.isSuccess) {
+                        val chownDestResult = Shell.cmd("chown -R $owner ${shellQuote(finalMetadataParentDir.absolutePath)}").exec()
+                        val chmodDestResult = Shell.cmd("chmod -R u+rwX ${shellQuote(finalMetadataParentDir.absolutePath)}").exec()
+                        if (cpResult.isSuccess && chownDestResult.isSuccess && chmodDestResult.isSuccess) {
                             Result.success(Unit)
                         } else {
-                            Result.failure(Exception("Failed to copy metadata files"))
+                            Result.failure(Exception("Failed to copy or set permissions on metadata files"))
                         }
                     } else {
                         try {
@@ -1053,7 +1053,6 @@ class RepositoriesRepository(
 
             if (restoreOutcome.isSuccess) {
                 resticRepository.clearSnapshots()
-                resticRepository.getSnapshots(repoPath, password, environmentVariables, resticOptions)
             }
 
             restoreOutcome
