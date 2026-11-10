@@ -111,6 +111,15 @@ class SettingsViewModel(
     private val _requireAppUnlock = MutableStateFlow(preferencesRepository.loadRequireAppUnlock())
     val requireAppUnlock = _requireAppUnlock.asStateFlow()
 
+    private val _deviceHostname = MutableStateFlow(preferencesRepository.getDeviceHostname())
+    val deviceHostname = _deviceHostname.asStateFlow()
+
+    private val _customDeviceHostname = MutableStateFlow(preferencesRepository.getCustomDeviceHostname())
+    val customDeviceHostname = _customDeviceHostname.asStateFlow()
+
+    val defaultDeviceHostname: String
+        get() = preferencesRepository.getDefaultDeviceHostname()
+
     private val _isIgnoringBatteryOptimizations = MutableStateFlow(false)
     val isIgnoringBatteryOptimizations = _isIgnoringBatteryOptimizations.asStateFlow()
 
@@ -270,6 +279,12 @@ class SettingsViewModel(
     fun onRequireAppUnlockChanged(required: Boolean) {
         _requireAppUnlock.value = required
         preferencesRepository.saveRequireAppUnlock(required)
+    }
+
+    fun onDeviceHostnameChanged(hostname: String?) {
+        preferencesRepository.saveDeviceHostname(hostname)
+        _customDeviceHostname.value = preferencesRepository.getCustomDeviceHostname()
+        _deviceHostname.value = preferencesRepository.getDeviceHostname()
     }
 
     fun refreshBatteryOptimizationStatus() {
