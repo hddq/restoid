@@ -889,63 +889,31 @@ class HomeViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isForgettingSnapshot = true) }
             try {
-                val repoKey = repositoriesRepository.selectedRepository.first()
-                val repo = repoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
-                val repoPath = repo?.path
-                val password = repoKey?.let { repositoriesRepository.getRepositoryPassword(it) }
-                val repoId = repo?.id
-
-                if (repoPath != null && password != null && repoId != null) {
-                    val executionEnvironment = repositoriesRepository.getExecutionEnvironmentVariables(repoKey)
-                    val resticOptions = repositoriesRepository.getExecutionResticOptions(repoKey)
-
-                    val result = resticRepository.forgetSnapshot(
-                        repoPath,
-                        password,
-                        snapshotId,
-                        executionEnvironment,
-                        resticOptions
-                    )
-                    result.fold(
-                        onSuccess = {
-                            val deleted = metadataRepository.deleteMetadataForSnapshot(repoId, snapshotId)
-                            if (deleted) {
-                                resticRepository.backupMetadata(
-                                    repoId,
-                                    repoPath,
-                                    password,
-                                    executionEnvironment,
-                                    resticOptions
-                                )
-                            }
-                            _uiState.update {
-                                it.copy(
-                                    snapshotPendingForget = null,
-                                    isForgettingSnapshot = false
-                                )
-                            }
-                        },
-                        onFailure = { error ->
-                            val msg = error.message ?: context.getString(R.string.error_unknown)
-                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
-                            _uiState.update {
-                                it.copy(
-                                    snapshotPendingForget = null,
-                                    isForgettingSnapshot = false
-                                )
-                            }
+                val result = repositoriesRepository.forgetSnapshot(
+                    snapshotId = snapshotId,
+                    resticRepository = resticRepository,
+                    metadataRepository = metadataRepository
+                )
+                result.fold(
+                    onSuccess = {
+                        _uiState.update {
+                            it.copy(
+                                snapshotPendingForget = null,
+                                isForgettingSnapshot = false
+                            )
                         }
-                    )
-                } else {
-                    val msg = context.getString(R.string.error_repository_password_or_id_not_found)
-                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
-                    _uiState.update {
-                        it.copy(
-                            snapshotPendingForget = null,
-                            isForgettingSnapshot = false
-                        )
+                    },
+                    onFailure = { error ->
+                        val msg = error.message ?: context.getString(R.string.error_unknown)
+                        Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                        _uiState.update {
+                            it.copy(
+                                snapshotPendingForget = null,
+                                isForgettingSnapshot = false
+                            )
+                        }
                     }
-                }
+                )
             } catch (e: Exception) {
                 val msg = e.message ?: context.getString(R.string.error_unknown)
                 Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
