@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">Restoid</string>
     <string name="screen_home">Strona główna</string>
     <string name="screen_settings">Ustawienia</string>
     <string name="screen_snapshot_details">Szczegóły migawki</string>
