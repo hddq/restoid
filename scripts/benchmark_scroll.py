@@ -134,8 +134,8 @@ def check_benchmark_variant_exists():
 
 def build_and_install(variant, device_abi):
     if variant == "benchmark" and not check_benchmark_variant_exists():
-        print("Warning: 'benchmark' variant not found in app/build.gradle.kts. Falling back to 'release'.", file=sys.stderr)
-        variant = "release"
+        print("Warning: 'benchmark' variant not found in app/build.gradle.kts. Falling back to 'debug'.", file=sys.stderr)
+        variant = "debug"
 
     info = VARIANT_MAP.get(variant)
     if not info:
@@ -257,11 +257,18 @@ def nav_to_applist(pkg, w, h):
 
     root2 = dump_ui_hierarchy()
     def is_apps_card(node):
-        text = (node.attrib.get("text") or "").lower()
-        desc = (node.attrib.get("content-desc") or "").lower()
-        if any(k in text or k in desc for k in ["application", "aplikac", "anwend", "aplicat", "applicaz", "app"]):
+        text = (node.attrib.get("text") or "").strip().lower()
+        desc = (node.attrib.get("content-desc") or "").strip().lower()
+        valid_titles = [
+            "applications", "aplikacje", "anwendungen", "aplicaciones",
+            "aplicativos", "applicazioni", "приложения", "tất cả ứng dụng",
+            "các ứng dụng", "uygulamalar", "aplikasi", "zadaci", "작업",
+            "애플리케이션", "应用程序", "アプリ"
+        ]
+        if text in valid_titles or desc in valid_titles:
             return True
-        return False
+        prefixes = ["application", "aplikac", "anwend", "aplicat", "applicaz", "приложен"]
+        return any(text.startswith(p) or desc.startswith(p) for p in prefixes)
 
     apps_node = find_node(root2, is_apps_card)
     if apps_node is not None:
@@ -277,10 +284,24 @@ def nav_to_applist(pkg, w, h):
     if root3 is not None:
         def is_root_denied(node):
             text = (node.attrib.get("text") or "").lower()
-            return "root" in text and ("denied" in text or "odmow" in text or "verweigert" in text)
+            return "root" in text and ("denied" in text or "odmow" in text or "verweigert" in text or "denegado" in text)
 
         if find_node(root3, is_root_denied):
-            print("[-] Warning: Root access is denied. Cannot open Applications backup list without root.", file=sys.stderr)
+            print("[-] Error: Root access is denied. Cannot open Applications backup list without root.", file=sys.stderr)
+            return False
+
+        def is_in_applist(node):
+            text = (node.attrib.get("text") or "").lower()
+            desc = (node.attrib.get("content-desc") or "").lower()
+            combined = text + " " + desc
+            if any(k in combined for k in ["select all", "zaznacz", "alle ausw", "seleccionar", "tout s", "seleziona", "выбрать все"]):
+                return True
+            if any(part.startswith(("com.", "org.", "io.", "android.")) for part in combined.split()):
+                return True
+            return False
+
+        if not find_node(root3, is_in_applist):
+            print("[-] Error: Applications list failed to open (screen did not transition).", file=sys.stderr)
             return False
 
     return True
@@ -296,14 +317,31 @@ def nav_to_snapshot_details(pkg, w, h):
     root = dump_ui_hierarchy()
     # Dynamically find the first snapshot card (8-character hex snapshot ID)
     snap_node = find_node(root, lambda n: bool(re.match(r"^[0-9a-f]{8}$", n.attrib.get("text", ""))))
-    if snap_node is not None:
-        sx, sy = get_node_center(snap_node)
-        run_adb(["shell", "input", "tap", str(sx), str(sy)], check=False)
-        time.sleep(2.0)
-        return True
-    else:
-        print("[-] Warning: No snapshot found on Home screen to open.", file=sys.stderr)
+    if snap_node is None:
+        print("[-] Error: No snapshot found on Home screen to open. Prerequisite: repository must contain at least one snapshot.", file=sys.stderr)
         return False
+
+    sx, sy = get_node_center(snap_node)
+    run_adb(["shell", "input", "tap", str(sx), str(sy)], check=False)
+    time.sleep(2.0)
+
+    # Verify that SnapshotDetailsScreen actually opened
+    root2 = dump_ui_hierarchy()
+    if root2 is not None:
+        def is_details_screen(node):
+            desc = (node.attrib.get("content-desc") or "").lower()
+            text = (node.attrib.get("text") or "").lower()
+            return (
+                "forget" in desc or "delete" in desc or "navigate up" in desc
+                or "usunię" in desc or "löschen" in desc or "general" in text
+                or "metadata" in text or "backed up" in text
+            )
+
+        if not find_node(root2, is_details_screen):
+            print("[-] Error: Snapshot details screen failed to open.", file=sys.stderr)
+            return False
+
+    return True
 
 def leave_snapshot_details(pkg, w, h):
     run_adb(["shell", "input", "keyevent", "KEYCODE_BACK"], check=False)
@@ -436,7 +474,7 @@ def print_summary_table(all_results):
 
 def main():
     has_benchmark = check_benchmark_variant_exists()
-    default_variant = "benchmark" if has_benchmark else "release"
+    default_variant = "benchmark" if has_benchmark else "debug"
 
     parser = argparse.ArgumentParser(description="Restoid Scroll & Performance Benchmark")
     parser.add_argument("-b", "--build", action="store_true", help="Build and install variant before running")
@@ -456,8 +494,8 @@ def main():
 
     variant = args.variant
     if variant == "benchmark" and not has_benchmark and not args.pkg:
-        print("Note: 'benchmark' variant not found in app/build.gradle.kts. Defaulting to 'release'.")
-        variant = "release"
+        print("Note: 'benchmark' variant not found in app/build.gradle.kts. Defaulting to 'debug'.")
+        variant = "debug"
 
     if args.build:
         build_and_install(variant, abi)
