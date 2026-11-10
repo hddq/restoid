@@ -294,13 +294,13 @@ def nav_to_applist(pkg, w, h):
             text = (node.attrib.get("text") or "").lower()
             desc = (node.attrib.get("content-desc") or "").lower()
             combined = text + " " + desc
-            if any(k in combined for k in ["select all", "zaznacz", "alle ausw", "seleccionar", "tout s", "seleziona", "выбрать все"]):
-                return True
-            if any(part.startswith(("com.", "org.", "io.", "android.")) for part in combined.split()):
-                return True
-            return False
+            return any(k in combined for k in [
+                "toggle all", "select all", "zaznacz", "alle umschalten", "alle ausw",
+                "alternar tudo", "seleziona", "выбрать всё", "tout basculer", "apps",
+                "aplikacje", "anwendungen", "aplicaciones", "aplicativos"
+            ])
 
-        if not find_node(root3, is_in_applist):
+        if find_node(root3, is_in_applist) is None:
             print("[-] Error: Applications list failed to open (screen did not transition).", file=sys.stderr)
             return False
 
@@ -337,7 +337,7 @@ def nav_to_snapshot_details(pkg, w, h):
                 or "metadata" in text or "backed up" in text
             )
 
-        if not find_node(root2, is_details_screen):
+        if find_node(root2, is_details_screen) is None:
             print("[-] Error: Snapshot details screen failed to open.", file=sys.stderr)
             return False
 
