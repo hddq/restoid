@@ -78,7 +78,15 @@ def get_connected_device():
     if not devices:
         print("Error: No ADB device connected. Please connect your phone via ADB.", file=sys.stderr)
         sys.exit(1)
-    TARGET_DEVICE = os.environ.get("ANDROID_SERIAL") if os.environ.get("ANDROID_SERIAL") in devices else devices[0]
+    serial_env = os.environ.get("ANDROID_SERIAL")
+    if serial_env:
+        if serial_env in devices:
+            TARGET_DEVICE = serial_env
+        else:
+            print(f"Error: Specified ANDROID_SERIAL '{serial_env}' not found among connected online devices: {devices}", file=sys.stderr)
+            sys.exit(1)
+    else:
+        TARGET_DEVICE = devices[0]
     model = run_adb(["shell", "getprop", "ro.product.model"], check=False)
     abi = run_adb(["shell", "getprop", "ro.product.cpu.abi"], check=False)
     return TARGET_DEVICE, model, abi
@@ -113,7 +121,22 @@ def find_best_apk(apk_dir, device_abi):
             return apk
     return apks[0]
 
+def check_benchmark_variant_exists():
+    gradle_file = os.path.join(PROJECT_DIR, "app", "build.gradle.kts")
+    if os.path.exists(gradle_file):
+        try:
+            with open(gradle_file, "r") as f:
+                content = f.read()
+                return 'create("benchmark")' in content or 'getByName("benchmark")' in content
+        except Exception:
+            pass
+    return False
+
 def build_and_install(variant, device_abi):
+    if variant == "benchmark" and not check_benchmark_variant_exists():
+        print("Warning: 'benchmark' variant not found in app/build.gradle.kts. Falling back to 'release'.", file=sys.stderr)
+        variant = "release"
+
     info = VARIANT_MAP.get(variant)
     if not info:
         print(f"Unknown variant '{variant}'. Choose from: {list(VARIANT_MAP.keys())}", file=sys.stderr)
@@ -202,24 +225,65 @@ def nav_to_home(pkg, w, h):
 def nav_to_applist(pkg, w, h):
     nav_to_home(pkg, w, h)
     root = dump_ui_hierarchy()
-    tasks_node = find_node(root, lambda n: n.attrib.get("content-desc") == "Tasks" or n.attrib.get("text") == "Tasks" or n.attrib.get("class") == "android.widget.Button")
+
+    def is_tasks_fab(node):
+        text = (node.attrib.get("text") or "").lower()
+        desc = (node.attrib.get("content-desc") or "").lower()
+        # Matches common translations: Tasks, Zadania, Aufgaben, Tareas, Tâches, Tarefas, Attività
+        if any(k in text or k in desc for k in ["task", "zadania", "aufgab", "tarea", "tâche", "tarefa", "attività", "attivit"]):
+            return True
+        return False
+
+    tasks_node = find_node(root, is_tasks_fab)
+    if tasks_node is None:
+        # Search for a clickable control positioned in the bottom-right FAB region
+        def is_bottom_fab(node):
+            if node.attrib.get("clickable") == "true":
+                center = get_node_center(node)
+                if center:
+                    cx, cy = center
+                    if cx > w * 0.5 and int(h * 0.7) < cy < int(h * 0.95):
+                        return True
+            return False
+        tasks_node = find_node(root, is_bottom_fab)
+
     if tasks_node is not None:
         tx, ty = get_node_center(tasks_node)
     else:
         tx, ty = int(w * 0.84), int(h * 0.855)
+
     run_adb(["shell", "input", "tap", str(tx), str(ty)], check=False)
-    time.sleep(1.2)
+    time.sleep(1.5)
 
     root2 = dump_ui_hierarchy()
-    apps_node = find_node(root2, lambda n: "application" in n.attrib.get("text", "").lower() or "application" in n.attrib.get("content-desc", "").lower())
+    def is_apps_card(node):
+        text = (node.attrib.get("text") or "").lower()
+        desc = (node.attrib.get("content-desc") or "").lower()
+        if any(k in text or k in desc for k in ["application", "aplikac", "anwend", "aplicat", "applicaz", "app"]):
+            return True
+        return False
+
+    apps_node = find_node(root2, is_apps_card)
     if apps_node is not None:
         ax, ay = get_node_center(apps_node)
-        run_adb(["shell", "input", "tap", str(ax), str(ay)], check=False)
-        time.sleep(2.0)
-        return True
     else:
-        print("[-] Warning: Applications card not found on Tasks screen.", file=sys.stderr)
-        return False
+        ax, ay = w // 2, int(h * 0.28)
+
+    run_adb(["shell", "input", "tap", str(ax), str(ay)], check=False)
+    time.sleep(2.0)
+
+    # Verify that BackupConfigScreen is loaded and root access is not denied
+    root3 = dump_ui_hierarchy()
+    if root3 is not None:
+        def is_root_denied(node):
+            text = (node.attrib.get("text") or "").lower()
+            return "root" in text and ("denied" in text or "odmow" in text or "verweigert" in text)
+
+        if find_node(root3, is_root_denied):
+            print("[-] Warning: Root access is denied. Cannot open Applications backup list without root.", file=sys.stderr)
+            return False
+
+    return True
 
 def leave_applist(pkg, w, h):
     run_adb(["shell", "input", "keyevent", "KEYCODE_BACK"], check=False)
@@ -371,10 +435,13 @@ def print_summary_table(all_results):
     print("#" * 68 + "\n")
 
 def main():
+    has_benchmark = check_benchmark_variant_exists()
+    default_variant = "benchmark" if has_benchmark else "release"
+
     parser = argparse.ArgumentParser(description="Restoid Scroll & Performance Benchmark")
     parser.add_argument("-b", "--build", action="store_true", help="Build and install variant before running")
-    parser.add_argument("-v", "--variant", choices=["benchmark", "debug", "release"], default="benchmark",
-                        help="Build variant to test (default: benchmark)")
+    parser.add_argument("-v", "--variant", choices=["benchmark", "debug", "release"], default=default_variant,
+                        help=f"Build variant to test (default: {default_variant})")
     parser.add_argument("--screen", choices=["all", "home", "applist", "snapshot_details"], default="all",
                         help="Screen to benchmark: 'all' (default), 'home', 'applist', 'snapshot_details'")
     parser.add_argument("-p", "--pkg", help="Override target package name")
@@ -387,10 +454,15 @@ def main():
     dev_id, model, abi = get_connected_device()
     print(f"Connected Device : {model} ({dev_id}, ABI: {abi})")
 
-    if args.build:
-        build_and_install(args.variant, abi)
+    variant = args.variant
+    if variant == "benchmark" and not has_benchmark and not args.pkg:
+        print("Note: 'benchmark' variant not found in app/build.gradle.kts. Defaulting to 'release'.")
+        variant = "release"
 
-    pkg = args.pkg or VARIANT_MAP[args.variant]["pkg"]
+    if args.build:
+        build_and_install(variant, abi)
+
+    pkg = args.pkg or VARIANT_MAP[variant]["pkg"]
     print(f"Target Package   : {pkg}")
     print(f"Benchmark Target : screen='{args.screen}', swipes={args.swipes}")
 
@@ -415,9 +487,9 @@ def main():
         print_summary_table(all_results)
 
     if args.save:
-        has_valid_frames = any(v.get("total_frames", 0) > 0 for v in all_results.values() if isinstance(v, dict))
-        if not has_valid_frames:
-            print("[-] Error: No valid frame stats collected. Skipping save to avoid corrupting baseline.", file=sys.stderr)
+        failed_screens = [scr for scr in screens_to_run if not all_results.get(scr) or all_results[scr].get("total_frames", 0) == 0]
+        if failed_screens:
+            print(f"[-] Error: Benchmark failed or incomplete for screen(s): {', '.join(failed_screens)}. Skipping save to avoid corrupting baseline.", file=sys.stderr)
         else:
             with open(args.save, "w") as f:
                 json.dump(all_results, f, indent=2)
