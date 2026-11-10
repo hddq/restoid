@@ -1,8 +1,10 @@
 package io.github.hddq.restoid.ui.screens
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -23,6 +25,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.AlertDialog
@@ -30,6 +34,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LoadingIndicator
@@ -96,6 +102,10 @@ fun HomeScreen(
     onDismissSftpPasswordDialog: () -> Unit,
     onDismissRestCredentialsDialog: () -> Unit,
     onDismissS3CredentialsDialog: () -> Unit,
+    onRestoreSnapshotClick: (String) -> Unit = {},
+    onRequestForgetSnapshot: (String) -> Unit = {},
+    onConfirmForgetSnapshot: () -> Unit = {},
+    onDismissForgetDialog: () -> Unit = {},
     onOpenOperationProgress: () -> Unit = {},
     onForceStopOperation: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -265,7 +275,9 @@ fun HomeScreen(
                             SnapshotItem(
                                 snapshotWithMetadata = item,
                                 apps = uiState.appInfoMap[item.snapshotInfo.id],
-                                onClick = { onSnapshotClick(item.snapshotInfo.id) }
+                                onClick = { onSnapshotClick(item.snapshotInfo.id) },
+                                onRestoreClick = { onRestoreSnapshotClick(item.snapshotInfo.id) },
+                                onForgetClick = { onRequestForgetSnapshot(item.snapshotInfo.id) }
                             )
                         }
                     }
@@ -298,6 +310,14 @@ fun HomeScreen(
                     Text(stringResource(R.string.action_cancel))
                 }
             }
+        )
+    }
+
+    if (uiState.snapshotPendingForget != null) {
+        ConfirmForgetDialog(
+            isForgetting = uiState.isForgettingSnapshot,
+            onConfirm = onConfirmForgetSnapshot,
+            onDismiss = onDismissForgetDialog
         )
     }
 
@@ -511,12 +531,16 @@ private fun ActiveOperationBanner(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SnapshotItem(
     snapshotWithMetadata: SnapshotWithMetadata,
     apps: List<AppInfo>?,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onRestoreClick: () -> Unit,
+    onForgetClick: () -> Unit
 ) {
+    var menuExpanded by remember { mutableStateOf(false) }
     val snapshot = snapshotWithMetadata.snapshotInfo
     val context = androidx.compose.ui.platform.LocalContext.current
 
@@ -555,116 +579,161 @@ private fun SnapshotItem(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = { menuExpanded = true }
+                )
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                text = snapshot.id.take(8),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                fontFamily = FontFamily.Monospace
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = timeText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.End,
-                modifier = Modifier.weight(1f)
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Icon(
-                imageVector = Icons.Outlined.ChevronRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(18.dp)
-            )
-        }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = snapshot.id.take(8),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Monospace
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = timeText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Icon(
+                    imageVector = Icons.Outlined.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
 
-        val appCount = snapshotWithMetadata.metadata?.apps?.size ?: 0
-        val customDirCount = snapshotWithMetadata.metadata?.customDirectories?.size ?: 0
-        val totalCount = appCount + customDirCount
+            val appCount = snapshotWithMetadata.metadata?.apps?.size ?: 0
+            val customDirCount = snapshotWithMetadata.metadata?.customDirectories?.size ?: 0
+            val totalCount = appCount + customDirCount
 
-        if (totalCount > 0) {
-            Text(
-                pluralStringResource(R.plurals.backed_up_items_count, totalCount, totalCount),
-                style = MaterialTheme.typography.labelMedium
-            )
-            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                val iconSize = 32.dp
-                val spacing = 8.dp
-                val itemWidthWithSpacing = iconSize + spacing
-                val maxIconsPossible = ((maxWidth + spacing) / itemWidthWithSpacing).toInt().coerceAtLeast(1)
+            if (totalCount > 0) {
+                Text(
+                    pluralStringResource(R.plurals.backed_up_items_count, totalCount, totalCount),
+                    style = MaterialTheme.typography.labelMedium
+                )
+                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                    val iconSize = 32.dp
+                    val spacing = 8.dp
+                    val itemWidthWithSpacing = iconSize + spacing
+                    val maxIconsPossible = ((maxWidth + spacing) / itemWidthWithSpacing).toInt().coerceAtLeast(1)
 
-                val customDirSlot = if (customDirCount > 0) 1 else 0
-                val availableSlotsForApps = (maxIconsPossible - customDirSlot).coerceAtLeast(0)
-                val showCounter = appCount > availableSlotsForApps
-                val limit = if (showCounter) (availableSlotsForApps - 1).coerceAtLeast(0) else availableSlotsForApps
+                    val customDirSlot = if (customDirCount > 0) 1 else 0
+                    val availableSlotsForApps = (maxIconsPossible - customDirSlot).coerceAtLeast(0)
+                    val showCounter = appCount > availableSlotsForApps
+                    val limit = if (showCounter) (availableSlotsForApps - 1).coerceAtLeast(0) else availableSlotsForApps
 
-                Row(horizontalArrangement = Arrangement.spacedBy(spacing), verticalAlignment = Alignment.CenterVertically) {
-                    if (apps != null && apps.isNotEmpty() && appCount > 0) {
-                        apps.take(limit).forEach { app ->
-                            Image(
-                                painter = rememberAsyncImagePainter(model = app.icon),
-                                contentDescription = app.name,
-                                modifier = Modifier.size(iconSize)
-                            )
+                    Row(horizontalArrangement = Arrangement.spacedBy(spacing), verticalAlignment = Alignment.CenterVertically) {
+                        if (apps != null && apps.isNotEmpty() && appCount > 0) {
+                            apps.take(limit).forEach { app ->
+                                Image(
+                                    painter = rememberAsyncImagePainter(model = app.icon),
+                                    contentDescription = app.name,
+                                    modifier = Modifier.size(iconSize)
+                                )
+                            }
+                            val realMoreCount = appCount - limit
+                            if (realMoreCount > 0) {
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier
+                                        .size(iconSize)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.secondaryContainer)
+                                ) {
+                                    Text(
+                                        text = "+$realMoreCount",
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
                         }
-                        val realMoreCount = appCount - limit
-                        if (realMoreCount > 0) {
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier
-                                    .size(iconSize)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.secondaryContainer)
-                            ) {
+                        if (customDirCount > 0) {
+                            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(iconSize)) {
+                                Icon(
+                                    imageVector = Icons.Default.Folder,
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize(),
+                                    tint = MaterialTheme.colorScheme.secondaryContainer
+                                )
                                 Text(
-                                    text = "+$realMoreCount",
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                    text = customDirCount.toString(),
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
                                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
                         }
                     }
-                    if (customDirCount > 0) {
-                        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(iconSize)) {
-                            Icon(
-                                imageVector = Icons.Default.Folder,
-                                contentDescription = null,
-                                modifier = Modifier.fillMaxSize(),
-                                tint = MaterialTheme.colorScheme.secondaryContainer
-                            )
-                            Text(
-                                text = customDirCount.toString(),
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
-                                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
                 }
+            } else if (snapshotWithMetadata.metadata == null) {
+                Text(
+                    text = stringResource(R.string.metadata_missing_or_corrupted),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            } else {
+                Text(
+                    text = stringResource(R.string.no_app_info_for_snapshot),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-        } else if (snapshotWithMetadata.metadata == null) {
-            Text(
-                text = stringResource(R.string.metadata_missing_or_corrupted),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error
+        }
+
+        DropdownMenu(
+            expanded = menuExpanded,
+            onDismissRequest = { menuExpanded = false }
+        ) {
+            DropdownMenuItem(
+                text = {
+                    Text(text = stringResource(R.string.screen_restore))
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Outlined.Restore,
+                        contentDescription = null
+                    )
+                },
+                onClick = {
+                    menuExpanded = false
+                    onRestoreClick()
+                }
             )
-        } else {
-            Text(
-                text = stringResource(R.string.no_app_info_for_snapshot),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        text = stringResource(R.string.action_forget),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Outlined.Delete,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                },
+                onClick = {
+                    menuExpanded = false
+                    onForgetClick()
+                }
             )
         }
     }
