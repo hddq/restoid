@@ -490,6 +490,10 @@ class MainActivity : FragmentActivity() {
                             ) {
                                 HomeScreen(
                                     onSnapshotClick = { snapshotId -> navController.navigate("${Screen.SnapshotDetails.route}/$snapshotId") },
+                                    onRestoreSnapshotClick = { snapshotId -> navController.navigate("${Screen.Restore.route}/$snapshotId") },
+                                    onRequestForgetSnapshot = { snapshotId -> homeViewModel.requestForgetSnapshot(snapshotId) },
+                                    onConfirmForgetSnapshot = { homeViewModel.confirmForgetSnapshot() },
+                                    onDismissForgetDialog = { homeViewModel.dismissForgetDialog() },
                                     uiState = homeUiState,
                                     onRefresh = { homeViewModel.refreshSnapshots() },
                                     onPasswordEntered = { p, s -> homeViewModel.onPasswordEntered(p, s) },

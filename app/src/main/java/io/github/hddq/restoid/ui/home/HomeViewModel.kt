@@ -1,5 +1,6 @@
 package io.github.hddq.restoid.ui.home
 
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.hddq.restoid.R
@@ -20,6 +21,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -61,7 +63,9 @@ data class HomeUiState(
     val showRestCredentialsDialogFor: String? = null,
     val showS3CredentialsDialogFor: String? = null,
     val isRepoReady: Boolean = false,
-    val activeOperation: OperationRuntimeState = OperationRuntimeState()
+    val activeOperation: OperationRuntimeState = OperationRuntimeState(),
+    val snapshotPendingForget: String? = null,
+    val isForgettingSnapshot: Boolean = false
 )
 
 class HomeViewModel(
@@ -164,7 +168,9 @@ class HomeViewModel(
                         showPasswordDialogFor = null,
                         showSftpPasswordDialogFor = null,
                         showRestCredentialsDialogFor = null,
-                        showS3CredentialsDialogFor = null
+                        showS3CredentialsDialogFor = null,
+                        snapshotPendingForget = null,
+                        isForgettingSnapshot = false
                     )
                 }
 
@@ -188,7 +194,9 @@ class HomeViewModel(
                         showPasswordDialogFor = null,
                         showSftpPasswordDialogFor = null,
                         showRestCredentialsDialogFor = null,
-                        showS3CredentialsDialogFor = null
+                        showS3CredentialsDialogFor = null,
+                        snapshotPendingForget = null,
+                        isForgettingSnapshot = false
                     )
                 }
                 return@combine
@@ -862,5 +870,94 @@ class HomeViewModel(
 
     fun forceStopOperation() {
         operationWorkRepository.forceStopCurrentOperation()
+    }
+
+    fun requestForgetSnapshot(snapshotId: String) {
+        if (_uiState.value.isForgettingSnapshot) return
+        _uiState.update { it.copy(snapshotPendingForget = snapshotId) }
+    }
+
+    fun dismissForgetDialog() {
+        if (_uiState.value.isForgettingSnapshot) return
+        _uiState.update { it.copy(snapshotPendingForget = null) }
+    }
+
+    fun confirmForgetSnapshot() {
+        val snapshotId = _uiState.value.snapshotPendingForget ?: return
+        if (_uiState.value.isForgettingSnapshot) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isForgettingSnapshot = true) }
+            try {
+                val repoKey = repositoriesRepository.selectedRepository.first()
+                val repo = repoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
+                val repoPath = repo?.path
+                val password = repoKey?.let { repositoriesRepository.getRepositoryPassword(it) }
+                val repoId = repo?.id
+
+                if (repoPath != null && password != null && repoId != null) {
+                    val executionEnvironment = repositoriesRepository.getExecutionEnvironmentVariables(repoKey)
+                    val resticOptions = repositoriesRepository.getExecutionResticOptions(repoKey)
+
+                    val result = resticRepository.forgetSnapshot(
+                        repoPath,
+                        password,
+                        snapshotId,
+                        executionEnvironment,
+                        resticOptions
+                    )
+                    result.fold(
+                        onSuccess = {
+                            val deleted = metadataRepository.deleteMetadataForSnapshot(repoId, snapshotId)
+                            if (deleted) {
+                                resticRepository.backupMetadata(
+                                    repoId,
+                                    repoPath,
+                                    password,
+                                    executionEnvironment,
+                                    resticOptions
+                                )
+                            }
+                            _uiState.update {
+                                it.copy(
+                                    snapshotPendingForget = null,
+                                    isForgettingSnapshot = false
+                                )
+                            }
+                        },
+                        onFailure = { error ->
+                            val msg = error.message ?: context.getString(R.string.error_unknown)
+                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                            _uiState.update {
+                                it.copy(
+                                    snapshotPendingForget = null,
+                                    isForgettingSnapshot = false
+                                )
+                            }
+                        }
+                    )
+                } else {
+                    val msg = context.getString(R.string.error_repository_password_or_id_not_found)
+                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                    _uiState.update {
+                        it.copy(
+                            snapshotPendingForget = null,
+                            isForgettingSnapshot = false
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                val msg = e.message ?: context.getString(R.string.error_unknown)
+                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                _uiState.update {
+                    it.copy(
+                        snapshotPendingForget = null,
+                        isForgettingSnapshot = false
+                    )
+                }
+            } finally {
+                _uiState.update { it.copy(isForgettingSnapshot = false) }
+            }
+        }
     }
 }
