@@ -13,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.security.MessageDigest
@@ -980,15 +981,23 @@ class RepositoriesRepository(
                     val owner = if (ownerResult.isSuccess) ownerResult.out.firstOrNull()?.trim() else null
 
                     if (owner != null) {
-                        val chownResult = Shell.cmd("chown -R $owner ${shellQuote(tempRestoreDir.absolutePath)}").exec()
+                        Shell.cmd("chown -R $owner ${shellQuote(tempRestoreDir.absolutePath)}").exec()
+                        Shell.cmd("chmod -R u+rwX ${shellQuote(tempRestoreDir.absolutePath)}").exec()
                         val cpResult = Shell.cmd("cp -a ${shellQuote(tempRestoreDir.absolutePath + "/.")} ${shellQuote(finalMetadataParentDir.absolutePath + "/")}").exec()
-                        if (chownResult.isSuccess && cpResult.isSuccess) {
+                        val chownDestResult = Shell.cmd("chown -R $owner ${shellQuote(finalMetadataParentDir.absolutePath)}").exec()
+                        val chmodDestResult = Shell.cmd("chmod -R u+rwX ${shellQuote(finalMetadataParentDir.absolutePath)}").exec()
+                        if (cpResult.isSuccess && chownDestResult.isSuccess && chmodDestResult.isSuccess) {
                             Result.success(Unit)
                         } else {
-                            Result.failure(Exception("Failed to copy or chown metadata files"))
+                            Result.failure(Exception("Failed to copy or set permissions on metadata files"))
                         }
                     } else {
-                        Result.failure(Exception("Failed to get owner for metadata directory"))
+                        try {
+                            tempRestoreDir.copyRecursively(finalMetadataParentDir, overwrite = true)
+                            Result.success(Unit)
+                        } catch (e: Exception) {
+                            Result.failure(e)
+                        }
                     }
                 } else {
                     Result.failure(Exception("Restic restore command failed"))
@@ -1040,6 +1049,10 @@ class RepositoriesRepository(
                         }
                     }
                 }
+            }
+
+            if (restoreOutcome.isSuccess) {
+                resticRepository.clearSnapshots()
             }
 
             restoreOutcome

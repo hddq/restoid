@@ -92,13 +92,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import coil.compose.rememberAsyncImagePainter
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.work.ExclusionConflict
 import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
 import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
+import coil.compose.AsyncImage
 import kotlin.math.roundToInt
 
 @Composable
@@ -116,7 +116,6 @@ fun TaskRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(IntrinsicSize.Min)
             .alpha(if (enabled) 1f else 0.5f)
             .clickable(enabled = enabled, onClick = rowClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -158,7 +157,7 @@ fun TaskRow(
             Spacer(Modifier.width(12.dp))
             Box(
                 modifier = Modifier
-                    .fillMaxHeight(0.5f)
+                    .height(24.dp)
                     .width(1.dp)
                     .background(MaterialTheme.colorScheme.outlineVariant)
             )
@@ -294,7 +293,6 @@ fun SelectAllListItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(IntrinsicSize.Min)
             .clickable(onClick = onClick ?: onToggle)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -335,7 +333,7 @@ fun SelectAllListItem(
             Spacer(Modifier.width(12.dp))
             Box(
                 modifier = Modifier
-                    .fillMaxHeight(0.5f)
+                    .height(24.dp)
                     .width(1.dp)
                     .background(MaterialTheme.colorScheme.outlineVariant)
             )
@@ -369,13 +367,12 @@ fun AppListItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(IntrinsicSize.Min)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Image(
-            painter = rememberAsyncImagePainter(model = app.icon),
+        AsyncImage(
+            model = app.icon,
             contentDescription = app.name,
             modifier = Modifier.size(48.dp)
         )
@@ -407,7 +404,7 @@ fun AppListItem(
         Spacer(Modifier.width(12.dp))
         Box(
             modifier = Modifier
-                .fillMaxHeight(0.5f)
+                .height(24.dp)
                 .width(1.dp)
                 .background(MaterialTheme.colorScheme.outlineVariant)
         )
@@ -558,13 +555,23 @@ fun BackupConfigScreen(
         }
     }
 
+    val isAllSelected = remember(apps) {
+        apps.isNotEmpty() && apps.all { it.isSelected }
+    }
+    val selectAllSubtitle = remember(apps, appBackupTypes, backupTypes, context) {
+        buildSelectedBackupTypesSummary(apps, appBackupTypes, backupTypes, context)
+    }
+    val defaultBackupTypesSummary = remember(backupTypes, context) {
+        buildBackupTypesSummary(backupTypes, context)
+    }
+
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp, top = 8.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         if (isLoadingApps) {
-            item {
+            item(key = "loading", contentType = "loading") {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -576,26 +583,36 @@ fun BackupConfigScreen(
             }
         } else {
             val totalRows = apps.size + 1
-            item(key = "header") {
+            item(key = "header", contentType = "header") {
                 ExpressiveSectionHeader(title = stringResource(R.string.apps_title))
             }
-            item(key = "select_all") {
-                val isAllSelected = apps.isNotEmpty() && apps.all { it.isSelected }
+            item(key = "select_all", contentType = "select_all") {
                 ExpressiveSegmentedSurface(index = 0, count = totalRows) {
                     SelectAllListItem(
                         isChecked = isAllSelected,
-                        subtitle = buildSelectedBackupTypesSummary(apps, appBackupTypes, backupTypes, context),
+                        subtitle = selectAllSubtitle,
                         onClick = { showBulkBackupTypesSheet = true },
                         onToggle = onToggleAllApps
                     )
                 }
             }
-            itemsIndexed(apps, key = { _, app -> app.packageName }) { index, app ->
+            itemsIndexed(
+                items = apps,
+                key = { _, app -> app.packageName },
+                contentType = { _, _ -> "app_item" }
+            ) { index, app ->
                 val currentAppBackupTypes = appBackupTypes[app.packageName] ?: backupTypes
+                val itemSubtitle = if (currentAppBackupTypes == backupTypes) {
+                    defaultBackupTypesSummary
+                } else {
+                    remember(currentAppBackupTypes, context) {
+                        buildBackupTypesSummary(currentAppBackupTypes, context)
+                    }
+                }
                 ExpressiveSegmentedSurface(index = index + 1, count = totalRows) {
                     AppListItem(
                         app = app,
-                        subtitle = buildBackupTypesSummary(currentAppBackupTypes, context),
+                        subtitle = itemSubtitle,
                         onClick = { selectedAppPackageName = app.packageName },
                         onToggle = { onToggleAppSelection(app.packageName) }
                     )
