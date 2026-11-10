@@ -41,6 +41,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
@@ -55,7 +56,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import coil.compose.rememberAsyncImagePainter
 import io.github.hddq.restoid.LocalAppBarActions
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.RestoidApplication
@@ -63,6 +63,7 @@ import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.model.BackupDetail
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
 import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
+import coil.compose.AsyncImage
 import io.github.hddq.restoid.ui.snapshot.ForgetResult
 import io.github.hddq.restoid.ui.snapshot.SnapshotDetailsViewModel
 import io.github.hddq.restoid.ui.snapshot.SnapshotDetailsViewModelFactory
@@ -150,14 +151,14 @@ fun SnapshotDetailsScreen(
                     contentPadding = PaddingValues(bottom = 88.dp, top = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    item(key = "header") {
+                    item(key = "header", contentType = "header") {
                         SnapshotDetailsHeader(
                             snapshot = snapshot!!,
                             modifier = Modifier.padding(bottom = 14.dp)
                         )
                     }
                     if (backupDetails.isNotEmpty()) {
-                        item(key = "apps_header") {
+                        item(key = "apps_header", contentType = "apps_header") {
                             ExpressiveSectionHeader(
                                 title = pluralStringResource(
                                     R.plurals.snapshot_backed_up_apps_count,
@@ -166,7 +167,11 @@ fun SnapshotDetailsScreen(
                                 )
                             )
                         }
-                        itemsIndexed(backupDetails, key = { _, detail -> "app_${detail.appInfo.packageName}" }) { index, detail ->
+                        itemsIndexed(
+                            items = backupDetails,
+                            key = { _, detail -> "app_${detail.appInfo.packageName}" },
+                            contentType = { _, _ -> "backed_up_app" }
+                        ) { index, detail ->
                             ExpressiveSegmentedSurface(
                                 index = index,
                                 count = backupDetails.size
@@ -176,7 +181,7 @@ fun SnapshotDetailsScreen(
                         }
                     }
                     if (dirsList.isNotEmpty()) {
-                        item(key = "dirs_header") {
+                        item(key = "dirs_header", contentType = "dirs_header") {
                             ExpressiveSectionHeader(
                                 title = pluralStringResource(
                                     R.plurals.snapshot_backed_up_custom_directories_count,
@@ -186,7 +191,11 @@ fun SnapshotDetailsScreen(
                                 modifier = Modifier.padding(top = if (backupDetails.isNotEmpty()) 14.dp else 0.dp)
                             )
                         }
-                        itemsIndexed(dirsList, key = { _, (path, _) -> "dir_$path" }) { index, (path, dirMetadata) ->
+                        itemsIndexed(
+                            items = dirsList,
+                            key = { _, (path, _) -> "dir_$path" },
+                            contentType = { _, _ -> "backed_up_dir" }
+                        ) { index, (path, dirMetadata) ->
                             ExpressiveSegmentedSurface(
                                 index = index,
                                 count = dirsList.size
@@ -197,7 +206,7 @@ fun SnapshotDetailsScreen(
                     }
 
                     if (backupDetails.isEmpty() && customDirs.isEmpty() && !isLoading) {
-                        item(key = "empty_metadata") {
+                        item(key = "empty_metadata", contentType = "empty_metadata") {
                             if (metadata == null) {
                                 Text(
                                     stringResource(R.string.metadata_missing_or_corrupted),
@@ -253,9 +262,16 @@ fun SnapshotDetailsHeader(
 fun BackedUpAppItem(detail: BackupDetail) {
     val context = LocalContext.current
     val notAvailable = stringResource(R.string.not_available)
+    val apkLabel = stringResource(R.string.backup_type_apk)
+    val dataLabel = stringResource(R.string.backup_type_data)
+    val deDataLabel = stringResource(R.string.backup_type_device_protected_data)
+    val extDataLabel = stringResource(R.string.backup_type_external_data)
+    val obbLabel = stringResource(R.string.backup_item_obb)
+    val mediaLabel = stringResource(R.string.backup_item_media)
+
     Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.Top) {
-        Image(
-            painter = rememberAsyncImagePainter(model = detail.appInfo.icon),
+        AsyncImage(
+            model = detail.appInfo.icon,
             contentDescription = null,
             modifier = Modifier.size(48.dp)
         )
@@ -277,12 +293,12 @@ fun BackedUpAppItem(detail: BackupDetail) {
             ) {
                 detail.backedUpItems.forEach { item ->
                     val sizeKey = when (item) {
-                        stringResource(R.string.backup_type_apk) -> "apk"
-                        stringResource(R.string.backup_type_data) -> "data"
-                        stringResource(R.string.backup_type_device_protected_data) -> "user_de"
-                        stringResource(R.string.backup_type_external_data) -> "external_data"
-                        stringResource(R.string.backup_item_obb) -> "obb"
-                        stringResource(R.string.backup_item_media) -> "media"
+                        apkLabel -> "apk"
+                        dataLabel -> "data"
+                        deDataLabel -> "user_de"
+                        extDataLabel -> "external_data"
+                        obbLabel -> "obb"
+                        mediaLabel -> "media"
                         else -> null
                     }
                     val size = sizeKey?.let { detail.detailedSizes[it] }

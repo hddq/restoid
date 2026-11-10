@@ -49,6 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -58,7 +59,6 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.rememberAsyncImagePainter
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.OperationRuntimeState
 import io.github.hddq.restoid.data.OperationType
@@ -69,6 +69,7 @@ import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
 import io.github.hddq.restoid.ui.components.PasswordDialog
 import io.github.hddq.restoid.ui.components.SshPrivateKeyField
 import io.github.hddq.restoid.ui.components.UsernamePasswordDialog
+import coil.compose.AsyncImage
 import io.github.hddq.restoid.ui.home.HomeAuthFailure
 import io.github.hddq.restoid.ui.home.HomeCredentialPrompt
 import io.github.hddq.restoid.ui.home.HomeUiState
@@ -118,6 +119,17 @@ fun HomeScreen(
                 onForceStopClick = { showForceStopDialog = true },
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp)
             )
+        }
+
+        val sortedSnapshots = remember(uiState.snapshotsWithMetadata) {
+            uiState.snapshotsWithMetadata.sortedByDescending { it.snapshotInfo.time }
+        }
+        val screenWidthDp = LocalConfiguration.current.screenWidthDp.dp
+        val maxIconsPossible = remember(screenWidthDp) {
+            val contentWidth = (screenWidthDp - 64.dp).coerceAtLeast(32.dp)
+            val iconSize = 32.dp
+            val spacing = 8.dp
+            ((contentWidth + spacing) / (iconSize + spacing)).toInt().coerceAtLeast(1)
         }
 
         PullToRefreshBox(
@@ -242,29 +254,29 @@ fun HomeScreen(
                     }
                 }
                 else -> {
-                    val snapshots = uiState.snapshotsWithMetadata.sortedByDescending { it.snapshotInfo.time }
-                    item(key = "snapshots_header") {
+                    item(key = "snapshots_header", contentType = "snapshots_header") {
                         ExpressiveSectionHeader(
                             title = pluralStringResource(
                                 R.plurals.snapshots_count,
-                                snapshots.size,
-                                snapshots.size
+                                sortedSnapshots.size,
+                                sortedSnapshots.size
                             )
                         )
                     }
                     itemsIndexed(
-                        items = snapshots,
+                        items = sortedSnapshots,
                         key = { _, item -> item.snapshotInfo.id },
                         contentType = { _, _ -> "snapshot_item" }
                     ) { index, item ->
                         ExpressiveSegmentedSurface(
                             index = index,
-                            count = snapshots.size,
-                            modifier = Modifier.padding(bottom = if (index < snapshots.size - 1) 2.dp else 0.dp)
+                            count = sortedSnapshots.size,
+                            modifier = Modifier.padding(bottom = if (index < sortedSnapshots.size - 1) 2.dp else 0.dp)
                         ) {
                             SnapshotItem(
                                 snapshotWithMetadata = item,
                                 apps = uiState.appInfoMap[item.snapshotInfo.id],
+                                maxIconsPossible = maxIconsPossible,
                                 onClick = { onSnapshotClick(item.snapshotInfo.id) }
                             )
                         }
@@ -515,6 +527,7 @@ private fun ActiveOperationBanner(
 private fun SnapshotItem(
     snapshotWithMetadata: SnapshotWithMetadata,
     apps: List<AppInfo>?,
+    maxIconsPossible: Int,
     onClick: () -> Unit
 ) {
     val snapshot = snapshotWithMetadata.snapshotInfo
@@ -598,59 +611,58 @@ private fun SnapshotItem(
                 pluralStringResource(R.plurals.backed_up_items_count, totalCount, totalCount),
                 style = MaterialTheme.typography.labelMedium
             )
-            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                val iconSize = 32.dp
-                val spacing = 8.dp
-                val itemWidthWithSpacing = iconSize + spacing
-                val maxIconsPossible = ((maxWidth + spacing) / itemWidthWithSpacing).toInt().coerceAtLeast(1)
+            val iconSize = 32.dp
+            val spacing = 8.dp
+            val customDirSlot = if (customDirCount > 0) 1 else 0
+            val availableSlotsForApps = (maxIconsPossible - customDirSlot).coerceAtLeast(0)
+            val showCounter = appCount > availableSlotsForApps
+            val limit = if (showCounter) (availableSlotsForApps - 1).coerceAtLeast(0) else availableSlotsForApps
 
-                val customDirSlot = if (customDirCount > 0) 1 else 0
-                val availableSlotsForApps = (maxIconsPossible - customDirSlot).coerceAtLeast(0)
-                val showCounter = appCount > availableSlotsForApps
-                val limit = if (showCounter) (availableSlotsForApps - 1).coerceAtLeast(0) else availableSlotsForApps
-
-                Row(horizontalArrangement = Arrangement.spacedBy(spacing), verticalAlignment = Alignment.CenterVertically) {
-                    if (apps != null && apps.isNotEmpty() && appCount > 0) {
-                        apps.take(limit).forEach { app ->
-                            Image(
-                                painter = rememberAsyncImagePainter(model = app.icon),
-                                contentDescription = app.name,
-                                modifier = Modifier.size(iconSize)
-                            )
-                        }
-                        val realMoreCount = appCount - limit
-                        if (realMoreCount > 0) {
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier
-                                    .size(iconSize)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.secondaryContainer)
-                            ) {
-                                Text(
-                                    text = "+$realMoreCount",
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(spacing),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (apps != null && apps.isNotEmpty() && appCount > 0) {
+                    apps.take(limit).forEach { app ->
+                        AsyncImage(
+                            model = app.icon,
+                            contentDescription = app.name,
+                            modifier = Modifier.size(iconSize)
+                        )
                     }
-                    if (customDirCount > 0) {
-                        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(iconSize)) {
-                            Icon(
-                                imageVector = Icons.Default.Folder,
-                                contentDescription = null,
-                                modifier = Modifier.fillMaxSize(),
-                                tint = MaterialTheme.colorScheme.secondaryContainer
-                            )
+                    val realMoreCount = appCount - limit
+                    if (realMoreCount > 0) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(iconSize)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.secondaryContainer)
+                        ) {
                             Text(
-                                text = customDirCount.toString(),
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
+                                text = "+$realMoreCount",
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                                 fontWeight = FontWeight.Bold
                             )
                         }
+                    }
+                }
+                if (customDirCount > 0) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(iconSize)) {
+                        Icon(
+                            imageVector = Icons.Default.Folder,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            tint = MaterialTheme.colorScheme.secondaryContainer
+                        )
+                        Text(
+                            text = customDirCount.toString(),
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp),
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }

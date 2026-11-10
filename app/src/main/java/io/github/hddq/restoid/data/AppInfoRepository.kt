@@ -32,14 +32,12 @@ class AppInfoRepository(private val context: Context) {
         prettyPrint = false // Use false for smaller file size
     }
     private val cacheMutex = Mutex()
+    private var isDiskCacheLoaded = false
 
-    init {
-        // Load the persistent cache from disk on initialization.
-        loadCacheFromDisk()
-    }
-
-    private fun loadCacheFromDisk() {
-        if (!cacheFile.exists()) return
+    private suspend fun ensureDiskCacheLoaded() = cacheMutex.withLock {
+        if (isDiskCacheLoaded) return@withLock
+        isDiskCacheLoaded = true
+        if (!cacheFile.exists()) return@withLock
         try {
             val content = cacheFile.readText()
             if (content.isNotBlank()) {
@@ -68,7 +66,15 @@ class AppInfoRepository(private val context: Context) {
      */
     suspend fun getAppInfoForPackages(packageNames: List<String>): List<AppInfo> {
         return withContext(Dispatchers.IO) {
-            packageNames.mapNotNull { getAppInfo(it) }
+            ensureDiskCacheLoaded()
+            var diskCacheDirty = false
+            val results = packageNames.mapNotNull { packageName ->
+                getAppInfo(packageName) { diskCacheDirty = true }
+            }
+            if (diskCacheDirty) {
+                saveCacheToDisk()
+            }
+            results
         }
     }
 
@@ -97,10 +103,13 @@ class AppInfoRepository(private val context: Context) {
      * 3. Fetches from the system if not found in any cache.
      * It now includes a version check to invalidate stale cache entries.
      */
-    private suspend fun getAppInfo(packageName: String): AppInfo? {
+    private suspend fun getAppInfo(
+        packageName: String,
+        onDiskCacheModified: () -> Unit
+    ): AppInfo? {
         val pm = context.packageManager
         val currentPackageInfo: PackageInfo = try {
-            pm.getPackageInfo(packageName, PackageManager.GET_META_DATA)
+            pm.getPackageInfo(packageName, 0)
         } catch (e: PackageManager.NameNotFoundException) {
             // App isn't installed. Clean up cache if it exists.
             var wasCached = false
@@ -108,7 +117,7 @@ class AppInfoRepository(private val context: Context) {
                 if (appInfoCache.remove(packageName) != null) wasCached = true
                 if (diskCache.remove(packageName) != null) wasCached = true
             }
-            if (wasCached) saveCacheToDisk()
+            if (wasCached) onDiskCacheModified()
             return null
         }
 
@@ -119,22 +128,23 @@ class AppInfoRepository(private val context: Context) {
 
         // 1. Check hot in-memory cache.
         if (currentSourceDir != null) {
-            appInfoCache[packageName]?.let {
-                if (it.versionCode == currentVersionCode && it.apkPaths.contains(currentSourceDir)) return it
+            val hotCached = cacheMutex.withLock { appInfoCache[packageName] }
+            if (hotCached != null && hotCached.versionCode == currentVersionCode && hotCached.apkPaths.contains(currentSourceDir)) {
+                return hotCached
             }
         }
 
         // 2. Check warm disk-backed cache.
         if (currentSourceDir != null) {
-            diskCache[packageName]?.let { cachedInfo ->
-                if (cachedInfo.versionCode == currentVersionCode && cachedInfo.apkPaths.contains(currentSourceDir)) {
-                    val appInfo = cachedInfo.toAppInfo(context)
-                    // Preserve selection state if available in hot cache
+            val warmCached = cacheMutex.withLock { diskCache[packageName] }
+            if (warmCached != null && warmCached.versionCode == currentVersionCode && warmCached.apkPaths.contains(currentSourceDir)) {
+                val appInfo = warmCached.toAppInfo(context)
+                return cacheMutex.withLock {
                     val finalInfo = appInfoCache[packageName]?.isSelected?.let { isSelected ->
                         appInfo.copy(isSelected = isSelected)
                     } ?: appInfo
                     appInfoCache[packageName] = finalInfo // Promote to hot cache.
-                    return finalInfo
+                    finalInfo
                 }
             }
         }
@@ -147,6 +157,7 @@ class AppInfoRepository(private val context: Context) {
                 apkPaths.add(app.sourceDir)
                 app.splitSourceDirs?.let { apkPaths.addAll(it) }
 
+                val preservedSelection = cacheMutex.withLock { appInfoCache[packageName]?.isSelected } ?: true
                 val info = AppInfo(
                     name = app.loadLabel(pm).toString(),
                     packageName = app.packageName,
@@ -155,15 +166,15 @@ class AppInfoRepository(private val context: Context) {
                     icon = app.loadIcon(pm),
                     apkPaths = apkPaths.distinct(),
                     // Preserve selection state if it was in the hot cache before being found stale
-                    isSelected = appInfoCache[packageName]?.isSelected ?: true
+                    isSelected = preservedSelection
                 )
 
-                // Update caches and save to disk.
+                // Update caches and mark disk cache as dirty for batch save.
                 cacheMutex.withLock {
                     appInfoCache[packageName] = info
                     diskCache[packageName] = info.toCachedAppInfo()
                 }
-                saveCacheToDisk()
+                onDiskCacheModified()
                 info
             }
         } catch (e: Exception) {

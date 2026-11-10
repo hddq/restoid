@@ -578,19 +578,36 @@ class HomeViewModel(
     private fun loadAppInfoForSnapshots(snapshotsWithMetadata: List<SnapshotWithMetadata>) {
         viewModelScope.launch {
             val appInfoMap = withContext(Dispatchers.Default) {
-                val map = mutableMapOf<String, List<AppInfo>>()
-                snapshotsWithMetadata.forEach { item ->
-                    val appsMetadata = item.metadata?.apps
-                    val packageNames = appsMetadata?.keys?.toList() ?: emptyList()
-                    if (packageNames.isNotEmpty()) {
-                        val appInfos = appInfoRepository.getAppInfoForPackages(packageNames)
-                        val sortedApps = appInfos.sortedByDescending { app ->
-                            appsMetadata?.get(app.packageName)?.size ?: 0L
+                val distinctPackages = snapshotsWithMetadata
+                    .asSequence()
+                    .mapNotNull { it.metadata?.apps?.keys }
+                    .flatten()
+                    .distinct()
+                    .toList()
+
+                if (distinctPackages.isEmpty()) {
+                    emptyMap()
+                } else {
+                    val appInfoByPackage = appInfoRepository
+                        .getAppInfoForPackages(distinctPackages)
+                        .associateBy { it.packageName }
+
+                    val map = mutableMapOf<String, List<AppInfo>>()
+                    snapshotsWithMetadata.forEach { item ->
+                        val appsMetadata = item.metadata?.apps
+                        if (!appsMetadata.isNullOrEmpty()) {
+                            val sortedApps = appsMetadata.keys
+                                .mapNotNull { appInfoByPackage[it] }
+                                .sortedByDescending { app ->
+                                    appsMetadata[app.packageName]?.size ?: 0L
+                                }
+                            if (sortedApps.isNotEmpty()) {
+                                map[item.snapshotInfo.id] = sortedApps
+                            }
                         }
-                        map[item.snapshotInfo.id] = sortedApps
                     }
+                    map
                 }
-                map
             }
             _uiState.update { it.copy(appInfoMap = appInfoMap) }
         }
