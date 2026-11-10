@@ -55,6 +55,8 @@ VARIANT_MAP = {
     },
 }
 
+TARGET_DEVICE = None
+
 def run_cmd(cmd, cwd=None, check=True):
     res = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
     if check and res.returncode != 0:
@@ -63,18 +65,23 @@ def run_cmd(cmd, cwd=None, check=True):
     return res.stdout.strip()
 
 def run_adb(args, check=True):
-    return run_cmd(["adb"] + args, check=check)
+    cmd = ["adb"]
+    if TARGET_DEVICE:
+        cmd += ["-s", TARGET_DEVICE]
+    return run_cmd(cmd + args, check=check)
 
 def get_connected_device():
-    out = run_adb(["devices"])
+    global TARGET_DEVICE
+    out = run_cmd(["adb", "devices"])
     lines = out.splitlines()[1:]
     devices = [line.split()[0] for line in lines if "\tdevice" in line]
     if not devices:
         print("Error: No ADB device connected. Please connect your phone via ADB.", file=sys.stderr)
         sys.exit(1)
+    TARGET_DEVICE = os.environ.get("ANDROID_SERIAL") if os.environ.get("ANDROID_SERIAL") in devices else devices[0]
     model = run_adb(["shell", "getprop", "ro.product.model"], check=False)
     abi = run_adb(["shell", "getprop", "ro.product.cpu.abi"], check=False)
-    return devices[0], model, abi
+    return TARGET_DEVICE, model, abi
 
 def wake_device():
     run_adb(["shell", "input", "keyevent", "KEYCODE_WAKEUP"], check=False)
@@ -82,6 +89,9 @@ def wake_device():
 
 def get_screen_size():
     out = run_adb(["shell", "wm", "size"], check=False)
+    override = re.search(r"Override size:\s*(\d+)x(\d+)", out)
+    if override:
+        return int(override.group(1)), int(override.group(2))
     match = re.search(r"(\d+)x(\d+)", out)
     if match:
         return int(match.group(1)), int(match.group(2))
@@ -185,13 +195,14 @@ def find_node(root, predicate):
 def nav_to_home(pkg, w, h):
     wake_device()
     run_adb(["shell", "cmd", "statusbar", "collapse"], check=False)
-    run_adb(["shell", "am", "start", "-a", "android.intent.action.MAIN", "-c", "android.intent.category.LAUNCHER", "-n", f"{pkg}/io.github.hddq.restoid.MainActivity"], check=False)
+    run_adb(["shell", "am", "start", "-S", "-a", "android.intent.action.MAIN", "-c", "android.intent.category.LAUNCHER", "-n", f"{pkg}/io.github.hddq.restoid.MainActivity"], check=False)
     time.sleep(1.8)
+    return True
 
 def nav_to_applist(pkg, w, h):
     nav_to_home(pkg, w, h)
     root = dump_ui_hierarchy()
-    tasks_node = find_node(root, lambda n: n.attrib.get("content-desc") == "Tasks" or n.attrib.get("text") == "Tasks")
+    tasks_node = find_node(root, lambda n: n.attrib.get("content-desc") == "Tasks" or n.attrib.get("text") == "Tasks" or n.attrib.get("class") == "android.widget.Button")
     if tasks_node is not None:
         tx, ty = get_node_center(tasks_node)
     else:
@@ -203,10 +214,12 @@ def nav_to_applist(pkg, w, h):
     apps_node = find_node(root2, lambda n: "application" in n.attrib.get("text", "").lower() or "application" in n.attrib.get("content-desc", "").lower())
     if apps_node is not None:
         ax, ay = get_node_center(apps_node)
+        run_adb(["shell", "input", "tap", str(ax), str(ay)], check=False)
+        time.sleep(2.0)
+        return True
     else:
-        ax, ay = int(w * 0.5), int(h * 0.175)
-    run_adb(["shell", "input", "tap", str(ax), str(ay)], check=False)
-    time.sleep(2.0)
+        print("[-] Warning: Applications card not found on Tasks screen.", file=sys.stderr)
+        return False
 
 def leave_applist(pkg, w, h):
     run_adb(["shell", "input", "keyevent", "KEYCODE_BACK"], check=False)
@@ -221,10 +234,12 @@ def nav_to_snapshot_details(pkg, w, h):
     snap_node = find_node(root, lambda n: bool(re.match(r"^[0-9a-f]{8}$", n.attrib.get("text", ""))))
     if snap_node is not None:
         sx, sy = get_node_center(snap_node)
+        run_adb(["shell", "input", "tap", str(sx), str(sy)], check=False)
+        time.sleep(2.0)
+        return True
     else:
-        sx, sy = int(w * 0.5), int(h * 0.20)
-    run_adb(["shell", "input", "tap", str(sx), str(sy)], check=False)
-    time.sleep(2.0)
+        print("[-] Warning: No snapshot found on Home screen to open.", file=sys.stderr)
+        return False
 
 def leave_snapshot_details(pkg, w, h):
     run_adb(["shell", "input", "keyevent", "KEYCODE_BACK"], check=False)
@@ -251,7 +266,11 @@ SCREEN_NAV_MAP = {
 def benchmark_screen(pkg, screen_id, w, h, swipes, delay):
     info = SCREEN_NAV_MAP[screen_id]
     print(f"\n[+] Navigating to: {info['title']}...")
-    info["nav"](pkg, w, h)
+    nav_ok = info["nav"](pkg, w, h)
+    if nav_ok is False:
+        print(f"[-] Skipping benchmark for {screen_id} due to navigation failure.")
+        info["cleanup"](pkg, w, h)
+        return {}
 
     print(f"[+] Resetting graphics metrics for {screen_id}...")
     reset_gfxinfo(pkg)
@@ -306,9 +325,14 @@ def print_screen_results(title, current, baseline=None):
 
         if cur_val is not None and base_val is not None:
             diff = cur_val - base_val
-            pct = ((cur_val - base_val) / base_val * 100) if base_val > 0 else 0
             sign = "+" if diff > 0 else ""
-            delta_str = f"{sign}{diff:.1f} ({sign}{pct:.1f}%)" if isinstance(cur_val, float) else f"{sign}{diff} ({sign}{pct:.1f}%)"
+            if base_val > 0:
+                pct = ((cur_val - base_val) / base_val * 100)
+                delta_str = f"{sign}{diff:.1f} ({sign}{pct:.1f}%)" if isinstance(cur_val, float) else f"{sign}{diff} ({sign}{pct:.1f}%)"
+            elif diff != 0:
+                delta_str = f"{sign}{diff:.1f} (new)" if isinstance(cur_val, float) else f"{sign}{diff} (new)"
+            else:
+                delta_str = "0 (0.0%)"
             if (diff < 0 and lower_is_better) or (diff > 0 and not lower_is_better):
                 delta_str = f"\033[92m{delta_str}\033[0m"  # Green
             elif (diff > 0 and lower_is_better) or (diff < 0 and not lower_is_better):
@@ -384,17 +408,20 @@ def main():
     for scr in screens_to_run:
         stats = benchmark_screen(pkg, scr, w, h, args.swipes, args.delay)
         all_results[scr] = stats
-        scr_baseline = baseline_data.get(scr) if (baseline_data and scr in baseline_data) else (baseline_data if args.screen != "all" else None)
+        scr_baseline = baseline_data.get(scr) if (baseline_data and isinstance(baseline_data, dict)) else None
         print_screen_results(SCREEN_NAV_MAP[scr]["title"], stats, scr_baseline)
 
     if len(screens_to_run) > 1:
         print_summary_table(all_results)
 
     if args.save:
-        save_obj = all_results if args.screen == "all" else all_results.get(args.screen, {})
-        with open(args.save, "w") as f:
-            json.dump(save_obj, f, indent=2)
-        print(f"Benchmark results saved to {args.save}")
+        has_valid_frames = any(v.get("total_frames", 0) > 0 for v in all_results.values() if isinstance(v, dict))
+        if not has_valid_frames:
+            print("[-] Error: No valid frame stats collected. Skipping save to avoid corrupting baseline.", file=sys.stderr)
+        else:
+            with open(args.save, "w") as f:
+                json.dump(all_results, f, indent=2)
+            print(f"Benchmark results saved to {args.save}")
 
 if __name__ == "__main__":
     main()
