@@ -4,15 +4,17 @@ import android.content.Context
 import io.github.hddq.restoid.ui.shared.BackupTypes
 import io.github.hddq.restoid.model.MaintenanceConfig
 import io.github.hddq.restoid.ui.restore.RestoreTypes
+import io.github.hddq.restoid.util.DeviceUtils
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-class PreferencesRepository(context: Context) {
+class PreferencesRepository(private val context: Context) {
     private val prefs = context.getSharedPreferences("user_preferences", Context.MODE_PRIVATE)
     private val json = Json { ignoreUnknownKeys = true }
 
     private companion object {
         const val KEY_REQUIRE_APP_UNLOCK = "require_app_unlock"
+        const val KEY_DEVICE_HOSTNAME = "device_hostname"
     }
 
     // Maintenance Preferences
@@ -192,5 +194,26 @@ class PreferencesRepository(context: Context) {
 
     fun loadRequireAppUnlock(): Boolean {
         return prefs.getBoolean(KEY_REQUIRE_APP_UNLOCK, false)
+    }
+
+    fun getCustomDeviceHostname(): String? {
+        return prefs.getString(KEY_DEVICE_HOSTNAME, null)?.trim()?.takeIf { it.isNotBlank() }
+    }
+
+    fun getDeviceHostname(): String {
+        return getCustomDeviceHostname() ?: getDefaultDeviceHostname()
+    }
+
+    fun getDefaultDeviceHostname(): String {
+        return DeviceUtils.getDefaultDeviceHostname(context)
+    }
+
+    fun saveDeviceHostname(hostname: String?) {
+        val sanitized = hostname?.let { DeviceUtils.sanitizeHostname(it) }?.takeIf { it.isNotBlank() }
+        if (sanitized == null) {
+            prefs.edit().remove(KEY_DEVICE_HOSTNAME).apply()
+        } else {
+            prefs.edit().putString(KEY_DEVICE_HOSTNAME, sanitized).apply()
+        }
     }
 }

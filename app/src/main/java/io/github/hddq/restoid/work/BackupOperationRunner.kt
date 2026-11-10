@@ -7,6 +7,7 @@ import com.topjohnwu.superuser.Shell
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.AppInfoRepository
 import io.github.hddq.restoid.data.OperationLockManager
+import io.github.hddq.restoid.data.PreferencesRepository
 import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.RepositoryBackendType
 import io.github.hddq.restoid.data.ResticBinaryManager
@@ -34,7 +35,8 @@ class BackupOperationRunner(
     private val resticBinaryManager: ResticBinaryManager,
     private val resticRepository: ResticRepository,
     private val appInfoRepository: AppInfoRepository,
-    private val operationLockManager: OperationLockManager
+    private val operationLockManager: OperationLockManager,
+    private val preferencesRepository: PreferencesRepository = PreferencesRepository(context)
 ) {
 
     suspend fun run(
@@ -214,6 +216,8 @@ class BackupOperationRunner(
             val envPrefix = buildShellEnvironmentPrefix(repositoryEnvironment)
             val resticOptionFlags = buildResticOptionFlags(repositoryResticOptions)
 
+            val deviceHostname = preferencesRepository.getDeviceHostname()
+
             val command = buildString {
                 stagingRoot?.let { root ->
                     append("cd ").append(shellQuote(root.absolutePath)).append(" && ")
@@ -228,6 +232,7 @@ class BackupOperationRunner(
                 append(shellQuote(currentRepoPath)).append(' ')
                 append("backup --files-from-raw ")
                 append(shellQuote(fileList.absolutePath))
+                append(" --host ").append(shellQuote(deviceHostname))
                 append(" --json --verbose=2 ")
                 append(tagFlags)
                 if (excludeFlags.isNotEmpty()) {

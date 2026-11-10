@@ -613,6 +613,7 @@ class ResticRepository(
 
             val tags = listOf("restoid", "metadata")
             val tagFlags = tags.joinToString(" ") { "--tag '$it'" }
+            val deviceHostname = PreferencesRepository(context).getDeviceHostname()
 
             val envPrefix = buildShellEnvironmentPrefix(environmentVariables)
             val optionFlags = buildResticOptionFlags(resticOptions)
@@ -628,7 +629,9 @@ class ResticRepository(
                 append("--retry-lock 5s ")
                 if (optionFlags.isNotEmpty()) append(optionFlags).append(' ')
                 append("-r ").append(shellQuote(repoPath)).append(' ')
-                append("backup ").append(shellQuote(repositoryId)).append(" --json ").append(tagFlags)
+                append("backup ").append(shellQuote(repositoryId))
+                append(" --host ").append(shellQuote(deviceHostname))
+                append(" --json ").append(tagFlags)
             }
 
             withContext(Dispatchers.IO) {
