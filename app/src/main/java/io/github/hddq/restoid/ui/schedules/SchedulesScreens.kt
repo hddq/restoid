@@ -1,8 +1,9 @@
 package io.github.hddq.restoid.ui.schedules
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,6 +45,8 @@ import androidx.compose.material.icons.outlined.Update
 import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
@@ -562,6 +565,7 @@ fun ScheduleCheckConfigScreen(viewModel: SchedulesViewModel, modifier: Modifier 
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ScheduleItem(
     schedule: Schedule,
@@ -570,80 +574,126 @@ private fun ScheduleItem(
     onToggleEnabled: () -> Unit,
     onRunNow: () -> Unit
 ) {
+    var menuExpanded by remember { mutableStateOf(false) }
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(IntrinsicSize.Min)
-            .clickable(onClick = onEdit)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.EventRepeat,
-            contentDescription = null,
-            tint = if (schedule.isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(end = 16.dp)
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = schedule.name,
-                style = MaterialTheme.typography.bodyLarge
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min)
+                .combinedClickable(
+                    onClick = onEdit,
+                    onLongClick = { menuExpanded = true }
+                )
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.EventRepeat,
+                contentDescription = null,
+                tint = if (schedule.isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(end = 16.dp)
             )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = schedule.name,
+                    style = MaterialTheme.typography.bodyLarge
+                )
 
-            val lastRunText = if (schedule.lastRunTimestamp != null) {
-                val relativeTime = android.text.format.DateUtils.getRelativeTimeSpanString(
-                    schedule.lastRunTimestamp,
-                    System.currentTimeMillis(),
-                    android.text.format.DateUtils.MINUTE_IN_MILLIS
-                ).toString()
-                val exactTime = dateFormat.format(Date(schedule.lastRunTimestamp))
-                stringResource(R.string.schedule_last_run, relativeTime, exactTime)
-            } else {
-                stringResource(R.string.schedule_never_run)
+                val lastRunText = if (schedule.lastRunTimestamp != null) {
+                    val relativeTime = android.text.format.DateUtils.getRelativeTimeSpanString(
+                        schedule.lastRunTimestamp,
+                        System.currentTimeMillis(),
+                        android.text.format.DateUtils.MINUTE_IN_MILLIS
+                    ).toString()
+                    val exactTime = dateFormat.format(Date(schedule.lastRunTimestamp))
+                    stringResource(R.string.schedule_last_run, relativeTime, exactTime)
+                } else {
+                    stringResource(R.string.schedule_never_run)
+                }
+
+                Text(
+                    text = stringResource(R.string.schedule_interval_label) + ": ${schedule.intervalHours}h\n" + lastRunText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
 
-            Text(
-                text = stringResource(R.string.schedule_interval_label) + ": ${schedule.intervalHours}h\n" + lastRunText,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+            Spacer(Modifier.width(12.dp))
+            Icon(
+                imageVector = Icons.Outlined.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(Modifier.width(12.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight(0.5f)
+                    .width(1.dp)
+                    .background(MaterialTheme.colorScheme.outlineVariant)
+            )
+            Spacer(Modifier.width(16.dp))
+
+            Switch(
+                checked = schedule.isEnabled,
+                onCheckedChange = { onToggleEnabled() },
+                thumbContent = if (schedule.isEnabled) {
+                    {
+                        Icon(
+                            imageVector = Icons.Filled.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(SwitchDefaults.IconSize)
+                        )
+                    }
+                } else {
+                    null
+                }
             )
         }
 
-        Spacer(Modifier.width(12.dp))
-        Icon(
-            imageVector = Icons.Outlined.ChevronRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Spacer(Modifier.width(12.dp))
-        Box(
-            modifier = Modifier
-                .fillMaxHeight(0.5f)
-                .width(1.dp)
-                .background(MaterialTheme.colorScheme.outlineVariant)
-        )
-        Spacer(Modifier.width(16.dp))
-
-        Switch(
-            checked = schedule.isEnabled,
-            onCheckedChange = { onToggleEnabled() },
-            thumbContent = if (schedule.isEnabled) {
-                {
+        DropdownMenu(
+            expanded = menuExpanded,
+            onDismissRequest = { menuExpanded = false }
+        ) {
+            DropdownMenuItem(
+                text = {
+                    Text(text = stringResource(R.string.action_run_now))
+                },
+                leadingIcon = {
                     Icon(
-                        imageVector = Icons.Filled.Check,
-                        contentDescription = null,
-                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                        imageVector = Icons.Outlined.PlayArrow,
+                        contentDescription = null
                     )
+                },
+                onClick = {
+                    menuExpanded = false
+                    onRunNow()
                 }
-            } else {
-                null
-            }
-        )
+            )
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        text = stringResource(R.string.action_delete),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Outlined.Delete,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                },
+                onClick = {
+                    menuExpanded = false
+                    onDelete()
+                }
+            )
+        }
     }
 }
 
