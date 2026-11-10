@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -31,7 +31,7 @@ fun OptionsSettings(viewModel: SettingsViewModel) {
     val customDeviceHostname by viewModel.customDeviceHostname.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    var showEditHostnameDialog by remember { mutableStateOf(false) }
+    var showEditHostnameDialog by rememberSaveable { mutableStateOf(false) }
 
     if (showEditHostnameDialog) {
         EditHostnameDialog(

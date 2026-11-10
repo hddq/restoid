@@ -137,12 +137,18 @@ class SettingsViewModel(
         }
     }
 
+    fun refreshDeviceHostnameState() {
+        _customDeviceHostname.value = preferencesRepository.getCustomDeviceHostname()
+        _deviceHostname.value = preferencesRepository.getDeviceHostname()
+    }
+
     fun refreshSystemState() {
         viewModelScope.launch {
             refreshRootDependentState()
             refreshBatteryOptimizationStatus()
             checkNotificationPermission()
             checkStoragePermission()
+            refreshDeviceHostnameState()
         }
     }
 

@@ -47,9 +47,13 @@ object DeviceUtils {
     }
 
     /**
-     * Strips control characters, newlines, and collapses multiple whitespace characters into single spaces.
+     * Converts newlines and tabs to spaces, strips remaining ISO control characters (e.g. \u0000, \u001B),
+     * and collapses multiple whitespace characters into single spaces.
      */
     fun sanitizeHostname(name: String): String {
-        return name.replace("\\s+".toRegex(), " ").trim()
+        return name
+            .replace("\\s+".toRegex(), " ")
+            .replace("\\p{Cntrl}".toRegex(), "")
+            .trim()
     }
 }
