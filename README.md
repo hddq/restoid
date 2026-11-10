@@ -1,6 +1,9 @@
 # Restoid
 Android backup tool powered by [`restic`](https://github.com/restic/restic/).
 
+[![F-Droid Downloads](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fkitswas%2Ffdroid-metrics-dashboard%2Frefs%2Fheads%2Fmain%2Fprocessed%2Ftotal%2Fio.github.hddq.restoid.json&query=%24.total_downloads&logo=fdroid&label=F-Droid%20downloads)](https://f-droid.org/packages/io.github.hddq.restoid)
+[![GitHub Downloads](https://img.shields.io/github/downloads/hddq/restoid/total?logo=github&label=GitHub%20downloads)](https://github.com/hddq/restoid/releases)
+
 Restoid gives you control over your backups through a clean and simple user interface. It's built for users who want robust, encrypted, and deduplicated backups.
 
 ## 📥 Download
