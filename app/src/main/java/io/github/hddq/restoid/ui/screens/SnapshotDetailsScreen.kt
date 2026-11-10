@@ -48,6 +48,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -304,6 +306,8 @@ fun ConfirmForgetDialog(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val forgettingDescription = stringResource(R.string.snapshot_forgetting)
+
     AlertDialog(
         onDismissRequest = {
             if (!isForgetting) {
@@ -316,11 +320,18 @@ fun ConfirmForgetDialog(
             Button(
                 onClick = onConfirm,
                 enabled = !isForgetting,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                modifier = if (isForgetting) {
+                    Modifier.semantics { contentDescription = forgettingDescription }
+                } else {
+                    Modifier
+                }
             ) {
                 if (isForgetting) {
                     LoadingIndicator(
-                        modifier = Modifier.size(24.dp),
+                        modifier = Modifier
+                            .size(24.dp)
+                            .semantics { contentDescription = forgettingDescription },
                         color = MaterialTheme.colorScheme.primary
                     )
                 } else {
