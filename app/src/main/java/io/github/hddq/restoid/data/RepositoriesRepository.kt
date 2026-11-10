@@ -1064,6 +1064,50 @@ class RepositoriesRepository(
         }
     }
 
+    suspend fun forgetSnapshot(
+        snapshotId: String,
+        resticRepository: ResticRepository,
+        metadataRepository: MetadataRepository
+    ): Result<Unit> {
+        val selectedRepoKey = _selectedRepository.value
+            ?: return Result.failure(Exception(context.getString(R.string.error_repository_password_or_id_not_found)))
+        val repo = getRepositoryByKey(selectedRepoKey)
+            ?: return Result.failure(Exception(context.getString(R.string.error_repository_password_or_id_not_found)))
+        val repoPath = repo.path
+        val password = getRepositoryPassword(selectedRepoKey)
+            ?: return Result.failure(Exception(context.getString(R.string.error_repository_password_or_id_not_found)))
+        val repoId = repo.id
+            ?: return Result.failure(Exception(context.getString(R.string.error_repository_password_or_id_not_found)))
+
+        val executionEnvironment = getExecutionEnvironmentVariables(selectedRepoKey)
+        val resticOptions = getExecutionResticOptions(selectedRepoKey)
+
+        val result = resticRepository.forgetSnapshot(
+            repoPath,
+            password,
+            snapshotId,
+            executionEnvironment,
+            resticOptions
+        )
+
+        return result.map {
+            try {
+                val deleted = metadataRepository.deleteMetadataForSnapshot(repoId, snapshotId)
+                if (deleted) {
+                    resticRepository.backupMetadata(
+                        repoId,
+                        repoPath,
+                        password,
+                        executionEnvironment,
+                        resticOptions
+                    )
+                }
+            } catch (e: Exception) {
+                Log.w("RepoRepo", "Failed to update metadata backup after forgetting snapshot $snapshotId", e)
+            }
+        }
+    }
+
     private fun saveNewRepository(
         repo: LocalRepository,
         password: String,

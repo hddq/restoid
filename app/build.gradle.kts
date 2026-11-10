@@ -100,6 +100,13 @@ android {
                 "proguard-rules.pro"
             )
         }
+        create("benchmark") {
+            initWith(getByName("release"))
+            matchingFallbacks += listOf("release")
+            applicationIdSuffix = ".benchmark"
+            versionNameSuffix = "-benchmark"
+            signingConfig = signingConfigs.getByName("debug")
+        }
         debug {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"

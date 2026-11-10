@@ -247,47 +247,20 @@ class SnapshotDetailsViewModel(
             _isForgetting.value = true
             _error.value = null
             try {
-                val selectedRepoKey = repositoriesRepository.selectedRepository.first()
-                val repo = selectedRepoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
-                val repoPath = repo?.path
-                val password = selectedRepoKey?.let { repositoriesRepository.getRepositoryPassword(it) }
-                val repoId = repo?.id
-
-                if (repoPath != null && password != null && repoId != null) {
-                    val executionEnvironment = repositoriesRepository.getExecutionEnvironmentVariables(selectedRepoKey)
-                    val resticOptions = repositoriesRepository.getExecutionResticOptions(selectedRepoKey)
-
-                    val result = resticRepository.forgetSnapshot(
-                        repoPath,
-                        password,
-                        snapshotToForget.id,
-                        executionEnvironment,
-                        resticOptions
-                    )
-                    result.fold(
-                        onSuccess = {
-                            // Also delete the metadata file
-                            val deleted = metadataRepository.deleteMetadataForSnapshot(repoId, snapshotToForget.id)
-                            if (deleted) {
-                                // After deleting, back up the changes to the metadata folder
-                                resticRepository.backupMetadata(
-                                    repoId,
-                                    repoPath,
-                                    password,
-                                    executionEnvironment,
-                                    resticOptions
-                                )
-                            }
-                            _forgetResult.value = ForgetResult.Success
-                        },
-                        onFailure = {
-                            _error.value = it.message
-                            _forgetResult.value = ForgetResult.Error(it.message ?: application.getString(R.string.error_unknown))
-                        }
-                    )
-                } else {
-                    _error.value = application.getString(R.string.error_repository_password_or_id_not_found)
-                }
+                val result = repositoriesRepository.forgetSnapshot(
+                    snapshotId = snapshotToForget.id,
+                    resticRepository = resticRepository,
+                    metadataRepository = metadataRepository
+                )
+                result.fold(
+                    onSuccess = {
+                        _forgetResult.value = ForgetResult.Success
+                    },
+                    onFailure = {
+                        _error.value = it.message
+                        _forgetResult.value = ForgetResult.Error(it.message ?: application.getString(R.string.error_unknown))
+                    }
+                )
             } catch (e: Exception) {
                 _error.value = e.message
             } finally {
