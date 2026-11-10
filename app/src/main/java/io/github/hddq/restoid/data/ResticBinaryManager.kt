@@ -8,6 +8,7 @@ import io.github.hddq.restoid.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import java.io.File
 
@@ -20,6 +21,7 @@ class ResticBinaryManager(private val context: Context) {
 
     private val _resticState = MutableStateFlow<ResticState>(ResticState.Idle)
     val resticState = _resticState.asStateFlow()
+    private val statusCheckMutex = Mutex()
 
     private val resticFile: File
         get() = resolveBundledBinary("librestic.so")
@@ -35,19 +37,27 @@ class ResticBinaryManager(private val context: Context) {
 
     // Check the status of the restic binary by executing it
     suspend fun checkResticStatus() {
-        withContext(Dispatchers.IO) {
-            if (resticFile.exists() && resticFile.canExecute()) {
-                val result = Shell.cmd("${resticFile.absolutePath} version").exec()
-                if (result.isSuccess) {
-                    val versionOutput = result.out.firstOrNull()?.trim() ?: context.getString(R.string.restic_unknown_version)
-                    val version = versionOutput.split(" ").getOrNull(1) ?: context.getString(R.string.restic_unknown)
-                    _resticState.value = ResticState.Installed(resticFile.absolutePath, version, versionOutput)
+        statusCheckMutex.lock()
+        try {
+            // Another caller may have completed the check while this caller waited.
+            if (_resticState.value is ResticState.Installed) return
+
+            withContext(Dispatchers.IO) {
+                if (resticFile.exists() && resticFile.canExecute()) {
+                    val result = Shell.cmd("${resticFile.absolutePath} version").exec()
+                    if (result.isSuccess) {
+                        val versionOutput = result.out.firstOrNull()?.trim() ?: context.getString(R.string.restic_unknown_version)
+                        val version = versionOutput.split(" ").getOrNull(1) ?: context.getString(R.string.restic_unknown)
+                        _resticState.value = ResticState.Installed(resticFile.absolutePath, version, versionOutput)
+                    } else {
+                        _resticState.value = ResticState.Error(context.getString(R.string.restic_error_binary_corrupted))
+                    }
                 } else {
-                    _resticState.value = ResticState.Error(context.getString(R.string.restic_error_binary_corrupted))
+                    _resticState.value = ResticState.Error(context.getString(R.string.restic_error_bundled_not_found))
                 }
-            } else {
-                _resticState.value = ResticState.Error(context.getString(R.string.restic_error_bundled_not_found))
             }
+        } finally {
+            statusCheckMutex.unlock()
         }
     }
 

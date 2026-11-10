@@ -70,6 +70,10 @@ class RunTasksOperationRunner(
             )
         }
 
+        // WorkManager can start this operation before the asynchronous startup
+        // check in RestoidApplication has updated the binary state from Idle.
+        resticBinaryManager.checkResticStatus()
+
         val startTime = System.currentTimeMillis()
         var completedTaskUnits = 0
         var progressState = OperationProgress(
