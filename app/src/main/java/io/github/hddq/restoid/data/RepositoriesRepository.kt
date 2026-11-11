@@ -400,8 +400,8 @@ class RepositoriesRepository(
     ): Result<SftpServerTrustInfo> {
         return withContext(Dispatchers.IO) {
             val normalizedPath = normalizeRepositoryPath(path, RepositoryBackendType.SFTP)
-            val binaryState = binaryManager.resticState.value
-            if (binaryState !is ResticState.Installed) {
+            val resticPath = binaryManager.getBinaryPath()
+            if (resticPath == null) {
                 return@withContext Result.failure(IllegalStateException(context.getString(R.string.repo_error_binary_not_ready)))
             }
 
@@ -475,7 +475,7 @@ class RepositoriesRepository(
                 val probeResult = Shell.cmd(buildString {
                     if (envPrefix.isNotEmpty()) append(envPrefix).append(' ')
                     append("RESTIC_PASSWORD_FILE=").append(shellQuote(passwordFile.absolutePath)).append(' ')
-                    append(shellQuote(binaryState.path)).append(' ')
+                    append(shellQuote(resticPath)).append(' ')
                     if (resticOptionFlags.isNotEmpty()) append(resticOptionFlags).append(' ')
                     append("-r ").append(shellQuote(normalizedPath)).append(" snapshots --last 1 --json")
                 }).exec()
@@ -701,13 +701,12 @@ class RepositoriesRepository(
                 return@withContext AddRepositoryState.Error(context.getString(R.string.repo_error_exists))
             }
 
-            val binaryState = binaryManager.resticState.value
-            if (binaryState !is ResticState.Installed) {
+            val resticPath = binaryManager.getBinaryPath()
+            if (resticPath == null) {
                 tempSftpKeyFile?.delete()
                 return@withContext AddRepositoryState.Error(context.getString(R.string.repo_error_binary_not_ready))
             }
 
-            val resticPath = binaryState.path
             val wasEmpty = repositories.value.isEmpty()
             val passwordFile = File.createTempFile("restic-pass", ".tmp", context.cacheDir)
             val envPrefix = buildShellEnvironmentPrefix(executionEnvironmentVariables)

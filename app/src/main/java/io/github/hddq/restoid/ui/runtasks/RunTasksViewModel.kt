@@ -9,7 +9,6 @@ import io.github.hddq.restoid.data.OperationType
 import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.RepositoryBackendType
 import io.github.hddq.restoid.data.ResticBinaryManager
-import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.ui.shared.BackupTypes
 import io.github.hddq.restoid.ui.shared.OperationProgress
@@ -283,7 +282,7 @@ class RunTasksViewModel(
             }
         }
 
-        if (resticBinaryManager.resticState.value !is ResticState.Installed) {
+        if (!resticBinaryManager.isInstalled) {
             return OperationProgress(
                 isFinished = true,
                 error = application.getString(R.string.error_restic_not_installed),

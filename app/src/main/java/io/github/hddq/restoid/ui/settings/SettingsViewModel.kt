@@ -187,7 +187,7 @@ class SettingsViewModel(
 
     fun restoreMetadata(key: String) {
         viewModelScope.launch {
-            if (resticState.value !is ResticState.Installed) {
+            if (!resticBinaryManager.isInstalled) {
                 _showMetadataWarning.value = context.getString(R.string.error_restic_not_installed)
                 return@launch
             }
@@ -428,13 +428,13 @@ class SettingsViewModel(
     }
 
     fun onShowAddRepoDialog() {
-        if (resticState.value is ResticState.Installed) {
+        if (resticBinaryManager.isInstalled) {
             _addRepoUiState.update { it.copy(showDialog = true) }
         }
     }
 
     fun addRepository() {
-        if (resticState.value !is ResticState.Installed) {
+        if (!resticBinaryManager.isInstalled) {
             _addRepoUiState.update { it.copy(state = AddRepositoryState.Error(context.getString(R.string.error_restic_not_installed))) }
             return
         }

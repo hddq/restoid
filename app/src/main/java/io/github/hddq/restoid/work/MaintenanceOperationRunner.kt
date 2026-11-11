@@ -7,7 +7,6 @@ import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.RepositoryBackendType
 import io.github.hddq.restoid.data.ResticBinaryManager
 import io.github.hddq.restoid.data.ResticRepository
-import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.ui.shared.OperationProgress
 import io.github.hddq.restoid.util.MaintenanceOutputParser
 
@@ -231,7 +230,7 @@ class MaintenanceOperationRunner(
                 finalSummary = context.getString(R.string.maintenance_summary_no_tasks)
             )
         }
-        if (resticBinaryManager.resticState.value !is ResticState.Installed) {
+        if (!resticBinaryManager.isInstalled) {
             return OperationProgress(
                 isFinished = true,
                 error = context.getString(R.string.error_restic_not_installed),
