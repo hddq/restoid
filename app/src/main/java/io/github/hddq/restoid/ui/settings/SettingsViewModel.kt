@@ -119,6 +119,42 @@ class SettingsViewModel(
     private val _changePasswordState = MutableStateFlow(ChangePasswordState.Idle)
     val changePasswordState = _changePasswordState.asStateFlow()
 
+    private val _showRcloneConfigDialog = MutableStateFlow(false)
+    val showRcloneConfigDialog = _showRcloneConfigDialog.asStateFlow()
+
+    private val _rcloneRemotes = MutableStateFlow<List<String>>(repositoriesRepository.getRcloneRemotes())
+    val rcloneRemotes = _rcloneRemotes.asStateFlow()
+
+    private val _hasRcloneConfig = MutableStateFlow<Boolean>(repositoriesRepository.hasRcloneConfig())
+    val hasRcloneConfig = _hasRcloneConfig.asStateFlow()
+
+    fun onShowRcloneConfigDialog() {
+        _showRcloneConfigDialog.value = true
+    }
+
+    fun onDismissRcloneConfigDialog() {
+        _showRcloneConfigDialog.value = false
+    }
+
+    fun refreshRcloneState() {
+        _rcloneRemotes.value = repositoriesRepository.getRcloneRemotes()
+        _hasRcloneConfig.value = repositoriesRepository.hasRcloneConfig()
+    }
+
+    fun getRcloneConfigContent(): String? = repositoriesRepository.getRcloneConfigContent()
+
+    fun saveRcloneConfig(content: String): Result<Unit> {
+        val result = repositoriesRepository.saveRcloneConfig(content)
+        refreshRcloneState()
+        return result
+    }
+
+    fun deleteRcloneConfig(): Boolean {
+        val result = repositoriesRepository.deleteRcloneConfig()
+        refreshRcloneState()
+        return result
+    }
+
     private val _requireAppUnlock = MutableStateFlow(preferencesRepository.loadRequireAppUnlock())
     val requireAppUnlock = _requireAppUnlock.asStateFlow()
 

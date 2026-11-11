@@ -42,6 +42,7 @@ fun SettingsScreen(
     val hasStorageAccess by viewModel.hasStorageAccess.collectAsStateWithLifecycle()
     val showMetadataWarning by viewModel.showMetadataWarning.collectAsStateWithLifecycle()
     val metadataRestoreSuccess by viewModel.metadataRestoreSuccess.collectAsStateWithLifecycle()
+    val showRcloneConfigDialog by viewModel.showRcloneConfigDialog.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -132,6 +133,13 @@ fun SettingsScreen(
             trustInfo = trustInfo,
             onConfirm = { viewModel.onSftpTrustDialogConfirm() },
             onDismiss = { viewModel.onSftpTrustDialogDismiss() }
+        )
+    }
+
+    if (showRcloneConfigDialog) {
+        io.github.hddq.restoid.ui.screens.settings.dialogs.RcloneConfigDialog(
+            viewModel = viewModel,
+            onDismiss = { viewModel.onDismissRcloneConfigDialog() }
         )
     }
 

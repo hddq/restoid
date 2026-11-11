@@ -96,7 +96,8 @@ fun AddRepositoryDialog(
         RepositoryBackendType.LOCAL,
         RepositoryBackendType.SFTP,
         RepositoryBackendType.REST,
-        RepositoryBackendType.S3
+        RepositoryBackendType.S3,
+        RepositoryBackendType.RCLONE
     )
 
     val selectedBackendLabel = when (uiState.backendType) {
@@ -104,6 +105,7 @@ fun AddRepositoryDialog(
         RepositoryBackendType.SFTP -> stringResource(R.string.repo_backend_sftp)
         RepositoryBackendType.REST -> stringResource(R.string.repo_backend_rest)
         RepositoryBackendType.S3 -> stringResource(R.string.repo_backend_s3)
+        RepositoryBackendType.RCLONE -> stringResource(R.string.repo_backend_rclone)
     }
 
     val pathPlaceholder = when (uiState.backendType) {
@@ -111,12 +113,14 @@ fun AddRepositoryDialog(
         RepositoryBackendType.SFTP -> ""
         RepositoryBackendType.REST -> stringResource(R.string.repo_hint_rest)
         RepositoryBackendType.S3 -> stringResource(R.string.repo_hint_s3)
+        RepositoryBackendType.RCLONE -> stringResource(R.string.repo_hint_rclone)
     }
 
     val savePasswordLabel = when (uiState.backendType) {
         RepositoryBackendType.SFTP,
         RepositoryBackendType.REST,
-        RepositoryBackendType.S3 -> stringResource(R.string.action_save_passwords)
+        RepositoryBackendType.S3,
+        RepositoryBackendType.RCLONE -> stringResource(R.string.action_save_passwords)
         else -> stringResource(R.string.action_save_password)
     }
 
@@ -154,6 +158,7 @@ fun AddRepositoryDialog(
                                 RepositoryBackendType.SFTP -> stringResource(R.string.repo_backend_sftp)
                                 RepositoryBackendType.REST -> stringResource(R.string.repo_backend_rest)
                                 RepositoryBackendType.S3 -> stringResource(R.string.repo_backend_s3)
+                                RepositoryBackendType.RCLONE -> stringResource(R.string.repo_backend_rclone)
                             }
 
                             DropdownMenuItem(
@@ -238,6 +243,9 @@ fun AddRepositoryDialog(
                             )
                         },
                         placeholder = { Text(pathPlaceholder) },
+                        supportingText = if (uiState.backendType == RepositoryBackendType.RCLONE) {
+                            { Text(stringResource(R.string.repo_hint_rclone)) }
+                        } else null,
                         singleLine = true,
                         isError = uiState.state is AddRepositoryState.Error,
                         trailingIcon = {

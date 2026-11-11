@@ -268,6 +268,7 @@ fun SelectableRepositoryRow(
                             RepositoryBackendType.SFTP -> stringResource(R.string.repo_backend_sftp)
                             RepositoryBackendType.REST -> stringResource(R.string.repo_backend_rest)
                             RepositoryBackendType.S3 -> stringResource(R.string.repo_backend_s3)
+                            RepositoryBackendType.RCLONE -> stringResource(R.string.repo_backend_rclone)
                         },
                         style = MaterialTheme.typography.labelSmall,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)

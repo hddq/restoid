@@ -17,6 +17,23 @@ tasks.register<Exec>("buildBundledRestic") {
     commandLine = listOf("bash", "scripts/build_restic.sh")
 }
 
+// This task builds the rclone binary from the submodule for each required Android architecture.
+tasks.register<Exec>("buildBundledRclone") {
+    group = "rclone"
+    description = "Builds rclone binary from submodule using bash script"
+
+    inputs.dir(rootProject.file("rclone"))
+    outputs.dir(file("src/main/jniLibs"))
+
+    onlyIf("binaries not yet built") {
+        !file("src/main/jniLibs/arm64-v8a/librclone.so").exists() ||
+                !file("src/main/jniLibs/x86_64/librclone.so").exists()
+    }
+
+    workingDir = rootProject.projectDir
+    commandLine = listOf("bash", "scripts/build_rclone.sh")
+}
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -198,4 +215,5 @@ dependencies {
 
 tasks.named("preBuild").configure {
     dependsOn(tasks.named("buildBundledRestic"))
+    dependsOn(tasks.named("buildBundledRclone"))
 }

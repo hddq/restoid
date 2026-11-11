@@ -2,3 +2,6 @@
 	path = restic
 	url = https://github.com/restic/restic.git
 	branch = v0.19.1
+[submodule "rclone"]
+	path = rclone
+	url = https://github.com/rclone/rclone.git

@@ -45,7 +45,8 @@ fun shouldAbortNetworkRun(
 fun isRemoteBackend(backendType: RepositoryBackendType?): Boolean {
     return backendType == RepositoryBackendType.SFTP ||
         backendType == RepositoryBackendType.REST ||
-        backendType == RepositoryBackendType.S3
+        backendType == RepositoryBackendType.S3 ||
+        backendType == RepositoryBackendType.RCLONE
 }
 
 /**

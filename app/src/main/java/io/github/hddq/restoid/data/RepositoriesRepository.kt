@@ -319,6 +319,15 @@ class RepositoriesRepository(
             }
         }
 
+        if (repository.backendType == RepositoryBackendType.RCLONE) {
+            val rcloneConfigFile = getRcloneConfigFile()
+            if (rcloneConfigFile.exists()) {
+                executionEnvironment = executionEnvironment + mapOf(
+                    "RCLONE_CONFIG" to rcloneConfigFile.absolutePath
+                )
+            }
+        }
+
         return executionEnvironment
     }
 
@@ -342,9 +351,20 @@ class RepositoriesRepository(
             null
         }
 
+        val baseOptions = if (repository.backendType == RepositoryBackendType.RCLONE) {
+            val rclonePath = binaryManager.getRcloneBinaryPath()
+            if (rclonePath != null && !repository.resticOptions.containsKey("rclone.program")) {
+                repository.resticOptions + mapOf("rclone.program" to rclonePath)
+            } else {
+                repository.resticOptions
+            }
+        } else {
+            repository.resticOptions
+        }
+
         return applySftpResticOptionDefaults(
             backendType = repository.backendType,
-            options = repository.resticOptions,
+            options = baseOptions,
             knownHostsFile = knownHostsFile,
             strictHostKeyCheckingValue = "yes",
             sftpKeyFilePath = sftpKeyFilePath
@@ -628,9 +648,31 @@ class RepositoriesRepository(
                     s3AccessKeyId.isNotBlank() &&
                     s3SecretAccessKey.isNotBlank()
 
+            if (backendType == RepositoryBackendType.RCLONE) {
+                if (binaryManager.getRcloneBinaryPath() == null) {
+                    tempSftpKeyFile?.delete()
+                    return@withContext AddRepositoryState.Error(context.getString(R.string.repo_error_rclone_binary_not_ready))
+                }
+                if (!getRcloneConfigFile().exists()) {
+                    tempSftpKeyFile?.delete()
+                    return@withContext AddRepositoryState.Error(context.getString(R.string.repo_error_rclone_config_missing))
+                }
+            }
+
+            val rcloneResticOptions = if (backendType == RepositoryBackendType.RCLONE) {
+                val rclonePath = binaryManager.getRcloneBinaryPath()
+                if (rclonePath != null && !resticOptions.containsKey("rclone.program")) {
+                    mapOf("rclone.program" to rclonePath)
+                } else {
+                    emptyMap()
+                }
+            } else {
+                emptyMap()
+            }
+
             val persistedResticOptions = applySftpResticOptionDefaults(
                 backendType = backendType,
-                options = resticOptions,
+                options = resticOptions + rcloneResticOptions,
                 knownHostsFile = knownHostsFile,
                 strictHostKeyCheckingValue = "yes",
                 sftpKeyFilePath = persistedSftpKeyFilePath
@@ -638,7 +680,7 @@ class RepositoriesRepository(
 
             val executionResticOptions = applySftpResticOptionDefaults(
                 backendType = backendType,
-                options = resticOptions,
+                options = resticOptions + rcloneResticOptions,
                 knownHostsFile = knownHostsFile,
                 strictHostKeyCheckingValue = "yes",
                 sftpKeyFilePath = tempSftpKeyFile?.absolutePath
@@ -692,6 +734,13 @@ class RepositoriesRepository(
                     "AWS_ACCESS_KEY_ID" to s3AccessKeyId,
                     "AWS_SECRET_ACCESS_KEY" to s3SecretAccessKey
                 )
+            } else if (backendType == RepositoryBackendType.RCLONE) {
+                val rcloneConfigFile = getRcloneConfigFile()
+                if (rcloneConfigFile.exists()) {
+                    persistedEnvironmentVariables + mapOf("RCLONE_CONFIG" to rcloneConfigFile.absolutePath)
+                } else {
+                    persistedEnvironmentVariables
+                }
             } else {
                 sftpExecutionEnvironmentVariables
             }
@@ -1208,6 +1257,7 @@ class RepositoriesRepository(
             RepositoryBackendType.SFTP -> if (trimmed.startsWith("sftp:")) trimmed else "sftp:$trimmed"
             RepositoryBackendType.REST -> if (trimmed.startsWith("rest:")) trimmed else "rest:$trimmed"
             RepositoryBackendType.S3 -> if (trimmed.startsWith("s3:")) trimmed else "s3:$trimmed"
+            RepositoryBackendType.RCLONE -> if (trimmed.startsWith("rclone:")) trimmed else "rclone:$trimmed"
         }
     }
 
@@ -1435,5 +1485,34 @@ class RepositoriesRepository(
                 sftpKeyFilePath = sftpKeyFilePath
             )
         )
+    }
+
+    fun getRcloneConfigFile(): File {
+        return File(File(context.filesDir, "rclone"), "rclone.conf")
+    }
+
+    fun hasRcloneConfig(): Boolean = getRcloneConfigFile().exists()
+
+    fun getRcloneConfigContent(): String? {
+        val file = getRcloneConfigFile()
+        return if (file.exists()) file.readText() else null
+    }
+
+    fun saveRcloneConfig(content: String): Result<Unit> {
+        return runCatching {
+            val file = getRcloneConfigFile()
+            file.parentFile?.mkdirs()
+            file.writeText(content)
+        }
+    }
+
+    fun deleteRcloneConfig(): Boolean {
+        return getRcloneConfigFile().delete()
+    }
+
+    fun getRcloneRemotes(): List<String> {
+        val content = getRcloneConfigContent() ?: return emptyList()
+        val regex = Regex("""^\s*\[([^\]]+)\]\s*$""", RegexOption.MULTILINE)
+        return regex.findAll(content).map { it.groupValues[1].trim() }.filter { it.isNotBlank() }.toList()
     }
 }

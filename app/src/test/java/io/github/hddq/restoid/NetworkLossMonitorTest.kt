@@ -96,6 +96,7 @@ class NetworkLossMonitorTest {
         assertTrue(isRemoteBackend(RepositoryBackendType.SFTP))
         assertTrue(isRemoteBackend(RepositoryBackendType.REST))
         assertTrue(isRemoteBackend(RepositoryBackendType.S3))
+        assertTrue(isRemoteBackend(RepositoryBackendType.RCLONE))
         assertFalse(isRemoteBackend(RepositoryBackendType.LOCAL))
         assertFalse(isRemoteBackend(null))
     }

@@ -12,6 +12,7 @@ local.properties
 .android/
 .kotlin/
 librestic.so
+librclone.so
 *.apk
 /out/
 __pycache__/

@@ -37,11 +37,17 @@ class ResticBinaryManager(
     private val resticFile: File
         get() = resolveBundledBinary("librestic.so")
 
+    private val rcloneFile: File
+        get() = resolveBundledBinary("librclone.so")
+
     private val sshAskpassFile: File
         get() = resolveBundledBinary("libssh_askpass.so")
 
     val isInstalled: Boolean
         get() = getBinaryPath() != null
+
+    val isRcloneInstalled: Boolean
+        get() = getRcloneBinaryPath() != null
 
     init {
         val path = resticFile.takeIf { it.exists() && it.canExecute() }?.absolutePath
@@ -56,6 +62,9 @@ class ResticBinaryManager(
         if (_resticState.value is ResticState.Error) return null
         return resticFile.takeIf { it.exists() && it.canExecute() }?.absolutePath
     }
+
+    fun getRcloneBinaryPath(): String? =
+        rcloneFile.takeIf { it.exists() && it.canExecute() }?.absolutePath
 
     fun getSshAskpassPath(): String? =
         sshAskpassFile.takeIf { it.exists() && it.canExecute() }?.absolutePath
