@@ -52,7 +52,7 @@ class ResticRepository(
             val result = executor.execute(
                 repoPath = repoPath,
                 password = password,
-                command = "snapshots --json",
+                command = "snapshots --json --no-lock",
                 failureMessage = context.getString(R.string.restic_failure_load_snapshots),
                 environmentVariables = environmentVariables,
                 resticOptions = resticOptions
@@ -138,7 +138,7 @@ class ResticRepository(
             val result = executor.execute(
                 repoPath = repoPath,
                 password = password,
-                command = "ls --json $snapshotId",
+                command = "ls --json --no-lock $snapshotId",
                 failureMessage = context.getString(R.string.restic_failure_load_snapshots),
                 environmentVariables = environmentVariables,
                 resticOptions = resticOptions
@@ -298,7 +298,7 @@ class ResticRepository(
         val result = executor.execute(
             repoPath = repoPath,
             password = password,
-            command = "ls --json $snapshotId",
+            command = "ls --json --no-lock $snapshotId",
             failureMessage = context.getString(R.string.restic_failure_load_snapshots),
             environmentVariables = environmentVariables,
             resticOptions = resticOptions,
@@ -433,7 +433,7 @@ class ResticRepository(
         return executor.execute(
             repoPath = repoPath,
             password = password,
-            command = "dump $snapshotId ${shellQuote(filePath)}",
+            command = "dump --no-lock $snapshotId ${shellQuote(filePath)}",
             failureMessage = context.getString(R.string.restic_executor_failure_command),
             environmentVariables = environmentVariables,
             resticOptions = resticOptions
