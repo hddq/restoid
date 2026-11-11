@@ -1091,18 +1091,9 @@ class RepositoriesRepository(
 
         return result.map {
             try {
-                val deleted = metadataRepository.deleteMetadataForSnapshot(repoId, snapshotId)
-                if (deleted) {
-                    resticRepository.backupMetadata(
-                        repoId,
-                        repoPath,
-                        password,
-                        executionEnvironment,
-                        resticOptions
-                    )
-                }
+                metadataRepository.deleteMetadataForSnapshot(repoId, snapshotId)
             } catch (e: Exception) {
-                Log.w("RepoRepo", "Failed to update metadata backup after forgetting snapshot $snapshotId", e)
+                Log.w("RepoRepo", "Failed to delete metadata after forgetting snapshot $snapshotId", e)
             }
         }
     }
