@@ -1,1 +1,1 @@
-Restic altyapılı, root gerektiren Android uygulama yedekleme aracı
+Restic altyapısıyla çalışan uygulamalar ve dosyalar için güvenli ve tekilleştirilmiş yedekleme.

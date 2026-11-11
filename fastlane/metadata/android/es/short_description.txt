@@ -1,1 +1,1 @@
-Herramienta de backup de apps Android con root, impulsada por restic
+Copia de seguridad segura y desduplicada para aplicaciones y archivos con la potencia del motor restic.

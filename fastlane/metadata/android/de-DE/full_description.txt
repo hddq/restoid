@@ -1,13 +1,45 @@
-Restoid gibt dir über eine saubere, moderne und einfache Benutzeroberfläche die volle Kontrolle über deine App-Backups. Angetrieben von der Open-Source-Engine "restic", wurde es für User entwickelt, die robuste, verschlüsselte und deduplizierte Backups verlangen.
+Restoid ist eine moderne, datenschutzfreundliche Backup-Lösung für Android, angetrieben von der robusten Open-Source-Engine restic. Schütze deine Apps, Daten, Fotos und Dokumente mit Verschlüsselung auf Unternehmensniveau und blitzschneller, speichersparender Deduplizierung.
 
-Root-Zugriff ist zwingend erforderlich, um private App-Datenverzeichnisse lesen und schreiben zu können.
+Egal, ob du Fotos auf einem Heim-NAS sichern, verschlüsselte Snapshots in der Cloud speichern oder vollständige App-Daten auf einem gerooteten Gerät bewahren möchtest: Restoid gibt dir die volle Kontrolle – ganz ohne Tracker, Werbung oder proprietäre Bindung.
 
-Features:
-* Restic-Powered: Nutzt die Geschwindigkeit, Sicherheit und Effizienz von restic für lokale, deduplizierte und verschlüsselte Backups.
-* Selektives Backup: Wähle genau aus, welche vom Nutzer installierten Anwendungen du sichern möchtest.
-* Granulare Kontrolle: Bestimme für jede App präzise, was gesichert werden soll: APK-Dateien, Nutzerdaten, gerätegeschützte Daten, externe/OBB-Daten oder Medien.
-* Flexible Repository-Verwaltung: Erstelle und verwalte Repositories über native Restic-Backends: Lokales Verzeichnis, SFTP, REST-Server und Amazon S3/MinIO.
-* Snapshot-Verwaltung: Durchsuche problemlos alte Backup-Snapshots, sieh dir Details zu den gesicherten Daten an und entferne alte Daten, um Speicherplatz zu sparen.
-* Präziser Restore: Stelle ganze Apps komplett wieder her oder nur spezifische Teile (z. B. nur App-Daten, ohne die APK zu überschreiben).
-* Automatisierte Zeitpläne: Richte wiederkehrende Backups mit anpassbaren Intervallen und Trigger-Bedingungen (Akku, Ladestatus und Netzwerk) ein.
-* Downgrade-Schutz: Verhindert, dass du versehentlich eine alte App-Version über eine neuere installierst.
+Root-Zugriff ist völlig optional: Sichere benutzerdefinierte Ordner, Fotos und Dokumente ohne Root; Root-Zugriff wird nur zum Sichern privater App-Daten benötigt.
+
+Hauptfunktionen:
+
+Blitzschnell & dedupliziert
+• Inhaltsdefinierte Deduplizierung: Es werden nur eindeutige, geänderte Blöcke hochgeladen, wodurch nachfolgende Backups blitzschnell und drastisch effizienter als herkömmliche tar.gz-Archive sind.
+• Speichersparend: Mehrere Snapshots teilen sich gemeinsame Daten, wodurch der Speicherbedarf minimal bleibt.
+
+Zero-Knowledge-Verschlüsselung
+• Sicherheit auf Unternehmensniveau: Alle Snapshots werden mit restic unter Verwendung modernster Kryptografie verschlüsselt.
+• Deine Passwörter und Verschlüsselungsschlüssel verbleiben vollständig unter deiner Kontrolle.
+
+Flexible Speicher-Backends
+• Lokaler Speicher: Speichere auf internem Speicher, SD-Karte oder USB-OTG-Laufwerken.
+• Netzwerk & Cloud: Native Unterstützung für SFTP (SSH-Key & Passwort), REST-Server und Amazon S3-kompatiblen Objektspeicher (Garage, MinIO, Wasabi, Cloudflare R2, Backblaze B2).
+
+Vollständiges App- & Daten-Backup (Root erforderlich)
+• Sichere installierte Benutzeranwendungen selektiv.
+• Granulare Kontrolle: Wähle, ob APKs, App-Daten, gerätekeschützte Daten, externe Dateien oder OBB-Caches einbezogen werden sollen.
+
+Benutzerdefinierte Dateien & Medien
+• Sichere persönliche Ordner: DCIM, Dokumente, Downloads oder ein beliebiges Verzeichnis auf deinem Gerät.
+
+Automatisierte Zeitpläne im Hintergrund
+• Konfiguriere wiederkehrende Zeitpläne (täglich, wöchentlich oder benutzerdefinierte Intervalle).
+• Intelligente Auslöser: Führe Backups nur beim Laden, in unlimitierten WLAN-Netzwerken oder bei erfüllten Akkubedingungen aus.
+
+Gezielte & sichere Wiederherstellung
+• Stelle ganze Apps oder bestimmte Teile wieder her (z. B. Daten wiederherstellen, ohne die installierte APK zu überschreiben).
+• Der Downgrade-Schutz verhindert das versehentliche Wiederherstellen älterer Versionen über neuere.
+
+Keine Anbieterbindung
+• Standard-restic-Format: Repositories verwenden das native Open-Source-restic-Format. Du kannst deine Daten jederzeit auf jedem PC (Linux, macOS, Windows) mit dem offiziellen restic-CLI zugreifen, untersuchen, einbinden oder wiederherstellen – selbst ohne dein Smartphone.
+
+Wartung & Repository-Integrität
+• Halte dein Repository kompakt durch automatisierte Snapshot-Aufbewahrungsrichtlinien (Bereinigung alter Backups nach Tag, Woche, Monat).
+• Führe Integritätsprüfungen des Repositories durch und lösche veraltete Sperren mit einem Tipp.
+
+Moderne Material 3 Expressive UI
+• Entwickelt mit modernen Jetpack Compose und Material 3 Expressive Design, mit dynamischen Themes, flüssigen Animationen und Edge-to-Edge-Layout.
+• 100 % kostenlos und Open Source (GPLv3), ganz ohne Analytik, Telemetrie oder Tracking von Drittanbietern.

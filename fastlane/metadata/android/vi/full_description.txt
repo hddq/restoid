@@ -1,13 +1,45 @@
-Restoid cung cấp cho bạn toàn quyền kiểm soát các bản sao lưu ứng dụng thông qua một giao diện gọn gàng, hiện đại và đơn giản. Được phát triển dựa trên engine mã nguồn mở "restic", ứng dụng dành cho những người dùng cần các bản sao lưu mạnh mẽ, được mã hóa và loại bỏ dữ liệu trùng lặp.
+Restoid là ứng dụng sao lưu hiện đại, tập trung vào quyền riêng tư trên Android, được vận hành bởi công cụ restic mã nguồn mở, mạnh mẽ. Bảo vệ ứng dụng, dữ liệu, ảnh và tài liệu của bạn bằng mã hóa cấp doanh nghiệp và tính năng khử trùng lặp dữ liệu siêu tốc, tiết kiệm không gian.
 
-Quyền Root là bắt buộc để đọc và ghi vào các thư mục dữ liệu riêng tư của ứng dụng.
+Cho dù bạn muốn sao lưu ảnh vào NAS gia đình, lưu trữ các bản snapshot được mã hóa trên đám mây hay bảo toàn toàn bộ dữ liệu ứng dụng trên thiết bị đã root, Restoid mang đến cho bạn quyền kiểm soát hoàn toàn mà không có trình theo dõi, quảng cáo hay sự ràng buộc độc quyền.
 
-Tính năng:
-* Nền tảng Restic: Tận dụng tốc độ, tính bảo mật và hiệu quả của restic để sao lưu cục bộ, chống trùng lặp và mã hóa.
-* Sao lưu có chọn lọc: Chọn chính xác những ứng dụng nào bạn muốn sao lưu.
-* Kiểm soát chi tiết: Lựa chọn chi tiết những thành phần cần sao lưu cho mỗi ứng dụng: tệp APK, dữ liệu người dùng, dữ liệu được bảo vệ của thiết bị, dữ liệu ngoài/OBB hoặc tệp phương tiện.
-* Quản lý kho lưu trữ linh hoạt: Tạo và quản lý kho lưu trữ thông qua các backend gốc của restic: Thư mục cục bộ, SFTP, Máy chủ REST và Amazon S3/MinIO.
-* Quản lý Snapshot: Dễ dàng duyệt qua lịch sử các snapshot sao lưu, xem chi tiết những gì đã được sao lưu và xóa dữ liệu cũ để giải phóng không gian.
-* Khôi phục chính xác: Khôi phục toàn bộ ứng dụng hoặc chỉ các phần cụ thể (chẳng hạn như chỉ khôi phục dữ liệu ứng dụng mà không ghi đè lên tệp APK).
-* Lịch trình tự động: Thiết lập sao lưu định kỳ với khoảng thời gian và điều kiện kích hoạt tùy chỉnh (pin, trạng thái sạc và mạng).
-* Bảo vệ chống hạ cấp: Ngăn bạn vô tình khôi phục phiên bản ứng dụng cũ đè lên phiên bản mới hơn.
+Quyền root hoàn toàn không bắt buộc: sao lưu các thư mục tùy chỉnh, ảnh và tài liệu mà không cần root; quyền root chỉ cần thiết để sao lưu dữ liệu ứng dụng riêng tư.
+
+Tính năng chính:
+
+Siêu tốc & Khử trùng lặp
+• Khử trùng lặp theo nội dung: Chỉ các khối dữ liệu thay đổi duy nhất được tải lên, giúp các lần sao lưu tiếp theo diễn ra cực kỳ nhanh chóng và hiệu quả hơn rất nhiều so với các lưu trữ tar.gz truyền thống.
+• Tiết kiệm dung lượng: Nhiều snapshot chia sẻ dữ liệu chung, giữ mức sử dụng bộ nhớ ở mức tối thiểu.
+
+Mã hóa không kiến thức (Zero-Knowledge)
+• Bảo mật cấp doanh nghiệp: Tất cả các snapshot được mã hóa bằng restic sử dụng công nghệ mật mã tối tân.
+• Mật khẩu và khóa mã hóa của bạn hoàn toàn nằm dưới quyền kiểm soát của bạn.
+
+Hệ thống lưu trữ linh hoạt
+• Bộ nhớ cục bộ: Lưu vào bộ nhớ trong, thẻ SD hoặc ổ USB OTG.
+• Mạng & Đám mây: Hỗ trợ gốc cho SFTP (khóa SSH & mật khẩu), máy chủ REST và lưu trữ đối tượng tương thích với Amazon S3 (Garage, MinIO, Wasabi, Cloudflare R2, Backblaze B2).
+
+Sao lưu toàn bộ ứng dụng & dữ liệu (Yêu cầu Root)
+• Tùy chọn sao lưu các ứng dụng người dùng đã cài đặt.
+• Kiểm soát chi tiết: Chọn có bao gồm APK, dữ liệu ứng dụng, dữ liệu được bảo vệ trên thiết bị, tệp bên ngoài hoặc bộ đệm OBB hay không.
+
+Tệp tùy chỉnh & Phương tiện
+• Sao lưu các thư mục cá nhân: DCIM, Documents, Downloads hoặc bất kỳ thư mục nào trên thiết bị của bạn.
+
+Lịch trình nền tự động
+• Định cấu hình lịch trình định kỳ (hàng ngày, hàng tuần hoặc khoảng thời gian tùy chỉnh).
+• Ràng buộc kích hoạt thông minh: Chỉ chạy khi đang sạc, trên Wi-Fi không giới hạn dung lượng hoặc khi đáp ứng các điều kiện về pin.
+
+Khôi phục chính xác & An toàn
+• Khôi phục toàn bộ ứng dụng hoặc các phần cụ thể (ví dụ: khôi phục dữ liệu mà không ghi đè lên APK đã cài đặt).
+• Bảo vệ hạ cấp giúp ngăn chặn việc vô tình khôi phục các phiên bản cũ hơn đè lên phiên bản mới hơn.
+
+Không bị ràng buộc nhà cung cấp
+• Định dạng restic tiêu chuẩn: Các kho lưu trữ sử dụng định dạng restic gốc, mã nguồn mở. Bạn luôn có thể truy cập, kiểm tra, gắn kết hoặc khôi phục dữ liệu của mình trên bất kỳ máy tính nào (Linux, macOS, Windows) bằng giao diện dòng lệnh (CLI) restic chính thức—ngay cả khi không có điện thoại.
+
+Bảo trì & Tình trạng kho lưu trữ
+• Giữ kho lưu trữ của bạn gọn gàng với các chính sách giữ lại snapshot tự động (dọn dẹp các bản sao lưu cũ theo ngày, tuần, tháng).
+• Chạy kiểm tra tính toàn vẹn của kho lưu trữ và xóa các khóa cũ chỉ với một lần chạm.
+
+Giao diện Material 3 Expressive hiện đại
+• Được xây dựng bằng Jetpack Compose hiện đại và thiết kế Material 3 Expressive, có tính năng tạo chủ đề động, hoạt ảnh mượt mà và bố cục tràn viền.
+• Miễn phí 100% và Mã nguồn mở (GPLv3), hoàn toàn không có tính năng phân tích, đo từ xa hoặc theo dõi từ bên thứ ba.

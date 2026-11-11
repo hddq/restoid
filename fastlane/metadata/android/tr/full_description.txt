@@ -1,13 +1,45 @@
-Restoid, temiz, modern ve basit bir arayüz ile uygulama yedekleriniz üzerinde tam kontrol sahibi olmanızı sağlar. Açık kaynaklı "restic" motoruyla güçlendirilmiş olan bu uygulama, sağlam, şifrelenmiş ve tekilleştirilmiş yedeklemeler talep eden kullanıcılar için geliştirilmiştir.
+Restoid, güçlü ve açık kaynaklı restic motoruyla güçlendirilmiş, Android için modern ve gizlilik odaklı bir yedekleme çözümüdür. Kurumsal düzeyde şifreleme ve ışık hızında, alandan tasarruf sağlayan veriyin yinelemesizleştirme (deduplication) özelliğiyle uygulamalarınızı, verilerinizi, fotoğraflarınızı ve belgelerinizi güvende tutun.
 
-Gizli uygulama veri dizinlerini okumak ve yazmak için Root erişimi kesinlikle gereklidir.
+İster fotoğraflarınızı evdeki bir NAS'a yedeklemek, ister bulutta şifrelenmiş anlık görüntüler saklamak veya root'lu bir cihazda tam uygulama verilerini korumak isteyin; Restoid, izleyiciler, reklamlar veya mülkî kısıtlamalar olmadan size tam kontrol sağlar.
 
-Özellikler:
-* Restic Altyapısı: Yerel, tekilleştirilmiş ve şifrelenmiş yedeklemeler için restic'in hızından, güvenliğinden ve verimliliğinden yararlanır.
-* Seçici Yedekleme: Kullanıcı tarafından yüklenen uygulamalardan hangilerini kaydetmek istediğinizi tam olarak seçin.
-* İnce Ayar Kontrolü: Her uygulama için nelerin dahil edileceğini ayrıntılı olarak seçin: APK dosyaları, kullanıcı verileri, cihaz korumalı veriler, harici/OBB veya medya dosyaları.
-* Esnek Depo Yönetimi: Restic'in yerel arka uçları üzerinden depolar oluşturun ve yönetin: Yerel Dizin, SFTP, REST sunucusu ve Amazon S3/MinIO.
-* Snapshot Yönetimi: Geçmiş yedekleme snapshot'larına kolayca göz atın, nelerin yedeklendiğine dair detayları görüntüleyin ve alan tasarrufu yapmak için eski verileri silin.
-* Hassas Geri Yükleme: Uygulamaları tamamen geri yükleyin veya yalnızca belirli parçalarını geri yükleyin (örneğin APK'nın üzerine yazmadan sadece uygulama verisini geri yüklemek).
-* Otomatik Zamanlamalar: Özelleştirilebilir aralıklar ve tetikleme koşullarıyla (pil, şarj olma durumu ve ağ) tekrarlayan yedeklemeler ayarlayın.
-* Sürüm Düşürme Koruması: Eski bir uygulama sürümünü yanlışlıkla daha yeni bir sürümün üzerine geri yüklemenizi engeller.
+Root erişimi tamamen isteğe bağlıdır: Özel klasörleri, fotoğrafları ve belgeleri root olmadan yedekleyin; root erişimi yalnızca özel uygulama verilerini yedeklemek için gereklidir.
+
+Önemli Özellikler:
+
+Işık Hızında ve Tekilleştirilmiş
+• İçerik Tanımlı Tekilleştirme (Deduplication): Yalnızca benzersiz değiştirilen bloklar yüklenir; bu sayede sonraki yedeklemeler ışık hızında gerçekleşir ve geleneksel tar.gz arşivlerine göre çok daha verimli olur.
+• Alandan Tasarruf: Birden fazla anlık görüntü ortak verileri paylaşarak depolama alanını minimumda tutar.
+
+Sıfır Bilgi Şifreleme
+• Kurumsal güvenlik: Tüm anlık görüntüler, son teknoloji ürünü kriptografi kullanılarak restic ile şifrelenir.
+• Parolalarınız ve şifreleme anahtarlarınız tamamen sizin kontrolünüzde kalır.
+
+Esnek Depolama Altyapıları
+• Yerel Depolama: Dahili belleğe, SD karta veya USB OTG sürücülerine kaydedin.
+• Ağ ve Bulut: SFTP (SSH anahtarı ve parolası), REST sunucusu ve Amazon S3 uyumlu nesne depolama (Garage, MinIO, Wasabi, Cloudflare R2, Backblaze B2) için yerel destek.
+
+Tam Uygulama ve Veri Yedekleme (Root Gerekir)
+• Yüklenen kullanıcı uygulamalarını seçici olarak yedekleyin.
+• Ayrıntılı kontrol: APK'ları, uygulama verilerini, cihaz korumalı verileri, harici dosyaları veya OBB önbelleklerini dahil edip etmeyeceğinizi seçin.
+
+Özel Dosyalar ve Medya
+• Kişisel klasörlerinizi yedekleyin: DCIM, Belgeler, İndirilenler veya cihazınızdaki herhangi bir dizin.
+
+Otomatik Arka Plan Zamanlamaları
+• Yinelenen zamanlamaları yapılandırın (günlük, haftalık veya özel aralıklar).
+• Akıllı tetikleyici kısıtlamaları: Yalnızca şarj olurken, tarifesiz Wi-Fi ağındayken veya pil koşulları karşılandığında çalıştırın.
+
+Hassas ve Güvenli Geri Yükleme
+• Tüm uygulamaları veya belirli parçaları geri yükleyin (örn. yüklü APK'nın üzerine yazmadan verileri geri yükleyin).
+• Sürüm düşürme koruması, daha eski sürümlerin daha yeni sürümlerin üzerine yanlışlıkla geri yüklenmesini engeller.
+
+Sıfır Satıcı Bağımlılığı
+• Standart restic formatı: Depolar, yerel ve açık kaynaklı restic formatını kullanır. Resmi restic CLI'yi kullanarak telefonunuz olmadan bile verilerinize herhangi bir PC'de (Linux, macOS, Windows) her zaman erişebilir, inceleyebilir, bağlayabilir veya verilerinizi geri yükleyebilirsiniz.
+
+Bakım ve Depo Sağlığı
+• Otomatik anlık görüntü saklama politikalarıyla deponuzu derli toplu tutun (eski yedekleri gün, hafta, ay bazında temizleyin).
+• Tek dokunuşla depo bütünlüğü kontrollerini çalıştırın ve eski kilitleri temizleyin.
+
+Modern Material 3 Expressive Arayüzü
+• Dinamik tema oluşturma, akıcı animasyonlar ve uçtan uca düzen özellikleriyle modern Jetpack Compose ve Material 3 Expressive tasarımıyla üretilmiştir.
+• Sıfır analiz, telemetri veya üçüncü taraf takibi ile %100 Ücretsiz ve Açık Kaynak (GPLv3).

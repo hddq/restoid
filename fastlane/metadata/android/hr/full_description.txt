@@ -1,13 +1,45 @@
-Restoid ti daje potpunu kontrolu nad backupima aplikacija kroz čisto, moderno i jednostavno korisničko sučelje. Pokretan open-source "restic" pogonom, napravljen je za korisnike koji zahtijevaju robusne, kriptirane i deduplicirane backupe.
+Restoid je moderno rješenje za sigurnosno kopiranje na Androidu usmjereno na privatnost koje pokreće snažan, open-source restic mehanizam. Čuvajte svoje aplikacije, podatke, fotografije i dokumente sigurnima uz enkripciju poslovne klase i munjevito brzu deduplikaciju koja štedi prostor.
 
-Root pristup strogo je potreban za čitanje i pisanje po privatnim podatkovnim mapama aplikacija.
+Bilo da želite sigurnosno kopirati fotografije na kućni NAS, pohraniti šifrirane snimke u oblak ili sačuvati potpune podatke aplikacija na rootanom uređaju, Restoid vam daje potpunu kontrolu bez pratitelja, oglasa ili vlasničkog zaključavanja.
 
-Značajke:
-* Pokretan Resticom: Koristi brzinu, sigurnost i učinkovitost restica za lokalne, deduplicirane i kriptirane backupe.
-* Selektivni backup: Odaberi točno one instalirane aplikacije koje želiš spremiti.
-* Granularna kontrola: Precizno odaberi što želiš uključiti za svaku aplikaciju: APK datoteke, korisničke podatke, podatke zaštićene uređajem, vanjske/OBB ili medijske datoteke.
-* Fleksibilno upravljanje repozitorijima: Stvaraj i upravljaj repozitorijima preko izvornih restic backendova: Lokalni direktorij, SFTP, REST server i Amazon S3/MinIO.
-* Upravljanje snapshotovima: Jednostavno pregledavaj povijest snapshotova, gledaj detalje o tome što je backupirano i ukloni stare podatke da uštediš prostor.
-* Kirurški restore: Vrati cijele aplikacije u potpunosti, ili samo specifične dijelove (poput vraćanja samo podataka aplikacije bez prepisivanja APK datoteke).
-* Automatizirani rasporedi: Postavi ponavljajuće backupe s prilagodljivim intervalima i uvjetima pokretanja (baterija, punjenje i status mreže).
-* Downgrade zaštita: Sprječava te da slučajno vratiš staru verziju aplikacije preko novije.
+Root pristup je u potpunosti opcionalan: sigurnosno kopirajte prilagođene mape, fotografije i dokumente bez roota; root pristup potreban je samo za sigurnosno kopiranje privatnih podataka aplikacija.
+
+Ključne značajke:
+
+Munjevito brzo i s deduplikacijom
+• Deduplikacija definirana sadržajem: Prenose se samo jedinstveni promijenjeni blokovi, što naknadne sigurnosne kopije čini munjevito brzima i drastično učinkovitijima od tradicionalnih tar.gz arhiva.
+• Ušteda prostora: Više snimaka dijeli zajedničke podatke, čime se zauzeće pohrane svodi na minimum.
+
+Enkripcija bez znanja
+• Sigurnost poslovne klase: Sve snimke šifrirane su pomoću restica uz korištenje najsuvremenije kriptografije.
+• Vaše lozinke i ključevi za enkripciju ostaju u potpunosti pod vašom kontrolom.
+
+Fleksibilne pozadinske pohrane
+• Lokalna pohrana: Spremite na unutarnju memoriju, SD karticu ili USB OTG pogone.
+• Mreža i oblak: Izvorna podrška za SFTP (SSH ključ i lozinka), REST poslužitelj i objektno skladištenje kompatibilno s Amazon S3 (Garage, MinIO, Wasabi, Cloudflare R2, Backblaze B2).
+
+Potpuna sigurnosna kopija aplikacija i podataka (potreban root)
+• Selektivno sigurnosno kopirajte instalirane korisničke aplikacije.
+• Granularna kontrola: Odaberite želite li uključiti APK-ove, podatke aplikacija, podatke zaštićene uređajem, vanjske datoteke ili OBB predmemorije.
+
+Prilagođene datoteke i mediji
+• Sigurnosno kopirajte osobne mape: DCIM, Dokumente, Preuzimanja ili bilo koji direktorij na vašem uređaju.
+
+Automatski rasporedi u pozadini
+• Konfigurirajte ponavljajuće rasporede (dnevno, tjedno ili prilagođeni intervali).
+• Pametna ograničenja okidača: Pokrećite samo tijekom punjenja, na Wi-Fi mreži bez ograničenja prometa ili kada su ispunjeni uvjeti baterije.
+
+Precizno i sigurno vraćanje
+• Vratite cijele aplikacije ili određene dijelove (npr. vratite podatke bez prepisivanja instaliranog APK-a).
+• Zaštita od vraćanja na stariju verziju sprječava slučajno vraćanje starijih verzija preko novijih.
+
+Bez vezivanja uz dobavljača
+• Standardni restic format: Repozitoriji koriste izvorni, open-source restic format. Uvijek možete pristupiti, pregledati, montirati ili vratiti svoje podatke na bilo kojem računalniku (Linux, macOS, Windows) pomoću službenog restic CLI-ja — čak i bez svog telefona.
+
+Održavanje i zdravlje repozitorija
+• Održavajte svoj repozitorij kompaktnim pomoću automatiziranih pravila zadržavanja snimaka (uklonite stare sigurnosne kopije po danu, tjednu, mjesecu).
+• Pokrenite provjere integriteta repozitorija i očistite zastarjele zaključavanja jednim dodirom.
+
+Moderno Material 3 izražajno sučelje
+• Izgrađeno s modernim Jetpack Compose i Material 3 Expressive dizajnom, s dinamičnim temama, glatkim animacijama i prilagodljivim rasporedom.
+• 100% besplatno i otvorenog koda (GPLv3), bez analitike, telemetrije ili praćenja treće strane.

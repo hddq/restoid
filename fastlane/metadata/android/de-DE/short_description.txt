@@ -1,1 +1,1 @@
-Root-basiertes Android-App-Backup-Tool, angetrieben von restic
+Sichere, deduplizierte Backups für Apps und Dateien, angetrieben von der restic-Engine.
