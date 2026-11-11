@@ -89,35 +89,17 @@ fun RepositorySettings(viewModel: SettingsViewModel) {
         }
 
         if (resticState is ResticState.Installed) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            FilledTonalButton(
+                onClick = { viewModel.onShowAddRepoDialog() },
+                modifier = Modifier.padding(top = 12.dp),
+                shape = MaterialTheme.shapes.extraLarge
             ) {
-                FilledTonalButton(
-                    onClick = { viewModel.onShowAddRepoDialog() },
-                    shape = MaterialTheme.shapes.extraLarge
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Add,
-                        contentDescription = null
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = stringResource(R.string.cd_add_repository))
-                }
-
-                OutlinedButton(
-                    onClick = { viewModel.onShowRcloneConfigDialog() },
-                    shape = MaterialTheme.shapes.extraLarge
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.CloudQueue,
-                        contentDescription = null
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = stringResource(R.string.rclone_config_title))
-                }
+                Icon(
+                    imageVector = Icons.Outlined.Add,
+                    contentDescription = null
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = stringResource(R.string.cd_add_repository))
             }
         }
     }

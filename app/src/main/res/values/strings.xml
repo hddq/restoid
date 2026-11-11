@@ -372,6 +372,7 @@
     <string name="action_save_passwords">Save Passwords</string>
     <string name="action_change_password">Change password</string>
     <string name="restic_binary">Restic Binary</string>
+    <string name="rclone_binary">Rclone Binary</string>
     <string name="restic_checking_status">Checking status…</string>
     <string name="restic_error_with_message">Error: %1$s</string>
 

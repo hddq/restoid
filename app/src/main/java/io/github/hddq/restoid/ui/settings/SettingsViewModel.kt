@@ -81,6 +81,7 @@ class SettingsViewModel(
 
     val rootState = rootRepository.rootState
     val resticState = resticBinaryManager.resticState
+    val rcloneState = resticBinaryManager.rcloneState
 
     val repositories = repositoriesRepository.repositories
     val selectedRepository = repositoriesRepository.selectedRepository
