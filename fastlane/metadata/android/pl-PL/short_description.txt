@@ -1,1 +1,1 @@
-Narzędzie do kopii zapasowych aplikacji na Androida (root) oparte na restic
+Bezpieczna, deduplikowana kopia zapasowa dla aplikacji i plików, obsługiwana przez silnik restic.

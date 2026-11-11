@@ -1,1 +1,1 @@
-Moderan alat temeljen na root pristupu za sigurnosno kopiranje Android aplikacija pokrenut restic-om
+Siguran i dedupliciran backup za aplikacije i datoteke koji pokreće restic engine.

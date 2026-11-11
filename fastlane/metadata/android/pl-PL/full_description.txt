@@ -1,13 +1,45 @@
-Restoid zapewnia pełną kontrolę nad kopiami zapasowymi aplikacji dzięki czystemu, nowoczesnemu i prostemu interfejsowi użytkownika. Oparty na otwartym silniku „restic”, został stworzony dla użytkowników wymagających solidnych, szyfrowanych i deduplikowanych kopii zapasowych.
+Restoid to nowoczesne, skupione na prywatności rozwiązanie do tworzenia kopii zapasowych dla systemu Android, napędzane przez solidny, otwartoźródłowy silnik restic. Zabezpiecz swoje aplikacje, dane, zdjęcia i dokumenty za pomocą szyfrowania klasy korporacyjnej oraz błyskawicznej, oszczędzającej miejsce deduplikacji.
 
-Dostęp do roota jest bezwzględnie wymagany do odczytu i zapisu prywatnych katalogów danych aplikacji.
+Niezależnie od tego, czy chcesz tworzyć kopie zapasowe zdjęć na domowym NASie, przechowywać zaszyfrowane migawki w chmurze, czy zachować pełne dane aplikacji na urządzeniu z rootem, Restoid daje Ci pełną kontrolę bez trackerów, reklam i blokady dostawcy.
 
-Funkcje:
-* Oparte na silniku Restic: Wykorzystuje szybkość, bezpieczeństwo i wydajność restic do lokalnych, deduplikowanych i szyfrowanych kopii zapasowych.
-* Selektywna kopia zapasowa: Wybierz dokładnie, które aplikacje zainstalowane przez użytkownika chcesz zapisać.
-* Szczegółowa kontrola: Precyzyjnie wybieraj elementy dla każdej aplikacji: pliki APK, dane użytkownika, dane chronione urządzeniem, pliki zewnętrzne/OBB lub pliki multimedialne.
-* Elastyczne zarządzanie repozytoriami: Twórz i zarządzaj repozytoriami w natywnych backendach restic: katalog lokalny, SFTP, serwer REST oraz Amazon S3/MinIO.
-* Zarządzanie migawkami: Łatwo przeglądaj historyczne migawki kopii zapasowych, sprawdzaj szczegóły zawartości i usuwaj stare dane, aby zaoszczędzić miejsce.
-* Precyzyjne przywracanie: Przywracaj całe aplikacje lub tylko ich wybrane części (np. przywracanie samych danych bez nadpisywania pliku APK).
-* Automatyczne harmonogramy: Konfiguruj cykliczne kopie zapasowe z dostosowywanymi interwałami i warunkami wyzwalania (stan baterii, ładowanie i status sieci).
-* Ochrona przed starszą wersją: Zapobiega przypadkowemu przywróceniu starszej wersji aplikacji na nowszą.
+Dostęp root jest całkowicie opcjonalny: twórz kopie zapasowe własnych folderów, zdjęć i dokumentów bez roota; dostęp root jest wymagany tylko do tworzenia kopii zapasowych prywatnych danych aplikacji.
+
+Kluczowe funkcje:
+
+Błyskawiczna i z deduplikacją
+• Deduplikacja definiowana przez zawartość: przesyłane są tylko unikalne zmienione bloki, dzięki czemu kolejne kopie zapasowe są błyskawiczne i znacznie wydajniejsze niż tradycyjne archiwa tar.gz.
+• Oszczędność miejsca: wiele migawek współdzieli wspólne dane, utrzymując zajętość pamięci na minimalnym poziomie.
+
+Szyfrowanie Zero-Knowledge
+• Bezpieczeństwo korporacyjne: wszystkie migawki są szyfrowane przez restic przy użyciu najnowocześniejszej kryptografii.
+• Twoje hasła i klucze szyfrowania pozostają w pełni pod Twoją kontrolą.
+
+Elastyczne zaplecze pamięci masowej
+• Pamięć lokalna: zapisuj w pamięci wewnętrznej, na karcie SD lub dyskach USB OTG.
+• Sieć i chmura: natywna obsługa SFTP (klucz SSH i hasło), serwera REST oraz pamięci obiektowej kompatybilnej z Amazon S3 (Garage, MinIO, Wasabi, Cloudflare R2, Backblaze B2).
+
+Pełna kopia zapasowa aplikacji i danych (wymagany root)
+• Wybiórcze tworzenie kopii zapasowych zainstalowanych aplikacji użytkownika.
+• Szczegółowa kontrola: wybierz, czy chcesz uwzględnić pliki APK, dane aplikacji, dane chronione przez urządzenie, pliki zewnętrzne czy pamięć podręczną OBB.
+
+Własne pliki i media
+• Twórz kopie zapasowe folderów osobistych: DCIM, Dokumenty, Pobrane lub dowolny katalog na urządzeniu.
+
+Zautomatyzowane harmonogramy w tle
+• Skonfiguruj harmonogramy cykliczne (codzienne, tygodniowe lub niestandardowe interwały).
+• Inteligentne ograniczenia wyzwalaczy: uruchamiaj tylko podczas ładowania, w nielimitowanej sieci Wi-Fi lub po spełnieniu warunków baterii.
+
+Precyzyjne i bezpieczne przywracanie
+• Przywracaj całe aplikacje lub ich konkretne części (np. przywracanie danych bez nadpisywania zainstalowanego pliku APK).
+• Ochrona przed starszą wersją zapobiega przypadkowemu przywróceniu starszych wersji zamiast nowszych.
+
+Brak uzależnienia od dostawcy
+• Standardowy format restic: repozytoria wykorzystują natywny, otwartoźródłowy format restic. Zawsze możesz uzyskać dostęp, sprawdzić, zamontować lub przywrócić swoje dane na dowolnym komputerze (Linux, macOS, Windows) za pomocą oficjalnego interfejsu CLI restic — nawet bez telefonu.
+
+Konserwacja i stan repozytorium
+• Dbaj o kompaktowość repozytorium dzięki zautomatyzowanym zasadom zachowywania migawek (usuwanie starych kopii zapasowych według dni, tygodni, miesięcy).
+• Przeprowadzaj kontrole integralności repozytorium i czyść przestarzałe blokady jednym dotknięciem.
+
+Nowoczesny interfejs Material 3 Expressive
+• Zbudowany przy użyciu nowoczesnego Jetpack Compose i designu Material 3 Expressive, wyposażony w dynamiczne motywy, płynne animacje i układ od krawędzi do krawędzi.
+• W 100% darmowy i otwartoźródłowy (GPLv3), bez analityki, telemetrii i śledzenia przez osoby trzecie.

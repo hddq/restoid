@@ -1,1 +1,1 @@
-Alat backup aplikasi Android berbasis root yang ditenagai restic
+Cadangan yang aman dan terdeduplikasi untuk aplikasi dan file yang didukung oleh mesin restic.

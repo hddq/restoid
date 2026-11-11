@@ -2,11 +2,13 @@
 <resources>
     <string name="screen_home">होम</string>
     <string name="screen_settings">सेटिंग्स</string>
+    <string name="screen_tasks">कार्य</string>
     <string name="screen_snapshot_details">स्नैपशॉट विवरण</string>
     <string name="screen_restore">रीस्टोर</string>
     <string name="screen_licenses">लाइसेंस</string>
     <string name="screen_schedules">शेड्यूल</string>
     <string name="screen_operation_progress">प्रगति</string>
+    <string name="topbar_tasks">कार्य</string>
     <string name="topbar_backup_config">बैकअप कॉन्फ़िगरेशन</string>
     <string name="topbar_forget_config">हटाने की नीति (Forget)</string>
     <string name="topbar_check_config">अखंडता जांच (Integrity)</string>
@@ -19,6 +21,7 @@
     <string name="topbar_restore_snapshot">स्नैपशॉट रीस्टोर करें</string>
     <string name="cd_back">पीछे</string>
     <string name="cd_forget_snapshot">स्नैपशॉट हटाएं</string>
+    <string name="action_run_now">अभी चलाएं</string>
     <string name="fab_run_tasks">टास्क चलाएं</string>
     <string name="fab_add_schedule">शेड्यूल जोड़ें</string>
     <string name="fab_restore">रीस्टोर</string>
@@ -28,24 +31,80 @@
     <string name="operation_schedule_name">शेड्यूल %1$s</string>
     <string name="operation_restore">रीस्टोर</string>
     <string name="operation_maintenance">रखरखाव</string>
-    <string name="run_tasks_phase_summary">%1$s:\n%2$s</string>
+    <string name="run_tasks_phase_summary">%1$s:
+%2$s</string>
     <string name="backup_types_title">बैकअप प्रकार</string>
     <string name="backup_type_apk">APK</string>
+    <string name="backup_type_apk_desc">एप्लिकेशन पैकेज फ़ाइल</string>
     <string name="backup_type_data">डेटा</string>
+    <string name="backup_type_data_desc">आंतरिक ऐप डेटा (/data/user/&lt;id&gt;)</string>
     <string name="backup_type_device_protected_data">डिवाइस सुरक्षित डेटा</string>
+    <string name="backup_type_device_protected_data_desc">डिवाइस अनलॉक करने से पहले एक्सेस योग्य डेटा (/data/user_de/&lt;id&gt;)</string>
     <string name="backup_type_external_data">बाहरी डेटा</string>
+    <string name="backup_type_external_data_desc">बाहरी स्टोरेज पर ऐप डेटा (/storage/emulated/&lt;id&gt;/Android/data)</string>
     <string name="backup_type_obb_data">OBB डेटा</string>
+    <string name="backup_type_obb_data_desc">ओपेक बाइनरी ब्लॉब फाइलें (/storage/emulated/&lt;id&gt;/Android/obb)</string>
     <string name="backup_type_media_data">मीडिया डेटा</string>
+    <string name="backup_type_media_data_desc">ऐप मीडिया फाइलें (/storage/emulated/&lt;id&gt;/Android/media)</string>
+    <string name="settings_system_permission_storage">स्टोरेज एक्सेस</string>
+    <string name="settings_system_permission_local_network">लोकल नेटवर्क एक्सेस</string>
+    <string name="local_network_permission_enabled">लोकल नेटवर्क एक्सेस प्रदान कर दिया गया</string>
+    <string name="backup_type_permissions">अनुमतियाँ</string>
+    <string name="backup_type_permissions_desc">अनुमतियाँ प्रदान की गईं</string>
     <string name="apps_title">ऐप्स</string>
     <string name="toggle_all">सभी चुनें</string>
+    <string name="backup_types_for_selected_apps">चयनित ऐप्स के लिए बैकअप प्रकार</string>
+    <string name="backup_types_none">कोई नहीं</string>
+    <string name="backup_types_mixed">मिश्रित</string>
     <string name="restore_options_title">रीस्टोर विकल्प</string>
     <string name="allow_downgrade">डाउनग्रेड की अनुमति दें</string>
     <string name="apps_to_restore_title">रीस्टोर करने के लिए ऐप्स</string>
     <string name="no_app_data_found_in_snapshot">इस स्नैपशॉट में कोई ऐप डेटा नहीं मिला।</string>
     <string name="restore_backup_version_with_installed">बैकअप: %1$s -&gt; स्थापित: %2$s</string>
     <string name="restore_backup_version_only">बैकअप: %1$s</string>
-    <string name="home_title" translatable="false">Restoid</string>
     <string name="run_tasks_applications">एप्लिकेशन</string>
+    <string name="run_tasks_custom_directories">कस्टम डायरेक्टरी</string>
+    <string name="run_tasks_custom_directories_subtitle_none">कोई डायरेक्टरी चयनित नहीं</string>
+    <string name="run_tasks_custom_directories_subtitle_count">%1$d डायरेक्टरी चयनित</string>
+    <string name="run_tasks_custom_directories_subtitle_with_exclusions">%1$d पथ चुने गए, %2$d छोड़े गए</string>
+    <string name="action_add_directory">डायरेक्टरी जोड़ें</string>
+    <string name="action_add_excluded_directory">फ़ाइल या फ़ोल्डर छोड़ें</string>
+    <string name="folder_browser_select_this_folder">इस पथ (पाथ) को चुनें</string>
+    <string name="folder_browser_show_hidden">छिपे हुए फ़ोल्डर दिखाएं</string>
+    <string name="folder_browser_show_hidden_items">छिपी हुई फ़ाइलें और फ़ोल्डर दिखाएं</string>
+    <string name="folder_browser_cannot_list">इस फ़ोल्डर की सूची नहीं बनाई जा सकती।</string>
+    <string name="folder_browser_empty">कोई सबफ़ोल्डर नहीं।</string>
+    <string name="folder_browser_empty_items">कोई फ़ाइल या फ़ोल्डर नहीं।</string>
+    <string name="folder_browser_up">पैरेंट फ़ोल्डर पर जाएं</string>
+    <string name="folder_browser_roots_title">स्टोरेज स्थान</string>
+    <string name="folder_browser_internal_storage">आंतरिक स्टोरेज</string>
+    <string name="folder_browser_system_root">सिस्टम रूट (/)</string>
+    <string name="folder_browser_external_storage">बाहरी स्टोरेज (%1$s)</string>
+    <string name="folder_browser_edit_path">पाथ (पथ) मैन्युअल रूप से दर्ज करें</string>
+    <string name="folder_browser_new_folder">नया फ़ोल्डर</string>
+    <string name="folder_browser_new_folder_name">फ़ोल्डर का नाम</string>
+    <string name="folder_browser_create_failed">फ़ोल्डर नहीं बनाया जा सका।</string>
+    <string name="action_create">बनाएं</string>
+    <string name="action_go">जाएं</string>
+    <string name="title_custom_directories">कस्टम निर्देशिकाएं</string>
+    <string name="custom_directories_description">बैकअप में शामिल करने के लिए अपने डिवाइस पर कस्टम डायरेक्टरी चुनें।</string>
+    <string name="custom_directories_long_press_hint">मेनू खोलने और इसे हटाने के लिए किसी प्रविष्टि को दबाकर रखें।</string>
+    <string name="custom_directories_typed_path_label">फ़ाइल या फ़ोल्डर का पथ (पाथ)</string>
+    <string name="custom_directories_typed_path_hint">जैसे /storage/emulated/0/Download या /system/build.prop</string>
+    <string name="custom_directories_typed_path_invalid">एक वैध पूर्ण (एब्सोल्यूट) फ़ोल्डर पाथ दर्ज करें।</string>
+    <string name="custom_directories_typed_path_not_found">फ़ोल्डर मौजूद नहीं है: %1$s</string>
+    <string name="custom_directory_not_found">कस्टम निर्देशिका नहीं मिली: %1$s</string>
+    <string name="custom_directories_already_added">यह निर्देशिका पहले से ही सूची में है।</string>
+    <string name="custom_directories_unresolvable">कस्टम निर्देशिका को रिज़ॉल्व नहीं किया जा सका: %1$s</string>
+    <string name="custom_directories_section_include">शामिल करें</string>
+    <string name="custom_directories_section_exclude">छोड़ें</string>
+    <string name="custom_directories_exclude_description">बैकअप से बाहर रखने के लिए सबडायरेक्टरी या फ़ाइलें चुनें।</string>
+    <string name="action_exclude_subfolder">सबफ़ोल्डर छोड़ें…</string>
+    <string name="warning_exclusion_conflict_header">कुछ बहिष्करण ऐप बैकअप से फ़ाइलों को बाहर कर सकते हैं:</string>
+    <string name="warning_exclusion_conflict_show_more">%1$d और दिखाएं…</string>
+    <string name="warning_exclusion_conflict_show_less">कम दिखाएं</string>
+    <string name="error_all_files_access_required">कस्टम निर्देशिकाओं का बैकअप लेने के लिए \'सभी फ़ाइलों का एक्सेस\' आवश्यक है।</string>
+    <string name="summary_all_files_access_required">\'सभी फ़ाइलों का एक्सेस\' प्रदान करें, फिर पुनः प्रयास करें।</string>
     <string name="run_tasks_backup_subtitle">%1$d ऐप्स चुने गए - %2$s</string>
     <string name="run_tasks_forget_snapshots">स्नैपशॉट हटाएं</string>
     <string name="run_tasks_forget_subtitle">नवीनतम %1$d रखें, दैनिक %2$d, साप्ताहिक %3$d, मासिक %4$d</string>
@@ -65,6 +124,7 @@
     <string name="dialog_discard_changes_message">आपके पास सहेजे न गए बदलाव हैं। क्या आप वाकई उन्हें रद्द करना चाहते हैं?</string>
     <string name="action_discard">रद्द करें</string>
     <string name="error_with_message">त्रुटि: %1$s</string>
+    <string name="error_cannot_backup_repo_to_itself">बैकअप के लिए रिपॉजिटरी को ही कस्टम डायरेक्टरी के रूप में नहीं जोड़ा जा सकता।</string>
     <string name="no_snapshots_found_for_repository">चुनी गई रिपॉजिटरी के लिए कोई स्नैपशॉट नहीं मिला।</string>
     <plurals name="snapshots_count">
         <item quantity="one">स्नैपशॉट (%1$d)</item>
@@ -84,8 +144,38 @@
         <item quantity="one">ऐप (%1$d):</item>
         <item quantity="other">ऐप्स (%1$d):</item>
     </plurals>
+    <plurals name="backed_up_items_count">
+        <item quantity="one">बैकअप लिया गया (%1$d):</item>
+        <item quantity="other">बैकअप लिया गया (%1$d):</item>
+    </plurals>
+    <plurals name="custom_directories_count">
+        <item quantity="one">कस्टम डायरेक्टरी (%1$d):</item>
+        <item quantity="other">कस्टम निर्देशिकाएं (%1$d):</item>
+    </plurals>
     <string name="no_app_info_for_snapshot">इस स्नैपशॉट के लिए कोई ऐप जानकारी उपलब्ध नहीं है।</string>
     <string name="metadata_missing_or_corrupted">मेटाडेटा गायब है या दूषित है।</string>
+    <string name="metadata_restore_success">मेटाडेटा सफलतापूर्वक रिस्टोर हो गया।</string>
+    <string name="time_just_now">अभी</string>
+    <plurals name="time_mins_ago">
+        <item quantity="one">%d मिनट पहले</item>
+        <item quantity="other">%d मिनट पहले</item>
+    </plurals>
+    <plurals name="time_hours_ago">
+        <item quantity="one">%d घंटे पहले</item>
+        <item quantity="other">%d घंटे पहले</item>
+    </plurals>
+    <plurals name="time_days_ago">
+        <item quantity="one">%d दिन पहले</item>
+        <item quantity="other">%d दिन पहले</item>
+    </plurals>
+    <plurals name="time_months_ago">
+        <item quantity="one">%d महीने पहले</item>
+        <item quantity="other">%d महीने पहले</item>
+    </plurals>
+    <plurals name="time_years_ago">
+        <item quantity="one">%d साल पहले</item>
+        <item quantity="other">%d साल पहले</item>
+    </plurals>
     <string name="maintenance_task_unlock_repository">रिपॉजिटरी अनलॉक करें</string>
     <string name="maintenance_task_prune_repository">रिपॉजिटरी साफ करें (Prune)</string>
     <string name="maintenance_keep_last">नवीनतम रखें</string>
@@ -97,15 +187,21 @@
         <item quantity="one">बैकअप किया गया ऐप (%1$d)</item>
         <item quantity="other">बैकअप किए गए ऐप्स (%1$d)</item>
     </plurals>
+    <plurals name="snapshot_backed_up_custom_directories_count">
+        <item quantity="one">बैकअप ली गई कस्टम डायरेक्टरी (%1$d)</item>
+        <item quantity="other">बैकअप ली गई कस्टम निर्देशिकाएं (%1$d)</item>
+    </plurals>
     <string name="snapshot_not_found">कोई स्नैपशॉट नहीं मिला।</string>
     <string name="snapshot_forgetting">स्नैपशॉट हटाया जा रहा है…</string>
-    <string name="snapshot_id">ID: %1$s</string>
+    <string name="snapshot_id">आईडी: %1$s</string>
+    <string name="snapshot_hostname">Device: %1$s</string>
     <string name="snapshot_time">समय: %1$s</string>
     <string name="snapshot_version_size">संस्करण: %1$s - आकार: %2$s</string>
     <string name="dialog_forget_snapshot_title">स्नैपशॉट हटाएं?</string>
     <string name="dialog_forget_snapshot_message">यह स्नैपशॉट प्रविष्टि को हटा देगा। वास्तविक डेटा केवल सफाई (Prune) चलाने के बाद ही हटाया जाएगा। क्या आप सुनिश्चित हैं?</string>
     <string name="label_password">पासवर्ड</string>
     <string name="label_repository_password">रिपॉजिटरी पासवर्ड</string>
+    <string name="repository_password_explanation">इस Restic रिपॉज़िटरी को एन्क्रिप्ट और रिस्टोर करने के लिए आवश्यक। आपके SFTP लॉगिन से अलग। इसे सुरक्षित रखें: यदि आप इसे खो देते हैं, तो आप अपने बैकअप को रिस्टोर नहीं कर पाएंगे।</string>
     <string name="label_rest_username">REST उपयोगकर्ता नाम</string>
     <string name="label_rest_password">REST पासवर्ड</string>
     <string name="label_s3_access_key_id">S3 Access Key ID</string>
@@ -120,6 +216,7 @@
     <string name="action_done">हो गया</string>
     <string name="action_add">जोड़ें</string>
     <string name="action_delete">हटाएं</string>
+    <string name="action_restore_metadata">मेटाडेटा रिस्टोर करें</string>
     <string name="action_change">बदलें</string>
     <string name="action_save">सहेजें</string>
     <string name="action_grant">अनुमति दें</string>
@@ -127,7 +224,12 @@
     <string name="action_forget">हटाएं</string>
     <string name="action_try_again">पुनः प्रयास करें</string>
     <string name="action_disable">अक्षम करें</string>
+    <string name="action_enable">सक्षम करें</string>
+    <string name="usage_stats_permission_enabled">ऐप उपयोग एक्सेस प्रदान किया गया</string>
+    <string name="usage_stats_permission_disabled">ऐप उपयोग का एक्सेस आवश्यक है</string>
+    <string name="usage_stats_permission_description">बैकअप के दौरान डायरेक्टरी स्कैन करने के बजाय तेज़ी से एप्लिकेशन के आकार की गणना करने में सक्षम बनाता है</string>
     <string name="progress_initializing">आरंभ किया जा रहा है…</string>
+    <string name="progress_in_progress">Running…</string>
     <string name="progress_stopping">रोका जा रहा है…</string>
     <string name="progress_operation_complete">%1$s पूर्ण</string>
     <string name="progress_operation_failed">%1$s विफल</string>
@@ -137,7 +239,6 @@
     <string name="progress_items">आइटम</string>
     <string name="progress_size">आकार</string>
     <string name="progress_processing">प्रसंस्करण:</string>
-    <string name="progress_placeholder" translatable="false">..।</string>
     <string name="dialog_add_repository_title">रिपॉजिटरी जोड़ें</string>
     <string name="label_repository_type">रिपॉजिटरी प्रकार</string>
     <string name="label_repository_specification">रिपॉजिटरी विशिष्टता</string>
@@ -147,7 +248,6 @@
     <string name="label_sftp_password">SFTP पासवर्ड</string>
     <string name="label_sftp_ssh_key">SSH कुंजी</string>
     <string name="label_sftp_private_key">SFTP SSH निजी कुंजी</string>
-    <string name="placeholder_sftp_private_key" translatable="false">-----BEGIN OPENSSH PRIVATE KEY-----\n..।</string>
     <string name="label_sftp_key_passphrase">SSH कुंजी पासफ़्रेज़</string>
     <string name="label_sftp_key_passphrase_optional">SSH कुंजी पासफ़्रेज़ (वैकल्पिक)</string>
     <string name="dialog_sftp_trust_title">SFTP सर्वर पर विश्वास करें</string>
@@ -156,9 +256,15 @@
     <string name="repo_backend_local">स्थानीय निर्देशिका (Local directory)</string>
     <string name="repo_backend_sftp">SFTP (SSH)</string>
     <string name="repo_backend_rest">HTTP REST सर्वर</string>
-    <string name="repo_backend_s3" translatable="false">Amazon S3 / MinIO</string>
-    <string name="repo_hint_rest" translatable="false">http://host:8000/</string>
-    <string name="repo_hint_s3" translatable="false">s3.us-east-1.amazonaws.com/bucket_name</string>
+    <string name="label_sftp_host">होस्ट</string>
+    <string name="label_sftp_port">पोर्ट</string>
+    <string name="label_sftp_username">उपयोगकर्ता नाम</string>
+    <string name="label_sftp_repository_path">रिपॉजिटरी पथ</string>
+    <string name="repo_supporting_sftp_path">एब्सोल्यूट (/srv/restic-repo) या आपके होम डायरेक्टरी के सापेक्ष (restic-repo)</string>
+    <string name="error_sftp_host_empty">होस्ट खाली नहीं हो सकता</string>
+    <string name="error_sftp_username_empty">उपयोगकर्ता नाम खाली नहीं हो सकता</string>
+    <string name="error_sftp_path_empty">रिपॉजिटरी पथ खाली नहीं हो सकता</string>
+    <string name="error_sftp_port_invalid">पोर्ट 1 और 65535 के बीच की संख्या होनी चाहिए</string>
     <string name="label_path">पथ (Path)</string>
     <string name="placeholder_select_directory">एक निर्देशिका चुनें…</string>
     <string name="cd_select_folder">फ़ोल्डर चुनें</string>
@@ -173,6 +279,9 @@
     <string name="root_access_denied">रूट एक्सेस अस्वीकृत</string>
     <string name="checking_for_root">रूट की जाँच की जा रही है…</string>
     <string name="root_access_granted">रूट एक्सेस स्वीकृत</string>
+    <string name="storage_permission_enabled">\'सभी फ़ाइलों का एक्सेस\' प्रदान कर दिया गया</string>
+    <string name="storage_permission_disabled">सभी फ़ाइलों तक एक्सेस आवश्यक</string>
+    <string name="storage_permission_description">रूट एक्सेस के बिना कस्टम निर्देशिकाओं (डायरेक्टरी) का बैकअप लेने के लिए आवश्यक।</string>
     <string name="dependencies_title">निर्भरताएं (Dependencies)</string>
     <string name="about_title">इसके बारे में</string>
     <string name="version_label">संस्करण</string>
@@ -186,9 +295,13 @@
     <string name="battery_optimization_description">लंबे पृष्ठभूमि संचालन की विश्वसनीयता में सुधार करने के लिए इसे अक्षम करें।</string>
     <string name="require_app_unlock_on_start">शुरुआत में ऐप अनलॉक की आवश्यकता है</string>
     <string name="options_title">विकल्प</string>
+    <string name="settings_device_hostname_title">Device hostname</string>
+    <string name="settings_device_hostname_description">Hostname used for snapshots created on this device. Defaults to your device name.</string>
+    <string name="settings_device_hostname_label">Hostname</string>
+    <string name="action_reset_default">Reset</string>
     <string name="app_unlock_prompt_title">Restoid अनलॉक करें</string>
     <string name="app_unlock_prompt_subtitle">जारी रखने के लिए फ़िंगरप्रिंट या स्क्रीन लॉक का उपयोग करें</string>
-    <string name="repository_id_short">ID: %1$s…</string>
+    <string name="repository_id_short">आईडी: %1$s…</string>
     <string name="cd_more_options">अधिक विकल्प</string>
     <string name="action_forget_password">पासवर्ड भूल जाएं</string>
     <string name="action_forget_sftp_password">SFTP पासवर्ड भूल जाएं</string>
@@ -228,9 +341,16 @@
     <string name="backup_stage_preparing">[%1$d/%2$d] बैकअप तैयार किया जा रहा है..।</string>
     <string name="backup_stage_running">[%1$d/%2$d] ऐप्स का बैकअप लिया जा रहा है…</string>
     <string name="backup_stage_finalizing">[%1$d/%2$d] बैकअप पूरा किया जा रहा है…</string>
+    <string name="backup_error_no_files_selected_for_items">चयनित आइटम के लिए बैकअप लेने हेतु कोई फ़ाइल नहीं मिली।</string>
     <string name="backup_error_command_failed_with_code">Restic कमांड निकास कोड %1$d के साथ विफल रहा।</string>
     <string name="backup_warning_metadata_not_saved">चेतावनी: बैकअप मेटाडेटा फ़ाइल स्थानीय रूप से सहेजी नहीं जा सकी।</string>
+    <plurals name="backup_summary_success_items">
+        <item quantity="one">बैकअप लिया गया: %1$d आइटम।</item>
+        <item quantity="other">बैकअप ली गई %1$d आइटम।</item>
+    </plurals>
     <string name="error_fatal_with_message">एक गंभीर त्रुटि हुई: %1$s</string>
+    <string name="error_no_items_selected">कोई आइटम चयनित नहीं है।</string>
+    <string name="summary_no_items_selected">कोई आइटम चयनित नहीं थे।</string>
     <string name="error_no_backup_types_selected">कोई बैकअप प्रकार नहीं चुना गया।</string>
     <string name="summary_no_backup_types_selected">कोई बैकअप प्रकार नहीं चुना गया था।</string>
     <string name="error_restic_not_installed">Restic स्थापित नहीं है।</string>
@@ -253,9 +373,13 @@
     <string name="restore_stage_processing_apps">ऐप्स प्रोसेस किए जा रहे हैं</string>
     <string name="restore_stage_cleanup">सफाई (Cleanup)</string>
     <string name="restore_error_preflight_failed">रीस्टोर से पहले की जांच विफल रही।</string>
+    <string name="restore_error_no_items_selected">रीस्टोर के लिए कोई आइटम चयनित नहीं है।</string>
+    <string name="restore_error_no_restore_types_selected">कोई रिस्टोर प्रकार नहीं चुना गया।</string>
     <string name="restore_error_password_not_found">रिपॉजिटरी के लिए पासवर्ड नहीं मिला।</string>
     <string name="restore_error_no_files_found">चुने गए ऐप्स के लिए स्नैपशॉट में कोई फ़ाइल नहीं मिली।</string>
     <string name="restore_error_command_failed">Restic रीस्टोर कमांड विफल रहा।</string>
+    <string name="restore_stage_processing_template_apps">[%1$d/%2$d] ऐप्स प्रोसेस किए जा रहे हैं</string>
+    <string name="restore_stage_processing_template_custom_directories">[%1$d/%2$d] कस्टम डायरेक्टरी प्रोसेस की जा रही हैं</string>
     <string name="restore_failure_install_commit">%1$s: इंस्टॉल कमिट विफल रहा: %2$s</string>
     <string name="restore_failure_write_apk_splits">%1$s: APK स्प्लिट्स लिखने में विफल।</string>
     <string name="restore_failure_create_install_session">%1$s: इंस्टॉल सत्र बनाने में विफल।</string>
@@ -263,7 +387,17 @@
     <string name="restore_failure_data_restore">%1$s: डेटा रीस्टोर विफल या अधूरा रहा।</string>
     <string name="restore_failure_permissions_app_not_installed">%1$s: अनुमतियां रीस्टोर करने में विफल क्योंकि ऐप स्थापित नहीं है।</string>
     <string name="restore_failure_permissions_partial">%1$s: कुछ अनुमतियां रीस्टोर करने में विफल: %2$s</string>
+    <string name="restore_stage_processing_custom_directories">कस्टम डायरेक्टरी प्रोसेस की जा रही हैं…</string>
+    <string name="restore_failure_custom_directory">कस्टम डायरेक्टरी रीस्टोर करने में विफल: %1$s</string>
     <string name="restore_summary_finished_in">रीस्टोर %1$s में समाप्त हुआ।</string>
+    <plurals name="restore_summary_processed_items">
+        <item quantity="one">सफलतापूर्वक प्रोसेस किए गए आइटम: %1$d।</item>
+        <item quantity="other">सफलतापूर्वक संसाधित %1$d आइटम।</item>
+    </plurals>
+    <plurals name="restore_summary_failed_items">
+        <item quantity="one"> %1$d आइटम रीस्टोर करने में विफल।</item>
+        <item quantity="other"> %1$d आइटम रीस्टोर करने में विफल।</item>
+    </plurals>
     <string name="restore_summary_details">\n\nविवरण:\n- %1$s</string>
     <string name="maintenance_task_unlock">अनलॉक</string>
     <string name="maintenance_task_forget">हटाएं</string>
@@ -306,6 +440,10 @@
     <string name="channel_completed_operations">पूर्ण ऑपरेशन</string>
     <string name="channel_ongoing_description">चल रहे बैकअप और रीस्टोर की प्रगति को चुपचाप दिखाता है।</string>
     <string name="channel_completed_description">बैकअप या रीस्टोर पूरा होने पर अलर्ट करता है।</string>
+    <string name="channel_successful_operations">सफल ऑपरेशन</string>
+    <string name="channel_successful_description">बैकअप या रीस्टोर सफलतापूर्वक पूरा होने पर अलर्ट करता है।</string>
+    <string name="channel_failed_operations">विफल ऑपरेशन</string>
+    <string name="channel_failed_description">जब कोई बैकअप या रीस्टोर ऑपरेशन विफल हो जाता है या उसमें त्रुटियां आती हैं, तो अलर्ट करता है।</string>
     <plurals name="notification_files_progress">
         <item quantity="one">%1$d/%2$d फ़ाइल</item>
         <item quantity="other">%1$d/%2$d फ़ाइलें</item>
@@ -317,6 +455,12 @@
     <string name="operation_interrupted">ऑपरेशन बाधित हो गया था।</string>
     <string name="dialog_stop_operation_title">ऑपरेशन रोकें?</string>
     <string name="dialog_stop_operation_message">क्या आप वर्तमान ऑपरेशन को रोकना चाहते हैं? कोई भी अधूरा काम रद्द कर दिया जाएगा।</string>
+    <string name="home_operation_running_title">%1$s प्रगति पर है</string>
+    <string name="home_operation_running_default_title">ऑपरेशन प्रगति पर है</string>
+    <string name="home_operation_running_tap_hint">प्रगति देखने के लिए टैप करें</string>
+    <string name="action_force_stop">बलपूर्वक बंद करें (फोर्स स्टॉप)</string>
+    <string name="dialog_force_stop_operation_title">क्या ऑपरेशन ज़बरदस्ती बंद (Force stop) करें?</string>
+    <string name="dialog_force_stop_operation_message">क्या आप वर्तमान ऑपरेशन को ज़बरदस्ती बंद करना चाहते हैं? कोई भी अधूरा कार्य रद्द कर दिया जाएगा और ऑपरेशन की स्थिति रीसेट हो जाएगी।</string>
     <string name="repo_error_exists">रिपॉजिटरी पहले से मौजूद है।</string>
     <string name="repo_error_binary_not_ready">Restic बाइनरी तैयार नहीं है।</string>
     <string name="repo_error_invalid_password_or_corrupted">अमान्य पासवर्ड या दूषित रिपॉजिटरी।</string>
@@ -371,7 +515,7 @@
     <string name="maintenance_summary_no_snapshots_removed">हटाने की नीति से कोई स्नैपशॉट मेल नहीं खाता।</string>
     <string name="maintenance_summary_check_completed">जांच ऑपरेशन पूरा हुआ।</string>
     <string name="maintenance_summary_unlock_finished">अनलॉक ऑपरेशन समाप्त हुआ।</string>
-    <string name="not_available">N/A</string>
+    <string name="not_available">लागू नहीं</string>
     <string name="section_general">सामान्य</string>
     <string name="section_conditions">शर्तें</string>
     <string name="condition_battery_not_low">बैटरी कम नहीं है</string>
@@ -390,132 +534,42 @@
     <string name="license_tap_to_expand">… (विस्तार करने के लिए टैप करें)</string>
     <string name="cd_open_link">लिंक खोलें</string>
     <string name="cd_copy_license">लाइसेंस कॉपी करें</string>
-    <string name="time_just_now">अभी</string>
-    <plurals name="time_mins_ago">
-        <item quantity="one">%d मिनट पहले</item>
-        <item quantity="other">%d मिनट पहले</item>
-    </plurals>
-    <plurals name="time_hours_ago">
-        <item quantity="one">%d घंटे पहले</item>
-        <item quantity="other">%d घंटे पहले</item>
-    </plurals>
-    <plurals name="time_days_ago">
-        <item quantity="one">%d दिन पहले</item>
-        <item quantity="other">%d दिन पहले</item>
-    </plurals>
-    <plurals name="time_months_ago">
-        <item quantity="one">%d महीने पहले</item>
-        <item quantity="other">%d महीने पहले</item>
-    </plurals>
-    <plurals name="time_years_ago">
-        <item quantity="one">%d साल पहले</item>
-        <item quantity="other">%d साल पहले</item>
-    </plurals>
-    <string name="backup_type_permissions">अनुमतियाँ</string>
-    <string name="backup_types_for_selected_apps">चयनित ऐप्स के लिए बैकअप प्रकार</string>
-    <string name="backup_types_none">कोई नहीं</string>
-    <string name="backup_types_mixed">मिश्रित</string>
-    <string name="restore_error_no_restore_types_selected">कोई रिस्टोर प्रकार नहीं चुना गया।</string>
-    <string name="backup_type_apk_desc">एप्लिकेशन पैकेज फ़ाइल</string>
-    <string name="backup_type_data_desc">आंतरिक ऐप डेटा (/data/user/&lt;id&gt;)</string>
-    <string name="backup_type_device_protected_data_desc">डिवाइस अनलॉक करने से पहले एक्सेस योग्य डेटा (/data/user_de/&lt;id&gt;)</string>
-    <string name="backup_type_external_data_desc">बाहरी स्टोरेज पर ऐप डेटा (/storage/emulated/&lt;id&gt;/Android/data)</string>
-    <string name="backup_type_obb_data_desc">ओपेक बाइनरी ब्लॉब फाइलें (/storage/emulated/&lt;id&gt;/Android/obb)</string>
-    <string name="backup_type_media_data_desc">ऐप मीडिया फाइलें (/storage/emulated/&lt;id&gt;/Android/media)</string>
-    <string name="backup_type_permissions_desc">अनुमतियाँ प्रदान की गईं</string>
-    <string name="action_enable">सक्षम करें</string>
-    <string name="usage_stats_permission_enabled">ऐप उपयोग एक्सेस प्रदान किया गया</string>
-    <string name="usage_stats_permission_disabled">ऐप उपयोग का एक्सेस आवश्यक है</string>
-    <string name="usage_stats_permission_description">बैकअप के दौरान डायरेक्टरी स्कैन करने के बजाय तेज़ी से एप्लिकेशन के आकार की गणना करने में सक्षम बनाता है</string>
-    <string name="metadata_restore_success">मेटाडेटा सफलतापूर्वक रिस्टोर हो गया।</string>
-    <string name="action_restore_metadata">मेटाडेटा रिस्टोर करें</string>
     <string name="repo_warning_metadata_restore_failed_title">मेटाडेटा रिस्टोरेशन विफल</string>
     <string name="repo_warning_metadata_restore_failed">रिपॉजिटरी सफलतापूर्वक जोड़ दी गई, लेकिन इसका मेटाडेटा (शेड्यूल, विस्तृत बैकअप जानकारी) रिस्टोर करने में विफलता हुई। इसका आमतौर पर मतलब है कि मेटाडेटा स्नैपशॉट गायब है या रिपॉजिटरी लॉक है। पुनः प्रयास करने के लिए, सेटिंग्स → रिपॉजिटरी खोलें, रेपो मेनू पर टैप करें, और \"मेटाडेटा रिस्टोर करें\" चुनें।</string>
-    <string name="screen_tasks">कार्य</string>
-    <string name="topbar_tasks">कार्य</string>
-    <string name="run_tasks_custom_directories">कस्टम डायरेक्टरी</string>
-    <string name="run_tasks_custom_directories_subtitle_none">कोई डायरेक्टरी चयनित नहीं</string>
-    <string name="run_tasks_custom_directories_subtitle_count">%1$d डायरेक्टरी चयनित</string>
-    <string name="action_add_directory">डायरेक्टरी जोड़ें</string>
-    <string name="title_custom_directories">कस्टम निर्देशिकाएं</string>
-    <string name="custom_directories_description">बैकअप में शामिल करने के लिए अपने डिवाइस पर कस्टम डायरेक्टरी चुनें।</string>
-    <string name="error_cannot_backup_repo_to_itself">बैकअप के लिए रिपॉजिटरी को ही कस्टम डायरेक्टरी के रूप में नहीं जोड़ा जा सकता।</string>
-    <plurals name="backed_up_items_count">
-        <item quantity="one">बैकअप लिया गया (%1$d):</item>
-        <item quantity="other">बैकअप लिया गया (%1$d):</item>
-    </plurals>
-    <plurals name="custom_directories_count">
-        <item quantity="one">कस्टम डायरेक्टरी (%1$d):</item>
-        <item quantity="other">कस्टम निर्देशिकाएं (%1$d):</item>
-    </plurals>
-    <plurals name="snapshot_backed_up_custom_directories_count">
-        <item quantity="one">बैकअप ली गई कस्टम डायरेक्टरी (%1$d)</item>
-        <item quantity="other">बैकअप ली गई कस्टम निर्देशिकाएं (%1$d)</item>
-    </plurals>
-    <string name="backup_error_no_files_selected_for_items">चयनित आइटम के लिए बैकअप लेने हेतु कोई फ़ाइल नहीं मिली।</string>
-    <plurals name="backup_summary_success_items">
-        <item quantity="one">बैकअप लिया गया: %1$d आइटम।</item>
-        <item quantity="other">बैकअप ली गई %1$d आइटम।</item>
-    </plurals>
-    <string name="error_no_items_selected">कोई आइटम चयनित नहीं है।</string>
-    <string name="summary_no_items_selected">कोई आइटम चयनित नहीं थे।</string>
-    <string name="restore_error_no_items_selected">रीस्टोर के लिए कोई आइटम चयनित नहीं है।</string>
-    <string name="restore_stage_processing_template_apps">[%1$d/%2$d] ऐप्स प्रोसेस किए जा रहे हैं</string>
-    <string name="restore_stage_processing_template_custom_directories">[%1$d/%2$d] कस्टम डायरेक्टरी प्रोसेस की जा रही हैं</string>
-    <string name="restore_stage_processing_custom_directories">कस्टम डायरेक्टरी प्रोसेस की जा रही हैं…</string>
-    <string name="restore_failure_custom_directory">कस्टम डायरेक्टरी रीस्टोर करने में विफल: %1$s</string>
-    <plurals name="restore_summary_processed_items">
-        <item quantity="one">सफलतापूर्वक प्रोसेस किए गए आइटम: %1$d।</item>
-        <item quantity="other">सफलतापूर्वक संसाधित %1$d आइटम।</item>
-    </plurals>
-    <string name="action_run_now">अभी चलाएं</string>
-    <string name="dialog_force_stop_operation_message">क्या आप वर्तमान ऑपरेशन को ज़बरदस्ती बंद करना चाहते हैं? कोई भी अधूरा कार्य रद्द कर दिया जाएगा और ऑपरेशन की स्थिति रीसेट हो जाएगी।</string>
-    <string name="action_create">बनाएं</string>
-    <string name="label_sftp_username">उपयोगकर्ता नाम</string>
-    <string name="home_operation_running_tap_hint">प्रगति देखने के लिए टैप करें</string>
-    <string name="folder_browser_roots_title">स्टोरेज स्थान</string>
-    <string name="folder_browser_empty_items">कोई फ़ाइल या फ़ोल्डर नहीं।</string>
+    <!-- Tasks & Maintenance Guide -->
+    <string name="cd_help">सहायता</string>
+    <string name="tasks_guide_title">टस्क और रखरखाव गाइड</string>
+    <string name="tasks_guide_subtitle">जानें कि प्रत्येक बैकअप और रखरखाव टास्क क्या करता है और वे एक साथ कैसे काम करते हैं।</string>
+    <string name="tasks_guide_unlock_title">रिपॉजिटरी अनलॉक करें</string>
+    <string name="tasks_guide_unlock_desc">पिछले बैकअप या टास्क के अचानक बाधित होने पर (जैसे ऐप बंद होना, डिवाइस रीस्टार्ट होना, या कनेक्शन टूटना) छोड़े गए पुराने लॉक हटाता है। इससे भविष्य के टास्क सुरक्षित रूप से आगे बढ़ पाते हैं।</string>
+    <string name="tasks_guide_forget_title">स्नैपशॉट हटाएं</string>
+    <string name="tasks_guide_forget_desc">आपकी रिटेंशन पॉलिसी लागू करती है (जैसे आखिरी N दैनिक, साप्ताहिक, या मासिक स्नैपशॉट रखना) और रिपॉजिटरी इतिहास से पुराने स्नैपशॉट रिकॉर्ड हटाती है। नोट: यह केवल स्नैपशॉट के संदर्भ हटाता है; यह अभी तक रॉ डेटा चंक को नहीं हटाता है।</string>
+    <string name="tasks_guide_prune_title">रिपॉजिटरी साफ करें (Prune)</string>
+    <string name="tasks_guide_prune_desc">किसी भी शेष स्नैपशॉट द्वारा अब संदर्भित न किए जाने वाले डेटा चंक के लिए रिपॉजिटरी को स्कैन करता है, उन्हें स्थायी रूप से हटाता है, और डिस्क स्थान वापस पाने के लिए पैक को दोबारा पैक करता है। प्र्यून संसाधन-गहन है और इसे समय-समय पर (जैसे साप्ताहिक या मासिक) चलाना सबसे अच्छा है।</string>
+    <string name="tasks_guide_check_title">अखंडता जांचें</string>
+    <string name="tasks_guide_check_desc">रिपॉजिटरी संरचना और इंडेक्स की जांच करता है। डिफ़ॉल्ट रूप से, संग्रहीत फ़ाइल सामग्री नहीं पढ़ी जाती है। डेटा पैक को भी सत्यापित करने के लिए \'अखंडता जांच\' सेटिंग्स में \'सभी डेटा पढ़ें\' सक्षम करें।</string>
+    <string name="tasks_guide_forget_vs_prune_title">हटाएं बनाम प्र्यून: क्या अंतर है?</string>
+    <string name="tasks_guide_forget_vs_prune_desc">\'Forget\' को लाइब्रेरी इंडेक्स से कैटलॉग कार्ड हटाने जैसा समझें, और \'Prune\' को बिल्डिंग से वास्तव में अनावश्यक किताबें हटाने जैसा समझें। आप क्या हटाना है यह चुनने के लिए पहले \'Forget\' चलाते हैं, और स्टोरेज स्पेस खाली करने के लिए बाद में \'Prune\' चलाते हैं।</string>
+    <string name="tasks_guide_apps_title">एप्लिकेशन</string>
+    <string name="tasks_guide_apps_desc">इंस्टॉल किए गए ऐप्स का बैकअप लेता है, जिसमें APK, ऐप डेटा, डिवाइस-सुरक्षित डेटा और बाहरी स्टोरेज डेटा शामिल हैं।</string>
+    <string name="tasks_guide_files_title">फ़ाइलें और फ़ोल्डर</string>
     <string name="tasks_guide_files_desc">डिवाइस स्टोरेज से चुने गए कस्टम फ़ाइलों और डायरेक्ट्रीज़ का बैकअप लेता है।</string>
-    <string name="repository_password_explanation">इस Restic रिपॉज़िटरी को एन्क्रिप्ट और रिस्टोर करने के लिए आवश्यक। आपके SFTP लॉगिन से अलग। इसे सुरक्षित रखें: यदि आप इसे खो देते हैं, तो आप अपने बैकअप को रिस्टोर नहीं कर पाएंगे।</string>
-    <string name="folder_browser_up">पैरेंट फ़ोल्डर पर जाएं</string>
-    <string name="storage_permission_enabled">\'सभी फ़ाइलों का एक्सेस\' प्रदान कर दिया गया</string>
-    <string name="dialog_force_stop_operation_title">क्या ऑपरेशन ज़बरदस्ती बंद (Force stop) करें?</string>
-    <string name="folder_browser_edit_path">पाथ (पथ) मैन्युअल रूप से दर्ज करें</string>
-    <string name="repo_supporting_sftp_path">एब्सोल्यूट (/srv/restic-repo) या आपके होम डायरेक्टरी के सापेक्ष (restic-repo)</string>
-    <string name="custom_directories_already_added">यह निर्देशिका पहले से ही सूची में है।</string>
-    <string name="label_sftp_host">होस्ट</string>
-    <string name="summary_all_files_access_required">\'सभी फ़ाइलों का एक्सेस\' प्रदान करें, फिर पुनः प्रयास करें।</string>
-    <string name="folder_browser_new_folder_name">फ़ोल्डर का नाम</string>
-    <string name="home_operation_running_title">%1$s प्रगति पर है</string>
-    <string name="action_go">जाएं</string>
-    <string name="action_force_stop">बलपूर्वक बंद करें (फोर्स स्टॉप)</string>
-    <string name="error_sftp_host_empty">होस्ट खाली नहीं हो सकता</string>
-    <string name="custom_directories_typed_path_not_found">फ़ोल्डर मौजूद नहीं है: %1$s</string>
-    <string name="custom_directories_typed_path_label">फ़ाइल या फ़ोल्डर का पथ (पाथ)</string>
-    <string name="folder_browser_empty">कोई सबफ़ोल्डर नहीं।</string>
-    <string name="custom_directories_long_press_hint">मेनू खोलने और इसे हटाने के लिए किसी प्रविष्टि को दबाकर रखें।</string>
     <string name="tasks_guide_docs_button">आधिकारिक रेस्टिक दस्तावेज़ीकरण</string>
-    <string name="folder_browser_system_root">सिस्टम रूट (/)</string>
-    <string name="label_sftp_port">पोर्ट</string>
-    <string name="folder_browser_select_this_folder">इस पथ (पाथ) को चुनें</string>
-    <string name="folder_browser_show_hidden_items">छिपी हुई फ़ाइलें और फ़ोल्डर दिखाएं</string>
-    <string name="storage_permission_description">रूट एक्सेस के बिना कस्टम निर्देशिकाओं (डायरेक्टरी) का बैकअप लेने के लिए आवश्यक।</string>
-    <string name="folder_browser_show_hidden">छिपे हुए फ़ोल्डर दिखाएं</string>
-    <string name="storage_permission_disabled">सभी फ़ाइलों तक एक्सेस आवश्यक</string>
-    <string name="error_sftp_path_empty">रिपॉजिटरी पथ खाली नहीं हो सकता</string>
-    <string name="label_sftp_repository_path">रिपॉजिटरी पथ</string>
-    <string name="folder_browser_internal_storage">आंतरिक स्टोरेज</string>
-    <string name="folder_browser_cannot_list">इस फ़ोल्डर की सूची नहीं बनाई जा सकती।</string>
-    <string name="error_sftp_port_invalid">पोर्ट 1 और 65535 के बीच की संख्या होनी चाहिए</string>
-    <string name="custom_directories_unresolvable">कस्टम निर्देशिका को रिज़ॉल्व नहीं किया जा सका: %1$s</string>
-    <string name="custom_directories_typed_path_hint">जैसे /storage/emulated/0/Download या /system/build.prop</string>
-    <string name="error_sftp_username_empty">उपयोगकर्ता नाम खाली नहीं हो सकता</string>
-    <string name="home_operation_running_default_title">ऑपरेशन प्रगति पर है</string>
-    <string name="error_all_files_access_required">कस्टम निर्देशिकाओं का बैकअप लेने के लिए \'सभी फ़ाइलों का एक्सेस\' आवश्यक है।</string>
-    <string name="folder_browser_create_failed">फ़ोल्डर नहीं बनाया जा सका।</string>
-    <string name="folder_browser_external_storage">बाहरी स्टोरेज (%1$s)</string>
     <string name="no_browser_available">लिंक खोलने के लिए कोई ब्राउज़र नहीं मिला। URL क्लिपबोर्ड पर कॉपी कर लिया गया है।</string>
-    <string name="folder_browser_new_folder">नया फ़ोल्डर</string>
-    <string name="custom_directories_typed_path_invalid">एक वैध पूर्ण (एब्सोल्यूट) फ़ोल्डर पाथ दर्ज करें।</string>
-    <string name="custom_directory_not_found">कस्टम निर्देशिका नहीं मिली: %1$s</string>
+    <!-- Operation Logs -->
+    <string name="screen_operation_logs">ऑपरेशन लॉग</string>
+    <string name="operation_logs_empty">अभी तक कोई ऑपरेशन लॉग नहीं है</string>
+    <string name="operation_logs_empty_desc">पूर्ण किए गए बैकअप, रीस्टोर और रखरखाव रन यहां दिखाई देंगे।</string>
+    <string name="operation_logs_clear">लॉग साफ़ करें</string>
+    <string name="operation_logs_clear_confirm_title">सभी लॉग साफ़ करें?</string>
+    <string name="operation_logs_clear_confirm_desc">इससे सभी संग्रहीत ऑपरेशन लॉग इतिहास हट जाएगा।</string>
+    <string name="operation_logs_duration">अवधि: %1$s</string>
+    <string name="operation_logs_copied">लॉग क्लिपबोर्ड पर कॉपी किया गया</string>
+    <string name="path_copied_to_clipboard">Path copied to clipboard</string>
+    <string name="operation_status_success">सफल</string>
+    <string name="operation_status_failed">विफल</string>
+    <string name="action_expand">विस्तार करें</string>
+    <string name="action_collapse">छोटा करें</string>
+    <string name="action_copy_log">लॉग कॉपी करें</string>
+    <string name="action_clear">साफ़ करें</string>
 </resources>

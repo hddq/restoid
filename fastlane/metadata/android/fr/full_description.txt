@@ -1,13 +1,45 @@
-Restoid vous donne un contrôle total sur les sauvegardes de vos applications grâce à une interface claire, moderne et simple. Propulsé par le moteur open-source "restic", il est conçu pour les utilisateurs qui exigent des sauvegardes robustes, chiffrées et dédupliquées.
+Restoid est une solution de sauvegarde moderne axée sur la confidentialité pour Android, propulsée par le moteur robuste et open-source restic. Protégez vos applications, données, photos et documents grâce au chiffrement de niveau professionnel et à une déduplication ultra-rapide et économe en espace.
 
-L'accès Root est strictement requis pour lire et écrire dans les répertoires de données privés des applications.
+Que vous souhaitiez sauvegarder des photos sur un NAS domestique, stocker des instantanés chiffrés dans le cloud ou préserver toutes les données d'applications sur un appareil rooté, Restoid vous offre un contrôle total, sans traceurs, sans publicités et sans verrouillage propriétaire.
 
-Fonctionnalités :
-* Restic-Powered : Exploite la vitesse, la sécurité et l'efficacité de restic pour des sauvegardes locales, dédupliquées et chiffrées.
-* Sauvegarde sélective : Choisissez exactement les applications installées que vous souhaitez sauvegarder.
-* Contrôle granulaire : Sélectionnez avec précision ce qu'il faut inclure pour chaque application : fichiers APK, données utilisateur, données protégées, fichiers externes/OBB ou médias.
-* Gestion flexible des dépôts : Créez et gérez des dépôts via les backends natifs de restic : Répertoire local, SFTP, Serveur REST et Amazon S3/MinIO.
-* Gestion des Snapshots : Parcourez facilement l'historique de vos snapshots, consultez les détails de ce qui a été sauvegardé, et supprimez les anciennes données pour gagner de l'espace.
-* Restauration chirurgicale : Restaurez des applications entières, ou seulement des parties spécifiques (comme restaurer uniquement les données de l'application sans écraser l'APK).
-* Planifications automatisées : Configurez des sauvegardes récurrentes avec des intervalles et des conditions de déclenchement personnalisables (batterie, charge et réseau).
-* Protection contre le Downgrade : Empêche la restauration accidentelle d'une ancienne version d'application sur une version plus récente.
+L'accès root est entièrement optionnel : sauvegardez des dossiers personnalisés, des photos et des documents sans root ; l'accès root n'est nécessaire que pour sauvegarder les données privées des applications.
+
+Fonctionnalités principales :
+
+Ultra-rapide et dédupliqué
+• Déduplication définie par le contenu : Seuls les blocs modifiés uniques sont téléchargés, ce qui rend les sauvegardes suivantes extrêmement rapides et nettement plus efficaces que les archives tar.gz traditionnelles.
+• Économie d'espace : Plusieurs instantanés partagent des données communes, réduisant au minimum l'empreinte de stockage.
+
+Chiffrement Zero-Knowledge
+• Sécurité de niveau professionnel : Tous les instantanés sont chiffrés avec restic en utilisant une cryptographie de pointe.
+• Vos mots de passe et clés de chiffrement restent entièrement sous votre contrôle.
+
+Backends de stockage flexibles
+• Stockage local : Enregistrez sur la mémoire interne, une carte SD ou des clés USB OTG.
+• Réseau et cloud : Prise en charge native de SFTP (clé SSH et mot de passe), serveur REST et stockage d'objets compatible Amazon S3 (Garage, MinIO, Wasabi, Cloudflare R2, Backblaze B2).
+
+Sauvegarde complète des applications et des données (Root requis)
+• Sauvegardez sélectivement les applications utilisateur installées.
+• Contrôle granulaire : Choisissez d'inclure ou non les APK, les données d'applications, les données protégées de l'appareil, les fichiers externes ou les caches OBB.
+
+Fichiers et médias personnalisés
+• Sauvegardez des dossiers personnels : DCIM, Documents, Téléchargements ou tout autre répertoire de votre appareil.
+
+Planifications automatisées en arrière-plan
+• Configurez des planifications récurrentes (quotidiennes, hebdomadaires ou intervalles personnalisés).
+• Contraintes de déclenchement intelligentes : Exécutez uniquement en cours de charge, sur un Wi-Fi non mesuré ou lorsque les conditions de batterie sont remplies.
+
+Restauration chirurgicale et sûre
+• Restaurez des applications entières ou des parties spécifiques (ex. : restaurer des données sans écraser l'APK installé).
+• La protection contre le downgrade empêche la restauration accidentelle d'une ancienne version sur une plus récente.
+
+Zéro verrouillage fournisseur
+• Format restic standard : Les dépôts utilisent le format natif et open-source de restic. Vous pouvez toujours accéder, inspecter, monter ou restaurer vos données sur n'importe quel PC (Linux, macOS, Windows) à l'aide de l'interface de commande officielle restic, même sans votre téléphone.
+
+Maintenance et intégrité du dépôt
+• Gardez votre dépôt compact grâce aux politiques automatisées de rétention des instantanés (nettoyez les anciennes sauvegardes par jour, semaine, mois).
+• Exécutez des vérifications d'intégrité du dépôt et supprimez les verrous obsolètes en un seul geste.
+
+Interface moderne Material 3 Expressive
+• Conçu avec les technologies modernes Jetpack Compose et le design Material 3 Expressive, offrant un thémage dynamique, des animations fluides et une mise en page edge-to-edge.
+• 100 % gratuit et open-source (GPLv3), sans aucun outil d'analyse, de télémétrie ou de suivi tiers.

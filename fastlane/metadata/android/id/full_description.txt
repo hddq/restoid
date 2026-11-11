@@ -1,13 +1,45 @@
-Restoid memberi kamu kontrol penuh atas backup aplikasi melalui antarmuka pengguna yang bersih, modern, dan simpel. Ditenagai oleh engine open-source "restic", aplikasi ini dibangun untuk pengguna yang membutuhkan backup yang tangguh, terenkripsi, dan terdeduplikasi.
+Restoid adalah solusi pencadangan modern yang berfokus pada privasi untuk Android yang didukung oleh mesin restic sumber terbuka yang tangguh. Jaga keamanan aplikasi, data, foto, dan dokumen Anda dengan enkripsi kelas enterprise dan deduplikasi yang sangat cepat serta hemat ruang.
 
-Akses root sangat diwajibkan untuk membaca dan menulis direktori data aplikasi privat.
+Baik Anda ingin mencadangkan foto ke NAS rumah, menyimpan snapshot terenkripsi di cloud, atau melestarikan data aplikasi lengkap di perangkat yang telah di-root, Restoid memberi Anda kendali penuh tanpa pelacak, iklan, atau penguncian kepemilikan.
 
-Fitur:
-* Ditenagai Restic: Memanfaatkan kecepatan, keamanan, dan efisiensi restic untuk backup lokal, terdeduplikasi, dan terenkripsi.
-* Backup Selektif: Pilih dengan pasti aplikasi terinstal mana yang ingin kamu simpan.
-* Kontrol Granular: Pilih secara detail apa yang akan dimasukkan untuk setiap aplikasi: file APK, data pengguna, data yang dilindungi perangkat, eksternal/OBB, atau file media.
-* Manajemen Repositori Fleksibel: Buat dan kelola repositori di berbagai backend restic asli: Direktori lokal, SFTP, server REST, dan Amazon S3/MinIO.
-* Manajemen Snapshot: Telusuri riwayat snapshot backup dengan mudah, lihat detail apa yang telah di-backup, dan hapus data lama untuk menghemat ruang.
-* Pemulihan Presisi: Pulihkan seluruh aplikasi secara lengkap, atau hanya bagian tertentu (seperti hanya memulihkan data aplikasi tanpa menimpa APK).
-* Jadwal Otomatis: Siapkan backup berulang dengan interval yang bisa disesuaikan dan kondisi pemicu (baterai, status pengisian daya, dan jaringan).
-* Perlindungan Downgrade: Mencegah kamu menimpa versi aplikasi yang lebih baru dengan versi yang lebih lama saat pemulihan.
+Akses root sepenuhnya opsional: cadangkan folder kustom, foto, dan dokumen tanpa root; akses root hanya diperlukan untuk mencadangkan data aplikasi privat.
+
+Fitur Utama:
+
+Sangat Cepat & Tereduplikasi
+• Deduplikasi Berbasis Konten: Hanya blok yang diubah yang unik yang diunggah, membuat pencadangan berikutnya menjadi sangat cepat dan jauh lebih efisien daripada arsip tar.gz tradisional.
+• Hemat Ruang: Beberapa snapshot berbagi data yang sama, menjaga jejak penyimpanan tetap minimal.
+
+Enkripsi Pengetahuan-Nol
+• Keamanan enterprise: Semua snapshot dienkripsi dengan restic menggunakan kriptografi mutakhir.
+• Sandi dan kunci enkripsi Anda tetap sepenuhnya berada di bawah kendali Anda.
+
+Backend Penyimpanan yang Fleksibel
+• Penyimpanan Lokal: Simpan ke memori internal, kartu SD, atau drive USB OTG.
+• Jaringan & Cloud: Dukungan bawaan untuk SFTP (kunci & sandi SSH), server REST, dan penyimpanan objek yang kompatibel dengan Amazon S3 (Garage, MinIO, Wasabi, Cloudflare R2, Backblaze B2).
+
+Pencadangan Aplikasi & Data Penuh (Membutuhkan Root)
+• Pilih secara selektif aplikasi pengguna yang diinstal.
+• Kontrol terperinci: Pilih apakah akan menyertakan APK, data aplikasi, data yang dilindungi perangkat, file eksternal, atau tembolok OBB.
+
+File & Media Kustom
+• Cadangkan folder pribadi: DCIM, Dokumen, Unduhan, atau direktori apa pun di perangkat Anda.
+
+Jadwal Latar Belakang Otomatis
+• Konfigurasikan jadwal berulang (harian, mingguan, atau interval kustom).
+• Batasan pemicu cerdas: Jalankan hanya saat mengisi daya, menggunakan Wi-Fi nirbatas, atau saat ketentuan baterai terpenuhi.
+
+Pemulihan Bedah & Aman
+• Pulihkan seluruh aplikasi atau bagian tertentu (mis. pulihkan data tanpa menimpa APK yang terinstal).
+• Perlindungan penurunan versi mencegah pemulihan versi lama yang tidak disengaja di atas versi yang lebih baru.
+
+Tanpa Penguncian Vendor
+• Format restic standar: Repositori menggunakan format restic asli sumber terbuka. Anda selalu dapat mengakses, memeriksa, memasang, atau memulihkan data Anda di PC apa pun (Linux, macOS, Windows) menggunakan CLI restic resmi—bahkan tanpa ponsel Anda.
+
+Pemeliharaan & Kesehatan Repositori
+• Jaga repositori Anda tetap ringkas dengan kebijakan retensi snapshot otomatis (pangkas cadangan lama berdasarkan hari, minggu, bulan).
+• Jalankan pemeriksaan integritas repositori dan hapus kunci kedaluwarsa dengan satu ketukan.
+
+UI Ekspresif Material 3 Modern
+• Dibangun dengan Jetpack Compose modern dan desain Ekspresif Material 3, menampilkan tema dinamis, animasi halus, dan tata letak *edge-to-edge*.
+• 100% Gratis dan Sumber Terbuka (GPLv3), tanpa analitik, telemetri, atau pelacakan pihak ketiga.
