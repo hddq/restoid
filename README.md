@@ -1,10 +1,14 @@
 # Restoid
-Android backup tool powered by [`restic`](https://github.com/restic/restic/).
+Secure, deduplicated backup tool for Android powered by [`restic`](https://github.com/restic/restic/).
 
 [![F-Droid Downloads](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fkitswas%2Ffdroid-metrics-dashboard%2Frefs%2Fheads%2Fmain%2Fprocessed%2Ftotal%2Fio.github.hddq.restoid.json&query=%24.total_downloads&logo=fdroid&label=F-Droid%20downloads)](https://f-droid.org/packages/io.github.hddq.restoid)
 [![GitHub Downloads](https://img.shields.io/github/downloads/hddq/restoid/total?logo=github&label=GitHub%20downloads)](https://github.com/hddq/restoid/releases)
 
-Restoid gives you control over your backups through a clean and simple user interface. It's built for users who want robust, encrypted, and deduplicated backups.
+Restoid is a modern, privacy-focused backup solution for Android powered by the robust, open-source restic engine. Keep your apps, data, photos, and documents safe with enterprise-grade encryption and lightning-fast, space-saving deduplication.
+
+Whether you want to back up photos to a home NAS, store encrypted snapshots in the cloud, or preserve full app data on a rooted device, Restoid gives you complete control without trackers, ads, or proprietary lock-in.
+
+Root access is completely optional: back up custom folders, photos, and documents without root; root access is only needed to back up private app data.
 
 ## 📥 Download
 
@@ -28,15 +32,17 @@ Restoid gives you control over your backups through a clean and simple user inte
 
 ## ✨ Features
 
-* **Restic-Powered**: Leverages the speed, security, and efficiency of `restic` for deduplicated and encrypted backups.
-* **Selective App Backup**: Choose exactly which user-installed applications you want to back up (requires root).
-* **Full Control Over What You Back Up**: Granularly select what to include for each app: APK files, user data, device-protected data, external/OBB/media files (requires root).
-* **Custom Directory Backup**: Back up custom directories and files like DCIM, Documents, etc.
-* **Flexible Repository Management**: Create and manage repositories across native restic backends: Local directory, SFTP, REST server, and Amazon S3/MinIO.
-* **Snapshot Management**: Easily browse backup snapshots, view details of what was backed up, and forget old snapshots.
-* **Flexible Restore**: Restore entire apps or just specific parts (like only app data).
-* **Automated Schedules**: Set up recurring backups with customizable intervals and trigger conditions (battery, charging, and network status).
-* **Downgrade Protection**: Prevents you from accidentally restoring an older app version over a newer one (can be overridden).
+* ⚡ **Blazing Fast & Deduplicated**: Content-defined deduplication uploads only unique changed blocks, making subsequent backups blazingly fast and drastically more efficient than traditional `tar.gz` archives.
+* 🔒 **Zero-Knowledge Encryption**: All snapshots are encrypted with `restic` using state-of-the-art cryptography. Your encryption keys remain under your control.
+* ☁️ **Flexible Storage Backends**: Store backups on local storage (internal memory, SD card, USB OTG) or over the network (SFTP/SSH, REST server, and Amazon S3-compatible object storage like Garage, MinIO, Wasabi, Cloudflare R2, or Backblaze B2).
+* 📱 **Full App & Data Backup (Root Required)**: Selectively back up installed user applications with granular control: APKs, app user data, device-protected data, and external/OBB storage.
+* 📁 **Custom Files & Media**: Back up personal folders and files (DCIM, Documents, Downloads, or any directory) without requiring root.
+* ⏰ **Automated Schedules**: Set up recurring backups with customizable intervals and smart trigger constraints (charging only, unmetered Wi-Fi).
+* 🔄 **Surgical & Safe Restore**: Restore entire apps or specific parts (like app data without overwriting the installed APK), with downgrade protection to prevent version conflicts.
+* 🔓 **Zero Vendor Lock-in**: Restoid uses the standard, native `restic` repository format. You can always access, inspect, mount (`restic mount`), or restore your data on any computer (Linux, macOS, Windows) using the official `restic` CLI—no proprietary container or phone required.
+* 🧹 **Maintenance & Repository Health**: Automated snapshot retention policies (prune old snapshots by day, week, month), repository integrity checks, and stale lock management.
+* 🎨 **Material 3 Expressive UI**: Built with modern Jetpack Compose and Material 3 Expressive design, featuring dynamic theming, smooth animations, and edge-to-edge layout.
+* 🛡️ **100% Free & Open Source**: Licensed under GPLv3 with zero analytics, telemetry, or third-party tracking.
 
 ## ⚠️ Requirements
 

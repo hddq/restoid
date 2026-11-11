@@ -1,14 +1,45 @@
-Restoid gives you complete control over your backups through a clean, modern, and simple user interface. Powered by the open-source "restic" engine, it's built for users who demand robust, encrypted, and deduplicated backups.
+Restoid is a modern, privacy-focused backup solution for Android powered by the robust, open-source restic engine. Keep your apps, data, photos, and documents safe with enterprise-grade encryption and lightning-fast, space-saving deduplication.
 
-Root access is only required if you want to back up apps and their data.
+Whether you want to back up photos to a home NAS, store encrypted snapshots in the cloud, or preserve full app data on a rooted device, Restoid gives you complete control without trackers, ads, or proprietary lock-in.
 
-Features:
-* Restic-Powered: Leverages the speed, security, and efficiency of restic for local, deduplicated, and encrypted backups.
-* Selective App Backup: Choose exactly which user-installed applications you want to save (requires root).
-* Granular Control: Granularly select what to include for each app: APK files, user data, device-protected data, external/OBB, or media files (requires root).
-* Custom Directory Backup: Back up custom directories and files like DCIM, Documents, etc.
-* Flexible Repository Management: Create and manage repositories across native restic backends: Local directory, SFTP, REST server, and Amazon S3/MinIO.
-* Snapshot Management: Easily browse historical backup snapshots, view details of what was backed up, and forget old data to save space.
-* Surgical Restore: Restore entire apps completely, or just specific parts (like restoring only app data without overwriting the APK).
-* Automated Schedules: Set up recurring backups with customizable intervals and trigger conditions (battery, charging, and network status).
-* Downgrade Protection: Prevents you from accidentally restoring an older app version over a newer one.
+Root access is completely optional: back up custom folders, photos, and documents without root; root access is only needed to back up private app data.
+
+Key Features:
+
+Blazing Fast & Deduplicated
+• Content-Defined Deduplication: Only unique changed blocks are uploaded, making subsequent backups blazingly fast and drastically more efficient than traditional tar.gz archives.
+• Space-Saving: Multiple snapshots share common data, keeping storage footprints minimal.
+
+Zero-Knowledge Encryption
+• Enterprise security: All snapshots are encrypted with restic using state-of-the-art cryptography.
+• Your passwords and encryption keys remain entirely under your control.
+
+Flexible Storage Backends
+• Local Storage: Save to internal memory, SD card, or USB OTG drives.
+• Network & Cloud: Native support for SFTP (SSH key & password), REST server, and Amazon S3-compatible object storage (Garage, MinIO, Wasabi, Cloudflare R2, Backblaze B2).
+
+Full App & Data Backup (Root Required)
+• Selectively back up installed user applications.
+• Granular control: Choose whether to include APKs, app data, device-protected data, external files, or OBB caches.
+
+Custom Files & Media
+• Back up personal folders: DCIM, Documents, Downloads, or any directory on your device.
+
+Automated Background Schedules
+• Configure recurring schedules (daily, weekly, or custom intervals).
+• Smart trigger constraints: Run only while charging, on unmetered Wi-Fi, or when battery conditions are met.
+
+Surgical & Safe Restore
+• Restore entire apps or specific parts (e.g. restore data without overwriting the installed APK).
+• Downgrade protection prevents accidental restoration of older versions over newer ones.
+
+Zero Vendor Lock-in
+• Standard restic format: Repositories use the native, open-source restic format. You can always access, inspect, mount, or restore your data on any PC (Linux, macOS, Windows) using the official restic CLI—even without your phone.
+
+Maintenance & Repository Health
+• Keep your repository compact with automated snapshot retention policies (prune old backups by day, week, month).
+• Run repository integrity checks and clear stale locks with one tap.
+
+Modern Material 3 Expressive UI
+• Built with modern Jetpack Compose and Material 3 Expressive design, featuring dynamic theming, smooth animations, and edge-to-edge layout.
+• 100% Free and Open Source (GPLv3), with zero analytics, telemetry, or third-party tracking.
