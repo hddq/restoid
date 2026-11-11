@@ -12,7 +12,6 @@ import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.RepositoryBackendType
 import io.github.hddq.restoid.data.ResticBinaryManager
 import io.github.hddq.restoid.data.ResticRepository
-import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.AppMetadata
 import io.github.hddq.restoid.model.RestoidMetadata
@@ -90,7 +89,8 @@ class BackupOperationRunner(
             operationLockManager.acquire(repository.backendType)
             operationLockAcquired = true
 
-            val resticState = resticBinaryManager.resticState.value as ResticState.Installed
+            val resticPath = resticBinaryManager.getBinaryPath()
+                ?: throw IllegalStateException(context.getString(R.string.error_restic_not_installed))
             repositoryId = repository.id
             if (repositoryId == null) throw IllegalStateException(context.getString(R.string.backup_error_repository_id_not_found))
 
@@ -225,7 +225,7 @@ class BackupOperationRunner(
                 if (envPrefix.isNotEmpty()) append(envPrefix).append(' ')
                 append("RESTIC_PASSWORD_FILE=").append(shellQuote(passwordFile.absolutePath)).append(' ')
                 append("RESTIC_CACHE_DIR=").append(shellQuote(File(context.cacheDir, if (com.topjohnwu.superuser.Shell.getShell().isRoot) "restic" else "restic-user").absolutePath)).append(' ')
-                append(shellQuote(resticState.path)).append(' ')
+                append(shellQuote(resticPath)).append(' ')
                 append("--retry-lock 5s ")
                 if (resticOptionFlags.isNotEmpty()) append(resticOptionFlags).append(' ')
                 append("-r ")
@@ -534,7 +534,7 @@ class BackupOperationRunner(
             }
         }
 
-        if (resticBinaryManager.resticState.value !is ResticState.Installed) {
+        if (!resticBinaryManager.isInstalled) {
             return OperationProgress(
                 isFinished = true,
                 error = context.getString(R.string.error_restic_not_installed),

@@ -48,10 +48,8 @@ class ResticExecutor(
         stdoutCallback: CallbackList<String>? = null
     ): Result<String> {
         return withContext(Dispatchers.IO) {
-            val state = binaryManager.resticState.value
-            if (state !is ResticState.Installed) {
-                return@withContext Result.failure(Exception(context.getString(R.string.restic_executor_failure_not_ready)))
-            }
+            val resticPath = binaryManager.getBinaryPath()
+                ?: return@withContext Result.failure(Exception(context.getString(R.string.restic_executor_failure_not_ready)))
 
             if (environmentVariables.keys.any { !isValidEnvironmentVariableName(it) }) {
                 return@withContext Result.failure(Exception(context.getString(R.string.restic_executor_failure_invalid_env_name)))
@@ -61,7 +59,6 @@ class ResticExecutor(
                 return@withContext Result.failure(Exception(context.getString(R.string.restic_executor_failure_invalid_option_name)))
             }
 
-            val resticPath = state.path
             val passwordFile = File.createTempFile("restic-pass", ".tmp", context.cacheDir)
 
             try {

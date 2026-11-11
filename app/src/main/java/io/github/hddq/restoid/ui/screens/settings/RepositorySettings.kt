@@ -78,7 +78,7 @@ fun RepositorySettings(viewModel: SettingsViewModel) {
                         tint = LocalContentColor.current.copy(alpha = 0.6f)
                     )
                     Text(
-                        stringResource(R.string.install_restic_manage_repositories),
+                        stringResource(R.string.restic_not_available_check_settings),
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }

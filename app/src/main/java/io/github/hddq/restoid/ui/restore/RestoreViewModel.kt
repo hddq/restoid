@@ -11,7 +11,6 @@ import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.RepositoryBackendType
 import io.github.hddq.restoid.data.ResticBinaryManager
 import io.github.hddq.restoid.data.ResticRepository
-import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.BackupDetail
@@ -317,7 +316,6 @@ class RestoreViewModel(
         preferencesRepository.saveRestoreTypes(_restoreTypes.value)
         preferencesRepository.saveAllowDowngrade(_allowDowngrade.value)
 
-        val resticState = resticBinaryManager.resticState.value
         val selectedRepoKey = repositoriesRepository.selectedRepository.value
         val selectedRepository = selectedRepoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
         val selectedRepoPath = selectedRepository?.path
@@ -336,7 +334,7 @@ class RestoreViewModel(
             emptyList()
         }
 
-        if (resticState !is ResticState.Installed || selectedRepoPath == null || currentSnapshot == null) {
+        if (!resticBinaryManager.isInstalled || selectedRepoPath == null || currentSnapshot == null) {
             _restoreProgress.value = OperationProgress(
                 isFinished = true,
                 error = application.getString(R.string.restore_error_preflight_failed),

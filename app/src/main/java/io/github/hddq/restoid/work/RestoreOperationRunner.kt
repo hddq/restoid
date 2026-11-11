@@ -13,7 +13,6 @@ import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.RepositoryBackendType
 import io.github.hddq.restoid.data.ResticBinaryManager
 import io.github.hddq.restoid.data.ResticRepository
-import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.ui.shared.OperationProgress
 import io.github.hddq.restoid.util.ResticOutputParser
@@ -79,11 +78,11 @@ class RestoreOperationRunner(
 
         val finalResult = try {
             throwIfCancelled()
-            val resticState = resticBinaryManager.resticState.value
+            val resticPath = resticBinaryManager.getBinaryPath()
             val selectedRepository = repositoriesRepository.getRepositoryByKey(request.repositoryKey)
             val selectedRepoPath = selectedRepository?.path
 
-            if (resticState !is ResticState.Installed || selectedRepoPath == null) {
+            if (resticPath == null || selectedRepoPath == null) {
                 throw IllegalStateException(context.getString(R.string.restore_error_preflight_failed))
             }
 
@@ -157,7 +156,7 @@ class RestoreOperationRunner(
                     if (envPrefix.isNotEmpty()) append(envPrefix).append(' ')
                     append("RESTIC_PASSWORD_FILE=").append(shellQuote(passwordFile.absolutePath)).append(' ')
                     append("RESTIC_CACHE_DIR=").append(shellQuote(File(context.cacheDir, if (com.topjohnwu.superuser.Shell.getShell().isRoot) "restic" else "restic-user").absolutePath)).append(' ')
-                    append(shellQuote(resticState.path)).append(' ')
+                    append(shellQuote(resticPath)).append(' ')
                     append("--retry-lock 5s ")
                     if (resticOptionFlags.isNotEmpty()) append(resticOptionFlags).append(' ')
                     append("-r ")
