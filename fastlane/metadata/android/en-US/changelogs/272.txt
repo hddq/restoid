@@ -1,0 +1,9 @@
+* Display device hostname on snapshots and in Settings
+* Redesigned snapshot details with Material 3 Expressive badges
+* Context menus for snapshots and schedules on long press
+* Exclude specific files & folders from app data and backups
+* Save operation logs and open directly from notifications
+* Live streaming and wavy progress for maintenance tasks
+* Separate notification channels for successes and errors
+* Built-in Tasks & Maintenance guide
+* Performance improvements and bug fixes
