@@ -1,6 +1,7 @@
 package io.github.hddq.restoid.data
 
 import android.content.Context
+import kotlinx.coroutines.async
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -105,6 +106,44 @@ class ResticBinaryManagerTest {
             manager.checkResticStatus()
 
             assertEquals("restic 0.19.1 compiled...", (manager.resticState.value as ResticState.Installed).fullVersionOutput)
+        } finally {
+            tempDir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun checkResticStatus_concurrentCalls_executeCommandOnlyOnce() = kotlinx.coroutines.test.runTest {
+        val tempDir = Files.createTempDirectory("restoid_test_concurrent").toFile()
+        try {
+            val resticBin = File(tempDir, "librestic.so")
+            resticBin.writeText("#!/bin/sh\n")
+            resticBin.setExecutable(true)
+
+            var commandExecutions = 0
+            val manager = ResticBinaryManager(
+                context = FakeContext(),
+                nativeLibDirProvider = { tempDir },
+                stringResolver = { "error" },
+                versionCommandRunner = {
+                    kotlinx.coroutines.delay(50)
+                    commandExecutions++
+                    Pair(true, listOf("restic 0.19.1 (compiled go1.24)"))
+                }
+            )
+
+            // Start two overlapping checkResticStatus calls concurrently
+            val call1 = async { manager.checkResticStatus() }
+            val call2 = async { manager.checkResticStatus() }
+            call1.await()
+            call2.await()
+
+            // Subsequent third call
+            manager.checkResticStatus()
+
+            assertEquals(1, commandExecutions)
+            assertTrue(manager.resticState.value is ResticState.Installed)
+            assertEquals("0.19.1", (manager.resticState.value as ResticState.Installed).version)
+            assertEquals("restic 0.19.1 (compiled go1.24)", (manager.resticState.value as ResticState.Installed).fullVersionOutput)
         } finally {
             tempDir.deleteRecursively()
         }

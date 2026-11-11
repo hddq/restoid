@@ -23,6 +23,10 @@ class ResticBinaryManager(
     private val nativeLibDirProvider: () -> File = { File(context.applicationInfo.nativeLibraryDir) },
     private val stringResolver: (Int) -> String = { id ->
         runCatching { context.getString(id) }.getOrElse { "res_$id" }
+    },
+    private val versionCommandRunner: suspend (File) -> Pair<Boolean, List<String>> = { binary ->
+        val result = Shell.cmd("${binary.absolutePath} version").exec()
+        Pair(result.isSuccess, result.out)
     }
 ) {
 
@@ -70,9 +74,9 @@ class ResticBinaryManager(
             withContext(Dispatchers.IO) {
                 val binary = resticFile
                 if (binary.exists() && binary.canExecute()) {
-                    val result = Shell.cmd("${binary.absolutePath} version").exec()
-                    if (result.isSuccess) {
-                        val versionOutput = result.out.firstOrNull()?.trim() ?: stringResolver(R.string.restic_unknown_version)
+                    val (isSuccess, out) = versionCommandRunner(binary)
+                    if (isSuccess) {
+                        val versionOutput = out.firstOrNull()?.trim() ?: stringResolver(R.string.restic_unknown_version)
                         val version = versionOutput.split(" ").getOrNull(1) ?: stringResolver(R.string.restic_unknown)
                         _resticState.value = ResticState.Installed(binary.absolutePath, version, versionOutput)
                     } else {
