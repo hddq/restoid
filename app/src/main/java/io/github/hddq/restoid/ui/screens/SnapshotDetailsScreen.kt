@@ -31,14 +31,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -46,6 +44,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -53,7 +52,10 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import io.github.hddq.restoid.LocalAppBarActions
@@ -86,14 +88,14 @@ fun SnapshotDetailsScreen(
         )
     )
 
-    val snapshot by viewModel.snapshot.collectAsState()
-    val metadata by viewModel.metadata.collectAsState()
-    val backupDetails by viewModel.backupDetails.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-    val error by viewModel.error.collectAsState()
-    val showConfirmDialog by viewModel.showConfirmForgetDialog.collectAsState()
-    val isForgetting by viewModel.isForgetting.collectAsState()
-    val forgetResult by viewModel.forgetResult.collectAsState()
+    val snapshot by viewModel.snapshot.collectAsStateWithLifecycle()
+    val metadata by viewModel.metadata.collectAsStateWithLifecycle()
+    val backupDetails by viewModel.backupDetails.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val error by viewModel.error.collectAsStateWithLifecycle()
+    val showConfirmDialog by viewModel.showConfirmForgetDialog.collectAsStateWithLifecycle()
+    val isForgetting by viewModel.isForgetting.collectAsStateWithLifecycle()
+    val forgetResult by viewModel.forgetResult.collectAsStateWithLifecycle()
 
     val appBarActions = LocalAppBarActions.current
     DisposableEffect(snapshotId, isForgetting) {
@@ -259,7 +261,10 @@ fun SnapshotDetailsHeader(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun BackedUpAppItem(detail: BackupDetail) {
+fun BackedUpAppItem(
+    detail: BackupDetail,
+    modifier: Modifier = Modifier
+) {
     val context = LocalContext.current
     val notAvailable = stringResource(R.string.not_available)
     val apkLabel = stringResource(R.string.backup_type_apk)
@@ -269,48 +274,91 @@ fun BackedUpAppItem(detail: BackupDetail) {
     val obbLabel = stringResource(R.string.backup_item_obb)
     val mediaLabel = stringResource(R.string.backup_item_media)
 
-    Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.Top) {
+    val badges = remember(detail, context, apkLabel, dataLabel, deDataLabel, extDataLabel, obbLabel, mediaLabel) {
+        detail.backedUpItems.map { item ->
+            val sizeKey = when (item) {
+                apkLabel -> "apk"
+                dataLabel -> "data"
+                deDataLabel -> "user_de"
+                extDataLabel -> "external_data"
+                obbLabel -> "obb"
+                mediaLabel -> "media"
+                else -> null
+            }
+            val size = sizeKey?.let { detail.detailedSizes[it] }
+            if (size != null) {
+                "$item (${Formatter.formatShortFileSize(context, size)})"
+            } else {
+                item
+            }
+        }
+    }
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.Top
+    ) {
         AsyncImage(
             model = detail.appInfo.icon,
             contentDescription = null,
-            modifier = Modifier.size(48.dp)
+            modifier = Modifier
+                .size(44.dp)
+                .clip(RoundedCornerShape(10.dp))
         )
         Spacer(Modifier.width(16.dp))
-        Column {
-            Text(detail.appInfo.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = detail.appInfo.name,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
 
             val versionInfo = detail.versionName ?: notAvailable
             val sizeInfo = detail.backupSize?.let { Formatter.formatShortFileSize(context, it) } ?: notAvailable
             Text(
-                stringResource(R.string.snapshot_version_size, versionInfo, sizeInfo),
+                text = stringResource(R.string.snapshot_version_size, versionInfo, sizeInfo),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
-            Spacer(Modifier.height(8.dp))
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                detail.backedUpItems.forEach { item ->
-                    val sizeKey = when (item) {
-                        apkLabel -> "apk"
-                        dataLabel -> "data"
-                        deDataLabel -> "user_de"
-                        extDataLabel -> "external_data"
-                        obbLabel -> "obb"
-                        mediaLabel -> "media"
-                        else -> null
+
+            if (badges.isNotEmpty()) {
+                Spacer(Modifier.height(6.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    badges.forEach { labelText ->
+                        BackedUpItemBadge(text = labelText)
                     }
-                    val size = sizeKey?.let { detail.detailedSizes[it] }
-                    val labelText = if (size != null) {
-                        "$item (${Formatter.formatShortFileSize(context, size)})"
-                    } else {
-                        item
-                    }
-                    SuggestionChip(onClick = {}, label = { Text(labelText, style = MaterialTheme.typography.labelSmall) })
                 }
             }
         }
+    }
+}
+
+@Composable
+fun BackedUpItemBadge(
+    text: String,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(6.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHighest
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+        )
     }
 }
 
@@ -368,10 +416,14 @@ fun ConfirmForgetDialog(
 }
 
 @Composable
-fun BackedUpCustomDirItem(path: String, metadata: io.github.hddq.restoid.model.CustomDirectoryMetadata) {
+fun BackedUpCustomDirItem(
+    path: String,
+    metadata: io.github.hddq.restoid.model.CustomDirectoryMetadata,
+    modifier: Modifier = Modifier
+) {
     val context = LocalContext.current
     metadata.isDirectory?.let { isDirectory ->
-        BackedUpCustomDirItemContent(path, metadata, isDirectory, context)
+        BackedUpCustomDirItemContent(path, metadata, isDirectory, context, modifier)
         return
     }
     val initialIsDir = io.github.hddq.restoid.util.StorageUtils.isDirectoryFast(path)
@@ -385,7 +437,7 @@ fun BackedUpCustomDirItem(path: String, metadata: io.github.hddq.restoid.model.C
             }
         }
     }
-    BackedUpCustomDirItemContent(path, metadata, isDirectory, context)
+    BackedUpCustomDirItemContent(path, metadata, isDirectory, context, modifier)
 }
 
 @Composable
@@ -393,23 +445,103 @@ private fun BackedUpCustomDirItemContent(
     path: String,
     metadata: io.github.hddq.restoid.model.CustomDirectoryMetadata,
     isDirectory: Boolean,
-    context: android.content.Context
+    context: android.content.Context,
+    modifier: Modifier = Modifier
 ) {
-    Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Icon(
             if (isDirectory) Icons.Outlined.Folder else Icons.Outlined.Description,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary
         )
         Spacer(Modifier.width(16.dp))
-        Column {
-            Text(path.substringAfterLast("/").ifEmpty { path }, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                path.substringAfterLast("/").ifEmpty { path },
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
             val sizeInfo = Formatter.formatShortFileSize(context, metadata.size)
             Text(
                 stringResource(R.string.progress_size) + ": " + sizeInfo + " • " + path,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
+        }
+    }
+}
+
+@Preview(name = "Snapshot Details Apps Preview", showBackground = true)
+@Composable
+private fun BackedUpAppItemPreview() {
+    io.github.hddq.restoid.ui.theme.RestoidTheme {
+        Surface(color = MaterialTheme.colorScheme.surface) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                ExpressiveSegmentedSurface(index = 0, count = 2) {
+                    BackedUpAppItem(
+                        detail = BackupDetail(
+                            appInfo = io.github.hddq.restoid.model.AppInfo(
+                                name = "F-Droid",
+                                packageName = "org.fdroid.fdroid",
+                                versionName = "1.20.0",
+                                versionCode = 1020050,
+                                icon = android.graphics.drawable.ColorDrawable(0xFF1E88E5.toInt()),
+                                apkPaths = emptyList(),
+                                isSelected = true
+                            ),
+                            backedUpItems = listOf("APK", "Data", "Device Protected Data", "External Data"),
+                            versionName = "1.20.0",
+                            versionCode = 1020050,
+                            backupSize = 42_500_000L,
+                            isDowngrade = false,
+                            isInstalled = true,
+                            detailedSizes = mapOf(
+                                "apk" to 12_500_000L,
+                                "data" to 28_000_000L,
+                                "user_de" to 4_096L,
+                                "external_data" to 1_995_904L
+                            )
+                        )
+                    )
+                }
+                ExpressiveSegmentedSurface(index = 1, count = 2) {
+                    BackedUpAppItem(
+                        detail = BackupDetail(
+                            appInfo = io.github.hddq.restoid.model.AppInfo(
+                                name = "K-9 Mail",
+                                packageName = "com.fsck.k9",
+                                versionName = "6.802",
+                                versionCode = 39002,
+                                icon = android.graphics.drawable.ColorDrawable(0xFF43A047.toInt()),
+                                apkPaths = emptyList(),
+                                isSelected = true
+                            ),
+                            backedUpItems = listOf("APK", "Data"),
+                            versionName = "6.802",
+                            versionCode = 39002,
+                            backupSize = 85_200_000L,
+                            isDowngrade = false,
+                            isInstalled = true,
+                            detailedSizes = mapOf(
+                                "apk" to 32_000_000L,
+                                "data" to 53_200_000L
+                            )
+                        )
+                    )
+                }
+            }
         }
     }
 }
