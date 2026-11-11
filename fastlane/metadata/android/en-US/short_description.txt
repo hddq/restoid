@@ -1,1 +1,1 @@
-Android backup tool powered by restic
+Secure, deduplicated backup for apps and files powered by the restic engine.
