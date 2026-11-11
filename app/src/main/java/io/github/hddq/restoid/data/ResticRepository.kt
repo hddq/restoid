@@ -16,6 +16,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 
 /**
@@ -674,17 +679,31 @@ class ResticRepository(
 
     // --- JSON Parsing Helpers ---
 
-    private fun parseSnapshotsJson(jsonOutput: String): List<SnapshotInfo> {
+    internal fun parseSnapshotsJson(jsonOutput: String): List<SnapshotInfo> {
         val snapshots = mutableListOf<SnapshotInfo>()
+        val trimmed = jsonOutput.trim()
+        if (trimmed.isEmpty()) return emptyList()
+
         try {
-            val lines = jsonOutput.trim().lines()
-            if (lines.size == 1 && lines[0].trim().startsWith("[")) {
-                val content = lines[0].trim().removeSurrounding("[", "]")
+            if (trimmed.startsWith("[")) {
+                val array = json.parseToJsonElement(trimmed).jsonArray
+                array.forEach { element ->
+                    parseSnapshotElement(element.jsonObject)?.let { snapshots.add(it) }
+                }
+                return snapshots
+            }
+        } catch (e: Exception) {
+            // If full array parsing fails, fall back to line-by-line / object-by-object parsing
+        }
+
+        try {
+            if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+                val content = trimmed.removeSurrounding("[", "]").trim()
                 if (content.isNotEmpty()) {
                     splitJsonObjects(content).forEach { parseSnapshotObject(it)?.let { s -> snapshots.add(s) } }
                 }
             } else {
-                lines.forEach { line ->
+                trimmed.lines().forEach { line ->
                     if (line.trim().startsWith("{")) parseSnapshotObject(line.trim())?.let { snapshots.add(it) }
                 }
             }
@@ -723,15 +742,29 @@ class ResticRepository(
         return objects
     }
 
-    private fun parseSnapshotObject(jsonObj: String): SnapshotInfo? {
+    internal fun parseSnapshotElement(obj: JsonObject): SnapshotInfo? {
+        val id = obj["id"]?.jsonPrimitive?.contentOrNull
+            ?: obj["short_id"]?.jsonPrimitive?.contentOrNull
+            ?: return null
+        val time = obj["time"]?.jsonPrimitive?.contentOrNull
+            ?: runCatching { context.getString(R.string.restic_unknown) }.getOrDefault("Unknown")
+        val paths = obj["paths"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
+        val tags = obj["tags"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
+        val hostname = obj["hostname"]?.jsonPrimitive?.contentOrNull
+        return SnapshotInfo(id, time, paths, tags, hostname)
+    }
+
+    internal fun parseSnapshotObject(jsonObj: String): SnapshotInfo? {
         return try {
+            val element = json.parseToJsonElement(jsonObj).jsonObject
+            parseSnapshotElement(element)
+        } catch (e: Exception) {
             val id = extractJsonField(jsonObj, "id") ?: extractJsonField(jsonObj, "short_id") ?: return null
-            val time = extractJsonField(jsonObj, "time") ?: context.getString(R.string.restic_unknown)
+            val time = extractJsonField(jsonObj, "time") ?: runCatching { context.getString(R.string.restic_unknown) }.getOrDefault("Unknown")
             val paths = extractJsonArrayField(jsonObj, "paths")
             val tags = extractJsonArrayField(jsonObj, "tags")
-            SnapshotInfo(id, time, paths, tags)
-        } catch (e: Exception) {
-            null
+            val hostname = extractJsonField(jsonObj, "hostname")
+            SnapshotInfo(id, time, paths, tags, hostname)
         }
     }
 
@@ -750,5 +783,6 @@ data class SnapshotInfo(
     val id: String,
     val time: String,
     val paths: List<String>,
-    val tags: List<String>
+    val tags: List<String>,
+    val hostname: String? = null
 )

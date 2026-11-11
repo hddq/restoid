@@ -204,6 +204,7 @@
     <string name="snapshot_not_found">No snapshot found.</string>
     <string name="snapshot_forgetting">Forgetting snapshot…</string>
     <string name="snapshot_id">ID: %1$s</string>
+    <string name="snapshot_hostname">Device: %1$s</string>
     <string name="snapshot_time">Time: %1$s</string>
     <string name="snapshot_version_size">Version: %1$s - Size: %2$s</string>
     <string name="dialog_forget_snapshot_title">Forget Snapshot?</string>
