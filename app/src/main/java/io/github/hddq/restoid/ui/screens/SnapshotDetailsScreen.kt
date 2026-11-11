@@ -264,6 +264,12 @@ fun SnapshotDetailsHeader(
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.Monospace
             )
+            snapshot.hostname?.takeIf { it.isNotBlank() }?.let { hostname ->
+                Text(
+                    stringResource(R.string.snapshot_hostname, hostname),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
             Text(
                 stringResource(R.string.snapshot_time, snapshot.time),
                 style = MaterialTheme.typography.bodyMedium
@@ -523,9 +529,22 @@ private fun BackedUpAppItemPreview() {
         Surface(color = MaterialTheme.colorScheme.surface) {
             Column(
                 modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                ExpressiveSegmentedSurface(index = 0, count = 2) {
+                SnapshotDetailsHeader(
+                    snapshot = SnapshotInfo(
+                        id = "a1b2c3d4e5f67890",
+                        time = "2026-11-10 14:30:00",
+                        paths = listOf("/data/app/org.fdroid.fdroid"),
+                        tags = emptyList(),
+                        hostname = "Pixel-8"
+                    )
+                )
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    ExpressiveSegmentedSurface(index = 0, count = 2) {
                     BackedUpAppItem(
                         detail = BackupDetail(
                             appInfo = io.github.hddq.restoid.model.AppInfo(
@@ -580,4 +599,5 @@ private fun BackedUpAppItemPreview() {
             }
         }
     }
+}
 }
