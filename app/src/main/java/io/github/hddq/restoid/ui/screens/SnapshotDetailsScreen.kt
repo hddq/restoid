@@ -1,7 +1,11 @@
 package io.github.hddq.restoid.ui.screens
 
+import android.content.ClipData
 import android.text.format.Formatter
-import androidx.compose.foundation.Image
+import android.widget.Toast
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +26,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -38,13 +44,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -440,6 +453,7 @@ fun BackedUpCustomDirItem(
     BackedUpCustomDirItemContent(path, metadata, isDirectory, context, modifier)
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun BackedUpCustomDirItemContent(
     path: String,
@@ -448,11 +462,26 @@ private fun BackedUpCustomDirItemContent(
     context: android.content.Context,
     modifier: Modifier = Modifier
 ) {
+    var isExpanded by rememberSaveable { mutableStateOf(false) }
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
+    val copiedText = stringResource(R.string.path_copied_to_clipboard)
+
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .combinedClickable(
+                onClick = { isExpanded = !isExpanded },
+                onLongClick = {
+                    scope.launch {
+                        clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Path", path)))
+                        Toast.makeText(context, copiedText, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            )
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .animateContentSize(),
+        verticalAlignment = if (isExpanded) Alignment.Top else Alignment.CenterVertically
     ) {
         Icon(
             if (isDirectory) Icons.Outlined.Folder else Icons.Outlined.Description,
@@ -465,7 +494,7 @@ private fun BackedUpCustomDirItemContent(
                 path.substringAfterLast("/").ifEmpty { path },
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
+                maxLines = if (isExpanded) Int.MAX_VALUE else 1,
                 overflow = TextOverflow.Ellipsis
             )
             val sizeInfo = Formatter.formatShortFileSize(context, metadata.size)
@@ -473,10 +502,17 @@ private fun BackedUpCustomDirItemContent(
                 stringResource(R.string.progress_size) + ": " + sizeInfo + " • " + path,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
+                maxLines = if (isExpanded) Int.MAX_VALUE else 1,
                 overflow = TextOverflow.Ellipsis
             )
         }
+        Spacer(Modifier.width(8.dp))
+        Icon(
+            imageVector = if (isExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+            contentDescription = if (isExpanded) stringResource(R.string.action_collapse) else stringResource(R.string.action_expand),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp)
+        )
     }
 }
 
