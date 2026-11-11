@@ -8,8 +8,6 @@ Restoid is a modern, privacy-focused backup solution for Android powered by the 
 
 Whether you want to back up photos to a home NAS, store encrypted snapshots in the cloud, or preserve full app data on a rooted device, Restoid gives you complete control without trackers, ads, or proprietary lock-in.
 
-Root access is completely optional: back up custom folders, photos, and documents without root; root access is only needed to back up private app data.
-
 ## 📥 Download
 
 <p align="center">
@@ -46,8 +44,8 @@ Root access is completely optional: back up custom folders, photos, and document
 
 ## ⚠️ Requirements
 
-* **Root Access (Optional)**: Root access is only required if you want to back up apps and their data.
-* **Android Version**: Minimum SDK 29 (Android 10), but SDK 37 (Android 17) is recommended.
+* **Root Access (Optional)**: Root access is only required to back up installed apps and their private data. Custom folders, photos, and documents can be backed up completely without root.
+* **Android Version**: Minimum SDK 29 (Android 10), with SDK 37 (Android 17) recommended.
 
 ## 🤝 How to Contribute
 
