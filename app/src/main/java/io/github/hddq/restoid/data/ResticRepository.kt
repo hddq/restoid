@@ -52,7 +52,7 @@ class ResticRepository(
             val result = executor.execute(
                 repoPath = repoPath,
                 password = password,
-                command = "snapshots --json",
+                command = "snapshots --json --no-lock",
                 failureMessage = context.getString(R.string.restic_failure_load_snapshots),
                 environmentVariables = environmentVariables,
                 resticOptions = resticOptions
