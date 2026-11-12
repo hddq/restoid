@@ -75,6 +75,34 @@ class ExcludedCustomDirectoriesTest {
         val deserialized = json.decodeFromString<RunTasksConfig>(legacyJson)
         assertEquals(listOf("/storage/emulated/0/DCIM"), deserialized.customDirectories)
         assertTrue(deserialized.excludedCustomDirectories.isEmpty())
+        org.junit.Assert.assertNull(deserialized.customDirectoriesBackupEnabled)
+    }
+
+    @Test
+    fun runTasksConfig_serializesAndDeserializesWithCustomDirectoriesBackupEnabled() {
+        val config = RunTasksConfig(
+            backupEnabled = true,
+            backupTypes = BackupTypeSelection(),
+            selectedPackageNames = emptyList(),
+            customDirectoriesBackupEnabled = false,
+            customDirectories = listOf("/storage/emulated/0/DCIM"),
+            excludedCustomDirectories = listOf("/storage/emulated/0/DCIM/Camera2"),
+            unlockRepo = false,
+            forgetSnapshots = false,
+            pruneRepo = false,
+            checkRepo = false,
+            readData = false,
+            keepLast = 0,
+            keepDaily = 0,
+            keepWeekly = 0,
+            keepMonthly = 0
+        )
+
+        val serialized = json.encodeToString(config)
+        val deserialized = json.decodeFromString<RunTasksConfig>(serialized)
+        org.junit.Assert.assertEquals(false, deserialized.customDirectoriesBackupEnabled)
+        assertEquals(listOf("/storage/emulated/0/DCIM"), deserialized.customDirectories)
+        assertEquals(listOf("/storage/emulated/0/DCIM/Camera2"), deserialized.excludedCustomDirectories)
     }
 
     @Test

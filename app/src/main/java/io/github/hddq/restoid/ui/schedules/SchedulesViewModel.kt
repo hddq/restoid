@@ -176,7 +176,7 @@ class SchedulesViewModel(
             ),
             triggerConditions = schedule.triggerConditions,
             lastRunTimestamp = schedule.lastRunTimestamp,
-            customDirectoriesBackupEnabled = schedule.config.customDirectories.isNotEmpty(),
+            customDirectoriesBackupEnabled = schedule.config.customDirectoriesBackupEnabled ?: schedule.config.customDirectories.isNotEmpty(),
             customDirectories = schedule.config.customDirectories.map { io.github.hddq.restoid.model.CustomDirectory(it, true) },
             excludedCustomDirectories = schedule.config.excludedCustomDirectories.map { io.github.hddq.restoid.model.CustomDirectory(it, true) }
         )
@@ -256,6 +256,7 @@ class SchedulesViewModel(
                 backupTypes = state.backupTypes.toSelection(),
                 selectedPackageNames = state.apps.filter { it.isSelected }.map { it.packageName },
                 appBackupTypes = selectedAppBackupTypes(state).mapValues { it.value.toSelection() },
+                customDirectoriesBackupEnabled = state.customDirectoriesBackupEnabled,
                 customDirectories = state.customDirectories.filter { it.isSelected }.map { it.uri },
                 excludedCustomDirectories = state.excludedCustomDirectories.filter { it.isSelected }.map { it.uri },
                 unlockRepo = state.maintenance.unlockRepo,

@@ -36,15 +36,27 @@ class ScheduleWorker(
         val schedule = schedules[scheduleIndex]
         if (!schedule.isEnabled) return Result.success()
 
+        val hasRoot = app.capabilityManager.isRootGranted()
+        val hasStorageAccess = app.capabilityManager.hasStorageAccessSync()
+
+        val customDirsConfiguredEnabled = schedule.config.customDirectoriesBackupEnabled ?: schedule.config.customDirectories.isNotEmpty()
+        val customDirsEnabled = customDirsConfiguredEnabled && hasStorageAccess
+        val backupAppsEnabled = schedule.config.backupEnabled && hasRoot
+
+        val selectedPackageNames = if (backupAppsEnabled) schedule.config.selectedPackageNames else emptyList()
+        val appBackupTypes = if (backupAppsEnabled) schedule.config.appBackupTypes else emptyMap()
+        val customDirectories = if (customDirsEnabled) schedule.config.customDirectories else emptyList()
+        val excludedCustomDirectories = if (customDirsEnabled) schedule.config.excludedCustomDirectories else emptyList()
+
         // Trigger the run tasks operation
         val workRequest = RunTasksWorkRequest(
             repositoryKey = repoKey,
-            backupEnabled = schedule.config.backupEnabled || schedule.config.customDirectories.isNotEmpty(),
+            backupEnabled = backupAppsEnabled || (customDirsEnabled && customDirectories.isNotEmpty()),
             backupTypes = schedule.config.backupTypes,
-            selectedPackageNames = if (schedule.config.backupEnabled) schedule.config.selectedPackageNames else emptyList(),
-            appBackupTypes = if (schedule.config.backupEnabled) schedule.config.appBackupTypes else emptyMap(),
-            customDirectories = schedule.config.customDirectories,
-            excludedCustomDirectories = schedule.config.excludedCustomDirectories,
+            selectedPackageNames = selectedPackageNames,
+            appBackupTypes = appBackupTypes,
+            customDirectories = customDirectories,
+            excludedCustomDirectories = excludedCustomDirectories,
             unlockRepo = schedule.config.unlockRepo,
             forgetSnapshots = schedule.config.forgetSnapshots,
             pruneRepo = schedule.config.pruneRepo,

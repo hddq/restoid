@@ -72,6 +72,7 @@ data class RunTasksConfig(
     val backupTypes: BackupTypeSelection,
     val selectedPackageNames: List<String>,
     val appBackupTypes: Map<String, BackupTypeSelection> = emptyMap(),
+    val customDirectoriesBackupEnabled: Boolean? = null,
     val customDirectories: List<String> = emptyList(),
     val excludedCustomDirectories: List<String> = emptyList(),
     val unlockRepo: Boolean,

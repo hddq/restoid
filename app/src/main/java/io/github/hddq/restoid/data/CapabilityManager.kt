@@ -17,7 +17,7 @@ class CapabilityManager(
     val storagePermissionRepository: StoragePermissionRepository,
     coroutineScope: CoroutineScope,
     private val rootGrantedChecker: () -> Boolean = {
-        rootRepository.rootState.value == RootState.Granted || runCatching { Shell.getShell().isRoot }.getOrDefault(false)
+        runCatching { Shell.getShell().isRoot }.getOrDefault(false)
     },
     private val allFilesAccessChecker: () -> Boolean = {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -42,7 +42,7 @@ class CapabilityManager(
     }.stateIn(
         scope = coroutineScope,
         started = SharingStarted.Eagerly,
-        initialValue = hasStorageAccessSync()
+        initialValue = (rootRepository.rootState.value == RootState.Granted) || allFilesAccessChecker()
     )
 
     /**

@@ -94,4 +94,54 @@ class CapabilityManagerTest {
         assertFalse(capabilityManager.canBackupApps())
         assertFalse(capabilityManager.canRestoreApps())
     }
+
+    @Test
+    fun liveShellRootRevocation_immediatelyDeniesAppBackupAndRestore() = runTest {
+        val testScope = TestScope()
+        val rootRepo = RootRepository()
+        val storageRepo = StoragePermissionRepository(FakeContext())
+
+        var liveRoot = true
+
+        val capabilityManager = CapabilityManager(
+            context = FakeContext(),
+            rootRepository = rootRepo,
+            storagePermissionRepository = storageRepo,
+            coroutineScope = testScope.backgroundScope,
+            rootGrantedChecker = { liveRoot },
+            allFilesAccessChecker = { true }
+        )
+
+        assertTrue(capabilityManager.canBackupApps())
+        assertTrue(capabilityManager.canRestoreApps())
+
+        // Revoke root on live shell
+        liveRoot = false
+        assertFalse(capabilityManager.canBackupApps())
+        assertFalse(capabilityManager.canRestoreApps())
+    }
+
+    @Test
+    fun initialState_doesNotCallLiveRootChecker() = runTest {
+        val testScope = TestScope()
+        val rootRepo = RootRepository() // defaults to RootState.Checking
+        val storageRepo = StoragePermissionRepository(FakeContext())
+
+        var rootCheckerCalled = false
+
+        val capabilityManager = CapabilityManager(
+            context = FakeContext(),
+            rootRepository = rootRepo,
+            storagePermissionRepository = storageRepo,
+            coroutineScope = testScope.backgroundScope,
+            rootGrantedChecker = {
+                rootCheckerCalled = true
+                false
+            },
+            allFilesAccessChecker = { false }
+        )
+
+        assertFalse(rootCheckerCalled)
+        assertFalse(capabilityManager.hasStorageAccess.value)
+    }
 }
