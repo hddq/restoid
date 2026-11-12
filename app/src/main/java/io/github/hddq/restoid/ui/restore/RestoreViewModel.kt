@@ -318,134 +318,144 @@ class RestoreViewModel(
         preferencesRepository.saveRestoreTypes(_restoreTypes.value)
         preferencesRepository.saveAllowDowngrade(_allowDowngrade.value)
 
-        val selectedRepoKey = repositoriesRepository.selectedRepository.value
-        val selectedRepository = selectedRepoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
-        val selectedRepoPath = selectedRepository?.path
-        val currentSnapshot = _snapshot.value
-        val hasRoot = capabilityManager.isRootGranted()
-        val hasStorageAccess = capabilityManager.hasStorageAccess.value
-        
-        val selectedApps = if (_restoreAppsEnabled.value && hasRoot) {
-            _backupDetails.value.filter { it.appInfo.isSelected && (_allowDowngrade.value || !it.isDowngrade) }
-        } else {
-            emptyList()
-        }
-
-        val selectedCustomDirectories = if (_restoreCustomDirectoriesEnabled.value && hasStorageAccess) {
-            _customDirectories.value.filter { it.value }.keys.toList()
-        } else {
-            emptyList()
-        }
-
-        if (selectedRepository != null && !capabilityManager.canAccessRepository(selectedRepository.backendType)) {
-            val error = application.getString(R.string.storage_permission_disabled)
-            _restoreProgress.value = OperationProgress(
-                isFinished = true,
-                error = error,
-                finalSummary = error
-            )
-            _uiEvents.tryEmit(RestoreUiEvent.ShowError(error))
-            return
-        }
-
-        if (!resticBinaryManager.isInstalled || selectedRepoPath == null || currentSnapshot == null) {
-            val error = application.getString(R.string.restore_error_preflight_failed)
-            _restoreProgress.value = OperationProgress(
-                isFinished = true,
-                error = error,
-                finalSummary = error
-            )
-            _uiEvents.tryEmit(RestoreUiEvent.ShowError(error))
-            return
-        }
-
-        if (selectedApps.isEmpty() && selectedCustomDirectories.isEmpty()) {
-            val errorMsg = if (_restoreCustomDirectoriesEnabled.value && !hasStorageAccess) {
-                application.getString(R.string.error_all_files_access_required)
-            } else {
-                application.getString(R.string.restore_error_no_items_selected)
-            }
-            _restoreProgress.value = OperationProgress(
-                isFinished = true,
-                error = errorMsg,
-                finalSummary = errorMsg
-            )
-            _uiEvents.tryEmit(RestoreUiEvent.ShowError(errorMsg))
-            return
-        }
-
-        if (selectedApps.isNotEmpty() && selectedApps.none { effectiveRestoreTypes(it.appInfo.packageName).anyEnabled() }) {
-            val error = application.getString(R.string.restore_error_no_restore_types_selected)
-            _restoreProgress.value = OperationProgress(
-                isFinished = true,
-                error = error,
-                finalSummary = error
-            )
-            _uiEvents.tryEmit(RestoreUiEvent.ShowError(error))
-            return
-        }
-
-        if (selectedRepository.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpCredentials(selectedRepoKey)) {
-            _restoreProgress.value = OperationProgress(
-                isFinished = true,
-                error = application.getString(R.string.error_sftp_password_not_found_for_repository),
-                finalSummary = application.getString(R.string.summary_sftp_password_not_found)
-            )
-            return
-        }
-
-        if (
-            selectedRepository.backendType == RepositoryBackendType.REST &&
-            selectedRepository.restAuthRequired &&
-            !repositoriesRepository.hasRestCredentials(selectedRepoKey)
-        ) {
-            _restoreProgress.value = OperationProgress(
-                isFinished = true,
-                error = application.getString(R.string.error_rest_credentials_not_found_for_repository),
-                finalSummary = application.getString(R.string.summary_rest_credentials_not_found)
-            )
-            return
-        }
-
-        if (
-            selectedRepository.backendType == RepositoryBackendType.S3 &&
-            selectedRepository.s3AuthRequired &&
-            !repositoriesRepository.hasS3Credentials(selectedRepoKey)
-        ) {
-            _restoreProgress.value = OperationProgress(
-                isFinished = true,
-                error = application.getString(R.string.error_s3_credentials_not_found_for_repository),
-                finalSummary = application.getString(R.string.summary_s3_credentials_not_found)
-            )
-            return
-        }
-
-        val password = repositoriesRepository.getRepositoryPassword(selectedRepoKey)
-        if (password == null) {
-            _restoreProgress.value = OperationProgress(
-                isFinished = true,
-                error = application.getString(R.string.restore_error_password_not_found),
-                finalSummary = application.getString(R.string.summary_password_not_found)
-            )
-            return
-        }
-
-        val request = RestoreWorkRequest(
-            repositoryKey = selectedRepoKey,
-            snapshotId = currentSnapshot.id,
-            restoreTypes = _restoreTypes.value.toSelection(),
-            allowDowngrade = _allowDowngrade.value,
-            selectedApps = selectedApps.map {
-                RestoreAppSelection(
-                    packageName = it.appInfo.packageName,
-                    appName = it.appInfo.name
-                )
-            },
-            appRestoreTypes = selectedApps.associate { it.appInfo.packageName to effectiveRestoreTypes(it.appInfo.packageName).toSelection() },
-            selectedCustomDirectories = selectedCustomDirectories
-        )
-
         viewModelScope.launch(Dispatchers.IO) {
+            val selectedRepoKey = repositoriesRepository.selectedRepository.value
+            val selectedRepository = selectedRepoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
+            val selectedRepoPath = selectedRepository?.path
+            val currentSnapshot = _snapshot.value
+            val hasRoot = capabilityManager.isRootGrantedLive()
+            val hasStorageAccess = capabilityManager.hasStorageAccessSync()
+            
+            val selectedApps = if (_restoreAppsEnabled.value && hasRoot) {
+                _backupDetails.value.filter { it.appInfo.isSelected && (_allowDowngrade.value || !it.isDowngrade) }
+            } else {
+                emptyList()
+            }
+
+            val selectedCustomDirectories = if (_restoreCustomDirectoriesEnabled.value && hasStorageAccess) {
+                _customDirectories.value.filter { it.value }.keys.toList()
+            } else {
+                emptyList()
+            }
+
+            if (selectedRepository != null && !capabilityManager.canAccessRepository(selectedRepository.backendType)) {
+                val error = application.getString(R.string.storage_permission_disabled)
+                _restoreProgress.value = OperationProgress(
+                    isFinished = true,
+                    error = error,
+                    finalSummary = error
+                )
+                _uiEvents.tryEmit(RestoreUiEvent.ShowError(error))
+                return@launch
+            }
+
+            if (!resticBinaryManager.isInstalled || selectedRepoPath == null || currentSnapshot == null) {
+                val error = application.getString(R.string.restore_error_preflight_failed)
+                _restoreProgress.value = OperationProgress(
+                    isFinished = true,
+                    error = error,
+                    finalSummary = error
+                )
+                _uiEvents.tryEmit(RestoreUiEvent.ShowError(error))
+                return@launch
+            }
+
+            if (selectedApps.isEmpty() && selectedCustomDirectories.isEmpty()) {
+                val errorMsg = if (_restoreCustomDirectoriesEnabled.value && !hasStorageAccess) {
+                    application.getString(R.string.error_all_files_access_required)
+                } else if (_restoreAppsEnabled.value && !hasRoot) {
+                    application.getString(R.string.root_access_denied)
+                } else {
+                    application.getString(R.string.restore_error_no_items_selected)
+                }
+                _restoreProgress.value = OperationProgress(
+                    isFinished = true,
+                    error = errorMsg,
+                    finalSummary = errorMsg
+                )
+                _uiEvents.tryEmit(RestoreUiEvent.ShowError(errorMsg))
+                return@launch
+            }
+
+            if (selectedApps.isNotEmpty() && selectedApps.none { effectiveRestoreTypes(it.appInfo.packageName).anyEnabled() }) {
+                val error = application.getString(R.string.restore_error_no_restore_types_selected)
+                _restoreProgress.value = OperationProgress(
+                    isFinished = true,
+                    error = error,
+                    finalSummary = error
+                )
+                _uiEvents.tryEmit(RestoreUiEvent.ShowError(error))
+                return@launch
+            }
+
+            if (selectedRepository.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpCredentials(selectedRepoKey)) {
+                val error = application.getString(R.string.error_sftp_password_not_found_for_repository)
+                _restoreProgress.value = OperationProgress(
+                    isFinished = true,
+                    error = error,
+                    finalSummary = application.getString(R.string.summary_sftp_password_not_found)
+                )
+                _uiEvents.tryEmit(RestoreUiEvent.ShowError(error))
+                return@launch
+            }
+
+            if (
+                selectedRepository.backendType == RepositoryBackendType.REST &&
+                selectedRepository.restAuthRequired &&
+                !repositoriesRepository.hasRestCredentials(selectedRepoKey)
+            ) {
+                val error = application.getString(R.string.error_rest_credentials_not_found_for_repository)
+                _restoreProgress.value = OperationProgress(
+                    isFinished = true,
+                    error = error,
+                    finalSummary = application.getString(R.string.summary_rest_credentials_not_found)
+                )
+                _uiEvents.tryEmit(RestoreUiEvent.ShowError(error))
+                return@launch
+            }
+
+            if (
+                selectedRepository.backendType == RepositoryBackendType.S3 &&
+                selectedRepository.s3AuthRequired &&
+                !repositoriesRepository.hasS3Credentials(selectedRepoKey)
+            ) {
+                val error = application.getString(R.string.error_s3_credentials_not_found_for_repository)
+                _restoreProgress.value = OperationProgress(
+                    isFinished = true,
+                    error = error,
+                    finalSummary = application.getString(R.string.summary_s3_credentials_not_found)
+                )
+                _uiEvents.tryEmit(RestoreUiEvent.ShowError(error))
+                return@launch
+            }
+
+            val password = repositoriesRepository.getRepositoryPassword(selectedRepoKey)
+            if (password == null) {
+                val error = application.getString(R.string.restore_error_password_not_found)
+                _restoreProgress.value = OperationProgress(
+                    isFinished = true,
+                    error = error,
+                    finalSummary = application.getString(R.string.summary_password_not_found)
+                )
+                _uiEvents.tryEmit(RestoreUiEvent.ShowError(error))
+                return@launch
+            }
+
+            val request = RestoreWorkRequest(
+                repositoryKey = selectedRepoKey,
+                snapshotId = currentSnapshot.id,
+                restoreTypes = _restoreTypes.value.toSelection(),
+                allowDowngrade = _allowDowngrade.value,
+                selectedApps = selectedApps.map {
+                    RestoreAppSelection(
+                        packageName = it.appInfo.packageName,
+                        appName = it.appInfo.name
+                    )
+                },
+                appRestoreTypes = selectedApps.associate { it.appInfo.packageName to effectiveRestoreTypes(it.appInfo.packageName).toSelection() },
+                selectedCustomDirectories = selectedCustomDirectories
+            )
+
             val enqueued = operationWorkRepository.enqueueRestore(request)
             if (enqueued) {
                 _uiEvents.tryEmit(RestoreUiEvent.NavigateToOperationProgress)

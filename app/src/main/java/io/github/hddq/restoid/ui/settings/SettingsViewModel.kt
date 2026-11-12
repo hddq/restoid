@@ -498,14 +498,6 @@ class SettingsViewModel(
             return
         }
 
-        if (backendType == RepositoryBackendType.LOCAL) {
-            capabilityManager.refreshStoragePermission()
-            if (!capabilityManager.canAccessRepository(backendType)) {
-                _addRepoUiState.update { it.copy(state = AddRepositoryState.Error(context.getString(R.string.storage_permission_disabled))) }
-                return
-            }
-        }
-
         if (backendType == RepositoryBackendType.SFTP) {
             if (sftpAuthMethod == SftpAuthMethod.KEY && sftpKey.isBlank()) {
                 _addRepoUiState.update { it.copy(state = AddRepositoryState.Error(context.getString(R.string.error_sftp_key_cannot_be_empty))) }
@@ -565,6 +557,17 @@ class SettingsViewModel(
         )
 
         viewModelScope.launch {
+            if (input.backendType == RepositoryBackendType.LOCAL) {
+                val canAccess = withContext(Dispatchers.IO) {
+                    capabilityManager.refreshStoragePermission()
+                    capabilityManager.canAccessRepository(input.backendType)
+                }
+                if (!canAccess) {
+                    _addRepoUiState.update { it.copy(state = AddRepositoryState.Error(context.getString(R.string.storage_permission_disabled))) }
+                    return@launch
+                }
+            }
+
             if (input.backendType == RepositoryBackendType.SFTP) {
                 _addRepoUiState.update { it.copy(state = AddRepositoryState.Initializing, sftpServerTrustInfo = null) }
 

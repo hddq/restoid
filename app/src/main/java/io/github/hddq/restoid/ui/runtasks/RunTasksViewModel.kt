@@ -189,55 +189,61 @@ class RunTasksViewModel(
         val selectedExcludedCustomDirs = _uiState.value.excludedCustomDirectories.filter { it.isSelected }.map { it.uri }.toSet()
         persistExcludedCustomDirectories()
 
-        val errorState = preflightChecks()
-        if (errorState != null) {
-            _uiState.update { it.copy(isRunning = false, progress = errorState) }
-            errorState.error?.let { _uiEvents.tryEmit(RunTasksUiEvent.ShowError(it)) }
-            return
-        }
-
-        val selectedRepoKey = repositoriesRepository.selectedRepository.value ?: run {
-            val error = application.getString(R.string.error_no_backup_repository_selected)
-            _uiState.update {
-                it.copy(
-                    isRunning = false,
-                    progress = OperationProgress(
-                        isFinished = true,
-                        error = error,
-                        finalSummary = application.getString(R.string.summary_no_backup_repository_selected)
-                    )
-                )
-            }
-            _uiEvents.tryEmit(RunTasksUiEvent.ShowError(error))
-            return
-        }
-
-        val maintenance = _uiState.value.maintenance
-        val hasStorageAccess = capabilityManager.hasStorageAccess.value
-        val hasCustomDirs = _uiState.value.customDirectoriesBackupEnabled && hasStorageAccess && selectedCustomDirs.isNotEmpty()
-        val hasRoot = capabilityManager.isRootGranted()
-        val backupAppsEnabled = _uiState.value.backupEnabled && hasRoot
-        
-        val request = RunTasksWorkRequest(
-            repositoryKey = selectedRepoKey,
-            backupEnabled = backupAppsEnabled || hasCustomDirs,
-            backupTypes = _uiState.value.backupTypes.toSelection(),
-            selectedPackageNames = if (backupAppsEnabled) _uiState.value.apps.filter { it.isSelected }.map { it.packageName } else emptyList(),
-            appBackupTypes = if (backupAppsEnabled) selectedAppBackupTypes().mapValues { it.value.toSelection() } else emptyMap(),
-            customDirectories = if (hasCustomDirs) selectedCustomDirs.toList() else emptyList(),
-            excludedCustomDirectories = if (_uiState.value.customDirectoriesBackupEnabled && hasStorageAccess) selectedExcludedCustomDirs.toList() else emptyList(),
-            unlockRepo = maintenance.unlockRepo,
-            forgetSnapshots = maintenance.forgetSnapshots,
-            pruneRepo = maintenance.pruneRepo,
-            checkRepo = maintenance.checkRepo,
-            readData = maintenance.readData,
-            keepLast = maintenance.keepLast,
-            keepDaily = maintenance.keepDaily,
-            keepWeekly = maintenance.keepWeekly,
-            keepMonthly = maintenance.keepMonthly
-        )
-
         viewModelScope.launch(Dispatchers.IO) {
+            val errorState = preflightChecks()
+            if (errorState != null) {
+                _uiState.update { it.copy(isRunning = false, progress = errorState) }
+                errorState.error?.let { _uiEvents.tryEmit(RunTasksUiEvent.ShowError(it)) }
+                return@launch
+            }
+
+            val selectedRepoKey = repositoriesRepository.selectedRepository.value ?: run {
+                val error = application.getString(R.string.error_no_backup_repository_selected)
+                _uiState.update {
+                    it.copy(
+                        isRunning = false,
+                        progress = OperationProgress(
+                            isFinished = true,
+                            error = error,
+                            finalSummary = application.getString(R.string.summary_no_backup_repository_selected)
+                        )
+                    )
+                }
+                _uiEvents.tryEmit(RunTasksUiEvent.ShowError(error))
+                return@launch
+            }
+
+            val currentState = _uiState.value
+            val maintenance = currentState.maintenance
+            val hasStorageAccess = capabilityManager.hasStorageAccessSync()
+            val hasRoot = capabilityManager.isRootGrantedLive()
+
+            val appsConfigured = currentState.backupEnabled && currentState.apps.any { it.isSelected }
+            val customDirsConfigured = currentState.customDirectoriesBackupEnabled && selectedCustomDirs.isNotEmpty()
+            val configuredSourceOmitted = (appsConfigured && !hasRoot) || (customDirsConfigured && !hasStorageAccess)
+
+            val hasCustomDirs = customDirsConfigured && hasStorageAccess
+            val backupAppsEnabled = appsConfigured && hasRoot
+            
+            val request = RunTasksWorkRequest(
+                repositoryKey = selectedRepoKey,
+                backupEnabled = backupAppsEnabled || hasCustomDirs,
+                backupTypes = currentState.backupTypes.toSelection(),
+                selectedPackageNames = if (backupAppsEnabled) currentState.apps.filter { it.isSelected }.map { it.packageName } else emptyList(),
+                appBackupTypes = if (backupAppsEnabled) selectedAppBackupTypes().mapValues { it.value.toSelection() } else emptyMap(),
+                customDirectories = if (hasCustomDirs) selectedCustomDirs.toList() else emptyList(),
+                excludedCustomDirectories = if (currentState.customDirectoriesBackupEnabled && hasStorageAccess) selectedExcludedCustomDirs.toList() else emptyList(),
+                unlockRepo = maintenance.unlockRepo,
+                forgetSnapshots = if (configuredSourceOmitted) false else maintenance.forgetSnapshots,
+                pruneRepo = if (configuredSourceOmitted) false else maintenance.pruneRepo,
+                checkRepo = maintenance.checkRepo,
+                readData = maintenance.readData,
+                keepLast = maintenance.keepLast,
+                keepDaily = maintenance.keepDaily,
+                keepWeekly = maintenance.keepWeekly,
+                keepMonthly = maintenance.keepMonthly
+            )
+
             val enqueued = operationWorkRepository.enqueueRunTasks(request)
             if (enqueued) {
                 _uiEvents.tryEmit(RunTasksUiEvent.NavigateToOperationProgress)
@@ -261,9 +267,29 @@ class RunTasksViewModel(
         val state = _uiState.value
         val maintenance = state.maintenance
         val hasMaintenanceTask = maintenance.unlockRepo || maintenance.forgetSnapshots || maintenance.pruneRepo || maintenance.checkRepo
-        val hasStorageAccess = capabilityManager.hasStorageAccess.value
-        val hasCustomDirs = state.customDirectoriesBackupEnabled && hasStorageAccess && state.customDirectories.any { it.isSelected }
-        val hasRoot = capabilityManager.isRootGranted()
+        val hasStorageAccess = capabilityManager.hasStorageAccessSync()
+        val hasRoot = capabilityManager.isRootGrantedLive()
+
+        val appsSelected = state.apps.any { it.isSelected }
+        val customDirsSelected = state.customDirectories.any { it.isSelected }
+
+        if (state.customDirectoriesBackupEnabled && customDirsSelected && !hasStorageAccess) {
+            return OperationProgress(
+                isFinished = true,
+                error = application.getString(R.string.error_all_files_access_required),
+                finalSummary = application.getString(R.string.summary_all_files_access_required)
+            )
+        }
+
+        if (state.backupEnabled && appsSelected && !hasRoot) {
+            return OperationProgress(
+                isFinished = true,
+                error = application.getString(R.string.root_access_denied),
+                finalSummary = application.getString(R.string.root_access_denied)
+            )
+        }
+
+        val hasCustomDirs = state.customDirectoriesBackupEnabled && hasStorageAccess && customDirsSelected
         val backupAppsEnabled = state.backupEnabled && hasRoot
         
         if (!backupAppsEnabled && !hasCustomDirs && !hasMaintenanceTask) {

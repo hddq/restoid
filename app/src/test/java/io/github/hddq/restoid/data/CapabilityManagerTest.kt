@@ -162,4 +162,38 @@ class CapabilityManagerTest {
 
         assertTrue(capabilityManager.hasCapability(android.Manifest.permission.READ_SMS))
     }
+
+    @Test
+    fun canAccessRepository_localBackendRequiresStorageOrLiveRoot() = runTest {
+        val testScope = TestScope()
+        val rootRepo = RootRepository()
+        val storageRepo = StoragePermissionRepository(FakeContext())
+
+        var liveRoot = false
+        var allFiles = false
+
+        val capabilityManager = CapabilityManager(
+            context = FakeContext(),
+            rootRepository = rootRepo,
+            storagePermissionRepository = storageRepo,
+            coroutineScope = testScope.backgroundScope,
+            liveRootChecker = { liveRoot },
+            allFilesAccessChecker = { allFiles }
+        )
+
+        // Neither storage nor root
+        assertFalse(capabilityManager.canAccessRepository(RepositoryBackendType.LOCAL))
+        assertTrue(capabilityManager.canAccessRepository(RepositoryBackendType.SFTP))
+        assertTrue(capabilityManager.canAccessRepository(RepositoryBackendType.REST))
+        assertTrue(capabilityManager.canAccessRepository(RepositoryBackendType.S3))
+
+        // Storage permission granted
+        allFiles = true
+        assertTrue(capabilityManager.canAccessRepository(RepositoryBackendType.LOCAL))
+
+        // Storage revoked, root granted
+        allFiles = false
+        liveRoot = true
+        assertTrue(capabilityManager.canAccessRepository(RepositoryBackendType.LOCAL))
+    }
 }
