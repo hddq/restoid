@@ -27,7 +27,7 @@ class CapabilityManagerTest {
             rootRepository = rootRepo,
             storagePermissionRepository = storageRepo,
             coroutineScope = testScope.backgroundScope,
-            rootGrantedChecker = { rootGranted },
+            liveRootChecker = { rootGranted },
             allFilesAccessChecker = { allFilesGranted }
         )
 
@@ -54,7 +54,7 @@ class CapabilityManagerTest {
             rootRepository = rootRepo,
             storagePermissionRepository = storageRepo,
             coroutineScope = testScope.backgroundScope,
-            rootGrantedChecker = { rootGranted },
+            liveRootChecker = { rootGranted },
             allFilesAccessChecker = { allFilesGranted }
         )
 
@@ -80,7 +80,7 @@ class CapabilityManagerTest {
             rootRepository = rootRepo,
             storagePermissionRepository = storageRepo,
             coroutineScope = testScope.backgroundScope,
-            rootGrantedChecker = { rootGranted },
+            liveRootChecker = { rootGranted },
             allFilesAccessChecker = { allFilesGranted }
         )
 
@@ -108,7 +108,7 @@ class CapabilityManagerTest {
             rootRepository = rootRepo,
             storagePermissionRepository = storageRepo,
             coroutineScope = testScope.backgroundScope,
-            rootGrantedChecker = { liveRoot },
+            liveRootChecker = { liveRoot },
             allFilesAccessChecker = { true }
         )
 
@@ -134,7 +134,7 @@ class CapabilityManagerTest {
             rootRepository = rootRepo,
             storagePermissionRepository = storageRepo,
             coroutineScope = testScope.backgroundScope,
-            rootGrantedChecker = {
+            liveRootChecker = {
                 rootCheckerCalled = true
                 false
             },

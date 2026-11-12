@@ -16,7 +16,7 @@ class CapabilityManager(
     val rootRepository: RootRepository,
     val storagePermissionRepository: StoragePermissionRepository,
     coroutineScope: CoroutineScope,
-    private val rootGrantedChecker: () -> Boolean = {
+    private val liveRootChecker: () -> Boolean = {
         runCatching { Shell.getShell().isRoot }.getOrDefault(false)
     },
     private val allFilesAccessChecker: () -> Boolean = {
@@ -46,9 +46,16 @@ class CapabilityManager(
     )
 
     /**
-     * Checks if root access is currently granted.
+     * Non-blocking cached check whether root access is granted.
+     * Safe to call on the main/UI thread.
      */
-    fun isRootGranted(): Boolean = rootGrantedChecker()
+    fun isRootGranted(): Boolean = rootRepository.rootState.value == RootState.Granted
+
+    /**
+     * Live check whether root access is currently active on the shell.
+     * Must be called from background workers or Dispatchers.IO.
+     */
+    fun isRootGrantedLive(): Boolean = liveRootChecker()
 
     /**
      * Checks if the app has external storage / all files access via Android permissions.
@@ -57,9 +64,10 @@ class CapabilityManager(
 
     /**
      * Checks if the app has storage access either via root or storage permissions.
+     * Checks storage permission first, falling back to the live root shell on Dispatchers.IO.
      */
     fun hasStorageAccessSync(): Boolean {
-        return isRootGranted() || hasAllFilesAccessSync()
+        return hasAllFilesAccessSync() || isRootGrantedLive()
     }
 
     /**
@@ -80,14 +88,14 @@ class CapabilityManager(
     fun canRestoreCustomDirectories(): Boolean = hasStorageAccessSync()
 
     /**
-     * Checks if app backups are allowed (requires root).
+     * Checks if app backups are allowed (requires live root on Dispatchers.IO).
      */
-    fun canBackupApps(): Boolean = isRootGranted()
+    fun canBackupApps(): Boolean = isRootGrantedLive()
 
     /**
-     * Checks if app restores are allowed (requires root).
+     * Checks if app restores are allowed (requires live root on Dispatchers.IO).
      */
-    fun canRestoreApps(): Boolean = isRootGranted()
+    fun canRestoreApps(): Boolean = isRootGrantedLive()
 
     /**
      * Refreshes the storage permission state from Android system.

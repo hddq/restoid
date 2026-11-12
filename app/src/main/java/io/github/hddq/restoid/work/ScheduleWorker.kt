@@ -36,30 +36,55 @@ class ScheduleWorker(
         val schedule = schedules[scheduleIndex]
         if (!schedule.isEnabled) return Result.success()
 
-        val hasRoot = app.capabilityManager.isRootGranted()
+        val hasRoot = app.capabilityManager.isRootGrantedLive()
         val hasStorageAccess = app.capabilityManager.hasStorageAccessSync()
 
-        val customDirsConfiguredEnabled = schedule.config.customDirectoriesBackupEnabled ?: schedule.config.customDirectories.isNotEmpty()
-        val customDirsEnabled = customDirsConfiguredEnabled && hasStorageAccess
-        val backupAppsEnabled = schedule.config.backupEnabled && hasRoot
+        val appsConfigured = schedule.config.backupEnabled && schedule.config.selectedPackageNames.isNotEmpty()
+        val customDirsConfigured = (schedule.config.customDirectoriesBackupEnabled ?: schedule.config.customDirectories.isNotEmpty()) && schedule.config.customDirectories.isNotEmpty()
+        val anyBackupConfigured = appsConfigured || customDirsConfigured
 
-        val selectedPackageNames = if (backupAppsEnabled) schedule.config.selectedPackageNames else emptyList()
-        val appBackupTypes = if (backupAppsEnabled) schedule.config.appBackupTypes else emptyMap()
-        val customDirectories = if (customDirsEnabled) schedule.config.customDirectories else emptyList()
-        val excludedCustomDirectories = if (customDirsEnabled) schedule.config.excludedCustomDirectories else emptyList()
+        val backupApps = appsConfigured && hasRoot
+        val backupCustomDirs = customDirsConfigured && hasStorageAccess
+
+        // If a configured backup source was omitted due to missing access (e.g. apps without root or dirs without storage),
+        // we must skip destructive maintenance (forget/prune) to avoid deleting old snapshots that contain the omitted source.
+        val configuredSourceOmitted = (appsConfigured && !hasRoot) || (customDirsConfigured && !hasStorageAccess)
+
+        val selectedPackageNames: List<String>
+        val appBackupTypes: Map<String, BackupTypeSelection>
+        val customDirectories: List<String>
+        val excludedCustomDirectories: List<String>
+        val backupEnabled: Boolean
+
+        if (anyBackupConfigured && !backupApps && !backupCustomDirs) {
+            // Backup was configured, but no configured source can run due to missing permissions.
+            // Forward configured sources with backupEnabled = true so BackupOperationRunner preflight fails,
+            // correctly reporting the missing permission failure and triggering the failed-backup maintenance guard.
+            backupEnabled = true
+            selectedPackageNames = if (appsConfigured) schedule.config.selectedPackageNames else emptyList()
+            appBackupTypes = if (appsConfigured) schedule.config.appBackupTypes else emptyMap()
+            customDirectories = if (customDirsConfigured) schedule.config.customDirectories else emptyList()
+            excludedCustomDirectories = if (customDirsConfigured) schedule.config.excludedCustomDirectories else emptyList()
+        } else {
+            backupEnabled = backupApps || backupCustomDirs
+            selectedPackageNames = if (backupApps) schedule.config.selectedPackageNames else emptyList()
+            appBackupTypes = if (backupApps) schedule.config.appBackupTypes else emptyMap()
+            customDirectories = if (backupCustomDirs) schedule.config.customDirectories else emptyList()
+            excludedCustomDirectories = if (backupCustomDirs) schedule.config.excludedCustomDirectories else emptyList()
+        }
 
         // Trigger the run tasks operation
         val workRequest = RunTasksWorkRequest(
             repositoryKey = repoKey,
-            backupEnabled = backupAppsEnabled || (customDirsEnabled && customDirectories.isNotEmpty()),
+            backupEnabled = backupEnabled,
             backupTypes = schedule.config.backupTypes,
             selectedPackageNames = selectedPackageNames,
             appBackupTypes = appBackupTypes,
             customDirectories = customDirectories,
             excludedCustomDirectories = excludedCustomDirectories,
             unlockRepo = schedule.config.unlockRepo,
-            forgetSnapshots = schedule.config.forgetSnapshots,
-            pruneRepo = schedule.config.pruneRepo,
+            forgetSnapshots = if (configuredSourceOmitted) false else schedule.config.forgetSnapshots,
+            pruneRepo = if (configuredSourceOmitted) false else schedule.config.pruneRepo,
             checkRepo = schedule.config.checkRepo,
             readData = schedule.config.readData,
             keepLast = schedule.config.keepLast,
