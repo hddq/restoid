@@ -1,6 +1,9 @@
 package io.github.hddq.restoid.ui.screens.settings.dialogs
 
 import android.widget.Toast
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -28,22 +31,27 @@ fun RcloneConfigDialog(
 ) {
     val context = LocalContext.current
     var configText by remember { mutableStateOf(viewModel.getRcloneConfigContent().orEmpty()) }
+    val scope = rememberCoroutineScope()
     val initialExists = remember { viewModel.hasRcloneConfig.value }
 
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
         if (uri != null) {
-            runCatching {
-                context.contentResolver.openInputStream(uri)?.use { stream ->
-                    stream.reader().readText()
+            scope.launch {
+                runCatching {
+                    withContext(Dispatchers.IO) {
+                        context.contentResolver.openInputStream(uri)?.use { stream ->
+                            stream.reader().readText()
+                        }
+                    }
+                }.onSuccess { text ->
+                    if (text != null) {
+                        configText = text
+                    }
+                }.onFailure {
+                    Toast.makeText(context, context.getString(R.string.rclone_config_import_error), Toast.LENGTH_SHORT).show()
                 }
-            }.onSuccess { text ->
-                if (text != null) {
-                    configText = text
-                }
-            }.onFailure {
-                Toast.makeText(context, context.getString(R.string.rclone_config_import_error), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -112,7 +120,7 @@ fun RcloneConfigDialog(
                         onClick = {
                             viewModel.deleteRcloneConfig()
                             configText = ""
-                            Toast.makeText(context, "rclone.conf deleted", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.rclone_config_deleted), Toast.LENGTH_SHORT).show()
                             onDismiss()
                         },
                         colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)

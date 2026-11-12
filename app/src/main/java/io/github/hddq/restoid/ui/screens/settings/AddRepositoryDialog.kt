@@ -258,10 +258,11 @@ fun AddRepositoryDialog(
                                     rcloneRemotes.forEach { remote ->
                                         SuggestionChip(
                                             onClick = {
-                                                val pathSuffix = if (uiState.path.contains(":")) {
-                                                    uiState.path.substringAfter(":")
+                                                val pathWithoutPrefix = uiState.path.removePrefix("rclone:")
+                                                val pathSuffix = if (pathWithoutPrefix.contains(":")) {
+                                                    pathWithoutPrefix.substringAfter(":")
                                                 } else {
-                                                    uiState.path
+                                                    pathWithoutPrefix
                                                 }
                                                 onPathChange("$remote:$pathSuffix")
                                             },

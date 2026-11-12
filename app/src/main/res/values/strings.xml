@@ -294,6 +294,7 @@
     <string name="rclone_config_dialog_description">Paste your rclone.conf file content below or import an existing configuration file.</string>
     <string name="rclone_config_import_file">Import file</string>
     <string name="rclone_config_paste_placeholder" translatable="false"># Paste rclone.conf content here\n[myremote]\ntype = ...</string>
+    <string name="rclone_config_deleted">rclone.conf deleted</string>
     <string name="rclone_config_delete">Delete Config</string>
     <string name="rclone_config_saved_success">Rclone configuration saved.</string>
     <string name="rclone_config_saved_error">Failed to save rclone configuration.</string>

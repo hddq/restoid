@@ -19,12 +19,20 @@ tasks.register<Exec>("buildBundledRestic") {
 tasks.register<Exec>("buildBundledRclone") {
     group = "rclone"
     description = "Builds rclone binary from submodule using bash script"
-    doNotTrackState("Binaries are built only if missing from jniLibs")
 
-    onlyIf("binaries not yet built") {
-        !file("src/main/jniLibs/arm64-v8a/librclone.so").exists() ||
-                !file("src/main/jniLibs/x86_64/librclone.so").exists()
-    }
+    // Track only the files that identify the rclone revision and the build recipe.
+    // (Hashing the whole submodule tree fails on files with non-UTF-8 names.)
+    inputs.files(
+        rootProject.file("scripts/build_rclone.sh"),
+        rootProject.file(".go-version"),
+        rootProject.file("rclone/go.mod"),
+        rootProject.file("rclone/go.sum"),
+        rootProject.file("rclone/fs/versiontag.go"),
+    ).withPropertyName("rcloneBuildInputs")
+    outputs.files(
+        file("src/main/jniLibs/arm64-v8a/librclone.so"),
+        file("src/main/jniLibs/x86_64/librclone.so"),
+    )
 
     workingDir = rootProject.projectDir
     commandLine = listOf("bash", "scripts/build_rclone.sh")

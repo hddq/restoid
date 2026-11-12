@@ -331,6 +331,15 @@ class RepositoriesRepository(
         return executionEnvironment
     }
 
+    private fun withBundledRcloneProgram(options: Map<String, String>): Map<String, String> {
+        val bundledPath = binaryManager.getRcloneBinaryPath() ?: return options
+        val saved = options["rclone.program"]
+        // Keep a user-chosen custom program; replace missing or stale bundled paths.
+        val isStaleBundled = saved != null &&
+            (File(saved).name == "librclone.so" || !File(saved).exists())
+        return if (saved == null || isStaleBundled) options + ("rclone.program" to bundledPath) else options
+    }
+
     fun getExecutionResticOptions(key: String): Map<String, String> {
         val repository = getRepositoryByKey(key) ?: return emptyMap()
         val knownHostsFile = if (repository.backendType == RepositoryBackendType.SFTP) {
@@ -352,12 +361,7 @@ class RepositoriesRepository(
         }
 
         val baseOptions = if (repository.backendType == RepositoryBackendType.RCLONE) {
-            val rclonePath = binaryManager.getRcloneBinaryPath()
-            if (rclonePath != null && !repository.resticOptions.containsKey("rclone.program")) {
-                repository.resticOptions + mapOf("rclone.program" to rclonePath)
-            } else {
-                repository.resticOptions
-            }
+            withBundledRcloneProgram(repository.resticOptions)
         } else {
             repository.resticOptions
         }
@@ -659,20 +663,17 @@ class RepositoriesRepository(
                 }
             }
 
+            // The bundled rclone path is resolved on every run, never persisted,
+            // because it changes when the app is updated.
             val rcloneResticOptions = if (backendType == RepositoryBackendType.RCLONE) {
-                val rclonePath = binaryManager.getRcloneBinaryPath()
-                if (rclonePath != null && !resticOptions.containsKey("rclone.program")) {
-                    mapOf("rclone.program" to rclonePath)
-                } else {
-                    emptyMap()
-                }
+                withBundledRcloneProgram(resticOptions)
             } else {
-                emptyMap()
+                resticOptions
             }
 
             val persistedResticOptions = applySftpResticOptionDefaults(
                 backendType = backendType,
-                options = resticOptions + rcloneResticOptions,
+                options = resticOptions,
                 knownHostsFile = knownHostsFile,
                 strictHostKeyCheckingValue = "yes",
                 sftpKeyFilePath = persistedSftpKeyFilePath
@@ -680,7 +681,7 @@ class RepositoriesRepository(
 
             val executionResticOptions = applySftpResticOptionDefaults(
                 backendType = backendType,
-                options = resticOptions + rcloneResticOptions,
+                options = rcloneResticOptions,
                 knownHostsFile = knownHostsFile,
                 strictHostKeyCheckingValue = "yes",
                 sftpKeyFilePath = tempSftpKeyFile?.absolutePath
@@ -1502,7 +1503,15 @@ class RepositoriesRepository(
         return runCatching {
             val file = getRcloneConfigFile()
             file.parentFile?.mkdirs()
-            file.writeText(content)
+            val atomicFile = android.util.AtomicFile(file)
+            val out = atomicFile.startWrite()
+            try {
+                out.write(content.toByteArray(Charsets.UTF_8))
+                atomicFile.finishWrite(out)
+            } catch (e: Throwable) {
+                atomicFile.failWrite(out)
+                throw e
+            }
         }
     }
 
