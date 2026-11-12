@@ -39,12 +39,14 @@ class ScheduleWorker(
         val hasRoot = app.capabilityManager.isRootGrantedLive()
         val hasStorageAccess = app.capabilityManager.hasStorageAccessSync()
 
-        val appsConfigured = schedule.config.backupEnabled && schedule.config.selectedPackageNames.isNotEmpty()
-        val customDirsConfigured = (schedule.config.customDirectoriesBackupEnabled ?: schedule.config.customDirectories.isNotEmpty()) && schedule.config.customDirectories.isNotEmpty()
+        val appsConfigured = schedule.config.backupEnabled
+        val customDirsSwitchEnabled = schedule.config.customDirectoriesBackupEnabled ?: (schedule.config.customDirectories.isNotEmpty() || schedule.config.excludedCustomDirectories.isNotEmpty())
+        val customDirsConfigured = customDirsSwitchEnabled && schedule.config.customDirectories.isNotEmpty()
         val anyBackupConfigured = appsConfigured || customDirsConfigured
 
         val backupApps = appsConfigured && hasRoot
         val backupCustomDirs = customDirsConfigured && hasStorageAccess
+        val customDirsAccess = customDirsSwitchEnabled && hasStorageAccess
 
         // If a configured backup source was omitted due to missing access (e.g. apps without root or dirs without storage),
         // we must skip destructive maintenance (forget/prune) to avoid deleting old snapshots that contain the omitted source.
@@ -53,7 +55,7 @@ class ScheduleWorker(
         val selectedPackageNames: List<String>
         val appBackupTypes: Map<String, BackupTypeSelection>
         val customDirectories: List<String>
-        val excludedCustomDirectories: List<String>
+        val excludedCustomDirectories = if (customDirsAccess) schedule.config.excludedCustomDirectories else emptyList()
         val backupEnabled: Boolean
 
         if (anyBackupConfigured && !backupApps && !backupCustomDirs) {
@@ -64,13 +66,11 @@ class ScheduleWorker(
             selectedPackageNames = if (appsConfigured) schedule.config.selectedPackageNames else emptyList()
             appBackupTypes = if (appsConfigured) schedule.config.appBackupTypes else emptyMap()
             customDirectories = if (customDirsConfigured) schedule.config.customDirectories else emptyList()
-            excludedCustomDirectories = if (customDirsConfigured) schedule.config.excludedCustomDirectories else emptyList()
         } else {
             backupEnabled = backupApps || backupCustomDirs
             selectedPackageNames = if (backupApps) schedule.config.selectedPackageNames else emptyList()
             appBackupTypes = if (backupApps) schedule.config.appBackupTypes else emptyMap()
             customDirectories = if (backupCustomDirs) schedule.config.customDirectories else emptyList()
-            excludedCustomDirectories = if (backupCustomDirs) schedule.config.excludedCustomDirectories else emptyList()
         }
 
         // Trigger the run tasks operation
