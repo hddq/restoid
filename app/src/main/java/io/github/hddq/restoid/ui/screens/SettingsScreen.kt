@@ -43,6 +43,8 @@ fun SettingsScreen(
     val showMetadataWarning by viewModel.showMetadataWarning.collectAsStateWithLifecycle()
     val metadataRestoreSuccess by viewModel.metadataRestoreSuccess.collectAsStateWithLifecycle()
     val showRcloneConfigDialog by viewModel.showRcloneConfigDialog.collectAsStateWithLifecycle()
+    val hasRcloneConfig by viewModel.hasRcloneConfig.collectAsStateWithLifecycle()
+    val rcloneRemotes by viewModel.rcloneRemotes.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -92,6 +94,9 @@ fun SettingsScreen(
     if (addRepoUiState.showDialog) {
         AddRepositoryDialog(
             uiState = addRepoUiState,
+            hasRcloneConfig = hasRcloneConfig,
+            rcloneRemotes = rcloneRemotes,
+            onConfigureRclone = { viewModel.onShowRcloneConfigDialog() },
             onDismiss = { viewModel.onNewRepoDialogDismiss() },
             onBackendTypeChange = { viewModel.onNewRepoBackendTypeChanged(it) },
             onPathChange = { viewModel.onNewRepoPathChanged(it) },

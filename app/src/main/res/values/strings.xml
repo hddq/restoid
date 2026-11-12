@@ -284,6 +284,9 @@
     <string name="repo_backend_s3" translatable="false">Amazon S3 / MinIO</string>
     <string name="repo_backend_rclone" translatable="false">Rclone</string>
     <string name="repo_hint_rclone" translatable="false">remote:path/to/repo</string>
+    <string name="rclone_missing_config_title">No rclone.conf found</string>
+    <string name="action_load_config">Load config</string>
+    <string name="action_edit_config">Edit config</string>
     <string name="rclone_config_title">Rclone Configuration</string>
     <string name="rclone_config_subtitle_configured">Config loaded: %1$d remote(s) found (%2$s)</string>
     <string name="rclone_config_subtitle_none">No rclone.conf loaded. Tap to import or paste.</string>

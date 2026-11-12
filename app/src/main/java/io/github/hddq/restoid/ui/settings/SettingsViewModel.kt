@@ -351,6 +351,9 @@ class SettingsViewModel(
     // UI handlers
     fun onNewRepoBackendTypeChanged(backendType: RepositoryBackendType) {
         pendingSftpTrustRequest = null
+        if (backendType == RepositoryBackendType.RCLONE) {
+            refreshRcloneState()
+        }
         _addRepoUiState.update {
             if (it.backendType == backendType) it else it.copy(
                 backendType = backendType,
@@ -499,6 +502,7 @@ class SettingsViewModel(
     fun onShowAddRepoDialog() {
         if (resticBinaryManager.isInstalled) {
             checkStoragePermission()
+            refreshRcloneState()
             _addRepoUiState.update { it.copy(showDialog = true) }
         }
     }

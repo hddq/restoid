@@ -27,10 +27,7 @@ fun DependencySettings(viewModel: SettingsViewModel) {
                 ResticDependencyRow(state = resticState)
             }
             ExpressiveSegmentedSurface(index = 1, count = 2) {
-                RcloneDependencyRow(
-                    state = rcloneState,
-                    onConfigureClick = { viewModel.onShowRcloneConfigDialog() }
-                )
+                RcloneDependencyRow(state = rcloneState)
             }
         }
     }

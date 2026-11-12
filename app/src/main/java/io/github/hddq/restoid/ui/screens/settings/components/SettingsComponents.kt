@@ -584,67 +584,48 @@ fun ResticDependencyRow(state: ResticState) {
 }
 
 @Composable
-fun RcloneDependencyRow(
-    state: ResticState,
-    onConfigureClick: (() -> Unit)? = null
-) {
+fun RcloneDependencyRow(state: ResticState) {
     AnimatedContent(targetState = state, label = "RcloneStatusAnimation") { targetState ->
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
-            ) {
-                val icon: ImageVector
-                val iconColor: Color
+            val icon: ImageVector
+            val iconColor: Color
 
-                when (targetState) {
-                    is ResticState.Installed -> {
-                        icon = Icons.Outlined.CheckCircle
-                        iconColor = MaterialTheme.colorScheme.primary
-                    }
-                    is ResticState.Error -> {
-                        icon = Icons.Outlined.ErrorOutline
-                        iconColor = MaterialTheme.colorScheme.error
-                    }
-                    ResticState.Idle -> {
-                        icon = Icons.Outlined.CheckCircle
-                        iconColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    }
+            when (targetState) {
+                is ResticState.Installed -> {
+                    icon = Icons.Outlined.CheckCircle
+                    iconColor = MaterialTheme.colorScheme.primary
                 }
-
-                Icon(imageVector = icon, contentDescription = null, modifier = Modifier.padding(end = 16.dp), tint = iconColor)
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.rclone_binary), style = MaterialTheme.typography.bodyLarge)
-                    val supportingText = when (targetState) {
-                        ResticState.Idle -> stringResource(R.string.restic_checking_status)
-                        is ResticState.Installed -> targetState.fullVersionOutput.ifBlank { "rclone" }
-                        is ResticState.Error -> targetState.message
-                    }
-                    Text(
-                        text = supportingText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                is ResticState.Error -> {
+                    icon = Icons.Outlined.ErrorOutline
+                    iconColor = MaterialTheme.colorScheme.error
+                }
+                ResticState.Idle -> {
+                    icon = Icons.Outlined.CheckCircle
+                    iconColor = MaterialTheme.colorScheme.onSurfaceVariant
                 }
             }
 
-            if (onConfigureClick != null) {
-                IconButton(onClick = onConfigureClick) {
-                    Icon(
-                        imageVector = Icons.Outlined.Settings,
-                        contentDescription = stringResource(R.string.rclone_config_title),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+            Icon(imageVector = icon, contentDescription = null, modifier = Modifier.padding(end = 16.dp), tint = iconColor)
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(stringResource(R.string.rclone_binary), style = MaterialTheme.typography.bodyLarge)
+                val supportingText = when (targetState) {
+                    ResticState.Idle -> stringResource(R.string.restic_checking_status)
+                    is ResticState.Installed -> targetState.fullVersionOutput.ifBlank { "rclone" }
+                    is ResticState.Error -> targetState.message
                 }
+                Text(
+                    text = supportingText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }

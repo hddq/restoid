@@ -9,6 +9,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.outlined.CloudDone
+import androidx.compose.material.icons.outlined.CloudOff
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.runtime.*
@@ -33,6 +36,9 @@ import io.github.hddq.restoid.util.SftpRepositorySpec
 @Composable
 fun AddRepositoryDialog(
     uiState: AddRepoUiState,
+    hasRcloneConfig: Boolean = false,
+    rcloneRemotes: List<String> = emptyList(),
+    onConfigureRclone: () -> Unit = {},
     onDismiss: () -> Unit,
     onBackendTypeChange: (RepositoryBackendType) -> Unit,
     onPathChange: (String) -> Unit,
@@ -88,6 +94,7 @@ fun AddRepositoryDialog(
         }) &&
         (uiState.backendType != RepositoryBackendType.LOCAL || hasStorageAccess) &&
         uiState.password.isNotBlank() &&
+        (uiState.backendType != RepositoryBackendType.RCLONE || hasRcloneConfig) &&
         !hasIncompleteRestCredentials &&
         !hasIncompleteS3Credentials &&
         !hasIncompleteSftpCredentials
@@ -172,6 +179,104 @@ fun AddRepositoryDialog(
                     }
                 }
 
+                if (uiState.backendType == RepositoryBackendType.RCLONE) {
+                    Surface(
+                        color = if (hasRcloneConfig) {
+                            MaterialTheme.colorScheme.surfaceContainerHigh
+                        } else {
+                            MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+                        },
+                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        imageVector = if (hasRcloneConfig) Icons.Outlined.CloudDone else Icons.Outlined.CloudOff,
+                                        contentDescription = null,
+                                        tint = if (hasRcloneConfig) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.padding(end = 12.dp)
+                                    )
+                                    Column {
+                                        Text(
+                                            text = if (hasRcloneConfig) stringResource(R.string.rclone_config_title) else stringResource(R.string.rclone_missing_config_title),
+                                            style = MaterialTheme.typography.titleSmall
+                                        )
+                                        val statusText = if (hasRcloneConfig && rcloneRemotes.isNotEmpty()) {
+                                            stringResource(R.string.rclone_config_subtitle_configured, rcloneRemotes.size, rcloneRemotes.joinToString(", "))
+                                        } else if (hasRcloneConfig) {
+                                            stringResource(R.string.rclone_no_remotes_warning)
+                                        } else {
+                                            stringResource(R.string.rclone_config_subtitle_none)
+                                        }
+                                        Text(
+                                            text = statusText,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.width(8.dp))
+
+                                FilledTonalButton(
+                                    onClick = onConfigureRclone,
+                                    enabled = !isBusy,
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Text(
+                                        text = if (hasRcloneConfig) stringResource(R.string.action_edit_config) else stringResource(R.string.action_load_config)
+                                    )
+                                }
+                            }
+
+                            if (hasRcloneConfig && rcloneRemotes.isNotEmpty()) {
+                                FlowRow(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.rclone_select_remote) + ":",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.align(Alignment.CenterVertically).padding(end = 4.dp)
+                                    )
+                                    rcloneRemotes.forEach { remote ->
+                                        SuggestionChip(
+                                            onClick = {
+                                                val pathSuffix = if (uiState.path.contains(":")) {
+                                                    uiState.path.substringAfter(":")
+                                                } else {
+                                                    uiState.path
+                                                }
+                                                onPathChange("$remote:$pathSuffix")
+                                            },
+                                            label = { Text("$remote:") },
+                                            colors = SuggestionChipDefaults.suggestionChipColors(
+                                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if (uiState.backendType == RepositoryBackendType.SFTP) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -252,6 +357,10 @@ fun AddRepositoryDialog(
                             if (uiState.backendType == RepositoryBackendType.LOCAL) {
                                 IconButton(onClick = onSelectPath, enabled = !isBusy && hasStorageAccess) {
                                     Icon(Icons.Default.FolderOpen, contentDescription = stringResource(R.string.cd_select_folder))
+                                }
+                            } else if (uiState.backendType == RepositoryBackendType.RCLONE) {
+                                IconButton(onClick = onConfigureRclone, enabled = !isBusy) {
+                                    Icon(Icons.Outlined.Settings, contentDescription = stringResource(R.string.rclone_config_title))
                                 }
                             }
                         },
