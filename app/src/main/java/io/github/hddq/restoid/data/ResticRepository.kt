@@ -14,6 +14,7 @@ import io.github.hddq.restoid.util.shellQuote
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -504,8 +505,9 @@ class ResticRepository(
             resticOptions = resticOptions
         )
             .map {
-                refreshSnapshots(repoPath, password, environmentVariables, resticOptions)
-                Unit
+                _snapshots.update { currentSnapshots ->
+                    currentSnapshots?.filterNot { it.id == snapshotId || it.id.startsWith(snapshotId) }
+                }
             }
     }
 
