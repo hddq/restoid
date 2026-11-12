@@ -4,9 +4,7 @@ import java.io.File
 tasks.register<Exec>("buildBundledRestic") {
     group = "restic"
     description = "Builds restic binary from submodule using bash script"
-
-    inputs.dir(rootProject.file("restic"))
-    outputs.dir(file("src/main/jniLibs"))
+    doNotTrackState("Binaries are built only if missing from jniLibs")
 
     onlyIf("binaries not yet built") {
         !file("src/main/jniLibs/arm64-v8a/librestic.so").exists() ||
@@ -21,9 +19,7 @@ tasks.register<Exec>("buildBundledRestic") {
 tasks.register<Exec>("buildBundledRclone") {
     group = "rclone"
     description = "Builds rclone binary from submodule using bash script"
-
-    inputs.dir(rootProject.file("rclone"))
-    outputs.dir(file("src/main/jniLibs"))
+    doNotTrackState("Binaries are built only if missing from jniLibs")
 
     onlyIf("binaries not yet built") {
         !file("src/main/jniLibs/arm64-v8a/librclone.so").exists() ||

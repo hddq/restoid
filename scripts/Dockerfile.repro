@@ -2,6 +2,8 @@ ARG BASE_IMAGE=ubuntu:26.04
 FROM ${BASE_IMAGE}
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
 RUN apt-get update && apt-get install -y \
     wget curl unzip git openjdk-21-jdk-headless gcc libc-dev make \
     && rm -rf /var/lib/apt/lists/*
