@@ -7,8 +7,13 @@ on:
   pull_request:
     paths:
       - 'app/**'
+      - 'gradle/**'
       - 'scripts/**'
       - 'restic/**'
+      - '*.gradle.kts'
+      - 'gradle.properties'
+      - 'gradlew'
+      - 'gradlew.bat'
       - '.gitmodules'
       - '.go-version'
       - '.github/workflows/reproducibility.yml'
