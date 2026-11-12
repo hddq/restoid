@@ -16,6 +16,9 @@ echo "  Compile SDK: $COMPILE_SDK"
 echo "  Build Tools: $BUILD_TOOLS"
 echo "  NDK:         $NDK_VER"
 
+rm -rf out
+mkdir -p out
+
 build_in_docker() {
     local base_image=$1
     local tag_name=$2
@@ -34,7 +37,11 @@ build_in_docker() {
 
     mkdir -p "out/$tag_name"
     echo "==> Running build in $tag_name container..."
-    docker run --rm -v "$(pwd):/src:ro" -v "$(pwd)/out/$tag_name:/out" "$tag_name" bash /src/scripts/repro-build.sh
+    docker run --rm \
+        --ulimit nofile=65535:65535 \
+        -v "$(pwd):/src:ro" \
+        -v "$(pwd)/out/$tag_name:/out" \
+        "$tag_name" bash /src/scripts/repro-build.sh
 }
 
 # Step 1: Ubuntu (GitHub Actions simulation)
@@ -48,6 +55,8 @@ echo "=========================================================="
 echo "==> Verification"
 echo "=========================================================="
 
+DIFFERS=0
+
 check_apk() {
     local apk_name=$1
     local ubuntu_apk="out/restoid-repro-ubuntu/$apk_name"
@@ -55,7 +64,8 @@ check_apk() {
 
     if [ ! -f "$ubuntu_apk" ] || [ ! -f "$debian_apk" ]; then
         echo "❌ Error: Missing $apk_name in one or both outputs!"
-        exit 1
+        DIFFERS=1
+        return
     fi
 
     local ubuntu_sha=$(sha256sum "$ubuntu_apk" | awk '{print $1}')
@@ -69,7 +79,7 @@ check_apk() {
         echo "  ✅ Matches!"
     else
         echo "  ❌ Differs!"
-        exit 1
+        DIFFERS=1
     fi
 }
 
@@ -77,5 +87,18 @@ check_apk "app-arm64-v8a-release-unsigned.apk"
 check_apk "app-x86_64-release-unsigned.apk"
 check_apk "app-universal-release-unsigned.apk"
 
+if [ -d "out/restoid-repro-ubuntu" ]; then
+    (cd out/restoid-repro-ubuntu && sha256sum *.apk > ../SHA256SUMS-ubuntu.txt)
+fi
+if [ -d "out/restoid-repro-debian" ]; then
+    (cd out/restoid-repro-debian && sha256sum *.apk > ../SHA256SUMS-debian.txt)
+fi
+
 echo ""
-echo "🎉 All builds are 100% reproducible across different distributions!"
+if [ "$DIFFERS" -eq 0 ]; then
+    echo "🎉 All builds are 100% reproducible across different distributions!"
+    exit 0
+else
+    echo "❌ One or more builds differed between Ubuntu and Debian!"
+    exit 1
+fi

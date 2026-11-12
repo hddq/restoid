@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+echo "==> Configuring git safe directory..."
+git config --global --add safe.directory "*"
+
 echo "==> Cloning source to working directory (simulating CI clone)..."
 git clone -q --depth 1 "file:///src" /app
 cd /app

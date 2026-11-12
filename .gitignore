@@ -13,5 +13,6 @@ local.properties
 .kotlin/
 librestic.so
 *.apk
+/out/
 __pycache__/
 *.pyc

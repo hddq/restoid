@@ -1,0 +1,74 @@
+name: Reproducible Builds CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'scripts/**'
+      - 'restic/**'
+      - '.gitmodules'
+      - '.go-version'
+      - '.github/workflows/reproducibility.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: repro-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-reproducibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Install diffoscope
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends diffoscope
+
+      - name: Run Reproducibility Check
+        id: repro_check
+        run: |
+          set -euo pipefail
+          ./scripts/check_reproducibility.sh
+
+      - name: Generate diffoscope report on failure
+        if: failure()
+        run: |
+          mkdir -p out/diffoscope
+          for apk in app-arm64-v8a-release-unsigned.apk app-x86_64-release-unsigned.apk app-universal-release-unsigned.apk; do
+            u_apk="out/restoid-repro-ubuntu/$apk"
+            d_apk="out/restoid-repro-debian/$apk"
+            if [ -f "$u_apk" ] && [ -f "$d_apk" ]; then
+              echo "Diffing $apk..."
+              diffoscope --text "out/diffoscope/$apk.diff.txt" \
+                         --html "out/diffoscope/$apk.diff.html" \
+                         "$u_apk" "$d_apk" || true
+            fi
+          done
+
+      - name: Upload diffoscope report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: reproducibility-diffoscope-report
+          path: out/diffoscope/
+          if-no-files-found: ignore
+
+      - name: Upload APKs & Checksums
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: repro-artifacts
+          path: |
+            out/SHA256SUMS*.txt
+            out/restoid-repro-*/*.apk
+          if-no-files-found: ignore
