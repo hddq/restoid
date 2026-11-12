@@ -144,4 +144,22 @@ class CapabilityManagerTest {
         assertFalse(rootCheckerCalled)
         assertFalse(capabilityManager.hasStorageAccess.value)
     }
+
+    @Test
+    fun hasCapability_withRoot_returnsTrueForAnyPermission() = runTest {
+        val testScope = TestScope()
+        val rootRepo = RootRepository()
+        val storageRepo = StoragePermissionRepository(FakeContext())
+
+        val capabilityManager = CapabilityManager(
+            context = FakeContext(),
+            rootRepository = rootRepo,
+            storagePermissionRepository = storageRepo,
+            coroutineScope = testScope.backgroundScope,
+            liveRootChecker = { true },
+            allFilesAccessChecker = { false }
+        )
+
+        assertTrue(capabilityManager.hasCapability(android.Manifest.permission.READ_SMS))
+    }
 }
