@@ -98,6 +98,19 @@ class CapabilityManager(
     fun canRestoreApps(): Boolean = isRootGrantedLive()
 
     /**
+     * Checks if a standard Android runtime permission is granted.
+     */
+    fun hasAndroidPermission(permission: String): Boolean {
+        return ContextCompat.checkSelfPermission(context, permission) ==
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
+
+    /**
+     * Checks if a capability requirement is met, either via live root or granted Android permission.
+     */
+    fun hasCapability(permission: String): Boolean = isRootGrantedLive() || hasAndroidPermission(permission)
+
+    /**
      * Refreshes the storage permission state from Android system.
      */
     fun refreshStoragePermission() {

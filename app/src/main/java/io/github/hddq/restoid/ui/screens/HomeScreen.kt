@@ -113,6 +113,7 @@ fun HomeScreen(
     onForceStopOperation: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     var showForceStopDialog by remember { mutableStateOf(false) }
     val activeOp = uiState.activeOperation
     val isOperationActive = activeOp.isRunning || activeOp.stopRequested
@@ -216,6 +217,23 @@ fun HomeScreen(
                                     Spacer(Modifier.height(12.dp))
                                     Button(onClick = onRetryS3CredentialsEntry) {
                                         Text(stringResource(R.string.action_enter_s3_credentials_again))
+                                    }
+                                }
+                                HomeAuthFailure.STORAGE_PERMISSION -> {
+                                    Spacer(Modifier.height(12.dp))
+                                    Button(onClick = {
+                                        val intent = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                                            android.content.Intent(android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                                                data = android.net.Uri.parse("package:${context.packageName}")
+                                            }
+                                        } else {
+                                            android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                                data = android.net.Uri.parse("package:${context.packageName}")
+                                            }
+                                        }
+                                        runCatching { context.startActivity(intent) }
+                                    }) {
+                                        Text(stringResource(R.string.settings_system_permission_storage))
                                     }
                                 }
                                 null -> Unit

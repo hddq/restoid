@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import io.github.hddq.restoid.data.AppInfoRepository
+import io.github.hddq.restoid.data.CapabilityManager
 import io.github.hddq.restoid.data.MetadataRepository
 import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.ResticBinaryManager
@@ -17,7 +18,8 @@ class HomeViewModelFactory(
     private val resticRepository: ResticRepository,
     private val appInfoRepository: AppInfoRepository,
     private val metadataRepository: MetadataRepository,
-    private val operationWorkRepository: OperationWorkRepository
+    private val operationWorkRepository: OperationWorkRepository,
+    private val capabilityManager: CapabilityManager
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(HomeViewModel::class.java)) {
@@ -29,7 +31,8 @@ class HomeViewModelFactory(
                 resticRepository,
                 appInfoRepository,
                 metadataRepository,
-                operationWorkRepository
+                operationWorkRepository,
+                capabilityManager
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

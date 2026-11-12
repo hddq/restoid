@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.AppInfoRepository
+import io.github.hddq.restoid.data.CapabilityManager
 import io.github.hddq.restoid.data.LocalRepository
 import io.github.hddq.restoid.data.MetadataRepository
 import io.github.hddq.restoid.data.OperationRuntimeState
@@ -36,7 +37,8 @@ enum class HomeAuthFailure {
     REPOSITORY_PASSWORD,
     SFTP_PASSWORD,
     REST_CREDENTIALS,
-    S3_CREDENTIALS
+    S3_CREDENTIALS,
+    STORAGE_PERMISSION
 }
 
 enum class HomeCredentialPrompt {
@@ -75,7 +77,8 @@ class HomeViewModel(
     private val resticRepository: ResticRepository,
     private val appInfoRepository: AppInfoRepository,
     private val metadataRepository: MetadataRepository,
-    private val operationWorkRepository: OperationWorkRepository
+    private val operationWorkRepository: OperationWorkRepository,
+    private val capabilityManager: CapabilityManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -95,13 +98,18 @@ class HomeViewModel(
             }
         }
 
-        combine(
+        val repoWithAccessFlow = combine(
             repositoriesRepository.selectedRepository,
+            capabilityManager.hasStorageAccess
+        ) { repoKey, hasStorageAccess -> repoKey to hasStorageAccess }
+
+        combine(
+            repoWithAccessFlow,
             resticBinaryManager.resticState, // Observe state from Manager
             resticRepository.snapshots,
             repositoriesRepository.repositories,
             refreshTrigger
-        ) { repoKey, restic, snapshots, repos, _ ->
+        ) { (repoKey, hasStorageAccess), restic, snapshots, repos, _ ->
 
             val selectedRepository = repoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
             val repoPath = selectedRepository?.path
@@ -109,6 +117,7 @@ class HomeViewModel(
             val resticOptions = repoKey?.let { repositoriesRepository.getExecutionResticOptions(it) }.orEmpty()
             val isRepoSwitch = repoKey != lastObservedRepoKey
 
+            val hasStorageForRepo = selectedRepository?.backendType != RepositoryBackendType.LOCAL || hasStorageAccess
             val hasRepositoryPassword = repoKey?.let { repositoriesRepository.hasRepositoryPassword(it) } ?: false
             val hasSftpCredentials = if (selectedRepository?.backendType == RepositoryBackendType.SFTP) {
                 repositoriesRepository.hasSftpCredentials(repositoriesRepository.repositoryKey(selectedRepository))
@@ -135,6 +144,7 @@ class HomeViewModel(
             val isRepoReady =
                 repoKey != null &&
                     restic is ResticState.Installed &&
+                    hasStorageForRepo &&
                     hasRepositoryPassword &&
                     hasSftpCredentials &&
                     hasRestCredentials &&
@@ -146,6 +156,29 @@ class HomeViewModel(
                     resticState = restic,
                     isRepoReady = isRepoReady
                 )
+            }
+
+            if (repoKey != null && selectedRepository?.backendType == RepositoryBackendType.LOCAL && !hasStorageAccess) {
+                lastObservedRepoKey = repoKey
+                resticRepository.clearSnapshots()
+                _uiState.update {
+                    it.copy(
+                        snapshotsWithMetadata = emptyList(),
+                        appInfoMap = emptyMap(),
+                        isLoading = false,
+                        isRefreshing = false,
+                        error = context.getString(R.string.storage_permission_disabled),
+                        authFailure = HomeAuthFailure.STORAGE_PERMISSION,
+                        openPrompt = null,
+                        showPasswordDialogFor = null,
+                        showSftpPasswordDialogFor = null,
+                        showRestCredentialsDialogFor = null,
+                        showS3CredentialsDialogFor = null,
+                        snapshotPendingForget = null,
+                        isForgettingSnapshot = false
+                    )
+                }
+                return@combine
             }
 
             if (isRepoSwitch) {
@@ -286,6 +319,21 @@ class HomeViewModel(
                 return
             }
 
+        if (repository.backendType == RepositoryBackendType.LOCAL && !capabilityManager.hasStorageAccess.value) {
+            _uiState.update {
+                it.copy(
+                    snapshotsWithMetadata = emptyList(),
+                    appInfoMap = emptyMap(),
+                    isLoading = false,
+                    isRefreshing = false,
+                    error = context.getString(R.string.storage_permission_disabled),
+                    authFailure = HomeAuthFailure.STORAGE_PERMISSION,
+                    openPrompt = null
+                )
+            }
+            return
+        }
+
         viewModelScope.launch {
             if (repository.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpCredentials(repoKey)) {
                 _uiState.update {
@@ -372,6 +420,7 @@ class HomeViewModel(
                             HomeAuthFailure.SFTP_PASSWORD -> context.getString(R.string.home_error_sftp_password_incorrect)
                             HomeAuthFailure.REST_CREDENTIALS -> context.getString(R.string.home_error_rest_credentials_incorrect)
                             HomeAuthFailure.S3_CREDENTIALS -> context.getString(R.string.home_error_s3_credentials_incorrect)
+                            HomeAuthFailure.STORAGE_PERMISSION -> context.getString(R.string.storage_permission_disabled)
                             null -> rawMessage
                         },
                         authFailure = authFailure,
@@ -396,6 +445,19 @@ class HomeViewModel(
         val repoPath = repository.path
         val environmentVariables = repositoriesRepository.getExecutionEnvironmentVariables(repoKey)
         val resticOptions = repositoriesRepository.getExecutionResticOptions(repoKey)
+
+        if (repository.backendType == RepositoryBackendType.LOCAL && !capabilityManager.hasStorageAccess.value) {
+            _uiState.update {
+                it.copy(
+                    isRefreshing = false,
+                    isLoading = false,
+                    error = context.getString(R.string.storage_permission_disabled),
+                    authFailure = HomeAuthFailure.STORAGE_PERMISSION,
+                    openPrompt = null
+                )
+            }
+            return
+        }
 
         if (repository.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpCredentials(repoKey)) {
             _uiState.update {
@@ -502,6 +564,7 @@ class HomeViewModel(
                                 HomeAuthFailure.SFTP_PASSWORD -> context.getString(R.string.home_error_sftp_password_incorrect)
                                 HomeAuthFailure.REST_CREDENTIALS -> context.getString(R.string.home_error_rest_credentials_incorrect)
                                 HomeAuthFailure.S3_CREDENTIALS -> context.getString(R.string.home_error_s3_credentials_incorrect)
+                                HomeAuthFailure.STORAGE_PERMISSION -> context.getString(R.string.storage_permission_disabled)
                                 null -> rawMessage
                             },
                             authFailure = authFailure,
@@ -524,6 +587,15 @@ class HomeViewModel(
         message: String
     ): HomeAuthFailure? {
         val normalized = message.lowercase()
+        if (repository.backendType == RepositoryBackendType.LOCAL) {
+            val isPermissionDenied = normalized.contains("permission denied") ||
+                normalized.contains("eacces") ||
+                !capabilityManager.hasStorageAccess.value
+            if (isPermissionDenied) {
+                return HomeAuthFailure.STORAGE_PERMISSION
+            }
+        }
+
         val isRepositoryPasswordError =
             normalized.contains("wrong password or no key found") ||
                 normalized.contains("wrong password") ||
@@ -624,6 +696,23 @@ class HomeViewModel(
     fun onPasswordEntered(password: String, save: Boolean) {
         val repoKey = _uiState.value.showPasswordDialogFor ?: return
         val repository = repositoriesRepository.getRepositoryByKey(repoKey) ?: return
+
+        if (repository.backendType == RepositoryBackendType.LOCAL && !capabilityManager.hasStorageAccess.value) {
+            _uiState.update {
+                it.copy(
+                    showPasswordDialogFor = null,
+                    showSftpPasswordDialogFor = null,
+                    showRestCredentialsDialogFor = null,
+                    showS3CredentialsDialogFor = null,
+                    isLoading = false,
+                    isRefreshing = false,
+                    error = context.getString(R.string.storage_permission_disabled),
+                    authFailure = HomeAuthFailure.STORAGE_PERMISSION,
+                    openPrompt = null
+                )
+            }
+            return
+        }
         _uiState.update {
             it.copy(
                 showPasswordDialogFor = null,

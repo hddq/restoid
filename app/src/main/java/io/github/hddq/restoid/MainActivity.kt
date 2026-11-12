@@ -312,7 +312,7 @@ class MainActivity : FragmentActivity() {
                         setOf(Screen.Home.route, SchedulesRoutes.Main, Screen.Settings.route)
                     }
                     val homeViewModel: HomeViewModel = viewModel(
-                        factory = HomeViewModelFactory(app, app.repositoriesRepository, app.resticBinaryManager, app.resticRepository, app.appInfoRepository, app.metadataRepository, app.operationWorkRepository)
+                        factory = HomeViewModelFactory(app, app.repositoriesRepository, app.resticBinaryManager, app.resticRepository, app.appInfoRepository, app.metadataRepository, app.operationWorkRepository, app.capabilityManager)
                     )
                     val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
 
