@@ -1,4 +1,4 @@
-ARG BASE_IMAGE
+ARG BASE_IMAGE=ubuntu:26.04
 FROM ${BASE_IMAGE}
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y \
 
 ENV ANDROID_HOME=/opt/android-sdk
 RUN mkdir -p $ANDROID_HOME/cmdline-tools && \
-    wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip && \
+    wget -q https://dl.google.com/android/repository/commandlinetools-linux-15859902_latest.zip -O cmdline-tools.zip && \
     unzip -q cmdline-tools.zip -d $ANDROID_HOME/cmdline-tools && \
     mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest && \
     rm cmdline-tools.zip
@@ -20,7 +20,11 @@ ARG BUILD_TOOLS
 ARG NDK_VER
 
 RUN yes | sdkmanager --licenses >/dev/null && \
-    sdkmanager "platforms;android-${COMPILE_SDK}" "build-tools;${BUILD_TOOLS}" "ndk;${NDK_VER}" >/dev/null
+    (sdkmanager "platforms;android-${COMPILE_SDK}.0" || sdkmanager "platforms;android-${COMPILE_SDK}") && \
+    sdkmanager "build-tools;${BUILD_TOOLS}" "ndk;${NDK_VER}" && \
+    if [ -d "$ANDROID_HOME/platforms/android-${COMPILE_SDK}.0" ] && [ ! -d "$ANDROID_HOME/platforms/android-${COMPILE_SDK}" ]; then \
+        ln -s "android-${COMPILE_SDK}.0" "$ANDROID_HOME/platforms/android-${COMPILE_SDK}"; \
+    fi
 
 ARG GO_VERSION
 RUN wget -q https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz && \
