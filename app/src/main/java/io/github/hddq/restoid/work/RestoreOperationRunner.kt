@@ -94,6 +94,14 @@ class RestoreOperationRunner(
                 throw IllegalStateException(context.getString(R.string.root_access_denied))
             }
 
+            if (request.selectedCustomDirectories.isNotEmpty() && !hasAllFilesAccess()) {
+                throw IllegalStateException(context.getString(R.string.error_all_files_access_required))
+            }
+
+            if (selectedRepository.backendType == RepositoryBackendType.LOCAL && !hasAllFilesAccess()) {
+                throw IllegalStateException(context.getString(R.string.storage_permission_disabled))
+            }
+
             val currentSnapshot = findSnapshot(request)
                 ?: throw IllegalStateException(context.getString(R.string.error_snapshot_not_found))
 
@@ -741,6 +749,17 @@ class RestoreOperationRunner(
             String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, secs)
         } else {
             String.format(Locale.US, "%02d:%02d", minutes, secs)
+        }
+    }
+
+    private fun hasAllFilesAccess(): Boolean {
+        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            android.os.Environment.isExternalStorageManager()
+        } else {
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.READ_EXTERNAL_STORAGE
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
         }
     }
 }

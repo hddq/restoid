@@ -79,6 +79,7 @@ class RestoreViewModel(
     private val application: Application,
     private val repositoriesRepository: RepositoriesRepository,
     private val rootRepository: io.github.hddq.restoid.data.RootRepository,
+    private val storagePermissionRepository: io.github.hddq.restoid.data.StoragePermissionRepository,
     private val resticBinaryManager: ResticBinaryManager,
     private val resticRepository: ResticRepository,
     private val appInfoRepository: AppInfoRepository,
@@ -135,6 +136,7 @@ class RestoreViewModel(
     val uiEvents: SharedFlow<RestoreUiEvent> = _uiEvents.asSharedFlow()
 
     val rootState = rootRepository.rootState
+    val storagePermissionState = storagePermissionRepository.permissionState
 
     init {
         _restoreTypes.value = preferencesRepository.loadRestoreTypes()
@@ -321,6 +323,7 @@ class RestoreViewModel(
         val selectedRepoPath = selectedRepository?.path
         val currentSnapshot = _snapshot.value
         val hasRoot = rootState.value == io.github.hddq.restoid.data.RootState.Granted
+        val hasStoragePermission = storagePermissionState.value == io.github.hddq.restoid.data.StoragePermissionState.Granted
         
         val selectedApps = if (_restoreAppsEnabled.value && hasRoot) {
             _backupDetails.value.filter { it.appInfo.isSelected && (_allowDowngrade.value || !it.isDowngrade) }
@@ -328,10 +331,19 @@ class RestoreViewModel(
             emptyList()
         }
 
-        val selectedCustomDirectories = if (_restoreCustomDirectoriesEnabled.value) {
+        val selectedCustomDirectories = if (_restoreCustomDirectoriesEnabled.value && hasStoragePermission) {
             _customDirectories.value.filter { it.value }.keys.toList()
         } else {
             emptyList()
+        }
+
+        if (selectedRepository != null && selectedRepository.backendType == RepositoryBackendType.LOCAL && !storagePermissionRepository.hasStoragePermission()) {
+            _restoreProgress.value = OperationProgress(
+                isFinished = true,
+                error = application.getString(R.string.storage_permission_disabled),
+                finalSummary = application.getString(R.string.storage_permission_disabled)
+            )
+            return
         }
 
         if (!resticBinaryManager.isInstalled || selectedRepoPath == null || currentSnapshot == null) {
@@ -344,10 +356,15 @@ class RestoreViewModel(
         }
 
         if (selectedApps.isEmpty() && selectedCustomDirectories.isEmpty()) {
+            val errorMsg = if (_restoreCustomDirectoriesEnabled.value && !hasStoragePermission) {
+                application.getString(R.string.error_all_files_access_required)
+            } else {
+                application.getString(R.string.restore_error_no_items_selected)
+            }
             _restoreProgress.value = OperationProgress(
                 isFinished = true,
-                error = application.getString(R.string.restore_error_no_items_selected),
-                finalSummary = application.getString(R.string.restore_error_no_items_selected)
+                error = errorMsg,
+                finalSummary = errorMsg
             )
             return
         }

@@ -321,6 +321,14 @@ class RunTasksViewModel(
             )
         }
 
+        if (repository.backendType == RepositoryBackendType.LOCAL && !storagePermissionRepository.hasStoragePermission()) {
+            return OperationProgress(
+                isFinished = true,
+                error = application.getString(R.string.storage_permission_disabled),
+                finalSummary = application.getString(R.string.storage_permission_disabled)
+            )
+        }
+
         if (repository.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpCredentials(selectedRepoKey)) {
             return OperationProgress(
                 isFinished = true,

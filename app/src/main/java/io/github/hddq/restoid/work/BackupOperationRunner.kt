@@ -559,6 +559,14 @@ class BackupOperationRunner(
             )
         }
 
+        if (repository.backendType == RepositoryBackendType.LOCAL && !hasAllFilesAccess()) {
+            return OperationProgress(
+                isFinished = true,
+                error = context.getString(R.string.storage_permission_disabled),
+                finalSummary = context.getString(R.string.storage_permission_disabled)
+            )
+        }
+
         if (repository.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpCredentials(request.repositoryKey)) {
             return OperationProgress(
                 isFinished = true,

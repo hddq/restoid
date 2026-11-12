@@ -120,6 +120,8 @@ fun RestoreScreen(
         item {
             val rootState by viewModel.rootState.collectAsState()
             val hasRoot = rootState == io.github.hddq.restoid.data.RootState.Granted
+            val storagePermissionState by viewModel.storagePermissionState.collectAsState()
+            val hasStoragePermission = storagePermissionState == io.github.hddq.restoid.data.StoragePermissionState.Granted
             val selectableBackupDetails = backupDetails.filter { allowDowngrade || !it.isDowngrade }
             val customDirsList = customDirectories.map { io.github.hddq.restoid.model.CustomDirectory(it.key, it.value) }
 
@@ -140,11 +142,16 @@ fun RestoreScreen(
                     ExpressiveSegmentedSurface(index = 1, count = 2) {
                         TaskRow(
                             title = stringResource(R.string.run_tasks_custom_directories),
-                            subtitle = io.github.hddq.restoid.ui.shared.buildCustomDirectoriesSubtitle(customDirsList, context),
+                            subtitle = if (hasStoragePermission) {
+                                io.github.hddq.restoid.ui.shared.buildCustomDirectoriesSubtitle(customDirsList, context)
+                            } else {
+                                stringResource(R.string.storage_permission_disabled)
+                            },
                             icon = Icons.Outlined.Folder,
-                            checked = restoreCustomDirectoriesEnabled,
+                            checked = if (hasStoragePermission) restoreCustomDirectoriesEnabled else false,
                             onCheckedChange = viewModel::setRestoreCustomDirectoriesEnabled,
-                            onNavigate = onNavigateToCustomDirectoriesConfig
+                            onNavigate = if (hasStoragePermission) onNavigateToCustomDirectoriesConfig else null,
+                            enabled = hasStoragePermission
                         )
                     }
                 }
@@ -273,6 +280,15 @@ fun RestoreCustomDirectoriesConfigScreen(
     viewModel: RestoreViewModel,
     modifier: Modifier = Modifier
 ) {
+    val storagePermissionState by viewModel.storagePermissionState.collectAsState()
+
+    if (storagePermissionState != io.github.hddq.restoid.data.StoragePermissionState.Granted) {
+        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(stringResource(R.string.storage_permission_disabled))
+        }
+        return
+    }
+
     val customDirectories by viewModel.customDirectories.collectAsState()
     val customDirectoryMetadata by viewModel.customDirectoryMetadata.collectAsState()
     val customDirectoriesList = customDirectories.toList()
