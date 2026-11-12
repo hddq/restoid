@@ -31,6 +31,7 @@ fun RcloneConfigDialog(
 ) {
     val context = LocalContext.current
     var configText by remember { mutableStateOf(viewModel.getRcloneConfigContent().orEmpty()) }
+    var isImporting by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val initialExists = remember { viewModel.hasRcloneConfig.value }
 
@@ -39,18 +40,20 @@ fun RcloneConfigDialog(
     ) { uri ->
         if (uri != null) {
             scope.launch {
-                runCatching {
-                    withContext(Dispatchers.IO) {
+                isImporting = true
+                try {
+                    val text = withContext(Dispatchers.IO) {
                         context.contentResolver.openInputStream(uri)?.use { stream ->
                             stream.reader().readText()
                         }
                     }
-                }.onSuccess { text ->
                     if (text != null) {
                         configText = text
                     }
-                }.onFailure {
+                } catch (e: Throwable) {
                     Toast.makeText(context, context.getString(R.string.rclone_config_import_error), Toast.LENGTH_SHORT).show()
+                } finally {
+                    isImporting = false
                 }
             }
         }
@@ -79,9 +82,17 @@ fun RcloneConfigDialog(
 
                 OutlinedButton(
                     onClick = { filePickerLauncher.launch("*/*") },
+                    enabled = !isImporting,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(Icons.Outlined.FileOpen, contentDescription = null, modifier = Modifier.size(18.dp))
+                    if (isImporting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Icon(Icons.Outlined.FileOpen, contentDescription = null, modifier = Modifier.size(18.dp))
+                    }
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(stringResource(R.string.rclone_config_import_file))
                 }
@@ -143,7 +154,7 @@ fun RcloneConfigDialog(
                         Toast.makeText(context, context.getString(R.string.rclone_config_saved_error), Toast.LENGTH_SHORT).show()
                     }
                 },
-                enabled = configText.isNotBlank()
+                enabled = !isImporting && configText.isNotBlank()
             ) {
                 Text(stringResource(R.string.action_save))
             }
