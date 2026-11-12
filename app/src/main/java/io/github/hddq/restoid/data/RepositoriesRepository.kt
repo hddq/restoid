@@ -47,7 +47,8 @@ data class S3Credentials(
 class RepositoriesRepository(
     private val context: Context,
     private val passwordManager: PasswordManager,
-    private val binaryManager: ResticBinaryManager
+    private val binaryManager: ResticBinaryManager,
+    private val capabilityManager: CapabilityManager
 ) {
     private companion object {
         private const val MISSING_S3_BUCKET_ERROR = "The specified bucket does not exist"
@@ -566,15 +567,7 @@ class RepositoriesRepository(
         return withContext(Dispatchers.IO) {
             val normalizedPath = normalizeRepositoryPath(path, backendType)
             val resolvedPath = if (backendType == RepositoryBackendType.LOCAL) {
-                val hasStorageAccess = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                    android.os.Environment.isExternalStorageManager()
-                } else {
-                    androidx.core.content.ContextCompat.checkSelfPermission(
-                        context,
-                        android.Manifest.permission.READ_EXTERNAL_STORAGE
-                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-                }
-                if (!hasStorageAccess) {
+                if (!capabilityManager.canAccessRepository(backendType)) {
                     return@withContext AddRepositoryState.Error(context.getString(R.string.storage_permission_disabled))
                 }
                 StorageUtils.resolvePathForShell(normalizedPath)

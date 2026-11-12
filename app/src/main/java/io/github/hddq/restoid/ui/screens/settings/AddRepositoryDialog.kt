@@ -54,7 +54,7 @@ fun AddRepositoryDialog(
     onSavePasswordChange: (Boolean) -> Unit,
     onConfirm: () -> Unit,
     onSelectPath: () -> Unit,
-    hasStoragePermission: Boolean = true
+    hasStorageAccess: Boolean = true
 ) {
     var repositoryPasswordVisible by remember { mutableStateOf(false) }
     var sftpPasswordVisible by remember { mutableStateOf(false) }
@@ -86,7 +86,7 @@ fun AddRepositoryDialog(
         } else {
             uiState.path.isNotBlank()
         }) &&
-        (uiState.backendType != RepositoryBackendType.LOCAL || hasStoragePermission) &&
+        (uiState.backendType != RepositoryBackendType.LOCAL || hasStorageAccess) &&
         uiState.password.isNotBlank() &&
         !hasIncompleteRestCredentials &&
         !hasIncompleteS3Credentials &&
@@ -242,7 +242,7 @@ fun AddRepositoryDialog(
                         isError = uiState.state is AddRepositoryState.Error,
                         trailingIcon = {
                             if (uiState.backendType == RepositoryBackendType.LOCAL) {
-                                IconButton(onClick = onSelectPath, enabled = !isBusy && hasStoragePermission) {
+                                IconButton(onClick = onSelectPath, enabled = !isBusy && hasStorageAccess) {
                                     Icon(Icons.Default.FolderOpen, contentDescription = stringResource(R.string.cd_select_folder))
                                 }
                             }
@@ -250,7 +250,7 @@ fun AddRepositoryDialog(
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !isBusy
                     )
-                    if (uiState.backendType == RepositoryBackendType.LOCAL && !hasStoragePermission) {
+                    if (uiState.backendType == RepositoryBackendType.LOCAL && !hasStorageAccess) {
                         Text(
                             text = stringResource(R.string.storage_permission_disabled),
                             color = MaterialTheme.colorScheme.error,

@@ -17,6 +17,8 @@ class RestoidApplication : Application() {
     lateinit var rootRepository: RootRepository
         private set
     lateinit var storagePermissionRepository: io.github.hddq.restoid.data.StoragePermissionRepository
+    lateinit var capabilityManager: CapabilityManager
+        private set
     lateinit var localNetworkPermissionRepository: LocalNetworkPermissionRepository
         private set
     lateinit var resticBinaryManager: ResticBinaryManager
@@ -64,6 +66,7 @@ class RestoidApplication : Application() {
         // Initialize specialized components
         rootRepository = RootRepository()
         storagePermissionRepository = StoragePermissionRepository(applicationContext)
+        capabilityManager = CapabilityManager(applicationContext, rootRepository, storagePermissionRepository, applicationScope)
         localNetworkPermissionRepository = LocalNetworkPermissionRepository(applicationContext)
         resticBinaryManager = ResticBinaryManager(applicationContext)
         resticExecutor = ResticExecutor(applicationContext, resticBinaryManager)
@@ -71,7 +74,7 @@ class RestoidApplication : Application() {
 
         passwordManager = PasswordManager(applicationContext)
         // RepositoriesRepository now needs BinaryManager to check installation status
-        repositoriesRepository = RepositoriesRepository(applicationContext, passwordManager, resticBinaryManager)
+        repositoriesRepository = RepositoriesRepository(applicationContext, passwordManager, resticBinaryManager, capabilityManager)
 
         notificationRepository = NotificationRepository(applicationContext)
         appInfoRepository = AppInfoRepository(applicationContext)

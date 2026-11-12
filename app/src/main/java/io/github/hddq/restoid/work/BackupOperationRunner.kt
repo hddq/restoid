@@ -5,7 +5,9 @@ import android.util.Log
 import com.topjohnwu.superuser.CallbackList
 import com.topjohnwu.superuser.Shell
 import io.github.hddq.restoid.R
+import io.github.hddq.restoid.RestoidApplication
 import io.github.hddq.restoid.data.AppInfoRepository
+import io.github.hddq.restoid.data.CapabilityManager
 import io.github.hddq.restoid.data.OperationLockManager
 import io.github.hddq.restoid.data.PreferencesRepository
 import io.github.hddq.restoid.data.RepositoriesRepository
@@ -35,7 +37,8 @@ class BackupOperationRunner(
     private val resticRepository: ResticRepository,
     private val appInfoRepository: AppInfoRepository,
     private val operationLockManager: OperationLockManager,
-    private val preferencesRepository: PreferencesRepository = PreferencesRepository(context)
+    private val preferencesRepository: PreferencesRepository = PreferencesRepository(context),
+    private val capabilityManager: CapabilityManager = (context.applicationContext as RestoidApplication).capabilityManager
 ) {
 
     suspend fun run(
@@ -490,7 +493,7 @@ class BackupOperationRunner(
             )
         }
 
-        if (request.customDirectories.isNotEmpty() && !hasAllFilesAccess()) {
+        if (request.customDirectories.isNotEmpty() && !capabilityManager.canBackupCustomDirectories()) {
             return OperationProgress(
                 isFinished = true,
                 error = context.getString(R.string.error_all_files_access_required),
@@ -498,7 +501,7 @@ class BackupOperationRunner(
             )
         }
 
-        if (selectedApps.isNotEmpty() && !Shell.getShell().isRoot) {
+        if (selectedApps.isNotEmpty() && !capabilityManager.canBackupApps()) {
             return OperationProgress(
                 isFinished = true,
                 error = context.getString(R.string.root_access_denied),
@@ -559,7 +562,7 @@ class BackupOperationRunner(
             )
         }
 
-        if (repository.backendType == RepositoryBackendType.LOCAL && !hasAllFilesAccess()) {
+        if (!capabilityManager.canAccessRepository(repository.backendType)) {
             return OperationProgress(
                 isFinished = true,
                 error = context.getString(R.string.storage_permission_disabled),
@@ -600,17 +603,6 @@ class BackupOperationRunner(
         }
 
         return null
-    }
-
-    private fun hasAllFilesAccess(): Boolean {
-        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-            android.os.Environment.isExternalStorageManager()
-        } else {
-            androidx.core.content.ContextCompat.checkSelfPermission(
-                context,
-                android.Manifest.permission.READ_EXTERNAL_STORAGE
-            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-        }
     }
 
     private fun getCurrentUserId(): Int {

@@ -134,40 +134,44 @@ class RunTasksOperationRunner(
             }
 
             if (maintenanceTaskCount > 0) {
-                val maintenanceRequest = MaintenanceWorkRequest(
-                    repositoryKey = request.repositoryKey,
-                    checkRepo = request.checkRepo,
-                    pruneRepo = request.pruneRepo,
-                    unlockRepo = request.unlockRepo,
-                    readData = request.readData,
-                    forgetSnapshots = request.forgetSnapshots,
-                    keepLast = request.keepLast,
-                    keepDaily = request.keepDaily,
-                    keepWeekly = request.keepWeekly,
-                    keepMonthly = request.keepMonthly
-                )
-
-                val result = maintenanceRunner.run(
-                    request = maintenanceRequest,
-                    onProgress = { childProgress ->
-                        progressState = mapChildProgress(childProgress, maintenanceTaskCount)
-                        onProgress(progressState)
-                    },
-                    shouldStop = shouldStop,
-                    stageContext = OperationStageContext(
-                        completedStagesBefore = completedTaskUnits,
-                        totalStages = totalEnabledTasks
+                if (request.backupEnabled && !overallSuccess) {
+                    // Skip maintenance if preceding backup failed, preventing accidental pruning/forgetting of old snapshots
+                } else {
+                    val maintenanceRequest = MaintenanceWorkRequest(
+                        repositoryKey = request.repositoryKey,
+                        checkRepo = request.checkRepo,
+                        pruneRepo = request.pruneRepo,
+                        unlockRepo = request.unlockRepo,
+                        readData = request.readData,
+                        forgetSnapshots = request.forgetSnapshots,
+                        keepLast = request.keepLast,
+                        keepDaily = request.keepDaily,
+                        keepWeekly = request.keepWeekly,
+                        keepMonthly = request.keepMonthly
                     )
-                )
 
-                completedTaskUnits += maintenanceTaskCount
-                summaries += context.getString(
-                    R.string.run_tasks_phase_summary,
-                    context.getString(R.string.operation_maintenance),
-                    result.progress.finalSummary
-                )
-                overallSuccess = overallSuccess && result.success
-                throwIfCancelled()
+                    val result = maintenanceRunner.run(
+                        request = maintenanceRequest,
+                        onProgress = { childProgress ->
+                            progressState = mapChildProgress(childProgress, maintenanceTaskCount)
+                            onProgress(progressState)
+                        },
+                        shouldStop = shouldStop,
+                        stageContext = OperationStageContext(
+                            completedStagesBefore = completedTaskUnits,
+                            totalStages = totalEnabledTasks
+                        )
+                    )
+
+                    completedTaskUnits += maintenanceTaskCount
+                    summaries += context.getString(
+                        R.string.run_tasks_phase_summary,
+                        context.getString(R.string.operation_maintenance),
+                        result.progress.finalSummary
+                    )
+                    overallSuccess = overallSuccess && result.success
+                    throwIfCancelled()
+                }
             }
         } catch (e: OperationCancelledException) {
             overallSuccess = false

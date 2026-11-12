@@ -3,13 +3,13 @@ package io.github.hddq.restoid.ui.settings
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import io.github.hddq.restoid.data.CapabilityManager
 import io.github.hddq.restoid.data.NotificationRepository
 import io.github.hddq.restoid.data.PreferencesRepository
 import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.ResticBinaryManager
 import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.data.RootRepository
-import io.github.hddq.restoid.data.StoragePermissionRepository
 import io.github.hddq.restoid.data.LocalNetworkPermissionRepository
 
 class SettingsViewModelFactory(
@@ -20,7 +20,7 @@ class SettingsViewModelFactory(
     private val repositoriesRepository: RepositoriesRepository,
     private val notificationRepository: NotificationRepository,
     private val preferencesRepository: PreferencesRepository,
-    private val storagePermissionRepository: StoragePermissionRepository,
+    private val capabilityManager: CapabilityManager,
     private val localNetworkPermissionRepository: LocalNetworkPermissionRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -34,7 +34,7 @@ class SettingsViewModelFactory(
                 repositoriesRepository,
                 notificationRepository,
                 preferencesRepository,
-                storagePermissionRepository,
+                capabilityManager,
                 localNetworkPermissionRepository
             ) as T
         }

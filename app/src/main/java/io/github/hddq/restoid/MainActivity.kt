@@ -173,10 +173,7 @@ class MainActivity : FragmentActivity() {
         super.onStart()
 
         val app = applicationContext as RestoidApplication
-        app.storagePermissionRepository.checkPermissionStatus()
-        lifecycleScope.launch {
-            app.rootRepository.checkRootAccess()
-        }
+        app.capabilityManager.refreshStoragePermission()
 
         if (!app.preferencesRepository.loadRequireAppUnlock()) {
             backgroundedAtElapsedRealtimeMs = null
@@ -536,7 +533,7 @@ class MainActivity : FragmentActivity() {
                                     app.repositoriesRepository,
                                     app.notificationRepository,
                                     app.preferencesRepository,
-                                    app.storagePermissionRepository,
+                                    app.capabilityManager,
                                     app.localNetworkPermissionRepository
                                 )
                             )
@@ -564,7 +561,7 @@ class MainActivity : FragmentActivity() {
                                 }
                                 val vm: SchedulesViewModel = viewModel(
                                     viewModelStoreOwner = parentEntry,
-                                    factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository, app.storagePermissionRepository)
+                                    factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.capabilityManager)
                                 )
                                 DestinationScaffold(
                                     titleRes = R.string.topbar_schedules,
@@ -589,7 +586,7 @@ class MainActivity : FragmentActivity() {
                                     }
                                     val vm: SchedulesViewModel = viewModel(
                                         viewModelStoreOwner = parentEntry,
-                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository, app.storagePermissionRepository)
+                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.capabilityManager)
                                     )
                                     val state by vm.addEditState.collectAsState()
                                     DestinationScaffold(
@@ -623,7 +620,7 @@ class MainActivity : FragmentActivity() {
                                     }
                                     val vm: SchedulesViewModel = viewModel(
                                         viewModelStoreOwner = parentEntry,
-                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository, app.storagePermissionRepository)
+                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.capabilityManager)
                                     )
                                     DestinationScaffold(
                                         titleRes = R.string.topbar_backup_config,
@@ -639,7 +636,7 @@ class MainActivity : FragmentActivity() {
                                     }
                                     val vm: SchedulesViewModel = viewModel(
                                         viewModelStoreOwner = parentEntry,
-                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository, app.storagePermissionRepository)
+                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.capabilityManager)
                                     )
                                     DestinationScaffold(
                                         titleRes = R.string.topbar_forget_config,
@@ -655,7 +652,7 @@ class MainActivity : FragmentActivity() {
                                     }
                                     val vm: SchedulesViewModel = viewModel(
                                         viewModelStoreOwner = parentEntry,
-                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository, app.storagePermissionRepository)
+                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.capabilityManager)
                                     )
                                     DestinationScaffold(
                                         titleRes = R.string.topbar_check_config,
@@ -671,7 +668,7 @@ class MainActivity : FragmentActivity() {
                                     }
                                     val vm: SchedulesViewModel = viewModel(
                                         viewModelStoreOwner = parentEntry,
-                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository, app.storagePermissionRepository)
+                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.capabilityManager)
                                     )
                                     DestinationScaffold(
                                         titleRes = R.string.title_custom_directories,
@@ -694,8 +691,7 @@ class MainActivity : FragmentActivity() {
                                         viewModelStoreOwner = parentEntry,
                                         factory = RunTasksViewModelFactory(
                                             app,
-                                            app.rootRepository,
-                                            app.storagePermissionRepository,
+                                            app.capabilityManager,
                                             app.repositoriesRepository,
                                             app.resticBinaryManager,
                                             app.appInfoRepository,
@@ -739,8 +735,7 @@ class MainActivity : FragmentActivity() {
                                         viewModelStoreOwner = parentEntry,
                                         factory = RunTasksViewModelFactory(
                                             app,
-                                            app.rootRepository,
-                                            app.storagePermissionRepository,
+                                            app.capabilityManager,
                                             app.repositoriesRepository,
                                             app.resticBinaryManager,
                                             app.appInfoRepository,
@@ -764,8 +759,7 @@ class MainActivity : FragmentActivity() {
                                         viewModelStoreOwner = parentEntry,
                                         factory = RunTasksViewModelFactory(
                                             app,
-                                            app.rootRepository,
-                                            app.storagePermissionRepository,
+                                            app.capabilityManager,
                                             app.repositoriesRepository,
                                             app.resticBinaryManager,
                                             app.appInfoRepository,
@@ -789,8 +783,7 @@ class MainActivity : FragmentActivity() {
                                         viewModelStoreOwner = parentEntry,
                                         factory = RunTasksViewModelFactory(
                                             app,
-                                            app.rootRepository,
-                                            app.storagePermissionRepository,
+                                            app.capabilityManager,
                                             app.repositoriesRepository,
                                             app.resticBinaryManager,
                                             app.appInfoRepository,
@@ -814,8 +807,7 @@ class MainActivity : FragmentActivity() {
                                         viewModelStoreOwner = parentEntry,
                                         factory = RunTasksViewModelFactory(
                                             app,
-                                            app.rootRepository,
-                                            app.storagePermissionRepository,
+                                            app.capabilityManager,
                                             app.repositoriesRepository,
                                             app.resticBinaryManager,
                                             app.appInfoRepository,
@@ -874,8 +866,7 @@ class MainActivity : FragmentActivity() {
                                         factory = RestoreViewModelFactory(
                                             app,
                                             app.repositoriesRepository,
-                                            app.rootRepository,
-                                            app.storagePermissionRepository,
+                                            app.capabilityManager,
                                             app.resticBinaryManager,
                                             app.resticRepository,
                                             app.appInfoRepository,
@@ -919,8 +910,7 @@ class MainActivity : FragmentActivity() {
                                         factory = RestoreViewModelFactory(
                                             app,
                                             app.repositoriesRepository,
-                                            app.rootRepository,
-                                            app.storagePermissionRepository,
+                                            app.capabilityManager,
                                             app.resticBinaryManager,
                                             app.resticRepository,
                                             app.appInfoRepository,
@@ -948,8 +938,7 @@ class MainActivity : FragmentActivity() {
                                         factory = RestoreViewModelFactory(
                                             app,
                                             app.repositoriesRepository,
-                                            app.rootRepository,
-                                            app.storagePermissionRepository,
+                                            app.capabilityManager,
                                             app.resticBinaryManager,
                                             app.resticRepository,
                                             app.appInfoRepository,

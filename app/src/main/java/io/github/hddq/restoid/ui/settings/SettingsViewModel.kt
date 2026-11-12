@@ -71,7 +71,7 @@ class SettingsViewModel(
     private val repositoriesRepository: RepositoriesRepository,
     private val notificationRepository: NotificationRepository,
     private val preferencesRepository: PreferencesRepository,
-    private val storagePermissionRepository: StoragePermissionRepository,
+    private val capabilityManager: CapabilityManager,
     private val localNetworkPermissionRepository: LocalNetworkPermissionRepository
 ) : ViewModel() {
 
@@ -81,7 +81,8 @@ class SettingsViewModel(
     val repositories = repositoriesRepository.repositories
     val selectedRepository = repositoriesRepository.selectedRepository
     val notificationPermissionState = notificationRepository.permissionState
-    val storagePermissionState = storagePermissionRepository.permissionState
+    val storagePermissionState = capabilityManager.storagePermissionState
+    val hasStorageAccess = capabilityManager.hasStorageAccess
     val localNetworkPermissionState = localNetworkPermissionRepository.permissionState
 
     fun updateLocalNetworkPermissionStatus() {
@@ -280,7 +281,7 @@ class SettingsViewModel(
 
     fun resetChangePasswordState() { _changePasswordState.value = ChangePasswordState.Idle }
     fun checkNotificationPermission() = notificationRepository.checkPermissionStatus()
-    fun checkStoragePermission() = storagePermissionRepository.checkPermissionStatus()
+    fun checkStoragePermission() = capabilityManager.refreshStoragePermission()
 
     fun onRequireAppUnlockChanged(required: Boolean) {
         _requireAppUnlock.value = required
@@ -498,8 +499,8 @@ class SettingsViewModel(
         }
 
         if (backendType == RepositoryBackendType.LOCAL) {
-            storagePermissionRepository.checkPermissionStatus()
-            if (!storagePermissionRepository.hasStoragePermission()) {
+            capabilityManager.refreshStoragePermission()
+            if (!capabilityManager.canAccessRepository(backendType)) {
                 _addRepoUiState.update { it.copy(state = AddRepositoryState.Error(context.getString(R.string.storage_permission_disabled))) }
                 return
             }

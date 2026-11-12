@@ -39,8 +39,7 @@ fun SettingsScreen(
     modifier: Modifier = Modifier
 ) {
     val addRepoUiState by viewModel.addRepoUiState.collectAsStateWithLifecycle()
-    val storagePermissionState by viewModel.storagePermissionState.collectAsStateWithLifecycle()
-    val hasStoragePermission = storagePermissionState == io.github.hddq.restoid.data.StoragePermissionState.Granted
+    val hasStorageAccess by viewModel.hasStorageAccess.collectAsStateWithLifecycle()
     val showMetadataWarning by viewModel.showMetadataWarning.collectAsStateWithLifecycle()
     val metadataRestoreSuccess by viewModel.metadataRestoreSuccess.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -113,7 +112,7 @@ fun SettingsScreen(
             onSavePasswordChange = { viewModel.onSavePasswordChanged(it) },
             onConfirm = { viewModel.addRepository() },
             onSelectPath = { showRepoFolderPicker = true },
-            hasStoragePermission = hasStoragePermission
+            hasStorageAccess = hasStorageAccess
         )
     }
 

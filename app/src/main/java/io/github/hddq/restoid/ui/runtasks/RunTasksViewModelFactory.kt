@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import io.github.hddq.restoid.data.AppInfoRepository
+import io.github.hddq.restoid.data.CapabilityManager
 import io.github.hddq.restoid.data.PreferencesRepository
 import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.ResticBinaryManager
@@ -11,8 +12,7 @@ import io.github.hddq.restoid.work.OperationWorkRepository
 
 class RunTasksViewModelFactory(
     private val application: Application,
-    private val rootRepository: io.github.hddq.restoid.data.RootRepository,
-    private val storagePermissionRepository: io.github.hddq.restoid.data.StoragePermissionRepository,
+    private val capabilityManager: CapabilityManager,
     private val repositoriesRepository: RepositoriesRepository,
     private val resticBinaryManager: ResticBinaryManager,
     private val appInfoRepository: AppInfoRepository,
@@ -24,8 +24,7 @@ class RunTasksViewModelFactory(
             @Suppress("UNCHECKED_CAST")
             return RunTasksViewModel(
                 application = application,
-                rootRepository = rootRepository,
-                storagePermissionRepository = storagePermissionRepository,
+                capabilityManager = capabilityManager,
                 repositoriesRepository = repositoriesRepository,
                 resticBinaryManager = resticBinaryManager,
                 appInfoRepository = appInfoRepository,

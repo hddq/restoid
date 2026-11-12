@@ -73,13 +73,13 @@ fun RestoreTypeSelection.toUiModel(): RestoreTypes {
 
 sealed interface RestoreUiEvent {
     data object NavigateToOperationProgress : RestoreUiEvent
+    data class ShowError(val message: String) : RestoreUiEvent
 }
 
 class RestoreViewModel(
     private val application: Application,
     private val repositoriesRepository: RepositoriesRepository,
-    private val rootRepository: io.github.hddq.restoid.data.RootRepository,
-    private val storagePermissionRepository: io.github.hddq.restoid.data.StoragePermissionRepository,
+    private val capabilityManager: io.github.hddq.restoid.data.CapabilityManager,
     private val resticBinaryManager: ResticBinaryManager,
     private val resticRepository: ResticRepository,
     private val appInfoRepository: AppInfoRepository,
@@ -135,8 +135,8 @@ class RestoreViewModel(
     private val _uiEvents = MutableSharedFlow<RestoreUiEvent>(extraBufferCapacity = 1)
     val uiEvents: SharedFlow<RestoreUiEvent> = _uiEvents.asSharedFlow()
 
-    val rootState = rootRepository.rootState
-    val storagePermissionState = storagePermissionRepository.permissionState
+    val rootState = capabilityManager.rootState
+    val hasStorageAccess = capabilityManager.hasStorageAccess
 
     init {
         _restoreTypes.value = preferencesRepository.loadRestoreTypes()
@@ -322,8 +322,8 @@ class RestoreViewModel(
         val selectedRepository = selectedRepoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
         val selectedRepoPath = selectedRepository?.path
         val currentSnapshot = _snapshot.value
-        val hasRoot = rootState.value == io.github.hddq.restoid.data.RootState.Granted
-        val hasStoragePermission = storagePermissionState.value == io.github.hddq.restoid.data.StoragePermissionState.Granted
+        val hasRoot = capabilityManager.isRootGranted()
+        val hasStorageAccess = capabilityManager.hasStorageAccess.value
         
         val selectedApps = if (_restoreAppsEnabled.value && hasRoot) {
             _backupDetails.value.filter { it.appInfo.isSelected && (_allowDowngrade.value || !it.isDowngrade) }
@@ -331,32 +331,36 @@ class RestoreViewModel(
             emptyList()
         }
 
-        val selectedCustomDirectories = if (_restoreCustomDirectoriesEnabled.value && hasStoragePermission) {
+        val selectedCustomDirectories = if (_restoreCustomDirectoriesEnabled.value && hasStorageAccess) {
             _customDirectories.value.filter { it.value }.keys.toList()
         } else {
             emptyList()
         }
 
-        if (selectedRepository != null && selectedRepository.backendType == RepositoryBackendType.LOCAL && !storagePermissionRepository.hasStoragePermission()) {
+        if (selectedRepository != null && !capabilityManager.canAccessRepository(selectedRepository.backendType)) {
+            val error = application.getString(R.string.storage_permission_disabled)
             _restoreProgress.value = OperationProgress(
                 isFinished = true,
-                error = application.getString(R.string.storage_permission_disabled),
-                finalSummary = application.getString(R.string.storage_permission_disabled)
+                error = error,
+                finalSummary = error
             )
+            _uiEvents.tryEmit(RestoreUiEvent.ShowError(error))
             return
         }
 
         if (!resticBinaryManager.isInstalled || selectedRepoPath == null || currentSnapshot == null) {
+            val error = application.getString(R.string.restore_error_preflight_failed)
             _restoreProgress.value = OperationProgress(
                 isFinished = true,
-                error = application.getString(R.string.restore_error_preflight_failed),
-                finalSummary = application.getString(R.string.restore_error_preflight_failed)
+                error = error,
+                finalSummary = error
             )
+            _uiEvents.tryEmit(RestoreUiEvent.ShowError(error))
             return
         }
 
         if (selectedApps.isEmpty() && selectedCustomDirectories.isEmpty()) {
-            val errorMsg = if (_restoreCustomDirectoriesEnabled.value && !hasStoragePermission) {
+            val errorMsg = if (_restoreCustomDirectoriesEnabled.value && !hasStorageAccess) {
                 application.getString(R.string.error_all_files_access_required)
             } else {
                 application.getString(R.string.restore_error_no_items_selected)
@@ -366,15 +370,18 @@ class RestoreViewModel(
                 error = errorMsg,
                 finalSummary = errorMsg
             )
+            _uiEvents.tryEmit(RestoreUiEvent.ShowError(errorMsg))
             return
         }
 
         if (selectedApps.isNotEmpty() && selectedApps.none { effectiveRestoreTypes(it.appInfo.packageName).anyEnabled() }) {
+            val error = application.getString(R.string.restore_error_no_restore_types_selected)
             _restoreProgress.value = OperationProgress(
                 isFinished = true,
-                error = application.getString(R.string.restore_error_no_restore_types_selected),
-                finalSummary = application.getString(R.string.restore_error_no_restore_types_selected)
+                error = error,
+                finalSummary = error
             )
+            _uiEvents.tryEmit(RestoreUiEvent.ShowError(error))
             return
         }
 

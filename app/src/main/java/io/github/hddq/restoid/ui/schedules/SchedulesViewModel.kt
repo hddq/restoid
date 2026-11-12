@@ -68,12 +68,11 @@ class SchedulesViewModel(
     private val scheduleRepository: ScheduleRepository,
     private val repositoriesRepository: RepositoriesRepository,
     private val appInfoRepository: AppInfoRepository,
-    private val rootRepository: io.github.hddq.restoid.data.RootRepository,
-    private val storagePermissionRepository: io.github.hddq.restoid.data.StoragePermissionRepository
+    private val capabilityManager: io.github.hddq.restoid.data.CapabilityManager
 ) : ViewModel() {
 
-    val rootState = rootRepository.rootState
-    val storagePermissionState = storagePermissionRepository.permissionState
+    val rootState = capabilityManager.rootState
+    val hasStorageAccess = capabilityManager.hasStorageAccess
 
     private val _uiState = MutableStateFlow(SchedulesUiState())
     val uiState = _uiState.asStateFlow()
@@ -98,12 +97,12 @@ class SchedulesViewModel(
             }
         }
         viewModelScope.launch {
-            rootRepository.rootState.collect {
+            capabilityManager.rootState.collect {
                 _addEditState.update { recomputeConflicts(it) }
             }
         }
         viewModelScope.launch {
-            storagePermissionRepository.permissionState.collect {
+            capabilityManager.hasStorageAccess.collect {
                 _addEditState.update { recomputeConflicts(it) }
             }
         }
@@ -247,23 +246,18 @@ class SchedulesViewModel(
     }
 
     private fun buildScheduleFromState(state: AddEditScheduleUiState): Schedule {
-        val hasRoot = rootState.value == io.github.hddq.restoid.data.RootState.Granted
-        val actualBackupEnabled = state.backupEnabled && hasRoot
-        val hasStoragePermission = storagePermissionState.value == io.github.hddq.restoid.data.StoragePermissionState.Granted
-        val actualCustomDirsEnabled = state.customDirectoriesBackupEnabled && hasStoragePermission
-
         return Schedule(
             id = state.id ?: UUID.randomUUID().toString(),
             name = state.name.ifBlank { "Schedule" },
             intervalHours = state.intervalHours,
             isEnabled = state.isEnabled,
             config = RunTasksConfig(
-                backupEnabled = actualBackupEnabled,
+                backupEnabled = state.backupEnabled,
                 backupTypes = state.backupTypes.toSelection(),
-                selectedPackageNames = if (actualBackupEnabled) state.apps.filter { it.isSelected }.map { it.packageName } else emptyList(),
-                appBackupTypes = if (actualBackupEnabled) selectedAppBackupTypes(state).mapValues { it.value.toSelection() } else emptyMap(),
-                customDirectories = if (actualCustomDirsEnabled) state.customDirectories.filter { it.isSelected }.map { it.uri } else emptyList(),
-                excludedCustomDirectories = if (actualCustomDirsEnabled) state.excludedCustomDirectories.filter { it.isSelected }.map { it.uri } else emptyList(),
+                selectedPackageNames = state.apps.filter { it.isSelected }.map { it.packageName },
+                appBackupTypes = selectedAppBackupTypes(state).mapValues { it.value.toSelection() },
+                customDirectories = state.customDirectories.filter { it.isSelected }.map { it.uri },
+                excludedCustomDirectories = state.excludedCustomDirectories.filter { it.isSelected }.map { it.uri },
                 unlockRepo = state.maintenance.unlockRepo,
                 forgetSnapshots = state.maintenance.forgetSnapshots,
                 pruneRepo = state.maintenance.pruneRepo,
@@ -495,10 +489,10 @@ class SchedulesViewModel(
     }
 
     private fun recomputeConflicts(state: AddEditScheduleUiState): AddEditScheduleUiState {
-        val hasRoot = rootState.value == io.github.hddq.restoid.data.RootState.Granted
-        val hasStoragePermission = storagePermissionState.value == io.github.hddq.restoid.data.StoragePermissionState.Granted
+        val hasRoot = capabilityManager.isRootGranted()
+        val hasStorageAccess = capabilityManager.hasStorageAccess.value
         val selectedApps = if (state.backupEnabled && hasRoot) state.apps.filter { it.isSelected } else emptyList()
-        val selectedExcluded = if (state.customDirectoriesBackupEnabled && hasStoragePermission) {
+        val selectedExcluded = if (state.customDirectoriesBackupEnabled && hasStorageAccess) {
             state.excludedCustomDirectories.filter { it.isSelected }.map { it.uri }
         } else {
             emptyList()

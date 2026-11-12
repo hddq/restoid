@@ -2,6 +2,8 @@ package io.github.hddq.restoid.work
 
 import android.content.Context
 import io.github.hddq.restoid.R
+import io.github.hddq.restoid.RestoidApplication
+import io.github.hddq.restoid.data.CapabilityManager
 import io.github.hddq.restoid.data.OperationLockManager
 import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.RepositoryBackendType
@@ -15,7 +17,8 @@ class MaintenanceOperationRunner(
     private val repositoriesRepository: RepositoriesRepository,
     private val resticBinaryManager: ResticBinaryManager,
     private val resticRepository: ResticRepository,
-    private val operationLockManager: OperationLockManager
+    private val operationLockManager: OperationLockManager,
+    private val capabilityManager: CapabilityManager = (context.applicationContext as RestoidApplication).capabilityManager
 ) {
 
     suspend fun run(
@@ -244,6 +247,14 @@ class MaintenanceOperationRunner(
                 isFinished = true,
                 error = context.getString(R.string.error_no_backup_repository_selected),
                 finalSummary = context.getString(R.string.summary_no_backup_repository_selected)
+            )
+        }
+
+        if (!capabilityManager.canAccessRepository(repository.backendType)) {
+            return OperationProgress(
+                isFinished = true,
+                error = context.getString(R.string.storage_permission_disabled),
+                finalSummary = context.getString(R.string.storage_permission_disabled)
             )
         }
 

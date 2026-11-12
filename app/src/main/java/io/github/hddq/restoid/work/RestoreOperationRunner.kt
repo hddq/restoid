@@ -7,6 +7,8 @@ import android.util.Log
 import com.topjohnwu.superuser.CallbackList
 import com.topjohnwu.superuser.Shell
 import io.github.hddq.restoid.R
+import io.github.hddq.restoid.RestoidApplication
+import io.github.hddq.restoid.data.CapabilityManager
 import io.github.hddq.restoid.data.MetadataRepository
 import io.github.hddq.restoid.data.OperationLockManager
 import io.github.hddq.restoid.data.RepositoriesRepository
@@ -30,7 +32,8 @@ class RestoreOperationRunner(
     private val resticBinaryManager: ResticBinaryManager,
     private val resticRepository: ResticRepository,
     private val metadataRepository: MetadataRepository,
-    private val operationLockManager: OperationLockManager
+    private val operationLockManager: OperationLockManager,
+    private val capabilityManager: CapabilityManager = (context.applicationContext as RestoidApplication).capabilityManager
 ) {
 
     suspend fun run(
@@ -90,15 +93,15 @@ class RestoreOperationRunner(
                 throw IllegalStateException(context.getString(R.string.restore_error_no_items_selected))
             }
 
-            if (selectedAppPackages.isNotEmpty() && !Shell.getShell().isRoot) {
+            if (selectedAppPackages.isNotEmpty() && !capabilityManager.canRestoreApps()) {
                 throw IllegalStateException(context.getString(R.string.root_access_denied))
             }
 
-            if (request.selectedCustomDirectories.isNotEmpty() && !hasAllFilesAccess()) {
+            if (request.selectedCustomDirectories.isNotEmpty() && !capabilityManager.canRestoreCustomDirectories()) {
                 throw IllegalStateException(context.getString(R.string.error_all_files_access_required))
             }
 
-            if (selectedRepository.backendType == RepositoryBackendType.LOCAL && !hasAllFilesAccess()) {
+            if (!capabilityManager.canAccessRepository(selectedRepository.backendType)) {
                 throw IllegalStateException(context.getString(R.string.storage_permission_disabled))
             }
 
@@ -749,17 +752,6 @@ class RestoreOperationRunner(
             String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, secs)
         } else {
             String.format(Locale.US, "%02d:%02d", minutes, secs)
-        }
-    }
-
-    private fun hasAllFilesAccess(): Boolean {
-        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-            android.os.Environment.isExternalStorageManager()
-        } else {
-            androidx.core.content.ContextCompat.checkSelfPermission(
-                context,
-                android.Manifest.permission.READ_EXTERNAL_STORAGE
-            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
         }
     }
 }
