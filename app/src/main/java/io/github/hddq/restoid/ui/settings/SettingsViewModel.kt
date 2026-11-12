@@ -497,6 +497,14 @@ class SettingsViewModel(
             return
         }
 
+        if (backendType == RepositoryBackendType.LOCAL) {
+            storagePermissionRepository.checkPermissionStatus()
+            if (!storagePermissionRepository.hasStoragePermission()) {
+                _addRepoUiState.update { it.copy(state = AddRepositoryState.Error(context.getString(R.string.storage_permission_disabled))) }
+                return
+            }
+        }
+
         if (backendType == RepositoryBackendType.SFTP) {
             if (sftpAuthMethod == SftpAuthMethod.KEY && sftpKey.isBlank()) {
                 _addRepoUiState.update { it.copy(state = AddRepositoryState.Error(context.getString(R.string.error_sftp_key_cannot_be_empty))) }

@@ -16,8 +16,12 @@ class StoragePermissionRepository(private val context: Context) {
     private val _permissionState = MutableStateFlow<StoragePermissionState>(StoragePermissionState.NotRequested)
     val permissionState = _permissionState.asStateFlow()
 
-    fun checkPermissionStatus() {
-        val hasPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+    init {
+        checkPermissionStatus()
+    }
+
+    fun hasStoragePermission(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             Environment.isExternalStorageManager()
         } else {
             // Fallback for older versions if minSdk is lowered later
@@ -26,6 +30,10 @@ class StoragePermissionRepository(private val context: Context) {
                 android.Manifest.permission.READ_EXTERNAL_STORAGE
             ) == android.content.pm.PackageManager.PERMISSION_GRANTED
         }
+    }
+
+    fun checkPermissionStatus() {
+        val hasPermission = hasStoragePermission()
 
         _permissionState.value = if (hasPermission) {
             StoragePermissionState.Granted

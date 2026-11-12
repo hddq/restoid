@@ -403,6 +403,8 @@ fun AddEditScheduleScreen(
         item {
             val rootState by viewModel.rootState.collectAsState()
             val hasRoot = rootState == io.github.hddq.restoid.data.RootState.Granted
+            val storagePermissionState by viewModel.storagePermissionState.collectAsState()
+            val hasStoragePermission = storagePermissionState == io.github.hddq.restoid.data.StoragePermissionState.Granted
 
             Column(modifier = Modifier.fillMaxWidth()) {
                 ExclusionConflictWarningCard(conflicts = state.exclusionConflicts)
@@ -422,11 +424,12 @@ fun AddEditScheduleScreen(
                     ExpressiveSegmentedSurface(index = 1, count = 2) {
                         TaskRow(
                             title = stringResource(R.string.run_tasks_custom_directories),
-                            subtitle = buildCustomDirectoriesSubtitle(state.customDirectories, state.excludedCustomDirectories, context),
+                            subtitle = if (hasStoragePermission) buildCustomDirectoriesSubtitle(state.customDirectories, state.excludedCustomDirectories, context) else stringResource(R.string.storage_permission_disabled),
                             icon = Icons.Outlined.Folder,
-                            checked = state.customDirectoriesBackupEnabled,
+                            checked = if (hasStoragePermission) state.customDirectoriesBackupEnabled else false,
                             onCheckedChange = viewModel::setCustomDirectoriesBackupEnabled,
-                            onNavigate = onNavigateToCustomDirectoriesConfig
+                            onNavigate = if (hasStoragePermission) onNavigateToCustomDirectoriesConfig else null,
+                            enabled = hasStoragePermission
                         )
                     }
                 }
@@ -702,6 +705,14 @@ fun ScheduleCustomDirectoriesConfigScreen(
     viewModel: SchedulesViewModel,
     modifier: Modifier = Modifier
 ) {
+    val storagePermissionState by viewModel.storagePermissionState.collectAsState()
+    if (storagePermissionState != io.github.hddq.restoid.data.StoragePermissionState.Granted) {
+        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(stringResource(R.string.storage_permission_disabled))
+        }
+        return
+    }
+
     val state by viewModel.addEditState.collectAsState()
     io.github.hddq.restoid.ui.shared.CustomDirectoriesConfigScreen(
         customDirectories = state.customDirectories,

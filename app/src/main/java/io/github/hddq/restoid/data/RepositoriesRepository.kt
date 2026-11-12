@@ -566,6 +566,17 @@ class RepositoriesRepository(
         return withContext(Dispatchers.IO) {
             val normalizedPath = normalizeRepositoryPath(path, backendType)
             val resolvedPath = if (backendType == RepositoryBackendType.LOCAL) {
+                val hasStorageAccess = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                    android.os.Environment.isExternalStorageManager()
+                } else {
+                    androidx.core.content.ContextCompat.checkSelfPermission(
+                        context,
+                        android.Manifest.permission.READ_EXTERNAL_STORAGE
+                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                }
+                if (!hasStorageAccess) {
+                    return@withContext AddRepositoryState.Error(context.getString(R.string.storage_permission_disabled))
+                }
                 StorageUtils.resolvePathForShell(normalizedPath)
             } else {
                 normalizedPath

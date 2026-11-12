@@ -63,8 +63,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
@@ -171,6 +173,11 @@ class MainActivity : FragmentActivity() {
         super.onStart()
 
         val app = applicationContext as RestoidApplication
+        app.storagePermissionRepository.checkPermissionStatus()
+        lifecycleScope.launch {
+            app.rootRepository.checkRootAccess()
+        }
+
         if (!app.preferencesRepository.loadRequireAppUnlock()) {
             backgroundedAtElapsedRealtimeMs = null
             return
@@ -557,7 +564,7 @@ class MainActivity : FragmentActivity() {
                                 }
                                 val vm: SchedulesViewModel = viewModel(
                                     viewModelStoreOwner = parentEntry,
-                                    factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository)
+                                    factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository, app.storagePermissionRepository)
                                 )
                                 DestinationScaffold(
                                     titleRes = R.string.topbar_schedules,
@@ -582,7 +589,7 @@ class MainActivity : FragmentActivity() {
                                     }
                                     val vm: SchedulesViewModel = viewModel(
                                         viewModelStoreOwner = parentEntry,
-                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository)
+                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository, app.storagePermissionRepository)
                                     )
                                     val state by vm.addEditState.collectAsState()
                                     DestinationScaffold(
@@ -616,7 +623,7 @@ class MainActivity : FragmentActivity() {
                                     }
                                     val vm: SchedulesViewModel = viewModel(
                                         viewModelStoreOwner = parentEntry,
-                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository)
+                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository, app.storagePermissionRepository)
                                     )
                                     DestinationScaffold(
                                         titleRes = R.string.topbar_backup_config,
@@ -632,7 +639,7 @@ class MainActivity : FragmentActivity() {
                                     }
                                     val vm: SchedulesViewModel = viewModel(
                                         viewModelStoreOwner = parentEntry,
-                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository)
+                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository, app.storagePermissionRepository)
                                     )
                                     DestinationScaffold(
                                         titleRes = R.string.topbar_forget_config,
@@ -648,7 +655,7 @@ class MainActivity : FragmentActivity() {
                                     }
                                     val vm: SchedulesViewModel = viewModel(
                                         viewModelStoreOwner = parentEntry,
-                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository)
+                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository, app.storagePermissionRepository)
                                     )
                                     DestinationScaffold(
                                         titleRes = R.string.topbar_check_config,
@@ -664,7 +671,7 @@ class MainActivity : FragmentActivity() {
                                     }
                                     val vm: SchedulesViewModel = viewModel(
                                         viewModelStoreOwner = parentEntry,
-                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository)
+                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository, app.storagePermissionRepository)
                                     )
                                     DestinationScaffold(
                                         titleRes = R.string.title_custom_directories,
@@ -688,6 +695,7 @@ class MainActivity : FragmentActivity() {
                                         factory = RunTasksViewModelFactory(
                                             app,
                                             app.rootRepository,
+                                            app.storagePermissionRepository,
                                             app.repositoriesRepository,
                                             app.resticBinaryManager,
                                             app.appInfoRepository,
@@ -732,6 +740,7 @@ class MainActivity : FragmentActivity() {
                                         factory = RunTasksViewModelFactory(
                                             app,
                                             app.rootRepository,
+                                            app.storagePermissionRepository,
                                             app.repositoriesRepository,
                                             app.resticBinaryManager,
                                             app.appInfoRepository,
@@ -756,6 +765,7 @@ class MainActivity : FragmentActivity() {
                                         factory = RunTasksViewModelFactory(
                                             app,
                                             app.rootRepository,
+                                            app.storagePermissionRepository,
                                             app.repositoriesRepository,
                                             app.resticBinaryManager,
                                             app.appInfoRepository,
@@ -780,6 +790,7 @@ class MainActivity : FragmentActivity() {
                                         factory = RunTasksViewModelFactory(
                                             app,
                                             app.rootRepository,
+                                            app.storagePermissionRepository,
                                             app.repositoriesRepository,
                                             app.resticBinaryManager,
                                             app.appInfoRepository,
@@ -804,6 +815,7 @@ class MainActivity : FragmentActivity() {
                                         factory = RunTasksViewModelFactory(
                                             app,
                                             app.rootRepository,
+                                            app.storagePermissionRepository,
                                             app.repositoriesRepository,
                                             app.resticBinaryManager,
                                             app.appInfoRepository,

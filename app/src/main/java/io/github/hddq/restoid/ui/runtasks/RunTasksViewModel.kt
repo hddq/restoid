@@ -54,6 +54,7 @@ sealed interface RunTasksUiEvent {
 class RunTasksViewModel(
     private val application: Application,
     private val rootRepository: io.github.hddq.restoid.data.RootRepository,
+    private val storagePermissionRepository: io.github.hddq.restoid.data.StoragePermissionRepository,
     private val repositoriesRepository: RepositoriesRepository,
     private val resticBinaryManager: ResticBinaryManager,
     private val appInfoRepository: io.github.hddq.restoid.data.AppInfoRepository,
@@ -62,6 +63,7 @@ class RunTasksViewModel(
 ) : ViewModel() {
 
     val rootState = rootRepository.rootState
+    val storagePermissionState = storagePermissionRepository.permissionState
 
     private val _uiState = MutableStateFlow(
         RunTasksUiState(
@@ -99,6 +101,7 @@ class RunTasksViewModel(
         loadInstalledApps()
         observeOperationState()
         observeRootState()
+        observeStoragePermissionState()
         val initialExcluded = if (_uiState.value.customDirectoriesBackupEnabled) {
             _uiState.value.excludedCustomDirectories.filter { it.isSelected }.map { it.uri }
         } else {
@@ -112,6 +115,14 @@ class RunTasksViewModel(
     private fun observeRootState() {
         viewModelScope.launch {
             rootRepository.rootState.collect {
+                _uiState.update { recomputeConflicts(it) }
+            }
+        }
+    }
+
+    private fun observeStoragePermissionState() {
+        viewModelScope.launch {
+            storagePermissionRepository.permissionState.collect {
                 _uiState.update { recomputeConflicts(it) }
             }
         }
@@ -203,7 +214,8 @@ class RunTasksViewModel(
         }
 
         val maintenance = _uiState.value.maintenance
-        val hasCustomDirs = _uiState.value.customDirectoriesBackupEnabled && selectedCustomDirs.isNotEmpty()
+        val hasStoragePermission = storagePermissionState.value == io.github.hddq.restoid.data.StoragePermissionState.Granted
+        val hasCustomDirs = _uiState.value.customDirectoriesBackupEnabled && hasStoragePermission && selectedCustomDirs.isNotEmpty()
         val hasRoot = rootState.value == io.github.hddq.restoid.data.RootState.Granted
         val backupAppsEnabled = _uiState.value.backupEnabled && hasRoot
         
@@ -214,7 +226,7 @@ class RunTasksViewModel(
             selectedPackageNames = if (backupAppsEnabled) _uiState.value.apps.filter { it.isSelected }.map { it.packageName } else emptyList(),
             appBackupTypes = if (backupAppsEnabled) selectedAppBackupTypes().mapValues { it.value.toSelection() } else emptyMap(),
             customDirectories = if (hasCustomDirs) selectedCustomDirs.toList() else emptyList(),
-            excludedCustomDirectories = if (_uiState.value.customDirectoriesBackupEnabled) selectedExcludedCustomDirs.toList() else emptyList(),
+            excludedCustomDirectories = if (_uiState.value.customDirectoriesBackupEnabled && hasStoragePermission) selectedExcludedCustomDirs.toList() else emptyList(),
             unlockRepo = maintenance.unlockRepo,
             forgetSnapshots = maintenance.forgetSnapshots,
             pruneRepo = maintenance.pruneRepo,
@@ -250,7 +262,8 @@ class RunTasksViewModel(
         val state = _uiState.value
         val maintenance = state.maintenance
         val hasMaintenanceTask = maintenance.unlockRepo || maintenance.forgetSnapshots || maintenance.pruneRepo || maintenance.checkRepo
-        val hasCustomDirs = state.customDirectoriesBackupEnabled && state.customDirectories.any { it.isSelected }
+        val hasStoragePermission = storagePermissionState.value == io.github.hddq.restoid.data.StoragePermissionState.Granted
+        val hasCustomDirs = state.customDirectoriesBackupEnabled && hasStoragePermission && state.customDirectories.any { it.isSelected }
         val hasRoot = rootState.value == io.github.hddq.restoid.data.RootState.Granted
         val backupAppsEnabled = state.backupEnabled && hasRoot
         
@@ -525,8 +538,9 @@ class RunTasksViewModel(
 
     private fun recomputeConflicts(state: RunTasksUiState): RunTasksUiState {
         val hasRoot = rootState.value == io.github.hddq.restoid.data.RootState.Granted
+        val hasStoragePermission = storagePermissionState.value == io.github.hddq.restoid.data.StoragePermissionState.Granted
         val selectedApps = if (state.backupEnabled && hasRoot) state.apps.filter { it.isSelected } else emptyList()
-        val selectedExcluded = if (state.customDirectoriesBackupEnabled) {
+        val selectedExcluded = if (state.customDirectoriesBackupEnabled && hasStoragePermission) {
             state.excludedCustomDirectories.filter { it.isSelected }.map { it.uri }
         } else {
             emptyList()
