@@ -1,6 +1,7 @@
 package io.github.hddq.restoid.work
 
 import android.content.Context
+import android.os.SystemClock
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.AppInfoRepository
 import io.github.hddq.restoid.data.OperationLockManager
@@ -70,7 +71,7 @@ class RunTasksOperationRunner(
             )
         }
 
-        val startTime = System.currentTimeMillis()
+        val startTime = SystemClock.elapsedRealtime()
         var completedTaskUnits = 0
         var progressState = OperationProgress(
             stageTitle = context.getString(R.string.progress_initializing),
@@ -89,7 +90,7 @@ class RunTasksOperationRunner(
             return child.copy(
                 overallPercentage = remappedOverall,
                 isOverallIndeterminate = isSingleTask && child.isOverallIndeterminate,
-                elapsedTime = (System.currentTimeMillis() - startTime) / 1000,
+                elapsedTime = (SystemClock.elapsedRealtime() - startTime) / 1000,
                 isFinished = false,
                 error = null,
                 finalSummary = ""
@@ -189,7 +190,7 @@ class RunTasksOperationRunner(
                 },
                 stagePercentage = 1f,
                 overallPercentage = 1f,
-                elapsedTime = (System.currentTimeMillis() - startTime) / 1000,
+                elapsedTime = (SystemClock.elapsedRealtime() - startTime) / 1000,
                 isFinished = true,
                 error = if (!overallSuccess) {
                     if (wasCancelled) context.getString(R.string.operation_interrupted)

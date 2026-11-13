@@ -3,6 +3,7 @@ package io.github.hddq.restoid.work
 import android.content.Context
 import android.content.pm.ServiceInfo
 import android.os.Build
+import android.os.SystemClock
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
@@ -13,6 +14,10 @@ import io.github.hddq.restoid.data.OperationType
 import io.github.hddq.restoid.ui.shared.OperationProgress
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
 import kotlin.math.abs
@@ -38,15 +43,16 @@ class HeavyOperationWorker(
 
         val logId = UUID.randomUUID().toString()
         val startTimeMillis = System.currentTimeMillis()
+        val startElapsedMs = SystemClock.elapsedRealtime()
         val interruptedSummary = applicationContext.getString(R.string.operation_interrupted)
         var scheduleName: String? = null
 
         fun saveInProgressLog(
             progress: OperationProgress,
             timestampMillis: Long = System.currentTimeMillis(),
+            durationSeconds: Long = ((SystemClock.elapsedRealtime() - startElapsedMs) / 1000L).coerceAtLeast(0L),
             durable: Boolean = false
         ) {
-            val durationSeconds = ((timestampMillis - startTimeMillis) / 1000).coerceAtLeast(0)
             app.operationLogRepository.saveActiveLog(
                 id = logId,
                 operationType = operationType,
@@ -64,7 +70,24 @@ class HeavyOperationWorker(
         }
 
         val initialProgress = OperationProgress(stageTitle = applicationContext.getString(R.string.progress_initializing))
-        val notifier = WorkerProgressNotifier(operationType, ::saveInProgressLog)
+        val notifier = WorkerProgressNotifier(
+            startElapsedMs = startElapsedMs,
+            initialProgress = initialProgress,
+            monitor = emitMonitor,
+            monotonicNowMs = { SystemClock.elapsedRealtime() },
+            onSaveInProgressLog = { progress, wallTimestampMs, elapsedSeconds ->
+                saveInProgressLog(progress, timestampMillis = wallTimestampMs, durationSeconds = elapsedSeconds)
+            },
+            onMarkRuntimeProgress = { progress, persist ->
+                app.operationRuntimeRepository.markProgress(operationType, progress, persist = persist)
+            },
+            onUpdateForeground = { progress ->
+                setForegroundAsync(createForegroundInfo(operationType, progress))
+            },
+            onSetWorkProgress = { progress ->
+                setProgressAsync(OperationWorkContract.progressToData(operationType, progress))
+            }
+        )
         val shouldStop = { isStopped || app.operationRuntimeRepository.state.value.stopRequested }
 
         // Aborts remote-backend runs when the network drops or turns metered
@@ -87,69 +110,81 @@ class HeavyOperationWorker(
         }
 
         val runResult = try {
-            setForeground(createForegroundInfo(operationType, initialProgress))
-            app.operationRuntimeRepository.markEnqueued(operationType, initialProgress)
-            saveInProgressLog(initialProgress, startTimeMillis, durable = true)
-            setProgress(OperationWorkContract.progressToData(operationType, initialProgress))
-
-            when (operationType) {
-                OperationType.BACKUP -> {
-                    val request = app.operationRequestStore.loadBackupRequest(requestId)
-                    armLossMonitor(request.repositoryKey, request.requireUnmeteredNetwork)
-                    val runner = BackupOperationRunner(
-                        context = applicationContext,
-                        repositoriesRepository = app.repositoriesRepository,
-                        resticBinaryManager = app.resticBinaryManager,
-                        resticRepository = app.resticRepository,
-                        appInfoRepository = app.appInfoRepository,
-                        operationLockManager = app.operationLockManager
-                    )
-                    runner.run(request, notifier::onProgress, shouldStop)
-                }
-
-                OperationType.RUN_TASKS -> {
-                    val request = app.operationRequestStore.loadRunTasksRequest(requestId)
-                    scheduleName = request.scheduleName
-                    if (scheduleName != null) {
-                        saveInProgressLog(initialProgress, startTimeMillis, durable = true)
+            coroutineScope {
+                val tickerJob = launch {
+                    while (isActive) {
+                        delay(PROGRESS_UPDATE_MIN_INTERVAL_MS)
+                        notifier.onTimerTick()
                     }
-                    armLossMonitor(request.repositoryKey, request.requireUnmeteredNetwork)
-                    val runner = RunTasksOperationRunner(
-                        context = applicationContext,
-                        repositoriesRepository = app.repositoriesRepository,
-                        resticBinaryManager = app.resticBinaryManager,
-                        resticRepository = app.resticRepository,
-                        appInfoRepository = app.appInfoRepository,
-                        operationLockManager = app.operationLockManager
-                    )
-                    runner.run(request, notifier::onProgress, shouldStop)
                 }
+                try {
+                    setForeground(createForegroundInfo(operationType, initialProgress))
+                    app.operationRuntimeRepository.markEnqueued(operationType, initialProgress)
+                    saveInProgressLog(initialProgress, startTimeMillis, durable = true)
+                    setProgress(OperationWorkContract.progressToData(operationType, initialProgress))
 
-                OperationType.RESTORE -> {
-                    val request = app.operationRequestStore.loadRestoreRequest(requestId)
-                    armLossMonitor(request.repositoryKey, requireUnmetered = false)
-                    val runner = RestoreOperationRunner(
-                        context = applicationContext,
-                        repositoriesRepository = app.repositoriesRepository,
-                        resticBinaryManager = app.resticBinaryManager,
-                        resticRepository = app.resticRepository,
-                        metadataRepository = app.metadataRepository,
-                        operationLockManager = app.operationLockManager
-                    )
-                    runner.run(request, notifier::onProgress, shouldStop)
-                }
+                    when (operationType) {
+                        OperationType.BACKUP -> {
+                            val request = app.operationRequestStore.loadBackupRequest(requestId)
+                            armLossMonitor(request.repositoryKey, request.requireUnmeteredNetwork)
+                            val runner = BackupOperationRunner(
+                                context = applicationContext,
+                                repositoriesRepository = app.repositoriesRepository,
+                                resticBinaryManager = app.resticBinaryManager,
+                                resticRepository = app.resticRepository,
+                                appInfoRepository = app.appInfoRepository,
+                                operationLockManager = app.operationLockManager
+                            )
+                            runner.run(request, notifier::onProgress, shouldStop)
+                        }
 
-                OperationType.MAINTENANCE -> {
-                    val request = app.operationRequestStore.loadMaintenanceRequest(requestId)
-                    armLossMonitor(request.repositoryKey, requireUnmetered = false)
-                    val runner = MaintenanceOperationRunner(
-                        context = applicationContext,
-                        repositoriesRepository = app.repositoriesRepository,
-                        resticBinaryManager = app.resticBinaryManager,
-                        resticRepository = app.resticRepository,
-                        operationLockManager = app.operationLockManager
-                    )
-                    runner.run(request, notifier::onProgress, shouldStop)
+                        OperationType.RUN_TASKS -> {
+                            val request = app.operationRequestStore.loadRunTasksRequest(requestId)
+                            scheduleName = request.scheduleName
+                            if (scheduleName != null) {
+                                saveInProgressLog(initialProgress, startTimeMillis, durable = true)
+                            }
+                            armLossMonitor(request.repositoryKey, request.requireUnmeteredNetwork)
+                            val runner = RunTasksOperationRunner(
+                                context = applicationContext,
+                                repositoriesRepository = app.repositoriesRepository,
+                                resticBinaryManager = app.resticBinaryManager,
+                                resticRepository = app.resticRepository,
+                                appInfoRepository = app.appInfoRepository,
+                                operationLockManager = app.operationLockManager
+                            )
+                            runner.run(request, notifier::onProgress, shouldStop)
+                        }
+
+                        OperationType.RESTORE -> {
+                            val request = app.operationRequestStore.loadRestoreRequest(requestId)
+                            armLossMonitor(request.repositoryKey, requireUnmetered = false)
+                            val runner = RestoreOperationRunner(
+                                context = applicationContext,
+                                repositoriesRepository = app.repositoriesRepository,
+                                resticBinaryManager = app.resticBinaryManager,
+                                resticRepository = app.resticRepository,
+                                metadataRepository = app.metadataRepository,
+                                operationLockManager = app.operationLockManager
+                            )
+                            runner.run(request, notifier::onProgress, shouldStop)
+                        }
+
+                        OperationType.MAINTENANCE -> {
+                            val request = app.operationRequestStore.loadMaintenanceRequest(requestId)
+                            armLossMonitor(request.repositoryKey, requireUnmetered = false)
+                            val runner = MaintenanceOperationRunner(
+                                context = applicationContext,
+                                repositoriesRepository = app.repositoriesRepository,
+                                resticBinaryManager = app.resticBinaryManager,
+                                resticRepository = app.resticRepository,
+                                operationLockManager = app.operationLockManager
+                            )
+                            runner.run(request, notifier::onProgress, shouldStop)
+                        }
+                    }
+                } finally {
+                    tickerJob.cancel()
                 }
             }
         } catch (e: Exception) {
@@ -181,7 +216,7 @@ class HeavyOperationWorker(
             app.operationRuntimeRepository.markFinished(operationType, finalResult.success, finalResult.progress)
 
             val endTimeMillis = System.currentTimeMillis()
-            val durationSeconds = ((endTimeMillis - startTimeMillis) / 1000).coerceAtLeast(0)
+            val durationSeconds = ((SystemClock.elapsedRealtime() - startElapsedMs) / 1000L).coerceAtLeast(0L)
             val logEntry = app.operationLogRepository.completeActiveLog(
                 id = logId,
                 operationType = operationType,
@@ -253,62 +288,153 @@ class HeavyOperationWorker(
         )
     }
 
-    private inner class WorkerProgressNotifier(
-        private val operationType: OperationType,
-        private val onSaveInProgressLog: (OperationProgress, Long) -> Unit
-    ) {
-        private var lastUpdateAtMs: Long = 0L
-        private var lastOverallPercentage: Float = -1f
-        private var lastStageTitle: String = ""
-        private var isFinished: Boolean = false
-
-        fun onProgress(progress: OperationProgress) {
-            if (!shouldEmit(progress)) return
-            emit(progress, isFinal = false)
-        }
-
-        fun forceNotify(progress: OperationProgress) {
-            emit(progress, isFinal = true)
-        }
-
-        private fun emit(progress: OperationProgress, isFinal: Boolean) {
-            synchronized(emitMonitor) {
-                if (isFinished && !isFinal) return
-                if (isFinal) {
-                    isFinished = true
-                }
-
-                lastUpdateAtMs = System.currentTimeMillis()
-                lastOverallPercentage = progress.overallPercentage
-                lastStageTitle = progress.stageTitle
-
-                if (!isFinal && !progress.isFinished) {
-                    onSaveInProgressLog(progress, lastUpdateAtMs)
-                }
-
-                app.operationRuntimeRepository.markProgress(operationType, progress)
-                setForegroundAsync(createForegroundInfo(operationType, progress))
-                setProgressAsync(OperationWorkContract.progressToData(operationType, progress))
-            }
-        }
-
-        private fun shouldEmit(progress: OperationProgress): Boolean {
-            if (progress.isFinished) return true
-            val now = System.currentTimeMillis()
-            if (now - lastUpdateAtMs >= PROGRESS_UPDATE_MIN_INTERVAL_MS) return true
-            if (abs(progress.overallPercentage - lastOverallPercentage) >= PROGRESS_DELTA_THRESHOLD) return true
-            if (progress.stageTitle != lastStageTitle) return true
-            return false
-        }
-    }
-
     private companion object {
         const val PROGRESS_UPDATE_MIN_INTERVAL_MS = 1000L
-        const val PROGRESS_DELTA_THRESHOLD = 0.02f
     }
 
     @Suppress("DEPRECATION")
     private fun foregroundServiceTypeDataSync(): Int {
         return ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+    }
+}
+
+internal class WorkerProgressNotifier(
+    private val startElapsedMs: Long,
+    initialProgress: OperationProgress,
+    private val monitor: Any = Any(),
+    private val monotonicNowMs: () -> Long,
+    private val wallNowMs: () -> Long = { System.currentTimeMillis() },
+    private val minNotificationIntervalMs: Long = DEFAULT_NOTIFICATION_MIN_INTERVAL_MS,
+    private val notificationDeltaThreshold: Float = DEFAULT_NOTIFICATION_DELTA_THRESHOLD,
+    private val checkpointIntervalMs: Long = DEFAULT_CHECKPOINT_INTERVAL_MS,
+    private val onSaveInProgressLog: (progress: OperationProgress, wallTimestampMs: Long, elapsedSeconds: Long) -> Unit,
+    private val onMarkRuntimeProgress: (progress: OperationProgress, persist: Boolean) -> Unit,
+    private val onUpdateForeground: (progress: OperationProgress) -> Unit,
+    private val onSetWorkProgress: (progress: OperationProgress) -> Unit
+) {
+    private var hasEmittedNotification: Boolean = false
+    private var lastNotificationAtMs: Long = 0L
+    private var lastNotificationPercentage: Float = -1f
+    private var lastNotificationStageTitle: String = ""
+    private var lastCheckpointAtMs: Long = startElapsedMs
+    private var latestProgress: OperationProgress = initialProgress
+    private var lastEmittedElapsedTime: Long = 0L
+    private var isFinished: Boolean = false
+
+    fun onProgress(progress: OperationProgress) {
+        synchronized(monitor) {
+            if (isFinished) return
+            val nowElapsedMs = monotonicNowMs()
+            val normalized = normalizeElapsed(progress, nowElapsedMs)
+            latestProgress = normalized
+            if (!shouldEmitNotificationLocked(normalized, nowElapsedMs)) return
+            emitLocked(
+                progress = normalized,
+                nowElapsedMs = nowElapsedMs,
+                isFinal = false,
+                updateForeground = true,
+                persistCheckpoint = true
+            )
+        }
+    }
+
+    fun onTimerTick() {
+        synchronized(monitor) {
+            if (isFinished) return
+            val nowElapsedMs = monotonicNowMs()
+            val elapsedSeconds = ((nowElapsedMs - startElapsedMs) / 1000L)
+                .coerceAtLeast(lastEmittedElapsedTime)
+            if (elapsedSeconds <= lastEmittedElapsedTime) return
+            val ticked = latestProgress.copy(elapsedTime = elapsedSeconds)
+            latestProgress = ticked
+            val shouldPersistCheckpoint = nowElapsedMs - lastCheckpointAtMs >= checkpointIntervalMs
+            // Timer ticks only advance elapsedTime, which isn't shown in the notification,
+            // so skip foreground updates and only persist checkpoints periodically.
+            emitLocked(
+                progress = ticked,
+                nowElapsedMs = nowElapsedMs,
+                isFinal = false,
+                updateForeground = false,
+                persistCheckpoint = shouldPersistCheckpoint
+            )
+        }
+    }
+
+    fun forceNotify(progress: OperationProgress) {
+        synchronized(monitor) {
+            val nowElapsedMs = monotonicNowMs()
+            emitLocked(
+                progress = progress,
+                nowElapsedMs = nowElapsedMs,
+                isFinal = true,
+                updateForeground = true,
+                persistCheckpoint = true
+            )
+        }
+    }
+
+    private fun normalizeElapsed(progress: OperationProgress, nowElapsedMs: Long): OperationProgress {
+        val monotonicElapsed = ((nowElapsedMs - startElapsedMs) / 1000L)
+            .coerceAtLeast(lastEmittedElapsedTime)
+        return if (progress.elapsedTime != monotonicElapsed) {
+            progress.copy(elapsedTime = monotonicElapsed)
+        } else {
+            progress
+        }
+    }
+
+    private fun emitLocked(
+        progress: OperationProgress,
+        nowElapsedMs: Long,
+        isFinal: Boolean,
+        updateForeground: Boolean,
+        persistCheckpoint: Boolean
+    ) {
+        if (isFinished && !isFinal) return
+        if (isFinal) {
+            isFinished = true
+        }
+
+        if (updateForeground) {
+            hasEmittedNotification = true
+            lastNotificationAtMs = nowElapsedMs
+            lastNotificationPercentage = progress.overallPercentage
+            lastNotificationStageTitle = progress.stageTitle
+        }
+        lastEmittedElapsedTime = maxOf(lastEmittedElapsedTime, progress.elapsedTime)
+
+        if (persistCheckpoint) {
+            lastCheckpointAtMs = nowElapsedMs
+            if (!isFinal && !progress.isFinished) {
+                val elapsedSeconds = ((nowElapsedMs - startElapsedMs) / 1000L).coerceAtLeast(0L)
+                onSaveInProgressLog(progress, wallNowMs(), elapsedSeconds)
+            }
+        }
+
+        onMarkRuntimeProgress(progress, persistCheckpoint)
+        if (updateForeground) {
+            onUpdateForeground(progress)
+        }
+        if (persistCheckpoint) {
+            onSetWorkProgress(progress)
+        }
+    }
+
+    private fun shouldEmitNotificationLocked(
+        progress: OperationProgress,
+        nowElapsedMs: Long
+    ): Boolean {
+        if (progress.isFinished) return true
+        if (!hasEmittedNotification) return true
+        if (nowElapsedMs - lastNotificationAtMs >= minNotificationIntervalMs) return true
+        if (abs(progress.overallPercentage - lastNotificationPercentage) >= notificationDeltaThreshold) return true
+        if (progress.stageTitle != lastNotificationStageTitle) return true
+        return false
+    }
+
+    companion object {
+        const val DEFAULT_NOTIFICATION_MIN_INTERVAL_MS = 1000L
+        const val DEFAULT_NOTIFICATION_DELTA_THRESHOLD = 0.02f
+        const val DEFAULT_CHECKPOINT_INTERVAL_MS = 15_000L
     }
 }

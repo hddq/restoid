@@ -2,6 +2,7 @@ package io.github.hddq.restoid.work
 
 import android.content.Context
 import android.os.Build
+import android.os.SystemClock
 import android.os.UserHandle
 import android.util.Log
 import com.topjohnwu.superuser.CallbackList
@@ -44,7 +45,7 @@ class RestoreOperationRunner(
             }
         }
 
-        val startTime = System.currentTimeMillis()
+        val startTime = SystemClock.elapsedRealtime()
         var progressState = OperationProgress(
             stageTitle = context.getString(R.string.progress_initializing),
             isStageIndeterminate = true
@@ -171,7 +172,7 @@ class RestoreOperationRunner(
                 val stdoutCallback = object : CallbackList<String>() {
                     override fun onAddElement(line: String) {
                         ResticOutputParser.parse(line, context)?.let { progressUpdate ->
-                            val elapsedTime = (System.currentTimeMillis() - startTime) / 1000
+                            val elapsedTime = (SystemClock.elapsedRealtime() - startTime) / 1000
                             val newProgress = if (progressUpdate.isFinished) {
                                 progressState.copy(
                                     isFinished = false,
@@ -211,7 +212,7 @@ class RestoreOperationRunner(
                     overallPercentage = currentStageNum.toFloat() / totalStages.toFloat(),
                     isStageIndeterminate = false,
                     isOverallIndeterminate = false,
-                    elapsedTime = (System.currentTimeMillis() - startTime) / 1000,
+                    elapsedTime = (SystemClock.elapsedRealtime() - startTime) / 1000,
                     isFinished = false
                 )
                 onProgress(progressState)
@@ -238,7 +239,7 @@ class RestoreOperationRunner(
                         filesProcessed = index + 1,
                         totalFiles = selectedAppPackages.size + request.selectedCustomDirectories.size,
                         isFinished = false,
-                        elapsedTime = (System.currentTimeMillis() - startTime) / 1000
+                        elapsedTime = (SystemClock.elapsedRealtime() - startTime) / 1000
                     )
                     onProgress(progressState)
 
@@ -353,7 +354,7 @@ class RestoreOperationRunner(
                         filesProcessed = successes + 1,
                         totalFiles = selectedAppPackages.size + request.selectedCustomDirectories.size,
                         isFinished = false,
-                        elapsedTime = (System.currentTimeMillis() - startTime) / 1000
+                        elapsedTime = (SystemClock.elapsedRealtime() - startTime) / 1000
                     )
                     onProgress(progressState)
                     
@@ -403,7 +404,7 @@ class RestoreOperationRunner(
                 stagePercentage = 0f,
                 overallPercentage = (totalStages - 1).toFloat() / totalStages.toFloat(),
                 isFinished = false,
-                elapsedTime = (System.currentTimeMillis() - startTime) / 1000
+                elapsedTime = (SystemClock.elapsedRealtime() - startTime) / 1000
             )
             onProgress(progressState)
 
@@ -412,7 +413,7 @@ class RestoreOperationRunner(
             onProgress(progressState)
             throwIfCancelled()
 
-            val finalElapsedTime = (System.currentTimeMillis() - startTime) / 1000
+            val finalElapsedTime = (SystemClock.elapsedRealtime() - startTime) / 1000
             val summary = buildString {
                 append(context.getString(R.string.restore_summary_finished_in, formatElapsedTime(finalElapsedTime)))
                 append(
@@ -451,7 +452,7 @@ class RestoreOperationRunner(
                 isFinished = true,
                 error = context.getString(R.string.operation_interrupted),
                 finalSummary = context.getString(R.string.operation_interrupted),
-                elapsedTime = (System.currentTimeMillis() - startTime) / 1000
+                elapsedTime = (SystemClock.elapsedRealtime() - startTime) / 1000
             )
             OperationRunResult(success = false, progress = finalProgress)
         } catch (e: Exception) {
@@ -459,7 +460,7 @@ class RestoreOperationRunner(
                 isFinished = true,
                 error = context.getString(R.string.error_fatal_with_message, e.message ?: ""),
                 finalSummary = context.getString(R.string.error_fatal_with_message, e.message ?: ""),
-                elapsedTime = (System.currentTimeMillis() - startTime) / 1000
+                elapsedTime = (SystemClock.elapsedRealtime() - startTime) / 1000
             )
             OperationRunResult(success = false, progress = finalProgress)
         } finally {

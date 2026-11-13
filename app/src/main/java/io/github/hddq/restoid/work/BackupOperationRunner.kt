@@ -1,6 +1,7 @@
 package io.github.hddq.restoid.work
 
 import android.content.Context
+import android.os.SystemClock
 import android.util.Log
 import com.topjohnwu.superuser.CallbackList
 import com.topjohnwu.superuser.Shell
@@ -53,7 +54,7 @@ class BackupOperationRunner(
             }
         }
 
-        val startTime = System.currentTimeMillis()
+        val startTime = SystemClock.elapsedRealtime()
         var progressState = OperationProgress(stageTitle = context.getString(R.string.progress_initializing))
         onProgress(progressState)
         throwIfCancelled()
@@ -108,7 +109,7 @@ class BackupOperationRunner(
                     stagePercentage = stagePercentage,
                     overallPercentage = overallPercentage,
                     isStageIndeterminate = isStageIndeterminate,
-                    elapsedTime = (System.currentTimeMillis() - startTime) / 1000,
+                    elapsedTime = (SystemClock.elapsedRealtime() - startTime) / 1000,
                     isFinished = false
                 )
                 onProgress(progressState)
@@ -272,7 +273,7 @@ class BackupOperationRunner(
                             stageTitle = stage2Title,
                             isStageIndeterminate = false,
                             overallPercentage = (currentStage - 1 + progressUpdate.stagePercentage) / totalStages,
-                            elapsedTime = (System.currentTimeMillis() - startTime) / 1000
+                            elapsedTime = (SystemClock.elapsedRealtime() - startTime) / 1000
                         )
                         onProgress(progressState)
                     }
@@ -377,8 +378,8 @@ class BackupOperationRunner(
             filesNew = finalSummaryProgress?.filesNew ?: 0,
             filesChanged = finalSummaryProgress?.filesChanged ?: 0,
             dataAdded = finalSummaryProgress?.dataAdded ?: 0,
-            totalDuration = finalSummaryProgress?.totalDuration ?: ((System.currentTimeMillis() - startTime) / 1000.0),
-            elapsedTime = (System.currentTimeMillis() - startTime) / 1000
+            totalDuration = finalSummaryProgress?.totalDuration ?: ((SystemClock.elapsedRealtime() - startTime) / 1000.0),
+            elapsedTime = (SystemClock.elapsedRealtime() - startTime) / 1000
         )
 
         if (isSuccess && repoPath != null && password != null) {

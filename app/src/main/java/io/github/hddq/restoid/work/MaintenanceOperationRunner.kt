@@ -1,6 +1,7 @@
 package io.github.hddq.restoid.work
 
 import android.content.Context
+import android.os.SystemClock
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.OperationLockManager
 import io.github.hddq.restoid.data.RepositoriesRepository
@@ -33,7 +34,7 @@ class MaintenanceOperationRunner(
             }
         }
 
-        val startTime = System.currentTimeMillis()
+        val startTime = SystemClock.elapsedRealtime()
         var progressState = OperationProgress(
             stageTitle = context.getString(R.string.progress_initializing),
             isStageIndeterminate = true,
@@ -103,7 +104,7 @@ class MaintenanceOperationRunner(
                                 if (trimmed.isNotBlank()) {
                                     progressState = progressState.copy(
                                         currentActivity = trimmed,
-                                        elapsedTime = (System.currentTimeMillis() - startTime) / 1000
+                                        elapsedTime = (SystemClock.elapsedRealtime() - startTime) / 1000
                                     )
                                     onProgress(progressState)
                                 }
@@ -126,7 +127,7 @@ class MaintenanceOperationRunner(
                                 if (trimmed.isNotBlank()) {
                                     progressState = progressState.copy(
                                         currentActivity = trimmed,
-                                        elapsedTime = (System.currentTimeMillis() - startTime) / 1000
+                                        elapsedTime = (SystemClock.elapsedRealtime() - startTime) / 1000
                                     )
                                     onProgress(progressState)
                                 }
@@ -155,7 +156,7 @@ class MaintenanceOperationRunner(
                     isOverallIndeterminate = isSingleTask,
                     currentActivity = "",
                     isFinished = false,
-                    elapsedTime = (System.currentTimeMillis() - startTime) / 1000
+                    elapsedTime = (SystemClock.elapsedRealtime() - startTime) / 1000
                 )
                 onProgress(progressState)
 
@@ -168,7 +169,7 @@ class MaintenanceOperationRunner(
                     isStageIndeterminate = false,
                     isOverallIndeterminate = false,
                     currentActivity = "",
-                    elapsedTime = (System.currentTimeMillis() - startTime) / 1000
+                    elapsedTime = (SystemClock.elapsedRealtime() - startTime) / 1000
                 )
                 onProgress(progressState)
 
@@ -214,7 +215,7 @@ class MaintenanceOperationRunner(
             } else {
                 null
             },
-            elapsedTime = (System.currentTimeMillis() - startTime) / 1000,
+            elapsedTime = (SystemClock.elapsedRealtime() - startTime) / 1000,
             overallPercentage = 1f,
             stagePercentage = 1f
         )
