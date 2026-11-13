@@ -1,0 +1,233 @@
+# Performance
+
+Compose performance is not "avoid recomposition" — some recomposition is expected. It is "keep recomposition cheap, skippable, and off the per-frame hot path". The rules below are what to enforce when writing or reviewing code.
+
+For a full numeric audit of an existing codebase, use the sibling `jetpack-compose-audit` skill. This file is the authoring guardrail.
+
+## Strong Skipping Mode — The Baseline
+
+On Kotlin `2.0.20+` with Compose Compiler `1.5.4+`, **Strong Skipping Mode is on by default**. Under SSM:
+
+- Any restartable composable whose parameters have all been structurally equal to the previous call is skipped.
+- Raw `List<T>` / `Map<K, V>` / `Set<T>` parameters are no longer a hard blocker for skipping.
+- `@Stable` / `@Immutable` annotations are no longer required on your own types to earn skippability.
+
+What still defeats skipping under SSM:
+
+1. **Fresh collection / fresh object literals in the call site.** `listOf(...)`, `mapOf(...)`, `MyUiModel(...)` built at the call site recompute a new identity on every recomposition. Structural equality may save you, but construction churn still costs.
+2. **Fresh non-lambda objects built in the composable body** — a `MyUiModel(...)` or wrapper allocated inline and passed down (an extension of 1). **Not lambdas:** SSM wraps every lambda passed to a composable in `remember`, *including ones with unstable captures*, so a plain callback does not defeat skipping — don't manually `remember` callbacks to "fix" recomposition (see *Lambdas In Composables* and *Optimizations That Do Nothing*). Manual remembering only matters SSM-off or on a `@DontMemoize` path.
+3. **Broken `equals()` on parameters.** If a data class overrides `equals()` incorrectly or is a plain class without `equals`, skipping fails for the wrong reason.
+4. **Explicit `@NonSkippableComposable` / `@DontMemoize`** on hot paths.
+
+If the repo has SSM **off** (older compiler or explicit opt-out), raw `List` / `Map` / `Set` parameters, missing `@Stable` on your types, and stateful shared collections all matter — follow the rules in the `jetpack-compose-audit` skill's `scoring.md`.
+
+**To tell which mode applies,** check the Kotlin version and Compose Compiler version in the module's Gradle config. Strong Skipping can be toggled per module; assume on unless you see an explicit `freeCompilerArgs += listOf("-P", "plugin:androidx.compose.compiler.plugins.kotlin:strongSkipping=false")` or the legacy `enableStrongSkippingMode = false` flag.
+
+## Hoist State Low, Read Lower
+
+A recomposition cost is proportional to the **subtree that reads the state**. To keep it cheap:
+
+- Read state as close to the UI that uses it as possible. If only a `Text` reads the counter, do not read the counter one level up and pass its value down.
+- When the same state is read by two siblings, hoist to the nearest common ancestor — not higher.
+- For values that travel through many layers, prefer passing `() -> T` (a state reader lambda) rather than `T`. The intermediate composables skip when the lambda identity is stable.
+
+```kotlin
+// Wrong — intermediate Row reads and recomposes on every count change
+@Composable
+fun Parent() {
+    var count by remember { mutableIntStateOf(0) }
+    MiddleRow(count = count)
+}
+@Composable fun MiddleRow(count: Int) { Row { Child(count) } }
+
+// Right — MiddleRow only recomposes when its own structure changes
+@Composable
+fun Parent() {
+    var count by remember { mutableIntStateOf(0) }
+    MiddleRow(countProvider = { count })
+}
+@Composable fun MiddleRow(countProvider: () -> Int) { Row { Child(countProvider) } }
+@Composable fun Child(countProvider: () -> Int) { Text("${countProvider()}") }
+```
+
+## Defer Reads As Long As Possible
+
+Every phase transition (composition → layout → draw) is an opportunity to skip work. Reading state later in the pipeline means earlier phases stay stable.
+
+Lambda-form modifiers defer the read to layout or draw:
+
+```kotlin
+// offset
+Modifier.offset(x = xDp)            // composition-phase read → recomposes every animation frame
+Modifier.offset { IntOffset(x, 0) } // layout-phase read → composition is stable
+
+// graphicsLayer — the generic escape hatch for alpha/scale/rotation/translation
+Modifier.alpha(alpha)                  // composition
+Modifier.graphicsLayer { this.alpha = alpha } // draw-phase read
+```
+
+Same idea for `rotate` and `scale` via `graphicsLayer`. `padding` does **not** have a lambda-form overload in Compose today, so animated padding still reads in composition and remeasures layout. If the effect is really positional motion, prefer `offset` / `graphicsLayer` when that is visually equivalent.
+
+## Never Back-Write Across Phases
+
+The reverse of deferring reads: never write state you have already read in the same pass, and never let a *later* phase write state an *earlier* phase read. Two shapes to avoid — the first is truly cross-phase, the second is composition-phase self-invalidation; the fix discipline is the same.
+
+**Layout → composition (cross-phase).** A layout callback (`onSizeChanged`, `onGloballyPositioned`, `onPlaced`) that writes state a sibling reads in composition — measure runs after composition, so the write re-runs composition, often once per frame:
+
+```kotlin
+// Bad — measure → write → recompose loop; labelWidth is read in composition
+var labelWidth by remember { mutableIntStateOf(0) }
+Box {
+    Text(label, Modifier.onSizeChanged { labelWidth = it.width }) // layout writes
+    // non-lambda offset(x = …) reads labelWidth in COMPOSITION → recomposes on every measure
+    Text(value, Modifier.offset(x = with(LocalDensity.current) { labelWidth.toDp() }))
+}
+
+// Good — one Layout measures label and places value after it; no composition-read hop
+Layout(content = { Text(label); Text(value) }) { (labelM, valueM), constraints ->
+    val l = labelM.measure(constraints); val v = valueM.measure(constraints)
+    val gap = 8.dp.roundToPx() // MeasureScope is a Density
+    layout(constraints.maxWidth, maxOf(l.height, v.height)) {
+        l.place(0, 0); v.place(l.width + gap, 0) // value placed using label's measured width, all in layout
+    }
+}
+```
+
+Writing a measured size from a layout callback is only a problem when something reads it **in composition**. If the value is consumed *exclusively* in a later layout/draw pass (`Modifier.layout { }`, `Modifier.drawBehind { }`, `graphicsLayer { }`), the write stays downstream and there is no loop — no custom `Layout` needed. And if a child genuinely needs the parent's constraints, `BoxWithConstraints` / `SubcomposeLayout` is fine — that exposes *parent constraints*, not a sibling's measured size. Do not round-trip a measured size through composition-read state.
+
+**Mutating a snapshot collection in the composition body (composition-phase self-invalidation — not cross-phase).** A `mutableStateListOf` / `mutableStateMapOf` (or `toMutableStateList()` / `toMutableStateMap()`) mutated (`add`, `put`, `putAll`, `clear`, `[k] =`, `+=`) inside a `@Composable` body that also reads it invalidates the composition that produced it:
+
+```kotlin
+// Bad — mutate-and-read in the same composition
+val heights = remember { mutableStateMapOf<String, Int>() }
+rows.forEach { heights[it.id] = it.baseHeight } // write in composition
+Column { rows.forEach { Box(Modifier.height((heights[it.id] ?: 0).dp)) } } // read → self-invalidates
+
+// Good — derive from inputs, no snapshot write in composition
+val heights = remember(rows) { rows.associate { it.id to it.baseHeight } }
+```
+
+Mutate snapshot state from an event handler, `LaunchedEffect`, or a state holder — never during composition.
+
+## Optimizations That Do Nothing
+
+These *look* like recomposition fixes but change nothing. Don't write them, and don't leave them behind as "optimized":
+
+- `remember(index) { isFirstRow(index) }` — a pure, cheap function of its own key. Same inputs, no skipping benefit; inline it. Only `remember` genuinely expensive work keyed on real inputs.
+- Wrapping a callback in `remember` to "stabilize" it **under Strong Skipping** — the compiler already auto-memoizes lambdas passed to composables, *including those with unstable captures*. That lever only matters SSM-off or on a `@DontMemoize` path.
+- Identity-caching a read-only derived map to preserve reference equality — `remember(keys)` on the inputs is enough and won't serve stale data.
+- Hoisting state up without stabilizing the values passed back down — a fresh unstable instance each recomposition still defeats skipping on the child.
+
+Prove a real win with recomposition counts (Layout Inspector) or compiler reports, not the presence of a pattern.
+
+## Lazy Lists Need Keys
+
+```kotlin
+// Wrong — reorderable list without key: every item recomposes + animation breaks
+LazyColumn {
+    items(todos) { todo -> TodoRow(todo) }
+}
+
+// Right
+LazyColumn {
+    items(items = todos, key = { it.id }) { todo -> TodoRow(todo) }
+}
+```
+
+Rules:
+
+- Keys **must be stable and unique**. IDs from the domain are ideal. Do not use `hashCode()`, do not use the index.
+- For heterogeneous lists (mixed item types), pass `contentType = { ... }` too — Compose reuses item layouts by content type.
+- `key =` is also what makes `animateItem()` work. Missing keys → no item animations.
+
+## Typed Primitive State
+
+```kotlin
+// Wrong — boxes Int into Integer
+var count by remember { mutableStateOf(0) }
+
+// Right
+var count by remember { mutableIntStateOf(0) }
+```
+
+Same for `mutableLongStateOf`, `mutableFloatStateOf`, `mutableDoubleStateOf`. This is free performance — no reason to skip it.
+
+## Avoid `remember` Pitfalls That Leak
+
+- `remember { expensiveFn() }` and `remember { mutableStateOf(expensiveFn()) }` run `expensiveFn()` during the first composition, then reuse the remembered result until the call leaves composition or its keys change. That is correct for a pure calculation you want to cache. The real bugs are doing I/O there, or seeding mutable state from changing inputs without keys. If the value depends on inputs, key it: `remember(input) { expensiveFn(input) }`. If it is app/data state, move it to the ViewModel or a state holder.
+- Do **not** launch coroutines from `remember { ... }`. `remember` caches values; `LaunchedEffect` is for composition-driven work, and `rememberCoroutineScope().launch` is for event-driven work.
+
+## Lambdas In Composables
+
+With SSM on, Compose wraps **every lambda passed to a composable** in `remember` for you — including those with unstable captures. You do **not** need to manually wrap callbacks in `remember { { ... } }`. That pattern is legacy and adds noise (see *Optimizations That Do Nothing*).
+
+Two cases where manual remembering still matters:
+
+1. **Strong Skipping is off, or the lambda is on a `@DontMemoize` path.** There the compiler does not wrap the lambda — `remember` it (and stabilize its captures) if a profiler shows identity-based churn.
+2. **Expensive derivations inside lambdas.** If the lambda itself is cheap but allocates a large structure, that allocation happens on every call. Move the allocation outside.
+
+## Expensive Work In Composition
+
+Composition runs often. Keep the body cheap.
+
+**`remember` is not the fix for non-trivial work.** `remember(key) { expensiveWork() }` caches the result, but `expensiveWork()` still runs on the composition thread on first composition and again whenever the key changes — that's a frame hitch on screen entry and on every key bump. For genuinely heavy work (parsing, scanning, regex compile, IO of any kind), the only correct fix is moving the work to the presenter / state holder / ViewModel so it runs off the hot path entirely. Use `remember(key)` only to cache the *result* of work that is genuinely cheap on first run.
+
+**O(1) is not a free pass either.** Object allocation with non-trivial initialization, `hashCode()` over a large structure, lock acquisition, and side-effectful constructors can be expensive even when the call is nominally constant-time. "It's just one call" is not a defence.
+
+Anti-patterns to flag:
+
+- **IO in a composable body, full stop.** `file.readText()`, `Files.*`, `FileInputStream`, `BufferedReader`; `HttpClient`, `OkHttp`, `Retrofit`, `URL(...).readText()`, `Socket(...)`; `DriverManager`, `Connection`, `prepareStatement`, `executeQuery`; `ProcessBuilder`, `Runtime.exec`; serialization (`Json.decodeFromString`, `Gson`, `Moshi`, `ObjectMapper`, XML/Protobuf/CSV parsing). These never belong in composition regardless of `remember` wrapping. The one accepted exception is image loading via threading-aware loaders (Coil, Glide) used through their Compose integration APIs (`AsyncImage`, `rememberAsyncImagePainter`) — they manage the threading contract themselves.
+- Heavy `list.filter { ... }.sortedBy { ... }.groupBy { ... }` chains inside a composable. Move to the presenter / ViewModel.
+- O(N) string work — `split("\n")`, `lines()`, `lineSequence().count()`, `replace(...)`, `format(...)`, `substringAfter(...)` — proportional to input length. Compute upstream.
+- `Regex("...")` constructed inline, or `.toRegex()` / `.matches(...)` / `.find(...)` executed inline. Pattern compilation runs every recomposition. Hoist the compiled `Regex` or do the matching upstream.
+- `LocalConfiguration.current.screenWidthDp` / `LocalDensity.current.density` read inside a hot loop. Read once, pass the computed value.
+- `stringResource(R.string.x, dynamicArg)` — normally fine to call directly. If something around it is expensive, cache the **pure computation** that produces `dynamicArg`, then call `stringResource(...)` with the cached result. Do not move `stringResource(...)` itself inside a `remember` lambda.
+- **Flow operator chains constructed in the composable body.** `combine(...)`, `flatMapLatest { ... }`, `debounce(...)`, `stateIn(...)`, `shareIn(...)` written inline are rebuilt on every composition unless wrapped in `remember(...)` with the right keys — and even when correctly remembered, the data shape lives in the wrong layer. Move pipeline construction into a presenter / state holder / ViewModel; have the UI consume one coherent `StateFlow<UiState>`. See `flows.md` → "Flow Operators Belong Outside The Composable Body".
+
+Safe in composition: simple field reads (`.size`, `.length`, `.isEmpty()`, index access on small structures), comparisons, boolean checks, property reads on already-computed values, and normal small allocations (data classes, small literals).
+
+## Animations
+
+See `references/animation.md` for API choice, `updateTransition`, `AnimatedContent`, lazy-list item animation, infinite transitions, gesture-driven `Animatable`, and reduced motion.
+
+See `references/paging.md` for Paging 3 lazy-list keys, `LoadState`, and paginated-stream crash patterns that reuse lazy-list rules with paging-specific triggers.
+
+Core performance rules:
+
+- Target-driven: `LaunchedEffect(target) { animatable.animateTo(target) }`, or better, `animate*AsState` / `updateTransition` with no effect at all. Event-driven animations launched from click or gesture handlers can use `rememberCoroutineScope()`.
+- Per-frame reads: lambda-form modifiers (`Modifier.offset { ... }`, `Modifier.graphicsLayer { ... }`, `Modifier.drawBehind { ... }`). Non-lambda `Modifier.padding(animatedDp)` has the same composition-phase problem as `Modifier.offset(x = dx)` — prefer offset/translation instead.
+
+For `Crossfade` vs `AnimatedContent`:
+
+- `Crossfade` is fine for standard fades between mutually exclusive content.
+- Switch to `AnimatedContent` when you want custom enter/exit transitions, size-aware swaps, or different directions based on target.
+
+## Canvas And Draw
+
+- Prefer `Modifier.drawBehind { ... }` and `Modifier.drawWithCache { ... }` over a full `Canvas` composable for simple decorations. `drawWithCache` caches draw-only state between frames.
+- Never read `LocalDensity.current` inside `drawBehind { ... }` — grab the density outside.
+- Avoid reading state inside `drawBehind` unless you need it — reads there invalidate draw, which is cheaper than composition but still not free.
+
+## Baseline Profiles
+
+Shipping a baseline profile is still one of the biggest end-user performance wins a Compose app can get. If the module generates one, the `baseline-prof.txt` lives under `src/main/`. If not, flag as a suggested improvement rather than a required fix — generation needs a benchmark module.
+
+## Grep Triggers
+
+- `mutableStateOf<(Int|Long|Float|Double)>` — typed-primitive miss
+- `remember\s*\{\s*mutableStateOf\s*\(\s*\w+\s*\)\s*\}` — parameter-seeded state (usually a bug — see `state.md`)
+- `Modifier\.offset\(` / `Modifier\.alpha\(` / `Modifier\.scale\(` / `Modifier\.rotate\(` / `Modifier\.padding\(` — look at the argument; if it reads an animated state, recommend lambda-form
+- `items\(\s*\w+\s*\)\s*\{` in a `Lazy*` without `key =` — probably missing keys
+- `animateItemPlacement\(` — migrate to `animateItem()`
+- `onSizeChanged|onGloballyPositioned|onPlaced` — check the lambda writes state read in composition (layout → composition back-write)
+- `mutableStateListOf|mutableStateMapOf|toMutableStateList|toMutableStateMap|SnapshotStateList|SnapshotStateMap` — check for `add`/`addAll`/`put`/`putAll`/`remove`/`clear`/`[k] =`/`+=`/`-=` mutation inside a `@Composable` body that also reads it
+- `@NonSkippableComposable` / `@DontMemoize` — demand justification
+
+## Primary Sources
+
+- `https://developer.android.com/develop/ui/compose/performance/bestpractices`
+- `https://developer.android.com/develop/ui/compose/performance/stability`
+- `https://developer.android.com/develop/ui/compose/performance/stability/strongskipping`
+- `https://developer.android.com/develop/ui/compose/performance/phases`
+- `https://developer.android.com/develop/ui/compose/lists` (keys and contentType)
+- `https://developer.android.com/develop/ui/compose/performance/baseline-profiles`

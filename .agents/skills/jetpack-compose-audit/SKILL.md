@@ -1,0 +1,374 @@
+---
+allowed-tools: Read, Glob, Grep, Write, Bash, Agent
+argument-hint: '[repo path or module path]'
+description: Audit Android Jetpack Compose repositories for performance, animation phase correctness, state management, side effects, composable API quality, and adjacent Android launch UX resource risks such as blurry Android 12+ splash icons. Scans source code, scores each category from 0-10, writes a strict markdown report, and summarizes the most important fixes. Use when reviewing a Compose codebase, rating repository quality, inspecting recomposition/state issues, animation issues, or running a Compose audit.
+metadata:
+    github-path: skills/jetpack-compose-audit
+    github-ref: refs/tags/v4.4.0
+    github-repo: https://github.com/hamen/compose_skill
+    github-tree-sha: 75e475e8ce2766bec99f89c868741d6a9c9e57a1
+name: jetpack-compose-audit
+---
+# Jetpack Compose Audit
+
+This skill audits Android Jetpack Compose repositories with a strict, evidence-based report.
+
+**Skill version:** 4.3.2 — released 2026-07-07. **Compose track:** Kotlin 2.0.20+ / Compose Compiler 1.5.4+ (Strong Skipping Mode default). See the README changelog for what changed.
+
+It is intentionally focused on four categories:
+
+- Performance
+- State management
+- Side effects
+- Composable API quality
+
+This skill does **not** score design or Material 3 compliance in v1. If the audit surfaces likely design-system problems, recommend a follow-up audit with the `material-3` skill (reference implementation: <https://github.com/hamen/material-3-skill>).
+
+Testing, focus/keyboard navigation, and Compose Multiplatform are **coverage notes**, not score categories. Map those surfaces when present, flag obvious risk, and recommend the focused `compose-agent` references (`testing`, `focus`, `kmp`) as follow-up work. Do not fold them into the 0-100 score unless the same root cause clearly affects one of the four scored categories.
+
+Android launch UX resources are also adjacent coverage, not a score category. Always scan splash-screen theme resources; if Android 12+ could render a static splash icon blurry, include it as an `Android Launch UX` finding and allow it into `Critical Findings` / `Prioritized Fixes` when the evidence is concrete.
+
+## Out Of Scope In v1
+
+Owned and deliberate scope choices — call out the limitation in the report rather than silently producing thin coverage:
+
+- Material 3 compliance, theming, color/typography tokens — defer to the `material-3` skill.
+- Accessibility scoring (`semantics`, content descriptions, touch-target sizing) — flag obvious gaps as a note, do not score.
+- UI test coverage and Compose test rule patterns — note presence/absence, do not score; recommend `compose-agent focus on testing` for deeper review.
+- Compose Multiplatform-specific rules (`expect`/`actual`, target-specific code paths) — note surface area and obvious platform-boundary risk; recommend `compose-agent focus on kmp` for deeper review.
+- Wear OS / TV / Auto / Glance surfaces — note obvious focus / keyboard / D-pad risk; recommend `compose-agent focus on focus` for deeper review.
+- Build performance (incremental compilation, KSP/KAPT choice).
+
+If the user explicitly asks for any of these, narrow the scope and state it in the report.
+
+## When To Use
+
+Use this skill when the user asks to:
+
+- audit a Jetpack Compose repository
+- review Compose architecture or quality
+- rate a codebase with scores
+- inspect recomposition, state, or effects issues
+- identify Compose best-practice violations in an existing repo
+
+Typical trigger phrases:
+
+- "audit this Compose repo"
+- "score this Jetpack Compose codebase"
+- "review state hoisting and side effects"
+- "check Compose performance"
+- "rate this repository"
+
+## Expected Output
+
+Produce both:
+
+- a repository report file named `COMPOSE-AUDIT-REPORT.md`
+- a short chat summary with the overall score, category scores, worst issues, and the top fixes
+
+## Audit Principles
+
+- Be strict, but evidence-based.
+- Do not score from search hits alone. Read representative files before judging a category.
+- Cite concrete file paths in the report for every important deduction.
+- **Cite an official documentation URL for every deduction.** No "trust me" findings — the rubric maps every rule to a canonical source in `references/canonical-sources.md`. The report template requires a `References:` line per finding.
+- Prefer canonical Android guidance over folklore.
+- Treat performance as important, but not as the only lens.
+- Do not punish app code for failing public-library purity tests. Apply API-quality checks mainly to reusable internal components, design-system pieces, and shared UI building blocks.
+- Reserve `0-3` scores for repeated or systemic problems, not isolated mistakes.
+- Do not award `9-10` unless the repo is consistently strong across the category.
+
+## Process
+
+### 1. Confirm Scope
+
+Identify the target path:
+
+- If the user passed an explicit path (`[repo path or module path]`), use it.
+- If no path was passed, default to the current working directory.
+- If the path does not exist, ask the user to clarify.
+
+Before mapping modules, confirm Compose is actually present (fast-fail):
+
+- grep for `androidx.compose` in any `build.gradle*` or `libs.versions.toml`
+- grep for `setContent {` or `@Composable` under `src/`
+
+If neither shows up, stop and report that the target is out of scope. Do not run a full module map first.
+
+If Compose is present *only* in `samples/`, `demos/`, or test sources (no production usage), narrow the scope to those directories, set confidence to `Low`, and state in the report that the audit is over sample code rather than production paths. Do not score production-quality categories against demo code.
+
+### 2. Map The Repository
+
+Before scoring, identify:
+
+- Gradle modules
+- Android app and feature modules
+- likely Compose source roots
+- shared UI/component packages
+- theme or design-system packages
+- state holder or ViewModel areas
+- test and preview locations
+- UI test, screenshot test, focus/keyboard test, and semantics-test locations
+- baseline-profile related modules or config if present
+- KMP / Compose Multiplatform source sets (`commonMain`, `androidMain`, `iosMain`, `desktopMain`, `wasmJsMain`) if present
+- Android splash-screen themes and drawable resources (`res/values*/themes.xml`, `styles.xml`, `drawable-v31`) if present
+
+### 3. Build A Compose Surface Map
+
+Look for:
+
+- `@Composable` functions
+- reusable UI components
+- screens and routes
+- `ViewModel` usage
+- `remember`, `rememberSaveable`, `mutableStateOf`
+- `collectAsStateWithLifecycle`, `collectAsState`
+- `LaunchedEffect`, `DisposableEffect`, `SideEffect`, `rememberUpdatedState`, `produceState`
+- `LazyColumn`, `LazyRow`, `items`, `itemsIndexed`
+- animation APIs: `animate*AsState`, `Animatable`, `updateTransition`, `rememberInfiniteTransition`, `AnimatedVisibility`, `AnimatedContent`, `Crossfade`
+- focus APIs: `FocusRequester`, `focusRequester`, `focusProperties`, `focusable`, `onFocusChanged`, `onPreviewKeyEvent`, `onKeyEvent`
+- UI testing APIs: `createComposeRule`, `createAndroidComposeRule`, `onNodeWithText`, `assertIsDisplayed`, `assertIsFocused`, screenshot test rules
+- KMP/CMP indicators: `commonMain`, `expect`, `actual`, `AndroidView`, `UIKitView`, platform services passed into common UI
+- Android launch resources: `windowSplashScreenAnimatedIcon`, `android:windowSplashScreenAnimatedIcon`, `drawable-v31`, `animated-vector`
+
+If the repo is large, audit by category or by module. If subagents are available, parallelize category scans by spawning `Explore`-type subagents (no write tools) and merge the findings.
+
+### 3a. Audit Android Launch UX Resources
+
+This is non-scored adjacent coverage, but it should run on every normal audit because the failure is user-visible and cheap to miss in Kotlin-only scans.
+
+Look for:
+
+- `windowSplashScreenAnimatedIcon` and `android:windowSplashScreenAnimatedIcon` in `res/values*/themes.xml` and `res/values*/styles.xml`
+- referenced drawables such as `@drawable/ic_splash`
+- API-qualified overrides in `res/drawable-v31/`
+- drawable XML roots: `<animated-vector>`, `<vector>`, `<adaptive-icon>`, `<bitmap>`, `<layer-list>`
+
+An `AnimatedVectorDrawable` is `Animatable`, so the platform draws it on a SurfaceView at full size; a static icon instead falls onto the internal `ImmobileIconDrawable` path (pre-rendered at 108 dp, upscaled into the 160/192 dp icon), which is what looks blurry on XHDPI+ devices. Flag a finding when all of these are true:
+
+1. A theme sets `windowSplashScreenAnimatedIcon` for an Android app.
+2. The API 31+ resource resolution points to a static icon (`<vector>`, `<adaptive-icon>`, bitmap, or a layer-list around those), or there is no `drawable-v31` override for the referenced splash icon.
+3. The resource is not already an `<animated-vector>` on API 31+.
+
+Report it as **Android Launch UX: Android 12+ static splash icon may render blurry**, not as a Compose score deduction. Evidence should include the theme item, the resolved drawable file, and whether the `res/drawable-v31` animated-vector override is missing. The fix direction is to keep the theme's `@drawable/<name>` stable and have it resolve to an `<animated-vector>` on API 31+ that wraps the real vector — **no animators are required; an empty `<animated-vector>` is enough**, because being an AVD is what changes the render path. One correctness caveat worth carrying into the report: the wrapper must reference a **separately-named** vector (a wrapper that references its own theme name re-resolves to itself on API 31+ and loops). Cite the Android splash-screen docs, the AndroidX `SplashScreen` reference, and the platform issue `https://issuetracker.google.com/issues/520672537` (which quotes the AOSP source). The bug dates to Android 12 (API 31) on XHDPI+ devices and was open when this skill shipped; confirm the live status against the issue rather than asserting it open-endedly.
+
+### 4. Generate Compose Compiler Reports (Automatic)
+
+Do **not** ask the user to edit `build.gradle` or run commands themselves. The skill runs the build with a bundled Gradle init script that injects `reportsDestination` / `metricsDestination` into every Compose module without modifying any file in the target repo. Before scoring, attempt this:
+
+1. **Locate the init script** shipped with the skill: `scripts/compose-reports.init.gradle`. The absolute path is the skill's install location — in most installs that's `~/.claude/skills/jetpack-compose-audit/scripts/compose-reports.init.gradle`. If you cannot resolve the path, fall back to writing the script to `<target>/.compose-audit-reports.init.gradle` and delete it after the run.
+
+2. **Check for a Gradle wrapper** in the target: `test -x <target>/gradlew`. If missing, skip to the fallback in step 6.
+
+3. **Pick a compile target.** Prefer the cheapest task that still triggers Kotlin compilation for a Compose module:
+   - find the first application module via `rg -l 'com\.android\.application' -g '*.gradle*'`
+   - try in order: `:<app-module>:compileReleaseKotlinAndroid`, `:<app-module>:compileReleaseKotlin`, `assembleRelease`, `assembleDebug`
+   - If the project is Compose-only on a library (`com.android.library`), use that module instead.
+
+4. **Run the build.** Inform the user the build is starting (it may take several minutes).
+
+   ```bash
+   cd <target> && ./gradlew <task> \
+       --init-script <path-to>/compose-reports.init.gradle \
+       --no-daemon --quiet
+   ```
+
+   Use a 600-second timeout. If the task fails, try the next fallback task in step 3 once. Do **not** loop indefinitely.
+
+5. **Collect the reports.**
+
+   ```bash
+   find <target> -path '*/build/compose_audit/*' \
+       \( -name '*-classes.txt' -o -name '*-composables.txt' -o -name '*-composables.csv' -o -name '*-module.json' \)
+   ```
+
+   From these files, extract:
+   - **unstable classes** (lines starting with `unstable class ` in `*-classes.txt`) used as composable parameters
+   - **non-skippable but restartable named composables** (ignore zero-argument lambdas; focus on actual named functions in `*-composables.txt` or `*-composables.csv` where `isLambda == "0"`)
+   - **module-wide skippability counts** from `*-module.json`, AND compute the **named-only skippability** from `*-composables.csv` (by filtering out rows where `isLambda == "1"` and calculating `sum(skippable) / sum(restartable)`). Cite both in the Performance section, noting that zero-argument lambdas can artificially anchor the module-wide metric.
+
+6. **Fallback if the build fails or Gradle is unavailable.** Proceed with source-inferred stability findings, but:
+   - set `Compiler diagnostics used: no` in the report's Notes And Limits and explain the failure reason briefly (wrapper missing, compile error, timeout)
+   - reduce overall confidence by one level
+   - state each stability-related deduction as "inferred from source — not verified against compiler reports"
+
+Stability deductions from step 5 are measured evidence and should be weighted normally. Fallback deductions from step 6 are inferred and must be flagged as such in the report.
+
+### 5. Audit The Four Categories
+
+Use the scoring rubric in `references/scoring.md` and the heuristics in `references/search-playbook.md`.
+
+> **Navigation 3:** if the repo uses `rememberNavBackStack`, `NavDisplay`, or `NavKey`, run **playbook section 2b** (Nav3 Detection & Audit) before scoring. Nav3 findings map to State Management and Side Effects — see the scoring note in section 2b.
+
+#### Performance
+
+Focus on:
+
+- expensive work in composition
+- avoidable recomposition
+- lazy list keys
+- paging list keys and `LazyPagingItems` misuse when `collectAsLazyPagingItems` is present
+- bad state-read timing
+- unstable or overly broad reads
+- backwards writes, including cross-phase back-writes (layout callback writing state read in composition) and snapshot-collection self-invalidation in a composable body
+- animation phase correctness (per-frame values deferred to layout/draw via lambda modifiers, `Animatable` held in `remember`, `rememberInfiniteTransition` scoped so it stops offscreen)
+- obvious release-performance hygiene where visible
+
+#### State Management
+
+Focus on:
+
+- hoisting correctness
+- single source of truth
+- reusable stateless seams
+- correct use of `remember` vs `rememberSaveable`
+- lifecycle-aware observable collection
+- paging `LoadState` handling (loading / empty / error / append) when `LazyPagingItems` is present
+- observable vs non-observable mutable state
+
+#### Side Effects
+
+Focus on:
+
+- side effects incorrectly done in composition
+- correct effect API choice
+- effect keys
+- stale lambda capture
+- cleanup correctness
+- lifecycle-aware effect behavior
+- animations driven from `LaunchedEffect(target)` for target-driven state changes (not from the composition body; `rememberCoroutineScope().launch { animateTo(...) }` is usually for event- or gesture-driven animation)
+- paging `LazyPagingItems.refresh()` / `retry()` called from composition or `LaunchedEffect(Unit)` to "load on enter" — initial load is `PagingData`'s job; these are user-initiated only
+
+#### Composable API Quality
+
+Focus on reusable internal components, not every leaf screen.
+
+Check:
+
+- `modifier` presence and placement
+- parameter order
+- explicit over implicit configuration
+- meaningful defaults
+- avoiding `MutableState<T>` or `State<T>` parameters in reusable APIs where a better shape exists
+- reusable animated components exposing `animationSpec: AnimationSpec<T>` where callers may reasonably need timing control, and using meaningful `label` values on shared/tooling-visible animations
+- component purpose and layering
+
+### 6. Verify Findings
+
+Before deducting points:
+
+- read the file where the smell appears
+- make sure the pattern is real, not a false positive
+- check whether the repo already has a compensating pattern elsewhere
+- distinguish one-off mistakes from systemic patterns
+- for stability findings (skippable / restartable / unstable params), use the compiler reports generated in Step 4. Cite the specific report line (e.g. `app/build/compose_audit/app_release-classes.txt:42`) as evidence. Only fall back to source-inferred stability claims if Step 4 failed, and label them as such.
+
+### 7. Score
+
+Assign each category a `0-10` score and a status:
+
+- `0-3`: fail
+- `4-6`: needs work
+- `7-8`: solid
+- `9-10`: excellent
+
+Use the weights in `references/scoring.md` to compute the overall score.
+
+**Measured ceilings are mandatory, not suggestive.** When Step 4 produced compiler reports, the Performance rubric in `references/scoring.md` defines a ceiling. First determine whether Strong Skipping is active (Kotlin 2.0.20+ / Compose Compiler 1.5.4+, or an explicit opt-in flag) and pick the matching table — the SSM-off table is driven by `skippable%` + unstable-class count, the SSM-on table by `skippable%` + instance-recreation churn + `equals()` quality on unstable params. After arriving at a qualitative Performance score, you MUST apply the ceiling and lower the score if it exceeds the cap. Show the math in the report, and name which table was applied:
+
+```
+Performance ceiling check:
+  Strong Skipping: OFF (Kotlin 1.9.x, no opt-in) → applying SSM-off table
+  skippable% = 186/273 = 68.1% → falls in 50-70% band → cap at 4
+  qualitative score: 7
+  applied score: 4 (ceiling lowered from 7)
+```
+
+Under Strong Skipping, `skippable%` will typically sit near 100% and stop being the binding constraint; the cap is usually driven by observed churn (`listOf(...)` / `mapOf(...)` / fresh literals passed into composables) or by expensive / broken `equals()` on unstable params. Name those findings explicitly in the ceiling-check block so the reader can audit the pick.
+
+Do not round `skippable%` up into a higher band. `68.1%` is not `≥70%`. If a qualitative score lands at or below the ceiling, no adjustment is needed — but the check itself must appear in the report so the reader can audit it.
+
+If a category genuinely has too little auditable surface area, mark it `N/A`, explain why, and renormalize the remaining weights.
+
+### 8. Write The Report
+
+Use `references/report-template.md`.
+
+The report must include:
+
+- overall score
+- category score table
+- top critical findings
+- category-by-category reasoning
+- evidence file paths
+- prioritized remediation list
+- optional follow-up note to run `material-3` if design issues are suspected
+- optional coverage notes for testing, focus/keyboard, and KMP/CMP surfaces; these notes do not change the score unless they overlap with the scored categories
+
+Write the report to:
+
+- `COMPOSE-AUDIT-REPORT.md` inside the audited target (the path the user passed), not the current working directory.
+
+If `COMPOSE-AUDIT-REPORT.md` already exists at that path, do not overwrite it silently. Either confirm overwrite with the user, or write to `COMPOSE-AUDIT-REPORT-<YYYY-MM-DD>.md` alongside it.
+
+### 9. Return A Short Summary
+
+In chat, produce a summary that mirrors the report's `Prioritized Fixes` section — not a generic recap. The developer should be able to act on the summary alone without opening the report file.
+
+Include:
+
+- overall score (and the delta vs. any prior `COMPOSE-AUDIT-REPORT*.md` at the same path, if present)
+- one-line judgment for each category, with the applied ceiling if any (e.g. "Performance 8/10 — capped by the SSM-on table: recreated `FeedItemUiModel` params")
+- when animation defects affected Performance, name them explicitly in the Performance line (e.g. "Performance 6/10 — animated `offset` reads recompose `DrawerContent` every frame")
+- when animation defects affected Side Effects, name them explicitly in the Side Effects line (e.g. "Side Effects 5/10 — `scope.launch { animateTo(...) }` in composition on `SettingsScreen`")
+- when paging defects affected Side Effects, name them explicitly in the Side Effects line (e.g. "Side Effects 6/10 — `LaunchedEffect(Unit) { feed.refresh() }` on `FeedScreen` loads from composition")
+- compiler-report highlights when Step 4 succeeded: Strong Skipping on/off (or mixed across modules), which ceiling table was applied, module-wide `skippable%`, named-only `skippable%`, which metric actually bound the cap, count of unstable shared types, and any module that failed to build
+- **top three actionable fixes**, each with:
+  - the concrete change ("add `key = { it.id }` to `items(...)` in `feed/FeedList.kt:42`")
+  - file path(s) and line numbers — the same ones listed in the report's Prioritized Fixes
+  - one official doc URL from `references/canonical-sources.md`
+  - expected impact that matches the active ceiling table: on SSM-off, frame it in terms of named-only `skippable%` / unstable-param reductions; on SSM-on, frame it in terms of removing instance-recreation churn, fixing expensive / broken `equals()`, or clearing the binding cap
+- whether a `material-3` audit is worth running next
+- whether focused follow-up is worth running next: `compose-agent focus on testing`, `compose-agent focus on focus`, `compose-agent focus on kmp`, `compose-agent focus on animation`, or `compose-agent focus on paging`
+
+The top-three fixes in the chat summary MUST be the same items as the report's `Prioritized Fixes` list (same file paths, same doc links). Do not add generic advice in chat that isn't in the written report.
+
+## Evidence Rules
+
+- Prefer multiple examples over one dramatic example.
+- Use positive evidence too, not just failures.
+- Do not infer runtime problems you cannot justify from the code.
+- When a rule is based on official guidance but app-level tradeoffs may justify deviation, call it out as a tradeoff instead of pretending it is always wrong.
+
+## Large Repo Strategy
+
+For medium or large repositories:
+
+1. Map modules first.
+2. Pick representative files per module.
+3. Parallelize category scans when possible.
+4. Merge repeated findings into systemic issues instead of listing the same smell twenty times.
+
+## What To Avoid
+
+- Do not produce a generic checklist with no repository evidence.
+- Do not turn the report into a public-library API lecture if the repo is an app.
+- Do not inflate the performance score just because the app uses Compose.
+- Do not over-penalize isolated experiments or sample files unless they are part of production paths.
+- Do not score design in v1.
+- Do not flag `LaunchedEffect(Unit)` or `LaunchedEffect(true)` on its own — the "run once" pattern is idiomatic. Only flag it when the body captures a value that may change without `rememberUpdatedState`. **Paging carve-out:** `LaunchedEffect(Unit) { lazyPagingItems.refresh() }` (or `retry()`) *is* a Side Effects defect — initial paged load is `PagingData`'s job, and `refresh()`/`retry()` are user-initiated. Flag it.
+- Do not deduct on Compose Multiplatform code paths for Android-only APIs (`collectAsStateWithLifecycle`, `lifecycle-runtime-compose`). Note the platform constraint as a tradeoff instead.
+- Do not double-count the same root cause across categories. A stability problem typically surfaces in both Performance and State — pick the dominant category and cross-reference.
+
+## References
+
+- `references/scoring.md` — per-rule rubric with inline citations
+- `references/search-playbook.md` — search patterns and red-flag heuristics
+- `references/report-template.md` — required structure for `COMPOSE-AUDIT-REPORT.md`
+- `references/canonical-sources.md` — the official URLs every deduction must cite
+- `references/diagnostics.md` — copy-pasteable Gradle/code snippets for Compose Compiler reports, stability config, baseline profiles, and R8 checks
+- `scripts/compose-reports.init.gradle` — Gradle init script the skill injects via `--init-script` in Step 4 to generate compiler reports automatically
+
+## Acceptance Evals
+
+`evals/evals.json` holds acceptance cases that grade an *audit of existing code* — each `{prompt, expected_output, expectations}` is a snippet plus the findings the audit must produce. Cases 12–14 (cross-phase back-write, Strong Skipping false lead, snapshot self-invalidation) are mirrored, in the opposite direction, by `compose-agent`'s write-mode evals, so the scoring path and the authoring path stay in lockstep. Run a model against each prompt and check every expectation.
