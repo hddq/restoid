@@ -11,6 +11,7 @@ import io.github.hddq.restoid.util.buildResticOptionFlags
 import io.github.hddq.restoid.util.buildShellEnvironmentPrefix
 import io.github.hddq.restoid.util.isValidResticOptionName
 import io.github.hddq.restoid.util.shellQuote
+import io.github.hddq.restoid.work.isRemoteBackend
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -1258,7 +1259,14 @@ class RepositoriesRepository(
             RepositoryBackendType.SFTP -> if (trimmed.startsWith("sftp:")) trimmed else "sftp:$trimmed"
             RepositoryBackendType.REST -> if (trimmed.startsWith("rest:")) trimmed else "rest:$trimmed"
             RepositoryBackendType.S3 -> if (trimmed.startsWith("s3:")) trimmed else "s3:$trimmed"
-            RepositoryBackendType.RCLONE -> if (trimmed.startsWith("rclone:")) trimmed else "rclone:$trimmed"
+            RepositoryBackendType.RCLONE -> {
+                val withoutPrefix = trimmed.removePrefix("rclone:")
+                if (trimmed.startsWith("rclone:") && withoutPrefix.contains(":")) {
+                    trimmed
+                } else {
+                    "rclone:$trimmed"
+                }
+            }
         }
     }
 
@@ -1523,5 +1531,43 @@ class RepositoriesRepository(
         val content = getRcloneConfigContent() ?: return emptyList()
         val regex = Regex("""^\s*\[([^\]]+)\]\s*$""", RegexOption.MULTILINE)
         return regex.findAll(content).map { it.groupValues[1].trim() }.filter { it.isNotBlank() }.toList()
+    }
+
+    fun extractRcloneRemote(path: String): String? {
+        val withoutPrefix = path.trim().removePrefix("rclone:")
+        return if (withoutPrefix.contains(":")) {
+            withoutPrefix.substringBefore(":").trim().ifEmpty { null }
+        } else {
+            null
+        }
+    }
+
+    fun getRcloneRemoteType(remoteName: String): String? {
+        val content = getRcloneConfigContent() ?: return null
+        val targetRemote = remoteName.trim()
+        var inSection = false
+        for (line in content.lineSequence()) {
+            val trimmed = line.trim()
+            if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+                inSection = trimmed.substring(1, trimmed.length - 1).trim() == targetRemote
+            } else if (inSection && trimmed.startsWith("type", ignoreCase = true)) {
+                val parts = trimmed.split("=", limit = 2)
+                if (parts.size == 2 && parts[0].trim().equals("type", ignoreCase = true)) {
+                    return parts[1].trim()
+                }
+            }
+        }
+        return null
+    }
+
+    fun isRemoteRepository(repository: LocalRepository?): Boolean {
+        val isRcloneLocal = if (repository?.backendType == RepositoryBackendType.RCLONE) {
+            val remote = extractRcloneRemote(repository.path)
+            val type = remote?.let { getRcloneRemoteType(it) }
+            type.equals("local", ignoreCase = true)
+        } else {
+            false
+        }
+        return isRemoteBackend(repository?.backendType, isRcloneLocal)
     }
 }

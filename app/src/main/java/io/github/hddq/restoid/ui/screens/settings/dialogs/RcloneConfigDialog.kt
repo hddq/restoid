@@ -14,6 +14,7 @@ import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.FileOpen
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -30,7 +31,7 @@ fun RcloneConfigDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    var configText by remember { mutableStateOf(viewModel.getRcloneConfigContent().orEmpty()) }
+    var configText by rememberSaveable { mutableStateOf(viewModel.getRcloneConfigContent().orEmpty()) }
     var isImporting by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val initialExists = remember { viewModel.hasRcloneConfig.value }

@@ -42,7 +42,10 @@ fun shouldAbortNetworkRun(
     return downDurationMs >= gracePeriodMs
 }
 
-fun isRemoteBackend(backendType: RepositoryBackendType?): Boolean {
+fun isRemoteBackend(backendType: RepositoryBackendType?, isRcloneLocal: Boolean = false): Boolean {
+    if (backendType == RepositoryBackendType.RCLONE && isRcloneLocal) {
+        return false
+    }
     return backendType == RepositoryBackendType.SFTP ||
         backendType == RepositoryBackendType.REST ||
         backendType == RepositoryBackendType.S3 ||
