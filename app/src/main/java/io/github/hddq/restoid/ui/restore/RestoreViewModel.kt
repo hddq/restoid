@@ -111,7 +111,7 @@ class RestoreViewModel(
     private val _backupDetails = MutableStateFlow<List<BackupDetail>>(emptyList())
     val backupDetails = _backupDetails.asStateFlow()
 
-    private val _sortOrder = MutableStateFlow(AppSortOrder.SIZE)
+    private val _sortOrder = MutableStateFlow(AppSortOrder.SIZE_DESCENDING)
     val sortOrder = _sortOrder.asStateFlow()
 
     private val _customDirectories = MutableStateFlow<Map<String, Boolean>>(emptyMap())
