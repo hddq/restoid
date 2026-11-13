@@ -1,27 +1,12 @@
 name: Reproducible Builds CI
 
 on:
-  push:
-    branches:
-      - master
-  pull_request:
-    paths:
-      - 'app/**'
-      - 'gradle/**'
-      - 'scripts/**'
-      - 'restic/**'
-      - '*.gradle.kts'
-      - 'gradle.properties'
-      - 'gradlew'
-      - 'gradlew.bat'
-      - '.gitmodules'
-      - '.go-version'
-      - '.github/workflows/reproducibility.yml'
   workflow_dispatch:
+  workflow_call:
 
 concurrency:
-  group: repro-${{ github.ref }}
-  cancel-in-progress: true
+  group: repro-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'workflow_dispatch' }}
 
 jobs:
   check-reproducibility:
