@@ -19,6 +19,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.ui.shared.AppSortOrder
 
@@ -79,6 +81,7 @@ private fun SortMenuItem(
 ) {
     DropdownMenuItem(
         text = { Text(text) },
+        modifier = Modifier.semantics { this.selected = selected },
         trailingIcon = {
             if (selected) {
                 Icon(
