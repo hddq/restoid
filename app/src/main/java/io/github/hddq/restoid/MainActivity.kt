@@ -494,6 +494,7 @@ class MainActivity : FragmentActivity() {
                                     onRequestForgetSnapshot = { snapshotId -> homeViewModel.requestForgetSnapshot(snapshotId) },
                                     onConfirmForgetSnapshot = { homeViewModel.confirmForgetSnapshot() },
                                     onDismissForgetDialog = { homeViewModel.dismissForgetDialog() },
+                                    onDismissForgetErrorDialog = { homeViewModel.dismissForgetErrorDialog() },
                                     uiState = homeUiState,
                                     onRefresh = { homeViewModel.refreshSnapshots() },
                                     onPasswordEntered = { p, s -> homeViewModel.onPasswordEntered(p, s) },

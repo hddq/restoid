@@ -233,6 +233,7 @@ class SnapshotDetailsViewModel(
 
     fun onForgetSnapshot() {
         if (_isForgetting.value) return
+        _forgetResult.value = ForgetResult.Idle
         _showConfirmForgetDialog.value = true
     }
 
@@ -245,7 +246,7 @@ class SnapshotDetailsViewModel(
 
         viewModelScope.launch {
             _isForgetting.value = true
-            _error.value = null
+            _forgetResult.value = ForgetResult.Idle
             try {
                 val result = repositoriesRepository.forgetSnapshot(
                     snapshotId = snapshotToForget.id,
@@ -257,12 +258,11 @@ class SnapshotDetailsViewModel(
                         _forgetResult.value = ForgetResult.Success
                     },
                     onFailure = {
-                        _error.value = it.message
                         _forgetResult.value = ForgetResult.Error(it.message ?: application.getString(R.string.error_unknown))
                     }
                 )
             } catch (e: Exception) {
-                _error.value = e.message
+                _forgetResult.value = ForgetResult.Error(e.message ?: application.getString(R.string.error_unknown))
             } finally {
                 _isForgetting.value = false
                 _showConfirmForgetDialog.value = false
@@ -274,6 +274,10 @@ class SnapshotDetailsViewModel(
         if (!_isForgetting.value) {
             _showConfirmForgetDialog.value = false
         }
+    }
+
+    fun dismissForgetError() {
+        _forgetResult.value = ForgetResult.Idle
     }
 
     // --- Restore Type Toggles ---
