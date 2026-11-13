@@ -13,7 +13,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  check-reproducibility:
+    uses: ./.github/workflows/reproducibility.yml
+
   build-and-release:
+    needs: check-reproducibility
     runs-on: ubuntu-latest
     env:
       JAVA_VERSION: "21"
