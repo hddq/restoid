@@ -509,6 +509,9 @@ private fun BackedUpCustomDirItemContent(
     modifier: Modifier = Modifier
 ) {
     var isExpanded by rememberSaveable { mutableStateOf(false) }
+    var titleOverflows by remember(path) { mutableStateOf(false) }
+    var subtitleOverflows by remember(path, metadata.size) { mutableStateOf(false) }
+    val canExpand = titleOverflows || subtitleOverflows
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
     val copiedText = stringResource(R.string.path_copied_to_clipboard)
@@ -517,7 +520,11 @@ private fun BackedUpCustomDirItemContent(
         modifier = modifier
             .fillMaxWidth()
             .combinedClickable(
-                onClick = { isExpanded = !isExpanded },
+                onClick = {
+                    if (canExpand || isExpanded) {
+                        isExpanded = !isExpanded
+                    }
+                },
                 onLongClick = {
                     scope.launch {
                         clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Path", path)))
@@ -541,7 +548,12 @@ private fun BackedUpCustomDirItemContent(
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = if (isExpanded) Int.MAX_VALUE else 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                onTextLayout = { result ->
+                    if (!isExpanded) {
+                        titleOverflows = result.hasVisualOverflow
+                    }
+                }
             )
             val sizeInfo = Formatter.formatShortFileSize(context, metadata.size)
             Text(
@@ -549,16 +561,23 @@ private fun BackedUpCustomDirItemContent(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = if (isExpanded) Int.MAX_VALUE else 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                onTextLayout = { result ->
+                    if (!isExpanded) {
+                        subtitleOverflows = result.hasVisualOverflow
+                    }
+                }
             )
         }
-        Spacer(Modifier.width(8.dp))
-        Icon(
-            imageVector = if (isExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
-            contentDescription = if (isExpanded) stringResource(R.string.action_collapse) else stringResource(R.string.action_expand),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(20.dp)
-        )
+        if (canExpand || isExpanded) {
+            Spacer(Modifier.width(8.dp))
+            Icon(
+                imageVector = if (isExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                contentDescription = if (isExpanded) stringResource(R.string.action_collapse) else stringResource(R.string.action_expand),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
+            )
+        }
     }
 }
 
