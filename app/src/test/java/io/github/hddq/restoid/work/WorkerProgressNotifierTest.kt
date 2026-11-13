@@ -181,4 +181,33 @@ class WorkerProgressNotifierTest {
         assertEquals(8L, recorded.runtimeUpdates.last().first.elapsedTime)
         assertEquals(8L, recorded.savedLogs.last().second)
     }
+
+    @Test
+    fun `forward-jumped runner elapsedTime does not poison monotonic ticks or checkpoints`() {
+        var nowElapsedMs = 10_000L
+        val (notifier, recorded) = createNotifier(
+            startElapsedMs = 10_000L,
+            monotonicClock = { nowElapsedMs },
+            checkpointIntervalMs = 5_000L
+        )
+
+        // Runner emits an elapsedTime jumped 1 hour forward while only 1s elapsed monotonically.
+        nowElapsedMs = 11_000L
+        notifier.onProgress(
+            OperationProgress(
+                stageTitle = "Checking",
+                elapsedTime = 3600L,
+                overallPercentage = 0.25f
+            )
+        )
+        assertEquals(1L, recorded.foregroundUpdates.last().elapsedTime)
+
+        // Quiet ticks continue advancing 2s..6s and persisting checkpoints at 16_000ms.
+        for (second in 2L..6L) {
+            nowElapsedMs = 10_000L + second * 1000L
+            notifier.onTimerTick()
+            assertEquals(second, recorded.runtimeUpdates.last().first.elapsedTime)
+        }
+        assertEquals(6L, recorded.savedLogs.last().second)
+    }
 }

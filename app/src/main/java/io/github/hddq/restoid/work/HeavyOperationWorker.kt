@@ -324,9 +324,9 @@ internal class WorkerProgressNotifier(
     fun onProgress(progress: OperationProgress) {
         synchronized(monitor) {
             if (isFinished) return
-            val normalized = normalizeElapsed(progress)
-            latestProgress = normalized
             val nowElapsedMs = monotonicNowMs()
+            val normalized = normalizeElapsed(progress, nowElapsedMs)
+            latestProgress = normalized
             if (!shouldEmitNotificationLocked(normalized, nowElapsedMs)) return
             emitLocked(
                 progress = normalized,
@@ -373,9 +373,11 @@ internal class WorkerProgressNotifier(
         }
     }
 
-    private fun normalizeElapsed(progress: OperationProgress): OperationProgress {
-        return if (progress.elapsedTime < lastEmittedElapsedTime) {
-            progress.copy(elapsedTime = lastEmittedElapsedTime)
+    private fun normalizeElapsed(progress: OperationProgress, nowElapsedMs: Long): OperationProgress {
+        val monotonicElapsed = ((nowElapsedMs - startElapsedMs) / 1000L)
+            .coerceAtLeast(lastEmittedElapsedTime)
+        return if (progress.elapsedTime != monotonicElapsed) {
+            progress.copy(elapsedTime = monotonicElapsed)
         } else {
             progress
         }
