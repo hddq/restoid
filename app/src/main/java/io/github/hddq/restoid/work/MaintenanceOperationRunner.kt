@@ -193,7 +193,7 @@ class MaintenanceOperationRunner(
             }
 
             if ((request.pruneRepo || request.forgetSnapshots) && (overallSuccess || forgetSucceeded)) {
-                val snapshotsResult = resticRepository.refreshSnapshots(
+                val snapshotsResult = resticRepository.refreshSnapshotsStrict(
                     selectedRepoPath,
                     password,
                     repositoryEnvironment,

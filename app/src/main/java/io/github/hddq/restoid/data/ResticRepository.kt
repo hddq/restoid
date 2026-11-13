@@ -43,27 +43,32 @@ class ResticRepository(
         _snapshots.value = null
     }
 
+    private suspend fun fetchSnapshotsRaw(
+        repoPath: String,
+        password: String,
+        environmentVariables: Map<String, String> = emptyMap(),
+        resticOptions: Map<String, String> = emptyMap()
+    ): Result<String> = withContext(Dispatchers.IO) {
+        executor.execute(
+            repoPath = repoPath,
+            password = password,
+            command = "snapshots --json --no-lock",
+            failureMessage = context.getString(R.string.restic_failure_load_snapshots),
+            environmentVariables = environmentVariables,
+            resticOptions = resticOptions
+        )
+    }
+
     suspend fun getSnapshots(
         repoPath: String,
         password: String,
         environmentVariables: Map<String, String> = emptyMap(),
         resticOptions: Map<String, String> = emptyMap()
     ): Result<List<SnapshotInfo>> {
-        return withContext(Dispatchers.IO) {
-            val result = executor.execute(
-                repoPath = repoPath,
-                password = password,
-                command = "snapshots --json --no-lock",
-                failureMessage = context.getString(R.string.restic_failure_load_snapshots),
-                environmentVariables = environmentVariables,
-                resticOptions = resticOptions
-            )
-
-            result.map { output ->
-                val snapshots = parseSnapshotsJson(output)
-                _snapshots.value = snapshots
-                snapshots
-            }
+        return fetchSnapshotsRaw(repoPath, password, environmentVariables, resticOptions).map { output ->
+            val snapshots = parseSnapshotsJson(output)
+            _snapshots.value = snapshots
+            snapshots
         }
     }
 
@@ -74,6 +79,27 @@ class ResticRepository(
         resticOptions: Map<String, String> = emptyMap()
     ): Result<List<SnapshotInfo>> {
         return getSnapshots(repoPath, password, environmentVariables, resticOptions)
+    }
+
+    suspend fun refreshSnapshotsStrict(
+        repoPath: String,
+        password: String,
+        environmentVariables: Map<String, String> = emptyMap(),
+        resticOptions: Map<String, String> = emptyMap()
+    ): Result<List<SnapshotInfo>> {
+        val rawResult = fetchSnapshotsRaw(repoPath, password, environmentVariables, resticOptions)
+        return rawResult.fold(
+            onSuccess = { output ->
+                val strictResult = parseSnapshotsJsonStrict(output)
+                strictResult.onSuccess { snapshots ->
+                    _snapshots.value = snapshots
+                }.onFailure {
+                    _snapshots.value = parseSnapshotsJson(output)
+                }
+                strictResult
+            },
+            onFailure = { Result.failure(it) }
+        )
     }
 
     suspend fun check(
@@ -680,6 +706,18 @@ class ResticRepository(
     }
 
     // --- JSON Parsing Helpers ---
+
+    internal fun parseSnapshotsJsonStrict(jsonOutput: String): Result<List<SnapshotInfo>> {
+        return runCatching {
+            val trimmed = jsonOutput.trim()
+            require(trimmed.isNotEmpty()) { "Empty snapshots JSON output" }
+            val array = json.parseToJsonElement(trimmed).jsonArray
+            array.map { element ->
+                parseSnapshotElement(element.jsonObject)
+                    ?: throw IllegalArgumentException("Snapshot entry missing id")
+            }
+        }
+    }
 
     internal fun parseSnapshotsJson(jsonOutput: String): List<SnapshotInfo> {
         val snapshots = mutableListOf<SnapshotInfo>()
