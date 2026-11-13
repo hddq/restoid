@@ -264,7 +264,14 @@ fun AddRepositoryDialog(
                     value = uiState.password,
                     onValueChange = onPasswordChange,
                     label = { Text(stringResource(R.string.label_repository_password)) },
-                    supportingText = { Text(stringResource(R.string.repository_password_explanation)) },
+                    supportingText = {
+                        val explanationRes = if (uiState.backendType == RepositoryBackendType.SFTP) {
+                            R.string.repository_password_explanation
+                        } else {
+                            R.string.repository_password_explanation_general
+                        }
+                        Text(stringResource(explanationRes))
+                    },
                     singleLine = true,
                     visualTransformation = if (repositoryPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
