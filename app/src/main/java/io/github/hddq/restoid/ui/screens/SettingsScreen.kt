@@ -39,6 +39,7 @@ fun SettingsScreen(
     modifier: Modifier = Modifier
 ) {
     val addRepoUiState by viewModel.addRepoUiState.collectAsStateWithLifecycle()
+    val hasStorageAccess by viewModel.hasStorageAccess.collectAsStateWithLifecycle()
     val showMetadataWarning by viewModel.showMetadataWarning.collectAsStateWithLifecycle()
     val metadataRestoreSuccess by viewModel.metadataRestoreSuccess.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -110,7 +111,8 @@ fun SettingsScreen(
             onEnvironmentVariablesChange = { viewModel.onNewRepoEnvironmentVariablesChanged(it) },
             onSavePasswordChange = { viewModel.onSavePasswordChanged(it) },
             onConfirm = { viewModel.addRepository() },
-            onSelectPath = { showRepoFolderPicker = true }
+            onSelectPath = { showRepoFolderPicker = true },
+            hasStorageAccess = hasStorageAccess
         )
     }
 

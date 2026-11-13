@@ -10,7 +10,11 @@ import io.github.hddq.restoid.util.isValidEnvironmentVariableName
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -82,6 +86,13 @@ class SettingsViewModel(
     val selectedRepository = repositoriesRepository.selectedRepository
     val notificationPermissionState = notificationRepository.permissionState
     val storagePermissionState = storagePermissionRepository.permissionState
+    val hasStorageAccess: StateFlow<Boolean> = combine(rootState, storagePermissionState) { root, storage ->
+        root == RootState.Granted || storage == StoragePermissionState.Granted
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = rootState.value == RootState.Granted || storagePermissionRepository.hasStoragePermission()
+    )
     val localNetworkPermissionState = localNetworkPermissionRepository.permissionState
 
     fun updateLocalNetworkPermissionStatus() {
@@ -450,6 +461,7 @@ class SettingsViewModel(
 
     fun onShowAddRepoDialog() {
         if (resticBinaryManager.isInstalled) {
+            checkStoragePermission()
             _addRepoUiState.update { it.copy(showDialog = true) }
         }
     }
@@ -472,6 +484,18 @@ class SettingsViewModel(
         val savePassword = addRepoUiState.value.savePassword
         val backendType = addRepoUiState.value.backendType
         val envParseResult = parseEnvironmentVariables(addRepoUiState.value.environmentVariablesRaw)
+
+        if (backendType == RepositoryBackendType.LOCAL) {
+            checkStoragePermission()
+            val hasRoot = rootState.value == RootState.Granted
+            val hasStorage = storagePermissionRepository.hasStoragePermission()
+            if (!hasRoot && !hasStorage) {
+                _addRepoUiState.update {
+                    it.copy(state = AddRepositoryState.Error(context.getString(R.string.storage_permission_disabled)))
+                }
+                return
+            }
+        }
 
         val path = if (backendType == RepositoryBackendType.SFTP) {
             val current = addRepoUiState.value

@@ -1,6 +1,8 @@
 package io.github.hddq.restoid.data
 
 import android.content.Context
+import android.os.Build
+import android.os.Environment
 import android.util.Log
 import com.topjohnwu.superuser.Shell
 import io.github.hddq.restoid.R
@@ -564,6 +566,21 @@ class RepositoriesRepository(
         savePassword: Boolean
     ): AddRepositoryState {
         return withContext(Dispatchers.IO) {
+            if (backendType == RepositoryBackendType.LOCAL) {
+                val isRoot = runCatching { Shell.getShell().isRoot }.getOrDefault(false)
+                val hasStoragePermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    Environment.isExternalStorageManager()
+                } else {
+                    androidx.core.content.ContextCompat.checkSelfPermission(
+                        context,
+                        android.Manifest.permission.READ_EXTERNAL_STORAGE
+                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                }
+                if (!isRoot && !hasStoragePermission) {
+                    return@withContext AddRepositoryState.Error(context.getString(R.string.storage_permission_disabled))
+                }
+            }
+
             val normalizedPath = normalizeRepositoryPath(path, backendType)
             val resolvedPath = if (backendType == RepositoryBackendType.LOCAL) {
                 StorageUtils.resolvePathForShell(normalizedPath)
