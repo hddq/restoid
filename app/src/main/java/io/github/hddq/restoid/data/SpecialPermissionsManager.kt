@@ -146,6 +146,33 @@ object SpecialPermissionsParser {
         return "$pkg/$fullClass"
     }
 
+    fun componentBelongsToPackage(component: String, packageName: String): Boolean {
+        val trimmed = component.trim()
+        if (trimmed.isEmpty() || trimmed.any { it.isWhitespace() }) return false
+        val slashIndex = trimmed.indexOf('/')
+        if (slashIndex <= 0 || slashIndex == trimmed.lastIndex) return false
+        val componentPackage = trimmed.substring(0, slashIndex)
+        val componentClass = trimmed.substring(slashIndex + 1)
+        if (componentClass.contains('/')) return false
+        return componentPackage == packageName
+    }
+
+    fun partitionComponentsByPackage(
+        components: List<String>,
+        packageName: String
+    ): Pair<List<String>, List<String>> {
+        val matching = mutableListOf<String>()
+        val mismatched = mutableListOf<String>()
+        for (component in components) {
+            if (componentBelongsToPackage(component, packageName)) {
+                matching.add(component.trim())
+            } else {
+                mismatched.add(component)
+            }
+        }
+        return matching to mismatched
+    }
+
     fun mergeColonSeparatedComponents(existingRaw: String, componentsToAdd: List<String>): String {
         val merged = mutableListOf<String>()
         val seenKeys = hashSetOf<String>()
@@ -223,11 +250,12 @@ class SpecialPermissionsManager(private val context: Context) {
         snapshot: DeviceAccessSnapshot
     ): SpecialAccessMetadata? {
         val result = Shell.cmd("cmd appops get --user $userId ${shellQuote(packageName)}").exec()
-        val appOps = if (result.isSuccess) {
-            SpecialPermissionsParser.parseAppOpsOutput(result.out)
-        } else {
-            emptyList()
+        if (!result.isSuccess) {
+            throw IllegalStateException(
+                formatShellFailure("Failed to query AppOps for $packageName (user $userId)", result)
+            )
         }
+        val appOps = SpecialPermissionsParser.parseAppOpsOutput(result.out)
 
         val metadata = SpecialAccessMetadata(
             allowedAppOps = appOps,
@@ -272,7 +300,14 @@ class SpecialPermissionsManager(private val context: Context) {
             }
         }
 
-        for (listener in specialAccess.enabledNotificationListeners) {
+        val (validListeners, mismatchedListeners) = SpecialPermissionsParser.partitionComponentsByPackage(
+            specialAccess.enabledNotificationListeners,
+            packageName
+        )
+        for (mismatched in mismatchedListeners) {
+            failures.add("$mismatched (package mismatch)")
+        }
+        for (listener in validListeners) {
             val result = Shell.cmd("cmd notification allow_listener ${shellQuote(listener)} $userId").exec()
             if (!result.isSuccess) {
                 val output = (result.err + result.out).joinToString(" ").trim()
@@ -296,7 +331,14 @@ class SpecialPermissionsManager(private val context: Context) {
             }
         }
 
-        for (adminComponent in specialAccess.activeDeviceAdmins) {
+        val (validAdmins, mismatchedAdmins) = SpecialPermissionsParser.partitionComponentsByPackage(
+            specialAccess.activeDeviceAdmins,
+            packageName
+        )
+        for (mismatched in mismatchedAdmins) {
+            failures.add("$mismatched (package mismatch)")
+        }
+        for (adminComponent in validAdmins) {
             val result = Shell.cmd("dpm set-active-admin --user $userId ${shellQuote(adminComponent)}").exec()
             if (!result.isSuccess) {
                 val output = (result.err + result.out).joinToString(" ").trim()
@@ -315,6 +357,17 @@ class SpecialPermissionsManager(private val context: Context) {
         if (services.isEmpty()) return emptyList()
         val failures = mutableListOf<String>()
 
+        val (validServices, mismatchedServices) = SpecialPermissionsParser.partitionComponentsByPackage(
+            services,
+            packageName
+        )
+        for (mismatched in mismatchedServices) {
+            failures.add("$mismatched (package mismatch)")
+        }
+        if (validServices.isEmpty()) {
+            return failures
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             // Unblock sideloaded accessibility services on Android 13+ when supported by the ROM.
             Shell.cmd("cmd appops set --user $userId ${shellQuote(packageName)} ACCESS_RESTRICTED_SETTINGS allow").exec()
@@ -323,12 +376,13 @@ class SpecialPermissionsManager(private val context: Context) {
         val currentResult = Shell.cmd("settings get --user $userId secure $SETTING_ACCESSIBILITY_SERVICES").exec()
         if (!currentResult.isSuccess) {
             val output = (currentResult.err + currentResult.out).joinToString(" ").trim()
-            return listOf(if (output.isBlank()) SETTING_ACCESSIBILITY_SERVICES else "$SETTING_ACCESSIBILITY_SERVICES ($output)")
+            failures.add(if (output.isBlank()) SETTING_ACCESSIBILITY_SERVICES else "$SETTING_ACCESSIBILITY_SERVICES ($output)")
+            return failures
         }
 
         val currentRaw = currentResult.out.joinToString("\n").trim()
-        val merged = SpecialPermissionsParser.mergeColonSeparatedComponents(currentRaw, services)
-        if (merged.isEmpty()) return emptyList()
+        val merged = SpecialPermissionsParser.mergeColonSeparatedComponents(currentRaw, validServices)
+        if (merged.isEmpty()) return failures
 
         val putServicesResult = Shell.cmd(
             "settings put --user $userId secure $SETTING_ACCESSIBILITY_SERVICES ${shellQuote(merged)}"
@@ -349,8 +403,11 @@ class SpecialPermissionsManager(private val context: Context) {
     }
 
     private fun queryActiveDeviceAdminsByPackage(): Map<String, List<String>> {
-        val dpm = context.getSystemService(DevicePolicyManager::class.java) ?: return emptyMap()
-        val admins = runCatching { dpm.activeAdmins }.getOrNull().orEmpty()
+        val dpm = context.getSystemService(DevicePolicyManager::class.java)
+            ?: throw IllegalStateException("DevicePolicyManager unavailable while backing up special access")
+        val admins = runCatching { dpm.activeAdmins }.getOrElse { error ->
+            throw IllegalStateException("Failed to query active device admins: ${error.message ?: error}", error)
+        }.orEmpty()
         if (admins.isEmpty()) return emptyMap()
 
         val grouped = linkedMapOf<String, MutableList<String>>()
@@ -374,14 +431,31 @@ class SpecialPermissionsManager(private val context: Context) {
 
     private fun queryColonSetting(userId: Int, key: String): List<String> {
         val result = Shell.cmd("settings get --user $userId secure $key").exec()
-        if (!result.isSuccess) return emptyList()
+        if (!result.isSuccess) {
+            throw IllegalStateException(
+                formatShellFailure("Failed to query secure setting '$key' for user $userId", result)
+            )
+        }
         return SpecialPermissionsParser.parseColonSeparatedSetting(result.out.joinToString("\n"))
     }
 
     private fun queryUserDeviceIdleWhitelist(): Set<String> {
         val result = Shell.cmd("dumpsys deviceidle whitelist").exec()
-        if (!result.isSuccess) return emptySet()
+        if (!result.isSuccess) {
+            throw IllegalStateException(
+                formatShellFailure("Failed to query battery optimization whitelist", result)
+            )
+        }
         return SpecialPermissionsParser.parseDeviceIdleWhitelist(result.out)
+    }
+
+    private fun formatShellFailure(prefix: String, result: Shell.Result): String {
+        val output = (result.err + result.out).joinToString(" ").trim()
+        return if (output.isBlank()) {
+            "$prefix (exit code ${result.code})"
+        } else {
+            "$prefix (exit code ${result.code}): $output"
+        }
     }
 
     private companion object {

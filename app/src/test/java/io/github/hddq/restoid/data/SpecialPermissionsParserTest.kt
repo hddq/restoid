@@ -4,7 +4,10 @@ import io.github.hddq.restoid.model.AppMetadata
 import io.github.hddq.restoid.model.AppOpPermission
 import io.github.hddq.restoid.model.RestoidMetadata
 import io.github.hddq.restoid.model.SpecialAccessMetadata
+import io.github.hddq.restoid.ui.restore.RestoreTypes
+import io.github.hddq.restoid.ui.restore.toUiModel
 import io.github.hddq.restoid.ui.shared.BackupTypes
+import io.github.hddq.restoid.ui.shared.toUiModel
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -174,5 +177,70 @@ class SpecialPermissionsParserTest {
         assertFalse(legacyBackupTypes.permissions)
         assertTrue(legacyBackupTypes.specialAccess)
         assertTrue(legacyBackupTypes.accessibility)
+    }
+
+    @Test
+    fun partitionComponentsByPackage_rejectsMismatchedAndMalformedComponents() {
+        val (matching, mismatched) = SpecialPermissionsParser.partitionComponentsByPackage(
+            components = listOf(
+                "com.example/.ServiceOne",
+                "com.example/com.example.ServiceTwo",
+                "com.other/.ForeignService",
+                "com.example.suffix/.Trick",
+                "com.example/",
+                "com.example/.Bad/Extra",
+                "com.example/.Bad Service"
+            ),
+            packageName = "com.example"
+        )
+
+        assertEquals(
+            listOf("com.example/.ServiceOne", "com.example/com.example.ServiceTwo"),
+            matching
+        )
+        assertEquals(
+            listOf(
+                "com.other/.ForeignService",
+                "com.example.suffix/.Trick",
+                "com.example/",
+                "com.example/.Bad/Extra",
+                "com.example/.Bad Service"
+            ),
+            mismatched
+        )
+    }
+
+    @Test
+    fun backupAndRestoreTypeConversions_preserveDisabledFlagsInRoundTrip() {
+        val disabledRestore = RestoreTypes(
+            apk = false,
+            data = false,
+            deviceProtectedData = false,
+            externalData = false,
+            obb = false,
+            media = false,
+            permissions = false,
+            specialAccess = false,
+            accessibility = false
+        )
+        assertEquals(disabledRestore, disabledRestore.toSelection().toUiModel())
+        assertFalse(disabledRestore.anyEnabled())
+
+        val partialRestore = RestoreTypes(permissions = false, specialAccess = false, accessibility = true)
+        assertEquals(partialRestore, partialRestore.toSelection().toUiModel())
+
+        val disabledBackup = BackupTypes(
+            apk = false,
+            data = false,
+            deviceProtectedData = false,
+            externalData = false,
+            obb = false,
+            media = false,
+            permissions = false,
+            specialAccess = false,
+            accessibility = false
+        )
+        assertEquals(disabledBackup, disabledBackup.toSelection().toUiModel())
+        assertFalse(disabledBackup.anyEnabled())
     }
 }

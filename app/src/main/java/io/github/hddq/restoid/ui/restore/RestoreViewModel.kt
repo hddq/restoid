@@ -74,7 +74,9 @@ fun RestoreTypeSelection.toUiModel(): RestoreTypes {
         externalData = externalData,
         obb = obb,
         media = media,
-        permissions = permissions
+        permissions = permissions,
+        specialAccess = specialAccess,
+        accessibility = accessibility
     )
 }
 
