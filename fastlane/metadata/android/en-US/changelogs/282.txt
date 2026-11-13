@@ -1,0 +1,8 @@
+* Sort backup app lists by name or size
+* Material 3 Expressive pull-to-refresh & back button
+* Faster snapshot listing and optimized forget/cache
+* Error dialog when snapshot deletion fails
+* Live 1-second elapsed timer for running operations
+* Prune orphaned snapshot metadata after maintenance
+* Block local repo creation without storage permission
+* UI fixes for logs, SFTP hints & custom directories
