@@ -217,6 +217,7 @@
     <string name="label_password">Password</string>
     <string name="label_repository_password">Backup encryption password</string>
     <string name="repository_password_explanation">Required to encrypt and restore this Restic repository. Different from your SFTP login. Keep it safe: if you lose it, you cannot restore your backups.</string>
+    <string name="repository_password_explanation_general">Required to encrypt and restore this Restic repository. Keep it safe: if you lose it, you cannot restore your backups.</string>
     <string name="label_rest_username">REST username</string>
     <string name="label_rest_password">REST password</string>
     <string name="label_s3_access_key_id">S3 access key ID</string>
