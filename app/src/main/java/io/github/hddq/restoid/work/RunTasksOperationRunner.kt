@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.SystemClock
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.AppInfoRepository
+import io.github.hddq.restoid.data.MetadataRepository
 import io.github.hddq.restoid.data.OperationLockManager
 import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.ResticBinaryManager
@@ -16,6 +17,7 @@ class RunTasksOperationRunner(
     private val resticBinaryManager: ResticBinaryManager,
     private val resticRepository: ResticRepository,
     private val appInfoRepository: AppInfoRepository,
+    private val metadataRepository: MetadataRepository,
     private val operationLockManager: OperationLockManager
 ) {
 
@@ -36,6 +38,7 @@ class RunTasksOperationRunner(
             repositoriesRepository = repositoriesRepository,
             resticBinaryManager = resticBinaryManager,
             resticRepository = resticRepository,
+            metadataRepository = metadataRepository,
             operationLockManager = operationLockManager
         )
     }
