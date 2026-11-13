@@ -12,6 +12,8 @@ import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.BackupDetail
 import io.github.hddq.restoid.model.RestoidMetadata
+import io.github.hddq.restoid.ui.shared.AppSortOrder
+import io.github.hddq.restoid.ui.shared.sortBackupDetails
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
@@ -50,6 +52,9 @@ class SnapshotDetailsViewModel(
 
     private val _backupDetails = MutableStateFlow<List<BackupDetail>>(emptyList())
     val backupDetails = _backupDetails.asStateFlow()
+
+    private val _sortOrder = MutableStateFlow(AppSortOrder.SIZE)
+    val sortOrder = _sortOrder.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
@@ -183,11 +188,14 @@ class SnapshotDetailsViewModel(
             BackupDetail(finalAppInfo, items, appMeta.versionName, appMeta.versionCode, appMeta.size, isDowngrade, isInstalled, appMeta.detailedSizes)
         }
 
-        // SORTING: Size (High -> Low), then Name (A -> Z)
-        _backupDetails.value = details.sortedWith(
-            compareByDescending<BackupDetail> { it.backupSize ?: 0L }
-                .thenBy { it.appInfo.name.lowercase() }
-        )
+        _backupDetails.value = sortBackupDetails(details, _sortOrder.value)
+    }
+
+    fun setSortOrder(order: AppSortOrder) {
+        if (_sortOrder.value == order) return
+
+        _sortOrder.value = order
+        _backupDetails.update { details -> sortBackupDetails(details, order) }
     }
 
     private fun findBackedUpItems(snapshot: SnapshotInfo, pkg: String, hasPermissionBackup: Boolean): List<String> {

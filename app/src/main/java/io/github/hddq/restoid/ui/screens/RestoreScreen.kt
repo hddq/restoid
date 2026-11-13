@@ -69,6 +69,7 @@ import io.github.hddq.restoid.model.BackupDetail
 import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
 import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
+import io.github.hddq.restoid.ui.components.SortableSectionHeader
 import io.github.hddq.restoid.ui.restore.RestoreTypes
 import io.github.hddq.restoid.ui.restore.RestoreUiEvent
 import io.github.hddq.restoid.ui.restore.RestoreViewModel
@@ -172,6 +173,7 @@ fun RestoreAppsConfigScreen(
     modifier: Modifier = Modifier
 ) {
     val backupDetails by viewModel.backupDetails.collectAsState()
+    val sortOrder by viewModel.sortOrder.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val allowDowngrade by viewModel.allowDowngrade.collectAsState()
     val restoreTypes by viewModel.restoreTypes.collectAsState()
@@ -220,7 +222,11 @@ fun RestoreAppsConfigScreen(
         } else {
             val totalAppRows = backupDetails.size + 1
             item(key = "apps_header") {
-                ExpressiveSectionHeader(title = stringResource(R.string.apps_to_restore_title))
+                SortableSectionHeader(
+                    title = stringResource(R.string.apps_to_restore_title),
+                    sortOrder = sortOrder,
+                    onSortOrderChange = viewModel::setSortOrder
+                )
             }
             item(key = "apps_select_all") {
                 ExpressiveSegmentedSurface(index = 0, count = totalAppRows) {
