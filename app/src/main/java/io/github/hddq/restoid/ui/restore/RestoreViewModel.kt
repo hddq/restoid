@@ -42,7 +42,9 @@ data class RestoreTypes(
     val externalData: Boolean = false,
     val obb: Boolean = false,
     val media: Boolean = false,
-    val permissions: Boolean = true
+    val permissions: Boolean = true,
+    val specialAccess: Boolean = true,
+    val accessibility: Boolean = true
 ) {
     fun toSelection(): RestoreTypeSelection {
         return RestoreTypeSelection(
@@ -52,12 +54,15 @@ data class RestoreTypes(
             externalData = externalData,
             obb = obb,
             media = media,
-            permissions = permissions
+            permissions = permissions,
+            specialAccess = specialAccess,
+            accessibility = accessibility
         )
     }
 
     fun anyEnabled(): Boolean {
-        return apk || data || deviceProtectedData || externalData || obb || media || permissions
+        return apk || data || deviceProtectedData || externalData || obb || media ||
+            permissions || specialAccess || accessibility
     }
 }
 
@@ -69,7 +74,9 @@ fun RestoreTypeSelection.toUiModel(): RestoreTypes {
         externalData = externalData,
         obb = obb,
         media = media,
-        permissions = permissions
+        permissions = permissions,
+        specialAccess = specialAccess,
+        accessibility = accessibility
     )
 }
 
@@ -249,7 +256,13 @@ class RestoreViewModel(
 
             val details = appMetadataMap.filterKeys { it != application.packageName }.map { (packageName, appMeta) ->
                 val appInfo = appInfoMap[packageName]
-                val items = findBackedUpItems(snapshot, packageName, appMeta.grantedRuntimePermissions.isNotEmpty())
+                val items = findBackedUpItems(
+                    snapshot = snapshot,
+                    pkg = packageName,
+                    hasPermissionBackup = appMeta.grantedRuntimePermissions.isNotEmpty(),
+                    hasSpecialAccessBackup = appMeta.hasSpecialAccessBackup(),
+                    hasAccessibilityBackup = appMeta.hasAccessibilityBackup()
+                )
 
                 val isInstalled = appInfo != null
                 val isDowngrade = if (isInstalled) {
@@ -302,7 +315,13 @@ class RestoreViewModel(
         _restoreCustomDirectoriesEnabled.value = enabled
     }
 
-    private fun findBackedUpItems(snapshot: SnapshotInfo, pkg: String, hasPermissionBackup: Boolean): List<String> {
+    private fun findBackedUpItems(
+        snapshot: SnapshotInfo,
+        pkg: String,
+        hasPermissionBackup: Boolean,
+        hasSpecialAccessBackup: Boolean,
+        hasAccessibilityBackup: Boolean
+    ): List<String> {
         val items = mutableListOf<String>()
         snapshot.paths.forEach { path ->
             when {
@@ -316,6 +335,12 @@ class RestoreViewModel(
         }
         if (hasPermissionBackup && !items.contains(application.getString(R.string.backup_item_permissions))) {
             items.add(application.getString(R.string.backup_item_permissions))
+        }
+        if (hasSpecialAccessBackup && !items.contains(application.getString(R.string.backup_item_special_access))) {
+            items.add(application.getString(R.string.backup_item_special_access))
+        }
+        if (hasAccessibilityBackup && !items.contains(application.getString(R.string.backup_item_accessibility))) {
+            items.add(application.getString(R.string.backup_item_accessibility))
         }
         return if (items.isNotEmpty()) items else listOf(application.getString(R.string.backup_item_unknown))
     }

@@ -1048,7 +1048,9 @@ class RepositoriesRepository(
                         runCatching {
                             val existing = json.decodeFromString<io.github.hddq.restoid.model.RestoidMetadata>(latestMetadataFile.readText())
                             val needsSizes = existing.apps.values.any {
-                                it.size == 0L && it.detailedSizes.isEmpty() && it.types.any { type -> type != "permissions" }
+                                it.size == 0L && it.detailedSizes.isEmpty() && it.types.any { type ->
+                                    type !in io.github.hddq.restoid.model.AppMetadata.METADATA_ONLY_BACKUP_TYPES
+                                }
                             } || existing.customDirectories.values.any { it.size == 0L }
                             if (needsSizes) {
                                 resticRepository.populateMetadataSizes(

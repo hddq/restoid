@@ -55,6 +55,10 @@
     <string name="local_network_permission_enabled">Local network access granted</string>
     <string name="backup_type_permissions">Permissions</string>
     <string name="backup_type_permissions_desc">Granted runtime permissions</string>
+    <string name="backup_type_special_access">Special access</string>
+    <string name="backup_type_special_access_desc">All files access, overlay, device admin, notification access, unrestricted battery, etc.</string>
+    <string name="backup_type_accessibility">Accessibility</string>
+    <string name="backup_type_accessibility_desc">Enabled accessibility services</string>
     <string name="apps_title">Apps</string>
     <string name="toggle_all">Toggle All</string>
     <string name="backup_types_for_selected_apps">Backup types for selected apps</string>
@@ -370,6 +374,8 @@
     <string name="s3_credentials_hint">Stored credentials are encrypted on this device.</string>
 
     <string name="backup_item_permissions">Permissions</string>
+    <string name="backup_item_special_access">Special access</string>
+    <string name="backup_item_accessibility">Accessibility</string>
     <string name="backup_item_unknown">Unknown items</string>
     <string name="backup_item_obb">OBB</string>
     <string name="backup_item_media">Media</string>
@@ -426,6 +432,10 @@
     <string name="restore_failure_data_restore">%1$s: Data restore failed or incomplete.</string>
     <string name="restore_failure_permissions_app_not_installed">%1$s: Failed to restore permissions because the app is not installed.</string>
     <string name="restore_failure_permissions_partial">%1$s: Failed to restore some permissions: %2$s</string>
+    <string name="restore_failure_special_access_app_not_installed">%1$s: Failed to restore special access because the app is not installed.</string>
+    <string name="restore_failure_special_access_partial">%1$s: Failed to restore some special access: %2$s</string>
+    <string name="restore_failure_accessibility_app_not_installed">%1$s: Failed to restore accessibility services because the app is not installed.</string>
+    <string name="restore_failure_accessibility_partial">%1$s: Failed to restore some accessibility services: %2$s</string>
     <string name="restore_stage_processing_custom_directories">Processing Custom Directories…</string>
     <string name="restore_failure_custom_directory">Failed to restore custom directory %1$s</string>
     <string name="restore_summary_finished_in">Restore finished in %1$s. </string>
