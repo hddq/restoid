@@ -9,5 +9,6 @@ data class AppInfo(
     val versionCode: Long,
     val icon: Drawable,
     val apkPaths: List<String>,
-    val isSelected: Boolean = true
+    val isSelected: Boolean = true,
+    val firstInstallTime: Long
 )

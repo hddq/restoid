@@ -18,7 +18,9 @@ data class CachedAppInfo(
     val versionName: String,
     val versionCode: Long,
     val apkPaths: List<String>,
-    val iconBase64: String
+    val iconBase64: String,
+    // Default keeps caches written by older app versions readable.
+    val firstInstallTime: Long = 0L
 )
 
 fun CachedAppInfo.toAppInfo(context: Context): AppInfo {
@@ -28,7 +30,8 @@ fun CachedAppInfo.toAppInfo(context: Context): AppInfo {
         versionName = this.versionName,
         versionCode = this.versionCode,
         apkPaths = this.apkPaths,
-        icon = this.iconBase64.base64ToDrawable(context)
+        icon = this.iconBase64.base64ToDrawable(context),
+        firstInstallTime = this.firstInstallTime
     )
 }
 
@@ -39,7 +42,8 @@ fun AppInfo.toCachedAppInfo(): CachedAppInfo {
         versionName = this.versionName,
         versionCode = this.versionCode,
         apkPaths = this.apkPaths,
-        iconBase64 = this.icon.toBase64()
+        iconBase64 = this.icon.toBase64(),
+        firstInstallTime = this.firstInstallTime
     )
 }
 

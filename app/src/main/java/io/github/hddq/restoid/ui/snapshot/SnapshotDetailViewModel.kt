@@ -190,7 +190,8 @@ class SnapshotDetailsViewModel(
                 versionCode = appMeta.versionCode,
                 icon = application.packageManager.defaultActivityIcon,
                 apkPaths = emptyList(),
-                isSelected = true
+                isSelected = true,
+                firstInstallTime = 0L
             )
 
             BackupDetail(finalAppInfo, items, appMeta.versionName, appMeta.versionCode, appMeta.size, isDowngrade, isInstalled, appMeta.detailedSizes)

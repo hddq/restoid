@@ -313,6 +313,7 @@
     <string name="cd_sort_apps">Sort apps</string>
     <string name="sort_by_name">Name</string>
     <string name="sort_by_size">Size</string>
+    <string name="sort_by_installation_date">Installation Date</string>
     <string name="sort_ascending">Ascending</string>
     <string name="sort_descending">Descending</string>
     <string name="dialog_forget_snapshot_title">Forget Snapshot?</string>

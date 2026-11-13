@@ -128,7 +128,8 @@ class ExcludedCustomDirectoriesTest {
             versionName = "1.0",
             versionCode = 1L,
             icon = dummyDrawable,
-            apkPaths = emptyList()
+            apkPaths = emptyList(),
+            firstInstallTime = 0L
         )
     }
 

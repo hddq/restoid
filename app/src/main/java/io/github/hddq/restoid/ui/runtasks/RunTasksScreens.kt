@@ -248,6 +248,8 @@ fun BackupConfigScreen(
         apps = uiState.apps,
         appBackupTypes = uiState.appBackupTypes,
         backupTypes = uiState.backupTypes,
+        sortOrder = uiState.appSortOrder,
+        onSortOrderChange = viewModel::setAppSortOrder,
         onRefreshApps = viewModel::refreshAppsList,
         onToggleAllApps = viewModel::toggleAllApps,
         onToggleAppSelection = viewModel::toggleAppSelection,

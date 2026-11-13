@@ -31,6 +31,7 @@ fun SortableSectionHeader(
     title: String,
     sortOrder: AppSortOrder,
     onSortOrderChange: (AppSortOrder) -> Unit,
+    showSizeSort: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     var sortMenuExpanded by remember { mutableStateOf(false) }
@@ -54,66 +55,36 @@ fun SortableSectionHeader(
                 expanded = sortMenuExpanded,
                 onDismissRequest = { sortMenuExpanded = false }
             ) {
-                val nameSelected = sortOrder == AppSortOrder.NAME_ASCENDING ||
-                    sortOrder == AppSortOrder.NAME_DESCENDING
-                SortMenuItem(
+                SortOrderMenuItem(
                     text = stringResource(R.string.sort_by_name),
-                    selected = nameSelected,
-                    directionIcon = when {
-                        !nameSelected -> null
-                        sortOrder == AppSortOrder.NAME_ASCENDING -> Icons.Outlined.ArrowUpward
-                        else -> Icons.Outlined.ArrowDownward
-                    },
-                    directionDescription = when {
-                        !nameSelected -> null
-                        sortOrder == AppSortOrder.NAME_ASCENDING -> stringResource(R.string.sort_ascending)
-                        else -> stringResource(R.string.sort_descending)
-                    },
-                    onClick = {
-                        onSortOrderChange(
-                            if (nameSelected) {
-                                if (sortOrder == AppSortOrder.NAME_ASCENDING) {
-                                    AppSortOrder.NAME_DESCENDING
-                                } else {
-                                    AppSortOrder.NAME_ASCENDING
-                                }
-                            } else {
-                                AppSortOrder.NAME_ASCENDING
-                            }
-                        )
-                        sortMenuExpanded = false
-                    }
+                    ascending = AppSortOrder.NAME_ASCENDING,
+                    descending = AppSortOrder.NAME_DESCENDING,
+                    defaultDirection = AppSortOrder.NAME_ASCENDING,
+                    sortOrder = sortOrder,
+                    onSelect = onSortOrderChange,
+                    onDismiss = { sortMenuExpanded = false }
                 )
 
-                val sizeSelected = sortOrder == AppSortOrder.SIZE_ASCENDING ||
-                    sortOrder == AppSortOrder.SIZE_DESCENDING
-                SortMenuItem(
-                    text = stringResource(R.string.sort_by_size),
-                    selected = sizeSelected,
-                    directionIcon = when {
-                        !sizeSelected -> null
-                        sortOrder == AppSortOrder.SIZE_ASCENDING -> Icons.Outlined.ArrowUpward
-                        else -> Icons.Outlined.ArrowDownward
-                    },
-                    directionDescription = when {
-                        !sizeSelected -> null
-                        sortOrder == AppSortOrder.SIZE_ASCENDING -> stringResource(R.string.sort_ascending)
-                        else -> stringResource(R.string.sort_descending)
-                    },
-                    onClick = {
-                        onSortOrderChange(
-                            if (sizeSelected) {
-                                if (sortOrder == AppSortOrder.SIZE_ASCENDING) {
-                                    AppSortOrder.SIZE_DESCENDING
-                                } else {
-                                    AppSortOrder.SIZE_ASCENDING
-                                }
-                            } else {
-                                AppSortOrder.SIZE_DESCENDING
-                            }
-                        )
-                        sortMenuExpanded = false
-                    }
+                if (showSizeSort) {
+                    SortOrderMenuItem(
+                        text = stringResource(R.string.sort_by_size),
+                        ascending = AppSortOrder.SIZE_ASCENDING,
+                        descending = AppSortOrder.SIZE_DESCENDING,
+                        defaultDirection = AppSortOrder.SIZE_DESCENDING,
+                        sortOrder = sortOrder,
+                        onSelect = onSortOrderChange,
+                        onDismiss = { sortMenuExpanded = false }
+                    )
+                }
+
+                SortOrderMenuItem(
+                    text = stringResource(R.string.sort_by_installation_date),
+                    ascending = AppSortOrder.FIRST_INSTALL_TIME_ASCENDING,
+                    descending = AppSortOrder.FIRST_INSTALL_TIME_DESCENDING,
+                    defaultDirection = AppSortOrder.FIRST_INSTALL_TIME_DESCENDING,
+                    sortOrder = sortOrder,
+                    onSelect = onSortOrderChange,
+                    onDismiss = { sortMenuExpanded = false }
                 )
             }
         }
@@ -121,16 +92,30 @@ fun SortableSectionHeader(
 }
 
 @Composable
-private fun SortMenuItem(
+private fun SortOrderMenuItem(
     text: String,
-    selected: Boolean,
-    directionIcon: ImageVector?,
-    directionDescription: String?,
-    onClick: () -> Unit
+    ascending: AppSortOrder,
+    descending: AppSortOrder,
+    defaultDirection: AppSortOrder,
+    sortOrder: AppSortOrder,
+    onSelect: (AppSortOrder) -> Unit,
+    onDismiss: () -> Unit
 ) {
+    val isSelected = sortOrder == ascending || sortOrder == descending
+    val directionIcon: ImageVector? = when {
+        !isSelected -> null
+        sortOrder == ascending -> Icons.Outlined.ArrowUpward
+        else -> Icons.Outlined.ArrowDownward
+    }
+    val directionDescription: String? = when {
+        !isSelected -> null
+        sortOrder == ascending -> stringResource(R.string.sort_ascending)
+        else -> stringResource(R.string.sort_descending)
+    }
+
     DropdownMenuItem(
         text = { Text(text) },
-        modifier = Modifier.semantics { this.selected = selected },
+        modifier = Modifier.semantics { this.selected = isSelected },
         trailingIcon = directionIcon?.let { icon ->
             {
                 Icon(
@@ -139,6 +124,15 @@ private fun SortMenuItem(
                 )
             }
         },
-        onClick = onClick
+        onClick = {
+            onSelect(
+                if (isSelected) {
+                    if (sortOrder == ascending) descending else ascending
+                } else {
+                    defaultDirection
+                }
+            )
+            onDismiss()
+        }
     )
 }

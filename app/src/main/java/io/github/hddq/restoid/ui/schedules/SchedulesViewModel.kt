@@ -20,11 +20,13 @@ import io.github.hddq.restoid.model.ContactAccountInfo
 import io.github.hddq.restoid.model.Schedule
 import io.github.hddq.restoid.model.TriggerConditions
 import io.github.hddq.restoid.model.MaintenanceConfig
+import io.github.hddq.restoid.ui.shared.AppSortOrder
 import io.github.hddq.restoid.ui.shared.BackupTypes
 import io.github.hddq.restoid.ui.shared.ForgetHostOption
 import io.github.hddq.restoid.ui.shared.ForgetHostsController
 import io.github.hddq.restoid.ui.shared.ForgetHostsSlice
 import io.github.hddq.restoid.ui.shared.normalizeForgetHosts
+import io.github.hddq.restoid.ui.shared.sortApps
 import io.github.hddq.restoid.ui.shared.toUiModel
 import io.github.hddq.restoid.util.StorageUtils
 import io.github.hddq.restoid.work.BackupWorkRequest
@@ -58,6 +60,7 @@ data class AddEditScheduleUiState(
     val backupTypes: BackupTypes = BackupTypes(),
     val appBackupTypes: Map<String, BackupTypes> = emptyMap(),
     val apps: List<AppInfo> = emptyList(),
+    val appSortOrder: AppSortOrder = AppSortOrder.NAME_ASCENDING,
     val maintenance: MaintenanceConfig = MaintenanceConfig(),
     val triggerConditions: TriggerConditions = TriggerConditions(),
     val lastRunTimestamp: Long? = null,
@@ -296,12 +299,13 @@ class SchedulesViewModel(
             } else {
                 allApps // Default selection from AppInfo might be true, we might want to default to true for new schedules too
             }
-            val appBackupTypes = apps.associate { app ->
+            val sortedApps = sortApps(apps, _addEditState.value.appSortOrder)
+            val appBackupTypes = sortedApps.associate { app ->
                 app.packageName to (currentTypes[app.packageName] ?: defaultTypes)
             }
             _addEditState.update {
                 if (addEditSessionId != sessionId) return@update it
-                val updated = recomputeConflicts(it.copy(apps = apps, appBackupTypes = appBackupTypes, isLoadingApps = false))
+                val updated = recomputeConflicts(it.copy(apps = sortedApps, appBackupTypes = appBackupTypes, isLoadingApps = false))
                 // Update initialState if it was just set (apps are loaded asynchronously)
                 val currentInitial = initialState
                 if (currentInitial != null && currentInitial.apps.isEmpty() && apps.isNotEmpty()) {
@@ -708,6 +712,16 @@ class SchedulesViewModel(
     fun removeExcludedCustomDirectory(uriString: String) {
         _addEditState.update { state ->
             recomputeConflicts(state.copy(excludedCustomDirectories = state.excludedCustomDirectories.filter { it.uri != uriString }))
+        }
+    }
+
+    fun setAppSortOrder(order: AppSortOrder) {
+        if (_addEditState.value.appSortOrder == order) return
+        _addEditState.update { state ->
+            state.copy(
+                appSortOrder = order,
+                apps = sortApps(state.apps, order)
+            )
         }
     }
 

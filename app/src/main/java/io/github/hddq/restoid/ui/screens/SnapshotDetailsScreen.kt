@@ -793,7 +793,8 @@ private fun BackedUpAppItemPreview() {
                                 versionCode = 1020050,
                                 icon = android.graphics.drawable.ColorDrawable(0xFF1E88E5.toInt()),
                                 apkPaths = emptyList(),
-                                isSelected = true
+                                isSelected = true,
+                                firstInstallTime = 0L
                             ),
                             backedUpItems = listOf("APK", "Data", "Device Protected Data", "External Data"),
                             versionName = "1.20.0",
@@ -820,7 +821,8 @@ private fun BackedUpAppItemPreview() {
                                 versionCode = 39002,
                                 icon = android.graphics.drawable.ColorDrawable(0xFF43A047.toInt()),
                                 apkPaths = emptyList(),
-                                isSelected = true
+                                isSelected = true,
+                                firstInstallTime = 0L
                             ),
                             backedUpItems = listOf("APK", "Data"),
                             versionName = "6.802",
