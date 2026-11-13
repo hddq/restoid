@@ -302,6 +302,8 @@ class SchedulesViewModel(
     fun setBackupObb(value: Boolean) = _addEditState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(obb = value))) }
     fun setBackupMedia(value: Boolean) = _addEditState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(media = value))) }
     fun setBackupPermissions(value: Boolean) = _addEditState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(permissions = value))) }
+    fun setBackupSpecialAccess(value: Boolean) = _addEditState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(specialAccess = value))) }
+    fun setBackupAccessibility(value: Boolean) = _addEditState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(accessibility = value))) }
 
     fun setCustomDirectoriesBackupEnabled(enabled: Boolean) {
         _addEditState.update { recomputeConflicts(it.copy(customDirectoriesBackupEnabled = enabled)) }

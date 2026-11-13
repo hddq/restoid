@@ -10,7 +10,9 @@ data class BackupTypeSelection(
     val externalData: Boolean = false,
     val obb: Boolean = false,
     val media: Boolean = false,
-    val permissions: Boolean = true
+    val permissions: Boolean = true,
+    val specialAccess: Boolean = true,
+    val accessibility: Boolean = true
 )
 
 @Serializable
@@ -21,7 +23,9 @@ data class RestoreTypeSelection(
     val externalData: Boolean = false,
     val obb: Boolean = false,
     val media: Boolean = false,
-    val permissions: Boolean = true
+    val permissions: Boolean = true,
+    val specialAccess: Boolean = true,
+    val accessibility: Boolean = true
 )
 
 @Serializable

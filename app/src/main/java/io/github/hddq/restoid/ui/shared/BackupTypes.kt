@@ -11,7 +11,9 @@ data class BackupTypes(
     val externalData: Boolean = false,
     val obb: Boolean = false,
     val media: Boolean = false,
-    val permissions: Boolean = true
+    val permissions: Boolean = true,
+    val specialAccess: Boolean = true,
+    val accessibility: Boolean = true
 ) {
     fun toSelection(): BackupTypeSelection {
         return BackupTypeSelection(
@@ -21,12 +23,15 @@ data class BackupTypes(
             externalData = externalData,
             obb = obb,
             media = media,
-            permissions = permissions
+            permissions = permissions,
+            specialAccess = specialAccess,
+            accessibility = accessibility
         )
     }
 
     fun anyEnabled(): Boolean {
-        return apk || data || deviceProtectedData || externalData || obb || media || permissions
+        return apk || data || deviceProtectedData || externalData || obb || media ||
+            permissions || specialAccess || accessibility
     }
 }
 
@@ -38,6 +43,8 @@ fun BackupTypeSelection.toUiModel(): BackupTypes {
         externalData = externalData,
         obb = obb,
         media = media,
-        permissions = permissions
+        permissions = permissions,
+        specialAccess = specialAccess,
+        accessibility = accessibility
     )
 }

@@ -522,6 +522,8 @@ class RunTasksViewModel(
     fun setBackupObb(value: Boolean) = _uiState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(obb = value))) }
     fun setBackupMedia(value: Boolean) = _uiState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(media = value))) }
     fun setBackupPermissions(value: Boolean) = _uiState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(permissions = value))) }
+    fun setBackupSpecialAccess(value: Boolean) = _uiState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(specialAccess = value))) }
+    fun setBackupAccessibility(value: Boolean) = _uiState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(accessibility = value))) }
 
     private fun recomputeConflicts(state: RunTasksUiState): RunTasksUiState {
         val hasRoot = rootState.value == io.github.hddq.restoid.data.RootState.Granted

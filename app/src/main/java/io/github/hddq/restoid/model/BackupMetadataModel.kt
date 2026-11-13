@@ -22,6 +22,31 @@ data class RestoidMetadata(
     val customDirectories: Map<String, CustomDirectoryMetadata> = emptyMap()
 )
 
+@Serializable
+data class AppOpPermission(
+    val op: String,
+    val isUidMode: Boolean = false
+)
+
+/**
+ * Special app access and privileged OS grants recorded per application at backup time.
+ */
+@Serializable
+data class SpecialAccessMetadata(
+    val allowedAppOps: List<AppOpPermission> = emptyList(),
+    val activeDeviceAdmins: List<String> = emptyList(),
+    val enabledNotificationListeners: List<String> = emptyList(),
+    val notificationPolicyAccess: Boolean = false,
+    val ignoringBatteryOptimizations: Boolean = false
+) {
+    fun isEmpty(): Boolean =
+        allowedAppOps.isEmpty() &&
+            activeDeviceAdmins.isEmpty() &&
+            enabledNotificationListeners.isEmpty() &&
+            !notificationPolicyAccess &&
+            !ignoringBatteryOptimizations
+}
+
 /**
  * Contains metadata for a single application within a snapshot.
  * This information helps in understanding what was backed up for each app.
@@ -33,6 +58,9 @@ data class RestoidMetadata(
  * @param versionName The version name of the app at the time of backup.
  * @param grantedRuntimePermissions A list of dangerous/runtime permissions that were granted
  * for this app at backup time (e.g., camera, location).
+ * @param specialAccess Special app access grants (AppOps, device admin, notification listeners,
+ * DND policy access, unrestricted battery) recorded for this app at backup time.
+ * @param enabledAccessibilityServices Enabled accessibility service components belonging to this app.
  * @param detailedSizes A map detailing the specific sizes of backed up components (e.g. "apk" to bytes)
  * calculated from the restic snapshot.
  */
@@ -44,5 +72,19 @@ data class AppMetadata(
     val versionName: String,
     val appName: String? = null,
     val grantedRuntimePermissions: List<String> = emptyList(),
+    val specialAccess: SpecialAccessMetadata? = null,
+    val enabledAccessibilityServices: List<String> = emptyList(),
     val detailedSizes: Map<String, Long> = emptyMap()
-)
+) {
+    fun hasSpecialAccessBackup(): Boolean = specialAccess?.isEmpty() == false
+
+    fun hasAccessibilityBackup(): Boolean = enabledAccessibilityServices.isNotEmpty()
+
+    companion object {
+        val METADATA_ONLY_BACKUP_TYPES = setOf(
+            "permissions",
+            "special_access",
+            "accessibility"
+        )
+    }
+}

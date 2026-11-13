@@ -113,7 +113,9 @@ class SnapshotDetailsViewModel(
                         )
                     } else if (
                         initialMetadata.apps.values.any {
-                            it.size == 0L && it.detailedSizes.isEmpty() && it.types.any { type -> type != "permissions" }
+                            it.size == 0L && it.detailedSizes.isEmpty() && it.types.any { type ->
+                                type !in io.github.hddq.restoid.model.AppMetadata.METADATA_ONLY_BACKUP_TYPES
+                            }
                         } || initialMetadata.customDirectories.values.any { it.size == 0L }
                     ) {
                         val populatedResult = resticRepository.populateMetadataSizes(
@@ -166,7 +168,13 @@ class SnapshotDetailsViewModel(
 
         val details = appMetadataMap.map { (packageName, appMeta) ->
             val appInfo = appInfoMap[packageName]
-            val items = findBackedUpItems(snapshot, packageName, appMeta.grantedRuntimePermissions.isNotEmpty())
+            val items = findBackedUpItems(
+                snapshot = snapshot,
+                pkg = packageName,
+                hasPermissionBackup = appMeta.grantedRuntimePermissions.isNotEmpty(),
+                hasSpecialAccessBackup = appMeta.hasSpecialAccessBackup(),
+                hasAccessibilityBackup = appMeta.hasAccessibilityBackup()
+            )
 
             val isInstalled = appInfo != null
             val isDowngrade = if (isInstalled) {
@@ -198,7 +206,13 @@ class SnapshotDetailsViewModel(
         _backupDetails.update { details -> sortBackupDetails(details, order) }
     }
 
-    private fun findBackedUpItems(snapshot: SnapshotInfo, pkg: String, hasPermissionBackup: Boolean): List<String> {
+    private fun findBackedUpItems(
+        snapshot: SnapshotInfo,
+        pkg: String,
+        hasPermissionBackup: Boolean,
+        hasSpecialAccessBackup: Boolean,
+        hasAccessibilityBackup: Boolean
+    ): List<String> {
         val items = mutableListOf<String>()
         snapshot.paths.forEach { path ->
             when {
@@ -212,6 +226,12 @@ class SnapshotDetailsViewModel(
         }
         if (hasPermissionBackup && !items.contains(application.getString(R.string.backup_item_permissions))) {
             items.add(application.getString(R.string.backup_item_permissions))
+        }
+        if (hasSpecialAccessBackup && !items.contains(application.getString(R.string.backup_item_special_access))) {
+            items.add(application.getString(R.string.backup_item_special_access))
+        }
+        if (hasAccessibilityBackup && !items.contains(application.getString(R.string.backup_item_accessibility))) {
+            items.add(application.getString(R.string.backup_item_accessibility))
         }
         return if (items.isNotEmpty()) items else listOf(application.getString(R.string.backup_item_unknown))
     }

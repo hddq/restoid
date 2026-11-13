@@ -24,6 +24,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.outlined.AccessibilityNew
+import androidx.compose.material.icons.outlined.AdminPanelSettings
 import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.ChevronRight
@@ -502,7 +504,7 @@ private fun RestoreTypesBottomSheet(
                 modifier = Modifier.padding(bottom = 12.dp)
             )
             ExpressiveCardGroup {
-                ExpressiveSegmentedSurface(index = 0, count = 7) {
+                ExpressiveSegmentedSurface(index = 0, count = 9) {
                     RestoreTypeToggle(
                         label = stringResource(R.string.backup_type_apk),
                         description = stringResource(R.string.backup_type_apk_desc),
@@ -512,7 +514,7 @@ private fun RestoreTypesBottomSheet(
                         onRestoreTypesChange(restoreTypes.copy(apk = it))
                     }
                 }
-                ExpressiveSegmentedSurface(index = 1, count = 7) {
+                ExpressiveSegmentedSurface(index = 1, count = 9) {
                     RestoreTypeToggle(
                         label = stringResource(R.string.backup_type_data),
                         description = stringResource(R.string.backup_type_data_desc),
@@ -522,7 +524,7 @@ private fun RestoreTypesBottomSheet(
                         onRestoreTypesChange(restoreTypes.copy(data = it))
                     }
                 }
-                ExpressiveSegmentedSurface(index = 2, count = 7) {
+                ExpressiveSegmentedSurface(index = 2, count = 9) {
                     RestoreTypeToggle(
                         label = stringResource(R.string.backup_type_device_protected_data),
                         description = stringResource(R.string.backup_type_device_protected_data_desc),
@@ -532,7 +534,7 @@ private fun RestoreTypesBottomSheet(
                         onRestoreTypesChange(restoreTypes.copy(deviceProtectedData = it))
                     }
                 }
-                ExpressiveSegmentedSurface(index = 3, count = 7) {
+                ExpressiveSegmentedSurface(index = 3, count = 9) {
                     RestoreTypeToggle(
                         label = stringResource(R.string.backup_type_external_data),
                         description = stringResource(R.string.backup_type_external_data_desc),
@@ -542,7 +544,7 @@ private fun RestoreTypesBottomSheet(
                         onRestoreTypesChange(restoreTypes.copy(externalData = it))
                     }
                 }
-                ExpressiveSegmentedSurface(index = 4, count = 7) {
+                ExpressiveSegmentedSurface(index = 4, count = 9) {
                     RestoreTypeToggle(
                         label = stringResource(R.string.backup_type_obb_data),
                         description = stringResource(R.string.backup_type_obb_data_desc),
@@ -552,7 +554,7 @@ private fun RestoreTypesBottomSheet(
                         onRestoreTypesChange(restoreTypes.copy(obb = it))
                     }
                 }
-                ExpressiveSegmentedSurface(index = 5, count = 7) {
+                ExpressiveSegmentedSurface(index = 5, count = 9) {
                     RestoreTypeToggle(
                         label = stringResource(R.string.backup_type_media_data),
                         description = stringResource(R.string.backup_type_media_data_desc),
@@ -562,7 +564,7 @@ private fun RestoreTypesBottomSheet(
                         onRestoreTypesChange(restoreTypes.copy(media = it))
                     }
                 }
-                ExpressiveSegmentedSurface(index = 6, count = 7) {
+                ExpressiveSegmentedSurface(index = 6, count = 9) {
                     RestoreTypeToggle(
                         label = stringResource(R.string.backup_type_permissions),
                         description = stringResource(R.string.backup_type_permissions_desc),
@@ -570,6 +572,26 @@ private fun RestoreTypesBottomSheet(
                         checked = restoreTypes.permissions
                     ) {
                         onRestoreTypesChange(restoreTypes.copy(permissions = it))
+                    }
+                }
+                ExpressiveSegmentedSurface(index = 7, count = 9) {
+                    RestoreTypeToggle(
+                        label = stringResource(R.string.backup_type_special_access),
+                        description = stringResource(R.string.backup_type_special_access_desc),
+                        icon = Icons.Outlined.AdminPanelSettings,
+                        checked = restoreTypes.specialAccess
+                    ) {
+                        onRestoreTypesChange(restoreTypes.copy(specialAccess = it))
+                    }
+                }
+                ExpressiveSegmentedSurface(index = 8, count = 9) {
+                    RestoreTypeToggle(
+                        label = stringResource(R.string.backup_type_accessibility),
+                        description = stringResource(R.string.backup_type_accessibility_desc),
+                        icon = Icons.Outlined.AccessibilityNew,
+                        checked = restoreTypes.accessibility
+                    ) {
+                        onRestoreTypesChange(restoreTypes.copy(accessibility = it))
                     }
                 }
             }
@@ -586,6 +608,8 @@ private fun buildRestoreTypesSummary(restoreTypes: RestoreTypes, context: androi
         if (restoreTypes.obb) add(context.getString(R.string.backup_type_obb_data))
         if (restoreTypes.media) add(context.getString(R.string.backup_type_media_data))
         if (restoreTypes.permissions) add(context.getString(R.string.backup_type_permissions))
+        if (restoreTypes.specialAccess) add(context.getString(R.string.backup_type_special_access))
+        if (restoreTypes.accessibility) add(context.getString(R.string.backup_type_accessibility))
     }.joinToString(", ")
 
     return types.ifBlank { context.getString(R.string.backup_types_none) }

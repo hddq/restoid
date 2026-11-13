@@ -138,6 +138,8 @@ class PreferencesRepository(private val context: Context) {
             putBoolean("backup_obb", types.obb)
             putBoolean("backup_media", types.media)
             putBoolean("backup_permissions", types.permissions)
+            putBoolean("backup_specialAccess", types.specialAccess)
+            putBoolean("backup_accessibility", types.accessibility)
             apply()
         }
     }
@@ -150,7 +152,9 @@ class PreferencesRepository(private val context: Context) {
             externalData = prefs.getBoolean("backup_externalData", false),
             obb = prefs.getBoolean("backup_obb", false),
             media = prefs.getBoolean("backup_media", false),
-            permissions = prefs.getBoolean("backup_permissions", true)
+            permissions = prefs.getBoolean("backup_permissions", true),
+            specialAccess = prefs.getBoolean("backup_specialAccess", true),
+            accessibility = prefs.getBoolean("backup_accessibility", true)
         )
     }
 
@@ -164,6 +168,8 @@ class PreferencesRepository(private val context: Context) {
             putBoolean("restore_obb", types.obb)
             putBoolean("restore_media", types.media)
             putBoolean("restore_permissions", types.permissions)
+            putBoolean("restore_specialAccess", types.specialAccess)
+            putBoolean("restore_accessibility", types.accessibility)
             apply()
         }
     }
@@ -176,7 +182,9 @@ class PreferencesRepository(private val context: Context) {
             externalData = prefs.getBoolean("restore_externalData", false),
             obb = prefs.getBoolean("restore_obb", false),
             media = prefs.getBoolean("restore_media", false),
-            permissions = prefs.getBoolean("restore_permissions", true)
+            permissions = prefs.getBoolean("restore_permissions", true),
+            specialAccess = prefs.getBoolean("restore_specialAccess", true),
+            accessibility = prefs.getBoolean("restore_accessibility", true)
         )
     }
 

@@ -14,6 +14,7 @@ import io.github.hddq.restoid.data.RepositoryBackendType
 import io.github.hddq.restoid.data.ResticBinaryManager
 import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.data.SnapshotInfo
+import io.github.hddq.restoid.data.SpecialPermissionsManager
 import io.github.hddq.restoid.ui.shared.OperationProgress
 import io.github.hddq.restoid.util.ResticOutputParser
 import io.github.hddq.restoid.util.buildCustomDirectoryRestoreCommand
@@ -67,10 +68,12 @@ class RestoreOperationRunner(
 
         val apkRestoreSelected = effectiveRestoreTypes.values.any { it.apk }
         val anyDataRestoreSelected = effectiveRestoreTypes.values.any { it.data || it.deviceProtectedData || it.externalData || it.obb || it.media }
-        val permissionsRestoreSelected = effectiveRestoreTypes.values.any { it.permissions }
+        val metadataRestoreSelected = effectiveRestoreTypes.values.any {
+            it.permissions || it.specialAccess || it.accessibility
+        }
 
         val stageList = mutableListOf(context.getString(R.string.restore_stage_restore_files))
-        if (apkRestoreSelected || anyDataRestoreSelected || permissionsRestoreSelected) stageList.add(context.getString(R.string.restore_stage_processing_apps))
+        if (apkRestoreSelected || anyDataRestoreSelected || metadataRestoreSelected) stageList.add(context.getString(R.string.restore_stage_processing_apps))
         if (request.selectedCustomDirectories.isNotEmpty()) stageList.add(context.getString(R.string.restore_stage_processing_custom_directories))
         stageList.add(context.getString(R.string.restore_stage_cleanup))
         val totalStages = stageList.size
@@ -134,7 +137,7 @@ class RestoreOperationRunner(
                 metadataRepository.getMetadataForSnapshot(repoId, currentSnapshot.id)
             }
 
-            if (pathsToRestore.isEmpty() && !permissionsRestoreSelected) {
+            if (pathsToRestore.isEmpty() && !metadataRestoreSelected) {
                 throw IllegalStateException(context.getString(R.string.restore_error_no_files_found))
             }
 
@@ -303,27 +306,72 @@ class RestoreOperationRunner(
                         }
                     }
 
+                    val appMeta = metadata?.apps?.get(packageName)
                     val permissionsToRestore = if (appRestoreTypes.permissions) {
-                        metadata?.apps?.get(packageName)?.grantedRuntimePermissions.orEmpty()
+                        appMeta?.grantedRuntimePermissions.orEmpty()
                     } else {
                         emptyList()
                     }
-                    if (permissionsToRestore.isNotEmpty()) {
-                        if (!isPackageInstalled(packageName)) {
-                            appProcessSuccess = false
-                            failureDetails.add(context.getString(R.string.restore_failure_permissions_app_not_installed, appName))
+                    val specialAccessToRestore = if (appRestoreTypes.specialAccess) {
+                        appMeta?.specialAccess?.takeUnless { it.isEmpty() }
+                    } else {
+                        null
+                    }
+                    val accessibilityToRestore = if (appRestoreTypes.accessibility) {
+                        appMeta?.enabledAccessibilityServices.orEmpty()
+                    } else {
+                        emptyList()
+                    }
+
+                    if (permissionsToRestore.isNotEmpty() || specialAccessToRestore != null || accessibilityToRestore.isNotEmpty()) {
+                        val specialPermissionsManager = if (specialAccessToRestore != null || accessibilityToRestore.isNotEmpty()) {
+                            SpecialPermissionsManager(context)
                         } else {
-                            val permissionFailures = restoreGrantedRuntimePermissions(packageName, permissionsToRestore)
-                            if (permissionFailures.isNotEmpty()) {
-                                appProcessSuccess = false
-                                failureDetails.add(
-                                    context.getString(
-                                        R.string.restore_failure_permissions_partial,
-                                        appName,
-                                        permissionFailures.joinToString(", ")
-                                    )
-                                )
+                            null
+                        }
+                        val currentUserId = getCurrentUserId()
+                        val installed = isPackageInstalled(packageName)
+
+                        if (!restoreMetadataGrant(
+                                installed = installed,
+                                appName = appName,
+                                shouldRestore = permissionsToRestore.isNotEmpty(),
+                                notInstalledResId = R.string.restore_failure_permissions_app_not_installed,
+                                partialFailureResId = R.string.restore_failure_permissions_partial,
+                                failureDetails = failureDetails
+                            ) {
+                                restoreGrantedRuntimePermissions(packageName, permissionsToRestore)
                             }
+                        ) {
+                            appProcessSuccess = false
+                        }
+
+                        if (!restoreMetadataGrant(
+                                installed = installed,
+                                appName = appName,
+                                shouldRestore = specialAccessToRestore != null,
+                                notInstalledResId = R.string.restore_failure_special_access_app_not_installed,
+                                partialFailureResId = R.string.restore_failure_special_access_partial,
+                                failureDetails = failureDetails
+                            ) {
+                                specialPermissionsManager!!.restoreSpecialAccess(packageName, currentUserId, specialAccessToRestore!!)
+                            }
+                        ) {
+                            appProcessSuccess = false
+                        }
+
+                        if (!restoreMetadataGrant(
+                                installed = installed,
+                                appName = appName,
+                                shouldRestore = accessibilityToRestore.isNotEmpty(),
+                                notInstalledResId = R.string.restore_failure_accessibility_app_not_installed,
+                                partialFailureResId = R.string.restore_failure_accessibility_partial,
+                                failureDetails = failureDetails
+                            ) {
+                                specialPermissionsManager!!.restoreAccessibilityServices(packageName, currentUserId, accessibilityToRestore)
+                            }
+                        ) {
+                            appProcessSuccess = false
                         }
                     }
 
@@ -696,6 +744,34 @@ class RestoreOperationRunner(
         } else {
             null
         }
+    }
+
+    private fun restoreMetadataGrant(
+        installed: Boolean,
+        appName: String,
+        shouldRestore: Boolean,
+        notInstalledResId: Int,
+        partialFailureResId: Int,
+        failureDetails: MutableList<String>,
+        restoreAction: () -> List<String>
+    ): Boolean {
+        if (!shouldRestore) return true
+        if (!installed) {
+            failureDetails.add(context.getString(notInstalledResId, appName))
+            return false
+        }
+        val failures = restoreAction()
+        if (failures.isNotEmpty()) {
+            failureDetails.add(
+                context.getString(
+                    partialFailureResId,
+                    appName,
+                    failures.joinToString(", ")
+                )
+            )
+            return false
+        }
+        return true
     }
 
     private fun restoreGrantedRuntimePermissions(packageName: String, permissions: List<String>): List<String> {

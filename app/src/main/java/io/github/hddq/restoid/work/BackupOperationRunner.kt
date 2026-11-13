@@ -12,6 +12,7 @@ import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.RepositoryBackendType
 import io.github.hddq.restoid.data.ResticBinaryManager
 import io.github.hddq.restoid.data.ResticRepository
+import io.github.hddq.restoid.data.SpecialPermissionsManager
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.AppMetadata
 import io.github.hddq.restoid.model.RestoidMetadata
@@ -139,7 +140,10 @@ class BackupOperationRunner(
             restoidMetadataFile.writeText(json.encodeToString(metadata))
             pathsToBackup.add(0, restoidMetadataFile.absolutePath)
 
-            if (pathsToBackup.size <= 1 && metadata.apps.values.none { "permissions" in it.types } && metadata.customDirectories.isEmpty()) {
+            if (pathsToBackup.size <= 1 &&
+                metadata.apps.values.none { it.types.any { type -> type in AppMetadata.METADATA_ONLY_BACKUP_TYPES } } &&
+                metadata.customDirectories.isEmpty()
+            ) {
                 throw IllegalStateException(context.getString(R.string.backup_error_no_files_selected_for_items))
             }
 
@@ -410,6 +414,23 @@ class BackupOperationRunner(
         val pathsToBackup = mutableListOf<String>()
         val excludePatterns = mutableListOf<String>()
         val appMetadataMap = mutableMapOf<String, AppMetadata>()
+        val currentUserId = getCurrentUserId()
+        val anySpecialAccess = selectedApps.any {
+            (appBackupTypes[it.packageName] ?: backupTypes).specialAccess
+        }
+        val anyAccessibility = selectedApps.any {
+            (appBackupTypes[it.packageName] ?: backupTypes).accessibility
+        }
+        val specialPermissionsManager = if (anySpecialAccess || anyAccessibility) {
+            SpecialPermissionsManager(context)
+        } else {
+            null
+        }
+        val accessSnapshot = specialPermissionsManager?.captureDeviceAccessSnapshot(
+            userId = currentUserId,
+            includeSpecialAccess = anySpecialAccess,
+            includeAccessibility = anyAccessibility
+        )
 
         selectedApps.forEach { app ->
             throwIfCancelled()
@@ -422,22 +443,34 @@ class BackupOperationRunner(
                 if (effectiveBackupTypes.obb) add("obb")
                 if (effectiveBackupTypes.media) add("media")
                 if (effectiveBackupTypes.permissions) add("permissions")
+                if (effectiveBackupTypes.specialAccess) add("special_access")
+                if (effectiveBackupTypes.accessibility) add("accessibility")
             }
             val appPaths = generateFilePathsForApp(app, effectiveBackupTypes)
             val existingAppPaths = appPaths.filter { Shell.cmd("[ -e ${shellQuote(it)} ]").exec().isSuccess }
             pathsToBackup.addAll(existingAppPaths)
 
             if (effectiveBackupTypes.data) {
-                excludePatterns.add("/data/user/${getCurrentUserId()}/${app.packageName}/cache")
-                excludePatterns.add("/data/user/${getCurrentUserId()}/${app.packageName}/code_cache")
+                excludePatterns.add("/data/user/$currentUserId/${app.packageName}/cache")
+                excludePatterns.add("/data/user/$currentUserId/${app.packageName}/code_cache")
             }
             if (effectiveBackupTypes.externalData) {
-                excludePatterns.add("/storage/emulated/${getCurrentUserId()}/Android/data/${app.packageName}/cache")
+                excludePatterns.add("/storage/emulated/$currentUserId/Android/data/${app.packageName}/cache")
             }
 
             throwIfCancelled()
             val grantedRuntimePermissions = if (effectiveBackupTypes.permissions) {
                 appInfoRepository.getGrantedRuntimePermissions(app.packageName)
+            } else {
+                emptyList()
+            }
+            val specialAccess = if (effectiveBackupTypes.specialAccess && specialPermissionsManager != null && accessSnapshot != null) {
+                specialPermissionsManager.collectSpecialAccess(app.packageName, currentUserId, accessSnapshot)
+            } else {
+                null
+            }
+            val accessibilityServices = if (effectiveBackupTypes.accessibility && accessSnapshot != null) {
+                accessSnapshot.accessibilityServicesByPackage[app.packageName].orEmpty()
             } else {
                 emptyList()
             }
@@ -448,6 +481,8 @@ class BackupOperationRunner(
                 versionName = app.versionName,
                 appName = app.name,
                 grantedRuntimePermissions = grantedRuntimePermissions,
+                specialAccess = specialAccess,
+                enabledAccessibilityServices = accessibilityServices,
                 detailedSizes = emptyMap()
             )
         }
@@ -514,7 +549,9 @@ class BackupOperationRunner(
                     backupOptions.externalData ||
                     backupOptions.obb ||
                     backupOptions.media ||
-                    backupOptions.permissions
+                    backupOptions.permissions ||
+                    backupOptions.specialAccess ||
+                    backupOptions.accessibility
         } || request.customDirectories.isNotEmpty()
         if (!hasAnyBackupType) {
             return OperationProgress(
