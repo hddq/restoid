@@ -156,20 +156,27 @@ jobs:
           echo "Found mapping file: ${mappings[0]}"
           gzip -9 -n -c "${mappings[0]}" > release-assets/mapping.txt.gz
 
-      - name: Grab latest Fastlane changelog
+      - name: Prepare release highlights from Fastlane changelog
         id: changelog
         run: |
           set -euo pipefail
           CHANGELOG_FILE=$(find fastlane/metadata/android/en-US/changelogs -type f -name '*.txt' | sort -V | tail -n 1)
           echo "Found changelog: $CHANGELOG_FILE"
-          echo "path=$CHANGELOG_FILE" >> "$GITHUB_OUTPUT"
+          RELEASE_BODY_FILE="$RUNNER_TEMP/release-body.md"
+          {
+            echo "## Highlights"
+            echo ""
+            cat "$CHANGELOG_FILE"
+            printf '\n\n'
+          } > "$RELEASE_BODY_FILE"
+          echo "path=$RELEASE_BODY_FILE" >> "$GITHUB_OUTPUT"
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v3
         with:
           name: Restoid ${{ github.ref_name }}
           tag_name: ${{ github.ref_name }}
-          generate_release_notes: false
+          generate_release_notes: true
           body_path: ${{ steps.changelog.outputs.path }}
           files: |
             ${{ steps.collect_apks.outputs.files }}
