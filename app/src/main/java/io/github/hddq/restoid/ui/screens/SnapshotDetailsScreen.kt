@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
@@ -59,12 +60,14 @@ import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -515,23 +518,34 @@ private fun BackedUpCustomDirItemContent(
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
     val copiedText = stringResource(R.string.path_copied_to_clipboard)
+    val copyPath: () -> Unit = {
+        scope.launch {
+            clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Path", path)))
+            Toast.makeText(context, copiedText, Toast.LENGTH_SHORT).show()
+        }
+    }
+    val interactionModifier = if (canExpand || isExpanded) {
+        Modifier.combinedClickable(
+            onClick = { isExpanded = !isExpanded },
+            onLongClick = copyPath
+        )
+    } else {
+        Modifier
+            .semantics {
+                onLongClick {
+                    copyPath()
+                    true
+                }
+            }
+            .pointerInput(path, copiedText) {
+                detectTapGestures(onLongPress = { copyPath() })
+            }
+    }
 
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .combinedClickable(
-                onClick = {
-                    if (canExpand || isExpanded) {
-                        isExpanded = !isExpanded
-                    }
-                },
-                onLongClick = {
-                    scope.launch {
-                        clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Path", path)))
-                        Toast.makeText(context, copiedText, Toast.LENGTH_SHORT).show()
-                    }
-                }
-            )
+            .then(interactionModifier)
             .padding(horizontal = 16.dp, vertical = 12.dp)
             .animateContentSize(),
         verticalAlignment = if (isExpanded) Alignment.Top else Alignment.CenterVertically
