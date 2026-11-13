@@ -1,6 +1,5 @@
 package io.github.hddq.restoid.ui.home
 
-import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.hddq.restoid.R
@@ -65,7 +64,8 @@ data class HomeUiState(
     val isRepoReady: Boolean = false,
     val activeOperation: OperationRuntimeState = OperationRuntimeState(),
     val snapshotPendingForget: String? = null,
-    val isForgettingSnapshot: Boolean = false
+    val isForgettingSnapshot: Boolean = false,
+    val forgetSnapshotError: String? = null
 )
 
 class HomeViewModel(
@@ -170,7 +170,8 @@ class HomeViewModel(
                         showRestCredentialsDialogFor = null,
                         showS3CredentialsDialogFor = null,
                         snapshotPendingForget = null,
-                        isForgettingSnapshot = false
+                        isForgettingSnapshot = false,
+                        forgetSnapshotError = null
                     )
                 }
 
@@ -196,7 +197,8 @@ class HomeViewModel(
                         showRestCredentialsDialogFor = null,
                         showS3CredentialsDialogFor = null,
                         snapshotPendingForget = null,
-                        isForgettingSnapshot = false
+                        isForgettingSnapshot = false,
+                        forgetSnapshotError = null
                     )
                 }
                 return@combine
@@ -891,7 +893,7 @@ class HomeViewModel(
 
     fun requestForgetSnapshot(snapshotId: String) {
         if (_uiState.value.isForgettingSnapshot) return
-        _uiState.update { it.copy(snapshotPendingForget = snapshotId) }
+        _uiState.update { it.copy(snapshotPendingForget = snapshotId, forgetSnapshotError = null) }
     }
 
     fun dismissForgetDialog() {
@@ -899,12 +901,16 @@ class HomeViewModel(
         _uiState.update { it.copy(snapshotPendingForget = null) }
     }
 
+    fun dismissForgetErrorDialog() {
+        _uiState.update { it.copy(forgetSnapshotError = null) }
+    }
+
     fun confirmForgetSnapshot() {
         val snapshotId = _uiState.value.snapshotPendingForget ?: return
         if (_uiState.value.isForgettingSnapshot) return
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isForgettingSnapshot = true) }
+            _uiState.update { it.copy(isForgettingSnapshot = true, forgetSnapshotError = null) }
             try {
                 val result = repositoriesRepository.forgetSnapshot(
                     snapshotId = snapshotId,
@@ -922,22 +928,22 @@ class HomeViewModel(
                     },
                     onFailure = { error ->
                         val msg = error.message ?: context.getString(R.string.error_unknown)
-                        Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                         _uiState.update {
                             it.copy(
                                 snapshotPendingForget = null,
-                                isForgettingSnapshot = false
+                                isForgettingSnapshot = false,
+                                forgetSnapshotError = msg
                             )
                         }
                     }
                 )
             } catch (e: Exception) {
                 val msg = e.message ?: context.getString(R.string.error_unknown)
-                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                 _uiState.update {
                     it.copy(
                         snapshotPendingForget = null,
-                        isForgettingSnapshot = false
+                        isForgettingSnapshot = false,
+                        forgetSnapshotError = msg
                     )
                 }
             } finally {

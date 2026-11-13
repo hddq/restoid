@@ -208,6 +208,7 @@
     <string name="snapshot_time">Time: %1$s</string>
     <string name="snapshot_version_size">Version: %1$s - Size: %2$s</string>
     <string name="dialog_forget_snapshot_title">Forget Snapshot?</string>
+    <string name="dialog_forget_snapshot_failed_title">Failed to Forget Snapshot</string>
     <string name="dialog_forget_snapshot_message">This will remove the snapshot entry. The actual data will only be deleted after running a prune. Are you sure?</string>
 
     <string name="label_password">Password</string>

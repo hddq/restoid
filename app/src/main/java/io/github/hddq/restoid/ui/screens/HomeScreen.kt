@@ -109,6 +109,7 @@ fun HomeScreen(
     onRequestForgetSnapshot: (String) -> Unit = {},
     onConfirmForgetSnapshot: () -> Unit = {},
     onDismissForgetDialog: () -> Unit = {},
+    onDismissForgetErrorDialog: () -> Unit = {},
     onOpenOperationProgress: () -> Unit = {},
     onForceStopOperation: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -334,6 +335,13 @@ fun HomeScreen(
             isForgetting = uiState.isForgettingSnapshot,
             onConfirm = onConfirmForgetSnapshot,
             onDismiss = onDismissForgetDialog
+        )
+    }
+
+    if (uiState.forgetSnapshotError != null) {
+        ForgetErrorDialog(
+            errorMessage = uiState.forgetSnapshotError,
+            onDismiss = onDismissForgetErrorDialog
         )
     }
 

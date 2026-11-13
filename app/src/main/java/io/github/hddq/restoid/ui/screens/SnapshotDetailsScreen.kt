@@ -6,6 +6,9 @@ import android.widget.Toast
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -146,6 +149,13 @@ fun SnapshotDetailsScreen(
                 viewModel.confirmForgetSnapshot()
             },
             onDismiss = { viewModel.cancelForgetSnapshot() }
+        )
+    }
+
+    if (forgetResult is ForgetResult.Error) {
+        ForgetErrorDialog(
+            errorMessage = (forgetResult as ForgetResult.Error).message,
+            onDismiss = { viewModel.dismissForgetError() }
         )
     }
 
@@ -428,6 +438,32 @@ fun ConfirmForgetDialog(
                 enabled = !isForgetting
             ) {
                 Text(stringResource(R.string.action_cancel))
+            }
+        },
+        modifier = modifier
+    )
+}
+
+@Composable
+fun ForgetErrorDialog(
+    errorMessage: String,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.dialog_forget_snapshot_failed_title)) },
+        text = {
+            SelectionContainer {
+                Text(
+                    text = errorMessage,
+                    modifier = Modifier.verticalScroll(rememberScrollState())
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_ok))
             }
         },
         modifier = modifier
