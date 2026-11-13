@@ -72,8 +72,8 @@ class ResticRepository(
         password: String,
         environmentVariables: Map<String, String> = emptyMap(),
         resticOptions: Map<String, String> = emptyMap()
-    ) {
-        getSnapshots(repoPath, password, environmentVariables, resticOptions)
+    ): Result<List<SnapshotInfo>> {
+        return getSnapshots(repoPath, password, environmentVariables, resticOptions)
     }
 
     suspend fun check(

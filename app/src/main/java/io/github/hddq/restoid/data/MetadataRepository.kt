@@ -9,9 +9,11 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
 
-class MetadataRepository(private val context: Context) {
+class MetadataRepository internal constructor(
+    private val metadataRoot: File
+) {
+    constructor(context: Context) : this(File(context.filesDir, "metadata"))
 
-    private val metadataRoot = File(context.filesDir, "metadata")
     private val json = Json { ignoreUnknownKeys = true }
 
     suspend fun getSchedules(repoId: String): List<Schedule> {
@@ -120,6 +122,37 @@ class MetadataRepository(private val context: Context) {
                 false
             }
         }
+    }
+
+    suspend fun pruneOrphanedMetadata(repoId: String, activeSnapshotIds: Set<String>): Int {
+        return withContext(Dispatchers.IO) {
+            try {
+                val repoDir = File(metadataRoot, repoId)
+                if (!repoDir.exists() || !repoDir.isDirectory) return@withContext 0
+
+                val files = repoDir.listFiles { _, name ->
+                    name.endsWith(".json") && name != SCHEDULES_FILE_NAME
+                } ?: return@withContext 0
+
+                var deletedCount = 0
+                for (file in files) {
+                    val snapshotId = file.nameWithoutExtension
+                    if (!SNAPSHOT_ID_REGEX.matches(snapshotId)) continue
+                    if (snapshotId !in activeSnapshotIds && file.delete()) {
+                        deletedCount++
+                    }
+                }
+                deletedCount
+            } catch (e: Exception) {
+                e.printStackTrace()
+                0
+            }
+        }
+    }
+
+    private companion object {
+        const val SCHEDULES_FILE_NAME = "schedules.json"
+        val SNAPSHOT_ID_REGEX = Regex("^[0-9a-fA-F]{8,64}$")
     }
 }
 

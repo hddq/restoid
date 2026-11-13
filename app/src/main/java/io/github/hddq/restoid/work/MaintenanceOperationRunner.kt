@@ -3,6 +3,7 @@ package io.github.hddq.restoid.work
 import android.content.Context
 import android.os.SystemClock
 import io.github.hddq.restoid.R
+import io.github.hddq.restoid.data.MetadataRepository
 import io.github.hddq.restoid.data.OperationLockManager
 import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.RepositoryBackendType
@@ -16,6 +17,7 @@ class MaintenanceOperationRunner(
     private val repositoriesRepository: RepositoriesRepository,
     private val resticBinaryManager: ResticBinaryManager,
     private val resticRepository: ResticRepository,
+    private val metadataRepository: MetadataRepository,
     private val operationLockManager: OperationLockManager
 ) {
 
@@ -46,6 +48,7 @@ class MaintenanceOperationRunner(
         var operationLockAcquired = false
         var finalSummary = StringBuilder()
         var overallSuccess = true
+        var forgetSucceeded = false
         var wasCancelled = false
 
         try {
@@ -75,9 +78,10 @@ class MaintenanceOperationRunner(
                     }
                 )
             }
+            val forgetTaskName = context.getString(R.string.maintenance_task_forget)
             if (request.forgetSnapshots) {
                 tasksToRun.add(
-                    context.getString(R.string.maintenance_task_forget) to {
+                    forgetTaskName to {
                         resticRepository.forget(
                             selectedRepoPath,
                             password,
@@ -175,6 +179,9 @@ class MaintenanceOperationRunner(
 
                 result.fold(
                     onSuccess = { output ->
+                        if (taskName == forgetTaskName) {
+                            forgetSucceeded = true
+                        }
                         val summary = MaintenanceOutputParser.parse(taskName, output, context)
                         finalSummary.append(context.getString(R.string.maintenance_task_successful, taskName, summary))
                     },
@@ -185,13 +192,20 @@ class MaintenanceOperationRunner(
                 )
             }
 
-            if ((request.pruneRepo || request.forgetSnapshots) && overallSuccess) {
-                resticRepository.refreshSnapshots(
+            if ((request.pruneRepo || request.forgetSnapshots) && (overallSuccess || forgetSucceeded)) {
+                val snapshotsResult = resticRepository.refreshSnapshots(
                     selectedRepoPath,
                     password,
                     repositoryEnvironment,
                     repositoryResticOptions
                 )
+                if (forgetSucceeded) {
+                    val repoId = repository.id
+                    val activeIds = snapshotsResult.getOrNull()?.map { it.id }?.toSet()
+                    if (repoId != null && activeIds != null) {
+                        metadataRepository.pruneOrphanedMetadata(repoId, activeIds)
+                    }
+                }
             }
         } catch (e: OperationCancelledException) {
             overallSuccess = false

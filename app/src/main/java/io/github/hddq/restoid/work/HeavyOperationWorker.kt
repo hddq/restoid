@@ -151,6 +151,7 @@ class HeavyOperationWorker(
                                 resticBinaryManager = app.resticBinaryManager,
                                 resticRepository = app.resticRepository,
                                 appInfoRepository = app.appInfoRepository,
+                                metadataRepository = app.metadataRepository,
                                 operationLockManager = app.operationLockManager
                             )
                             runner.run(request, notifier::onProgress, shouldStop)
@@ -178,6 +179,7 @@ class HeavyOperationWorker(
                                 repositoriesRepository = app.repositoriesRepository,
                                 resticBinaryManager = app.resticBinaryManager,
                                 resticRepository = app.resticRepository,
+                                metadataRepository = app.metadataRepository,
                                 operationLockManager = app.operationLockManager
                             )
                             runner.run(request, notifier::onProgress, shouldStop)
