@@ -38,7 +38,11 @@ class OperationRuntimeRepository(context: Context) {
         )
     }
 
-    fun markProgress(operationType: OperationType, progress: OperationProgress) {
+    fun markProgress(
+        operationType: OperationType,
+        progress: OperationProgress,
+        persist: Boolean = true
+    ) {
         val current = _state.value
         updateState(
             OperationRuntimeState(
@@ -47,7 +51,8 @@ class OperationRuntimeRepository(context: Context) {
                 success = null,
                 stopRequested = current.stopRequested && current.operationType == operationType,
                 progress = progress
-            )
+            ),
+            persist = persist
         )
     }
 
@@ -113,8 +118,9 @@ class OperationRuntimeRepository(context: Context) {
             .getOrElse { OperationRuntimeState() }
     }
 
-    private fun updateState(newState: OperationRuntimeState) {
+    private fun updateState(newState: OperationRuntimeState, persist: Boolean = true) {
         _state.value = newState
+        if (!persist) return
         val encoded = runCatching { json.encodeToString(PersistedState.fromRuntimeState(newState)) }.getOrNull()
         if (encoded == null) {
             prefs.edit().remove(KEY_STATE).apply()
