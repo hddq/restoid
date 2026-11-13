@@ -5,7 +5,7 @@ on:
   workflow_call:
 
 concurrency:
-  group: repro-${{ github.ref }}
+  group: repro-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'workflow_dispatch' }}
 
 jobs:
