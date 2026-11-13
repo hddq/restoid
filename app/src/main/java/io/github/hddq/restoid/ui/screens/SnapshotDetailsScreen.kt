@@ -78,6 +78,7 @@ import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.model.BackupDetail
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
 import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
+import io.github.hddq.restoid.ui.components.SortableSectionHeader
 import coil.compose.AsyncImage
 import io.github.hddq.restoid.ui.snapshot.ForgetResult
 import io.github.hddq.restoid.ui.snapshot.SnapshotDetailsViewModel
@@ -104,6 +105,7 @@ fun SnapshotDetailsScreen(
     val snapshot by viewModel.snapshot.collectAsStateWithLifecycle()
     val metadata by viewModel.metadata.collectAsStateWithLifecycle()
     val backupDetails by viewModel.backupDetails.collectAsStateWithLifecycle()
+    val sortOrder by viewModel.sortOrder.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val error by viewModel.error.collectAsStateWithLifecycle()
     val showConfirmDialog by viewModel.showConfirmForgetDialog.collectAsStateWithLifecycle()
@@ -174,12 +176,14 @@ fun SnapshotDetailsScreen(
                     }
                     if (backupDetails.isNotEmpty()) {
                         item(key = "apps_header", contentType = "apps_header") {
-                            ExpressiveSectionHeader(
+                            SortableSectionHeader(
                                 title = pluralStringResource(
                                     R.plurals.snapshot_backed_up_apps_count,
                                     backupDetails.size,
                                     backupDetails.size
-                                )
+                                ),
+                                sortOrder = sortOrder,
+                                onSortOrderChange = viewModel::setSortOrder
                             )
                         }
                         itemsIndexed(

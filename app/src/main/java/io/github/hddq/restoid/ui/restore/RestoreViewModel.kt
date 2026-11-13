@@ -16,7 +16,9 @@ import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.BackupDetail
 import io.github.hddq.restoid.model.CustomDirectoryMetadata
 import io.github.hddq.restoid.model.RestoidMetadata
+import io.github.hddq.restoid.ui.shared.AppSortOrder
 import io.github.hddq.restoid.ui.shared.OperationProgress
+import io.github.hddq.restoid.ui.shared.sortBackupDetails
 import io.github.hddq.restoid.work.OperationWorkRepository
 import io.github.hddq.restoid.work.RestoreAppSelection
 import io.github.hddq.restoid.work.RestoreTypeSelection
@@ -95,6 +97,9 @@ class RestoreViewModel(
 
     private val _backupDetails = MutableStateFlow<List<BackupDetail>>(emptyList())
     val backupDetails = _backupDetails.asStateFlow()
+
+    private val _sortOrder = MutableStateFlow(AppSortOrder.SIZE)
+    val sortOrder = _sortOrder.asStateFlow()
 
     private val _customDirectories = MutableStateFlow<Map<String, Boolean>>(emptyMap())
     val customDirectories = _customDirectories.asStateFlow()
@@ -266,10 +271,7 @@ class RestoreViewModel(
                 BackupDetail(finalAppInfo, items, appMeta.versionName, appMeta.versionCode, appMeta.size, isDowngrade, isInstalled)
             }
 
-            _backupDetails.value = details.sortedWith(
-                compareByDescending<BackupDetail> { it.backupSize ?: 0L }
-                    .thenBy { it.appInfo.name.lowercase() }
-            )
+            _backupDetails.value = sortBackupDetails(details, _sortOrder.value)
             _appRestoreTypes.value = details.associate { detail ->
                 detail.appInfo.packageName to (_appRestoreTypes.value[detail.appInfo.packageName] ?: _restoreTypes.value)
             }
@@ -283,6 +285,13 @@ class RestoreViewModel(
         if (_customDirectories.value.isNotEmpty()) {
             _restoreCustomDirectoriesEnabled.value = true
         }
+    }
+
+    fun setSortOrder(order: AppSortOrder) {
+        if (_sortOrder.value == order) return
+
+        _sortOrder.value = order
+        _backupDetails.update { details -> sortBackupDetails(details, order) }
     }
 
     fun setRestoreAppsEnabled(enabled: Boolean) {
