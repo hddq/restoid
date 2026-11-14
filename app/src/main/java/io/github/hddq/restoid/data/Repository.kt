@@ -14,7 +14,8 @@ enum class RepositoryBackendType {
     LOCAL,
     SFTP,
     REST,
-    S3
+    S3,
+    RCLONE
 }
 
 @Serializable
@@ -39,7 +40,8 @@ private fun defaultRepositoryName(path: String, backendType: RepositoryBackendTy
         RepositoryBackendType.LOCAL -> File(trimmed).name.ifBlank { trimmed }
         RepositoryBackendType.SFTP,
         RepositoryBackendType.REST,
-        RepositoryBackendType.S3 -> {
+        RepositoryBackendType.S3,
+        RepositoryBackendType.RCLONE -> {
             val segment = trimmed.substringAfterLast('/').substringAfterLast(':')
             if (segment.isBlank()) trimmed else segment
         }

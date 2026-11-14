@@ -4,9 +4,7 @@ import java.io.File
 tasks.register<Exec>("buildBundledRestic") {
     group = "restic"
     description = "Builds restic binary from submodule using bash script"
-
-    inputs.dir(rootProject.file("restic"))
-    outputs.dir(file("src/main/jniLibs"))
+    doNotTrackState("Binaries are built only if missing from jniLibs")
 
     onlyIf("binaries not yet built") {
         !file("src/main/jniLibs/arm64-v8a/librestic.so").exists() ||
@@ -15,6 +13,29 @@ tasks.register<Exec>("buildBundledRestic") {
 
     workingDir = rootProject.projectDir
     commandLine = listOf("bash", "scripts/build_restic.sh")
+}
+
+// This task builds the rclone binary from the submodule for each required Android architecture.
+tasks.register<Exec>("buildBundledRclone") {
+    group = "rclone"
+    description = "Builds rclone binary from submodule using bash script"
+
+    // Track only the files that identify the rclone revision and the build recipe.
+    // (Hashing the whole submodule tree fails on files with non-UTF-8 names.)
+    inputs.files(
+        rootProject.file("scripts/build_rclone.sh"),
+        rootProject.file(".go-version"),
+        rootProject.file("rclone/go.mod"),
+        rootProject.file("rclone/go.sum"),
+        rootProject.file("rclone/fs/versiontag.go"),
+    ).withPropertyName("rcloneBuildInputs")
+    outputs.files(
+        file("src/main/jniLibs/arm64-v8a/librclone.so"),
+        file("src/main/jniLibs/x86_64/librclone.so"),
+    )
+
+    workingDir = rootProject.projectDir
+    commandLine = listOf("bash", "scripts/build_rclone.sh")
 }
 
 plugins {
@@ -198,4 +219,5 @@ dependencies {
 
 tasks.named("preBuild").configure {
     dependsOn(tasks.named("buildBundledRestic"))
+    dependsOn(tasks.named("buildBundledRclone"))
 }
