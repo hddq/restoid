@@ -322,7 +322,10 @@ jobs:
             fi
           done
 
+          suggested_candidates=""
+          current_copied=false
           for apk in release-assets/*.apk; do
+            [ -e "$apk" ] || continue
             filename=$(basename "$apk")
             if [[ "$filename" == *"universal"* ]]; then
               echo "Skipping universal APK for F-Droid: $filename"
@@ -330,7 +333,11 @@ jobs:
             fi
             new_filename="${filename%.*}-${TAG}.apk"
             cp "$apk" "fdroid/repo/$new_filename"
+            current_copied=true
           done
+          if [ "$IS_PRERELEASE" != "true" ] && [ "$current_copied" = true ]; then
+            suggested_candidates="$TAG"
+          fi
 
           # Besides the current tag, keep the 2 newest *stable* releases. Pre-releases are
           # excluded, so a beta tag never pushes stable builds out of the repo, and a stable
@@ -345,8 +352,13 @@ jobs:
           for tag in $old_tags; do
             echo "Processing older stable release: $tag"
             mkdir -p "temp_dl_$tag"
-            gh release download "$tag" --pattern "*.apk" --dir "temp_dl_$tag" || continue
+            if ! gh release download "$tag" --pattern "*.apk" --dir "temp_dl_$tag"; then
+              echo "::warning::Failed to download APKs for older stable release $tag; skipping."
+              rm -rf "temp_dl_$tag"
+              continue
+            fi
 
+            tag_copied=false
             for apk in "temp_dl_$tag"/*.apk; do
               [ -e "$apk" ] || continue
               filename=$(basename "$apk")
@@ -356,16 +368,17 @@ jobs:
               fi
               new_filename="${filename%.*}-${tag}.apk"
               mv "$apk" "fdroid/repo/$new_filename"
+              tag_copied=true
             done
             rm -rf "temp_dl_$tag"
+
+            if [ "$tag_copied" = true ]; then
+              suggested_candidates=$(printf '%s\n%s' "$suggested_candidates" "$tag")
+            fi
           done
 
           # Suggested version (CurrentVersion/CurrentVersionCode) = newest stable release in the repo.
-          suggested_candidates="$old_tags"
-          if [ "$IS_PRERELEASE" != "true" ]; then
-            suggested_candidates=$(printf '%s\n%s\n' "$TAG" "$old_tags")
-          fi
-          SUGGESTED_TAG=$(printf '%s\n' "$suggested_candidates" | sed '/^$/d' | sort -V | tail -n 1)
+          SUGGESTED_TAG=$(printf '%s\n' "$suggested_candidates" | sed '/^$/d' | sort -V | tail -n 1 || true)
 
           SUGGESTED_CODE=""
           if [ -n "$SUGGESTED_TAG" ]; then
@@ -391,6 +404,9 @@ jobs:
               exit 1
             fi
             echo "Suggested version: ${SUGGESTED_TAG#v} ($SUGGESTED_CODE)"
+          elif [ "$IS_PRERELEASE" = "true" ] && [ -n "$old_tags" ]; then
+            echo "::error::Failed to download APKs for any previous stable release; refusing to publish pre-release without a stable suggested version."
+            exit 1
           else
             echo "::warning::No stable release available; fdroid will suggest the highest versionCode in the repo."
           fi
