@@ -72,7 +72,7 @@
 
         shellHook = '' # bash
           export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
-          export GRADLE_USER_HOME="$PWD/.gradle"
+          export GRADLE_USER_HOME="$HOME/.gradle"
           export ANDROID_USER_HOME="$HOME/.android"
 
           mkdir -p "$GRADLE_USER_HOME" "$ANDROID_USER_HOME"
