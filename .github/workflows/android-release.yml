@@ -13,11 +13,68 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  validate-version:
+    runs-on: ubuntu-latest
+    outputs:
+      is_prerelease: ${{ steps.version.outputs.is_prerelease }}
+      changelog_version_code: ${{ steps.version.outputs.changelog_version_code }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Validate tag against Gradle version metadata
+        id: version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          GRADLE_FILE=app/build.gradle.kts
+
+          if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z][0-9A-Za-z.-]*)?$ ]]; then
+            echo "::error::Tag '$TAG' must look like vX.Y.Z or vX.Y.Z-<pre-release> (e.g. v0.9.0-beta.1)."
+            exit 1
+          fi
+
+          VERSION_NAME=$(sed -n -E 's/^[[:space:]]*versionName = "([^"]+)".*/\1/p' "$GRADLE_FILE")
+          BASE_CODE=$(sed -n -E 's/^val baseAppVersionCode = ([0-9]+).*/\1/p' "$GRADLE_FILE")
+          DEFAULT_CODE=$(sed -n -E 's/^[[:space:]]*versionCode = ([0-9]+).*/\1/p' "$GRADLE_FILE")
+          echo "Tag: $TAG | versionName: $VERSION_NAME | baseAppVersionCode: $BASE_CODE | defaultConfig.versionCode: $DEFAULT_CODE"
+
+          if [ "v${VERSION_NAME}" != "$TAG" ]; then
+            echo "::error::Tag '$TAG' does not match versionName '$VERSION_NAME' in $GRADLE_FILE (expected tag 'v$VERSION_NAME')."
+            exit 1
+          fi
+          # F-Droid checkupdates parses the literal defaultConfig.versionCode, while the
+          # APKs use baseAppVersionCode; both must be bumped together.
+          if [ -z "$BASE_CODE" ] || [ "$BASE_CODE" != "$DEFAULT_CODE" ]; then
+            echo "::error::baseAppVersionCode ($BASE_CODE) and defaultConfig versionCode ($DEFAULT_CODE) must be equal."
+            exit 1
+          fi
+
+          if [[ "$TAG" == *-* ]]; then IS_PRERELEASE=true; else IS_PRERELEASE=false; fi
+          # Fastlane/F-Droid changelogs are keyed by the highest per-ABI versionCode (x86_64 = 10 * base + 2).
+          CHANGELOG_VERSION_CODE=$((BASE_CODE * 10 + 2))
+          CHANGELOG_FILE="fastlane/metadata/android/en-US/changelogs/${CHANGELOG_VERSION_CODE}.txt"
+          if [ ! -f "$CHANGELOG_FILE" ]; then
+            if [ "$IS_PRERELEASE" = "true" ]; then
+              echo "::warning::$CHANGELOG_FILE not found; the pre-release will be published without a Highlights section."
+            else
+              echo "::error::$CHANGELOG_FILE is required for stable releases (used by GitHub release notes and F-Droid)."
+              exit 1
+            fi
+          fi
+
+          {
+            echo "is_prerelease=$IS_PRERELEASE"
+            echo "changelog_version_code=$CHANGELOG_VERSION_CODE"
+          } >> "$GITHUB_OUTPUT"
+
   check-reproducibility:
+    needs: validate-version
     uses: ./.github/workflows/reproducibility.yml
 
   build-and-release:
-    needs: check-reproducibility
+    needs: [validate-version, check-reproducibility]
     runs-on: ubuntu-latest
     env:
       JAVA_VERSION: "21"
@@ -156,18 +213,45 @@ jobs:
           echo "Found mapping file: ${mappings[0]}"
           gzip -9 -n -c "${mappings[0]}" > release-assets/mapping.txt.gz
 
-      - name: Prepare release highlights from Fastlane changelog
+      - name: Prepare release notes
         id: changelog
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+          CHANGELOG_VERSION_CODE: ${{ needs.validate-version.outputs.changelog_version_code }}
         run: |
           set -euo pipefail
-          CHANGELOG_FILE=$(find fastlane/metadata/android/en-US/changelogs -type f -name '*.txt' | sort -V | tail -n 1)
-          echo "Found changelog: $CHANGELOG_FILE"
           RELEASE_BODY_FILE="$RUNNER_TEMP/release-body.md"
+          CHANGELOG_FILE="fastlane/metadata/android/en-US/changelogs/${CHANGELOG_VERSION_CODE}.txt"
+
+          # Always compare against the newest stable release *below* this version, so
+          # v0.9.0-beta.1, v0.9.0-beta.2 and v0.9.0 all diff against e.g. v0.8.1.
+          BASE_TAG="${TAG%%-*}"
+          STABLE_TAGS=$(gh release list --exclude-drafts --exclude-pre-releases --limit 100 --json tagName --jq '.[].tagName')
+          PREV_STABLE_TAG=$(printf '%s\n' "$STABLE_TAGS" "$BASE_TAG" \
+            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+            | sort -u -V \
+            | awk -v base="$BASE_TAG" '$0 == base { exit } { last = $0 } END { print last }')
+
+          notes_args=(-f tag_name="$TAG")
+          if [ -n "$PREV_STABLE_TAG" ]; then
+            echo "Generating release notes for $TAG against previous stable release $PREV_STABLE_TAG"
+            notes_args+=(-f previous_tag_name="$PREV_STABLE_TAG")
+          else
+            echo "::warning::No previous stable release found; GitHub will pick the comparison base."
+          fi
+          GENERATED_NOTES=$(gh api "repos/${{ github.repository }}/releases/generate-notes" "${notes_args[@]}" --jq '.body')
+
           {
-            echo "## Highlights"
-            echo ""
-            cat "$CHANGELOG_FILE"
-            printf '\n\n'
+            if [ -f "$CHANGELOG_FILE" ]; then
+              echo "Using changelog: $CHANGELOG_FILE" >&2
+              echo "## Highlights"
+              echo ""
+              cat "$CHANGELOG_FILE"
+              printf '\n\n'
+            fi
+            printf '%s\n' "$GENERATED_NOTES"
           } > "$RELEASE_BODY_FILE"
           echo "path=$RELEASE_BODY_FILE" >> "$GITHUB_OUTPUT"
 
@@ -176,7 +260,9 @@ jobs:
         with:
           name: Restoid ${{ github.ref_name }}
           tag_name: ${{ github.ref_name }}
-          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          # Notes are generated above against the last stable release; don't let GitHub add a second set.
+          generate_release_notes: false
           body_path: ${{ steps.changelog.outputs.path }}
           files: |
             ${{ steps.collect_apks.outputs.files }}
@@ -189,6 +275,10 @@ jobs:
           FDROID_REPO_KEY_ALIAS: ${{ secrets.FDROID_REPO_KEY_ALIAS }}
           FDROID_REPO_KEYSTORE_PASSWORD: ${{ secrets.FDROID_REPO_KEYSTORE_PASSWORD }}
           FDROID_REPO_KEY_PASSWORD: ${{ secrets.FDROID_REPO_KEY_PASSWORD }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+          IS_PRERELEASE: ${{ needs.validate-version.outputs.is_prerelease }}
         run: |
           set -euo pipefail
           test -n "$FDROID_REPO_KEYSTORE_BASE64"
@@ -200,6 +290,8 @@ jobs:
           printf '%s' "$FDROID_REPO_KEYSTORE_BASE64" | base64 --decode > fdroid/keystore.jks
           chmod 600 fdroid/keystore.jks
 
+          # archive_older: 0 -> keep every APK we put in repo/; the selection below is explicit
+          # (current tag + last 2 stable releases), so fdroidserver must not archive any of them.
           cat > fdroid/config.yml <<EOF
           repo_url: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/fdroid/repo
           repo_name: ${{ github.event.repository.name }}
@@ -208,6 +300,7 @@ jobs:
           keystorepass: ${FDROID_REPO_KEYSTORE_PASSWORD}
           keypass: ${FDROID_REPO_KEY_PASSWORD}
           repo_keyalias: ${FDROID_REPO_KEY_ALIAS}
+          archive_older: 0
           EOF
           chmod 600 fdroid/config.yml
 
@@ -229,35 +322,43 @@ jobs:
             fi
           done
 
-          cat > "fdroid/metadata/${APP_ID}.yml" <<EOF
-          Categories:
-            - System
-          License: GPL-3.0-only
-          AuthorName: hddq
-          SourceCode: https://github.com/hddq/restoid
-          IssueTracker: https://github.com/hddq/restoid/issues
-          Translation: https://crowdin.com/project/restoid
-          EOF
-
+          suggested_candidates=""
+          current_copied=false
           for apk in release-assets/*.apk; do
+            [ -e "$apk" ] || continue
             filename=$(basename "$apk")
             if [[ "$filename" == *"universal"* ]]; then
               echo "Skipping universal APK for F-Droid: $filename"
               continue
             fi
-            new_filename="${filename%.*}-${{ github.ref_name }}.apk"
+            new_filename="${filename%.*}-${TAG}.apk"
             cp "$apk" "fdroid/repo/$new_filename"
+            current_copied=true
           done
+          if [ "$IS_PRERELEASE" != "true" ] && [ "$current_copied" = true ]; then
+            suggested_candidates="$TAG"
+          fi
 
-          export GH_TOKEN=${{ secrets.GITHUB_TOKEN }}
-          # Grab up to 3 tags to ensure we get 2 older ones after filtering out the current one
-          old_tags=$(gh release list --limit 3 --json tagName --jq '.[].tagName' | grep -v "^${{ github.ref_name }}$" || true)
+          # Besides the current tag, keep the 2 newest *stable* releases. Pre-releases are
+          # excluded, so a beta tag never pushes stable builds out of the repo, and a stable
+          # tag never carries older betas along.
+          STABLE_TAGS=$(gh release list --exclude-drafts --exclude-pre-releases --limit 100 --json tagName --jq '.[].tagName')
+          old_tags=$(printf '%s\n' "$STABLE_TAGS" \
+            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+            | grep -vxF "$TAG" \
+            | sort -u -V -r \
+            | head -n 2 || true)
 
           for tag in $old_tags; do
-            echo "Processing older release: $tag"
+            echo "Processing older stable release: $tag"
             mkdir -p "temp_dl_$tag"
-            gh release download "$tag" --pattern "*.apk" --dir "temp_dl_$tag" || continue
+            if ! gh release download "$tag" --pattern "*.apk" --dir "temp_dl_$tag"; then
+              echo "::warning::Failed to download APKs for older stable release $tag; skipping."
+              rm -rf "temp_dl_$tag"
+              continue
+            fi
 
+            tag_copied=false
             for apk in "temp_dl_$tag"/*.apk; do
               [ -e "$apk" ] || continue
               filename=$(basename "$apk")
@@ -267,9 +368,68 @@ jobs:
               fi
               new_filename="${filename%.*}-${tag}.apk"
               mv "$apk" "fdroid/repo/$new_filename"
+              tag_copied=true
             done
             rm -rf "temp_dl_$tag"
+
+            if [ "$tag_copied" = true ]; then
+              suggested_candidates=$(printf '%s\n%s' "$suggested_candidates" "$tag")
+            fi
           done
+
+          # Suggested version (CurrentVersion/CurrentVersionCode) = newest stable release in the repo.
+          SUGGESTED_TAG=$(printf '%s\n' "$suggested_candidates" | sed '/^$/d' | sort -V | tail -n 1 || true)
+
+          SUGGESTED_CODE=""
+          if [ -n "$SUGGESTED_TAG" ]; then
+            BUILD_TOOLS=$(sed -n -E 's/.*buildToolsVersion = "(.*)".*/\1/p' app/build.gradle.kts | tr -d ' ')
+            AAPT2="$ANDROID_HOME/build-tools/$BUILD_TOOLS/aapt2"
+            if [ ! -x "$AAPT2" ]; then
+              AAPT2=$(find "$ANDROID_HOME/build-tools" -type f -name aapt2 | sort -V | tail -n 1)
+            fi
+            test -x "$AAPT2"
+
+            # Highest versionCode across that release's per-ABI APKs (x86_64 = 10 * base + 2), so the
+            # F-Droid client suggests the matching build for every ABI and shows <code>.txt as "What's new".
+            for apk in fdroid/repo/*-"${SUGGESTED_TAG}".apk; do
+              [ -e "$apk" ] || continue
+              code=$("$AAPT2" dump badging "$apk" | sed -n -E "s/^package: .*versionCode='([0-9]+)'.*/\1/p")
+              echo "  $(basename "$apk"): versionCode=$code"
+              if [ -n "$code" ] && { [ -z "$SUGGESTED_CODE" ] || [ "$code" -gt "$SUGGESTED_CODE" ]; }; then
+                SUGGESTED_CODE="$code"
+              fi
+            done
+            if [ -z "$SUGGESTED_CODE" ]; then
+              echo "::error::Could not determine versionCode for latest stable release $SUGGESTED_TAG."
+              exit 1
+            fi
+            echo "Suggested version: ${SUGGESTED_TAG#v} ($SUGGESTED_CODE)"
+          elif [ "$IS_PRERELEASE" = "true" ] && [ -n "$old_tags" ]; then
+            echo "::error::Failed to download APKs for any previous stable release; refusing to publish pre-release without a stable suggested version."
+            exit 1
+          else
+            echo "::warning::No stable release available; fdroid will suggest the highest versionCode in the repo."
+          fi
+
+          cat > "fdroid/metadata/${APP_ID}.yml" <<EOF
+          Categories:
+            - System
+          License: GPL-3.0-only
+          AuthorName: hddq
+          SourceCode: https://github.com/hddq/restoid
+          IssueTracker: https://github.com/hddq/restoid/issues
+          Translation: https://crowdin.com/project/restoid
+          EOF
+          if [ -n "$SUGGESTED_CODE" ]; then
+            {
+              echo "CurrentVersion: '${SUGGESTED_TAG#v}'"
+              echo "CurrentVersionCode: ${SUGGESTED_CODE}"
+            } >> "fdroid/metadata/${APP_ID}.yml"
+          fi
+          echo "--- fdroid/metadata/${APP_ID}.yml ---"
+          cat "fdroid/metadata/${APP_ID}.yml"
+          echo "--- fdroid/repo ---"
+          ls -1 fdroid/repo
 
           docker run --rm -v "${PWD}/fdroid:/fdroid" -w /fdroid debian:testing bash -c "apt-get update && apt-get install -y fdroidserver aapt && fdroid update --create-metadata"
           sudo chown -R $USER:$USER fdroid
