@@ -16,7 +16,8 @@ Zero-Knowledge Encryption
 
 Flexible Storage Backends
 • Local Storage: Save to internal memory, SD card, or USB OTG drives.
-• Network & Cloud: Native support for SFTP (SSH key & password), REST server, and Amazon S3-compatible object storage (Garage, MinIO, Wasabi, Cloudflare R2, Backblaze B2).
+• Native Network Backends: Direct support for SFTP (SSH key & password), REST server, and Amazon S3-compatible object storage (Garage, MinIO, Wasabi, Cloudflare R2, Backblaze B2).
+• Cloud & Extra Backends via Rclone: Connect to dozens of storage providers and protocols (such as Google Drive, OneDrive, Dropbox, WebDAV, Nextcloud, pCloud, and more) with built-in rclone support by importing or pasting an rclone.conf.
 
 Full App & Data Backup (Root Required)
 • Selectively back up installed user applications.
