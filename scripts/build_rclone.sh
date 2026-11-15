@@ -92,7 +92,18 @@ fi
 OVERLAY_DIR="$(mktemp -d)"
 trap 'rm -rf "$OVERLAY_DIR"' EXIT
 grep -v "$RCLONE_GUI_IMPORT_RE" "$RCLONE_ALL_GO" > "$OVERLAY_DIR/all.go"
-printf '{"Replace":{"%s":"%s"}}\n' "$RCLONE_ALL_GO" "$OVERLAY_DIR/all.go" > "$OVERLAY_DIR/overlay.json"
+json_escape() {
+    local s="${1//\\/\\\\}"
+    s="${s//\"/\\\"}"
+    if [[ "$s" == *[[:cntrl:]]* ]]; then
+        echo "Error: path contains control characters: $1" >&2
+        exit 1
+    fi
+    printf '%s' "$s"
+}
+OVERLAY_SRC_JSON="$(json_escape "$RCLONE_ALL_GO")"
+OVERLAY_DST_JSON="$(json_escape "$OVERLAY_DIR/all.go")"
+printf '{"Replace":{"%s":"%s"}}\n' "$OVERLAY_SRC_JSON" "$OVERLAY_DST_JSON" > "$OVERLAY_DIR/overlay.json"
 
 for abi in "${!ABI_TO_GOARCH[@]}"; do
     goarch="${ABI_TO_GOARCH[$abi]}"
