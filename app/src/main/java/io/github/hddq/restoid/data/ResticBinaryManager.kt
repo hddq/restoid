@@ -34,14 +34,23 @@ class ResticBinaryManager(
     private val _resticState = MutableStateFlow<ResticState>(ResticState.Idle)
     val resticState = _resticState.asStateFlow()
 
+    private val _rcloneState = MutableStateFlow<ResticState>(ResticState.Idle)
+    val rcloneState = _rcloneState.asStateFlow()
+
     private val resticFile: File
         get() = resolveBundledBinary("librestic.so")
+
+    private val rcloneFile: File
+        get() = resolveBundledBinary("librclone.so")
 
     private val sshAskpassFile: File
         get() = resolveBundledBinary("libssh_askpass.so")
 
     val isInstalled: Boolean
         get() = getBinaryPath() != null
+
+    val isRcloneInstalled: Boolean
+        get() = getRcloneBinaryPath() != null
 
     init {
         val path = resticFile.takeIf { it.exists() && it.canExecute() }?.absolutePath
@@ -50,12 +59,22 @@ class ResticBinaryManager(
         } else {
             _resticState.value = ResticState.Error(stringResolver(R.string.restic_error_bundled_not_found))
         }
+
+        val rclonePath = rcloneFile.takeIf { it.exists() && it.canExecute() }?.absolutePath
+        if (rclonePath != null) {
+            _rcloneState.value = ResticState.Installed(rclonePath, "", "")
+        } else {
+            _rcloneState.value = ResticState.Error(stringResolver(R.string.repo_error_rclone_binary_not_ready))
+        }
     }
 
     fun getBinaryPath(): String? {
         if (_resticState.value is ResticState.Error) return null
         return resticFile.takeIf { it.exists() && it.canExecute() }?.absolutePath
     }
+
+    fun getRcloneBinaryPath(): String? =
+        rcloneFile.takeIf { it.exists() && it.canExecute() }?.absolutePath
 
     fun getSshAskpassPath(): String? =
         sshAskpassFile.takeIf { it.exists() && it.canExecute() }?.absolutePath
@@ -84,6 +103,20 @@ class ResticBinaryManager(
                     }
                 } else {
                     _resticState.value = ResticState.Error(stringResolver(R.string.restic_error_bundled_not_found))
+                }
+
+                val rcloneBin = rcloneFile
+                if (rcloneBin.exists() && rcloneBin.canExecute()) {
+                    val (isSuccess, out) = versionCommandRunner(rcloneBin)
+                    if (isSuccess) {
+                        val versionOutput = out.firstOrNull()?.trim() ?: stringResolver(R.string.restic_unknown_version)
+                        val version = versionOutput.split(" ").getOrNull(1) ?: stringResolver(R.string.restic_unknown)
+                        _rcloneState.value = ResticState.Installed(rcloneBin.absolutePath, version, versionOutput)
+                    } else {
+                        _rcloneState.value = ResticState.Error(stringResolver(R.string.restic_error_binary_corrupted))
+                    }
+                } else {
+                    _rcloneState.value = ResticState.Error(stringResolver(R.string.repo_error_rclone_binary_not_ready))
                 }
             }
         }

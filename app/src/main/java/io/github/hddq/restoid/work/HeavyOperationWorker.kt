@@ -105,7 +105,7 @@ class HeavyOperationWorker(
         }
         fun armLossMonitor(repositoryKey: String?, requireUnmetered: Boolean) {
             val repository = repositoryKey?.let { app.repositoriesRepository.getRepositoryByKey(it) }
-            lossMonitor.configure(isRemoteBackend(repository?.backendType), requireUnmetered)
+            lossMonitor.configure(app.repositoriesRepository.isRemoteRepository(repository), requireUnmetered)
             lossMonitor.start()
         }
 

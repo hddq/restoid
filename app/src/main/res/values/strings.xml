@@ -282,6 +282,28 @@
     <string name="repo_backend_sftp">SFTP (SSH)</string>
     <string name="repo_backend_rest">HTTP REST server</string>
     <string name="repo_backend_s3" translatable="false">Amazon S3 / MinIO</string>
+    <string name="repo_backend_rclone" translatable="false">Rclone</string>
+    <string name="repo_hint_rclone" translatable="false">remote:path/to/repo</string>
+    <string name="rclone_missing_config_title">No rclone.conf found</string>
+    <string name="action_load_config">Load config</string>
+    <string name="action_edit_config">Edit config</string>
+    <string name="rclone_config_title">Rclone Configuration</string>
+    <string name="rclone_config_subtitle_configured">Config loaded: %1$d remote(s) found (%2$s)</string>
+    <string name="rclone_config_subtitle_none">No rclone.conf loaded. Tap to import or paste.</string>
+    <string name="rclone_config_dialog_title">Rclone Configuration</string>
+    <string name="rclone_config_dialog_description">Paste your rclone.conf file content below or import an existing configuration file.</string>
+    <string name="rclone_config_import_file">Import file</string>
+    <string name="rclone_config_paste_placeholder" translatable="false"># Paste rclone.conf content here\n[myremote]\ntype = ...</string>
+    <string name="rclone_config_deleted">rclone.conf deleted</string>
+    <string name="rclone_config_delete">Delete Config</string>
+    <string name="rclone_config_saved_success">Rclone configuration saved.</string>
+    <string name="rclone_config_saved_error">Failed to save rclone configuration.</string>
+    <string name="rclone_config_import_error">Failed to read selected file.</string>
+    <string name="repo_error_rclone_binary_not_ready">Rclone binary is not ready.</string>
+    <string name="repo_error_rclone_config_missing">No rclone.conf configuration found. Please configure Rclone first.</string>
+    <string name="rclone_select_remote">Select remote</string>
+    <string name="rclone_no_remotes_warning">No remotes detected in rclone.conf. Make sure it contains valid [remote_name] sections.</string>
+    <string name="rclone_missing_config_warning">No rclone.conf loaded. Configure Rclone in Settings to import or paste your config.</string>
 
     <string name="label_sftp_host">Host</string>
     <string name="label_sftp_port">Port</string>
@@ -354,6 +376,7 @@
     <string name="action_save_passwords">Save Passwords</string>
     <string name="action_change_password">Change password</string>
     <string name="restic_binary">Restic Binary</string>
+    <string name="rclone_binary">Rclone Binary</string>
     <string name="restic_checking_status">Checking status…</string>
     <string name="restic_error_with_message">Error: %1$s</string>
 

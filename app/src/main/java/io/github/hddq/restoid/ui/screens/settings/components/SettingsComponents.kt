@@ -268,6 +268,7 @@ fun SelectableRepositoryRow(
                             RepositoryBackendType.SFTP -> stringResource(R.string.repo_backend_sftp)
                             RepositoryBackendType.REST -> stringResource(R.string.repo_backend_rest)
                             RepositoryBackendType.S3 -> stringResource(R.string.repo_backend_s3)
+                            RepositoryBackendType.RCLONE -> stringResource(R.string.repo_backend_rclone)
                         },
                         style = MaterialTheme.typography.labelSmall,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
@@ -577,6 +578,54 @@ fun ResticDependencyRow(state: ResticState) {
                         overflow = TextOverflow.Ellipsis
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun RcloneDependencyRow(state: ResticState) {
+    AnimatedContent(targetState = state, label = "RcloneStatusAnimation") { targetState ->
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val icon: ImageVector
+            val iconColor: Color
+
+            when (targetState) {
+                is ResticState.Installed -> {
+                    icon = Icons.Outlined.CheckCircle
+                    iconColor = MaterialTheme.colorScheme.primary
+                }
+                is ResticState.Error -> {
+                    icon = Icons.Outlined.ErrorOutline
+                    iconColor = MaterialTheme.colorScheme.error
+                }
+                ResticState.Idle -> {
+                    icon = Icons.Outlined.CheckCircle
+                    iconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                }
+            }
+
+            Icon(imageVector = icon, contentDescription = null, modifier = Modifier.padding(end = 16.dp), tint = iconColor)
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(stringResource(R.string.rclone_binary), style = MaterialTheme.typography.bodyLarge)
+                val supportingText = when (targetState) {
+                    ResticState.Idle -> stringResource(R.string.restic_checking_status)
+                    is ResticState.Installed -> targetState.fullVersionOutput.ifBlank { "rclone" }
+                    is ResticState.Error -> targetState.message
+                }
+                Text(
+                    text = supportingText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }

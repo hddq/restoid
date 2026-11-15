@@ -148,4 +148,26 @@ class ResticBinaryManagerTest {
             tempDir.deleteRecursively()
         }
     }
+
+    @Test
+    fun rcloneBinaryPresentAndExecutable_isDetectedCorrectly() {
+        val tempDir = Files.createTempDirectory("restoid_test_native_rclone").toFile()
+        try {
+            val rcloneBin = File(tempDir, "librclone.so")
+            rcloneBin.writeText("#!/bin/sh\necho rclone v1.69.2")
+            rcloneBin.setExecutable(true)
+
+            val manager = ResticBinaryManager(
+                context = FakeContext(),
+                nativeLibDirProvider = { tempDir },
+                stringResolver = { "error" }
+            )
+
+            assertTrue(manager.isRcloneInstalled)
+            assertNotNull(manager.getRcloneBinaryPath())
+            assertEquals(rcloneBin.absolutePath, manager.getRcloneBinaryPath())
+        } finally {
+            tempDir.deleteRecursively()
+        }
+    }
 }

@@ -11,6 +11,7 @@ import io.github.hddq.restoid.util.buildResticOptionFlags
 import io.github.hddq.restoid.util.buildShellEnvironmentPrefix
 import io.github.hddq.restoid.util.isValidResticOptionName
 import io.github.hddq.restoid.util.shellQuote
+import io.github.hddq.restoid.work.isRemoteBackend
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -319,7 +320,25 @@ class RepositoriesRepository(
             }
         }
 
+        if (repository.backendType == RepositoryBackendType.RCLONE) {
+            val rcloneConfigFile = getRcloneConfigFile()
+            if (rcloneConfigFile.exists()) {
+                executionEnvironment = executionEnvironment + mapOf(
+                    "RCLONE_CONFIG" to rcloneConfigFile.absolutePath
+                )
+            }
+        }
+
         return executionEnvironment
+    }
+
+    private fun withBundledRcloneProgram(options: Map<String, String>): Map<String, String> {
+        val bundledPath = binaryManager.getRcloneBinaryPath() ?: return options
+        val saved = options["rclone.program"]
+        // Keep a user-chosen custom program; replace missing or stale bundled paths.
+        val isStaleBundled = saved != null &&
+            (File(saved).name == "librclone.so" || !File(saved).exists())
+        return if (saved == null || isStaleBundled) options + ("rclone.program" to bundledPath) else options
     }
 
     fun getExecutionResticOptions(key: String): Map<String, String> {
@@ -342,9 +361,15 @@ class RepositoriesRepository(
             null
         }
 
+        val baseOptions = if (repository.backendType == RepositoryBackendType.RCLONE) {
+            withBundledRcloneProgram(repository.resticOptions)
+        } else {
+            repository.resticOptions
+        }
+
         return applySftpResticOptionDefaults(
             backendType = repository.backendType,
-            options = repository.resticOptions,
+            options = baseOptions,
             knownHostsFile = knownHostsFile,
             strictHostKeyCheckingValue = "yes",
             sftpKeyFilePath = sftpKeyFilePath
@@ -628,6 +653,25 @@ class RepositoriesRepository(
                     s3AccessKeyId.isNotBlank() &&
                     s3SecretAccessKey.isNotBlank()
 
+            if (backendType == RepositoryBackendType.RCLONE) {
+                if (binaryManager.getRcloneBinaryPath() == null) {
+                    tempSftpKeyFile?.delete()
+                    return@withContext AddRepositoryState.Error(context.getString(R.string.repo_error_rclone_binary_not_ready))
+                }
+                if (!getRcloneConfigFile().exists()) {
+                    tempSftpKeyFile?.delete()
+                    return@withContext AddRepositoryState.Error(context.getString(R.string.repo_error_rclone_config_missing))
+                }
+            }
+
+            // The bundled rclone path is resolved on every run, never persisted,
+            // because it changes when the app is updated.
+            val rcloneResticOptions = if (backendType == RepositoryBackendType.RCLONE) {
+                withBundledRcloneProgram(resticOptions)
+            } else {
+                resticOptions
+            }
+
             val persistedResticOptions = applySftpResticOptionDefaults(
                 backendType = backendType,
                 options = resticOptions,
@@ -638,7 +682,7 @@ class RepositoriesRepository(
 
             val executionResticOptions = applySftpResticOptionDefaults(
                 backendType = backendType,
-                options = resticOptions,
+                options = rcloneResticOptions,
                 knownHostsFile = knownHostsFile,
                 strictHostKeyCheckingValue = "yes",
                 sftpKeyFilePath = tempSftpKeyFile?.absolutePath
@@ -692,6 +736,13 @@ class RepositoriesRepository(
                     "AWS_ACCESS_KEY_ID" to s3AccessKeyId,
                     "AWS_SECRET_ACCESS_KEY" to s3SecretAccessKey
                 )
+            } else if (backendType == RepositoryBackendType.RCLONE) {
+                val rcloneConfigFile = getRcloneConfigFile()
+                if (rcloneConfigFile.exists()) {
+                    persistedEnvironmentVariables + mapOf("RCLONE_CONFIG" to rcloneConfigFile.absolutePath)
+                } else {
+                    persistedEnvironmentVariables
+                }
             } else {
                 sftpExecutionEnvironmentVariables
             }
@@ -1208,6 +1259,14 @@ class RepositoriesRepository(
             RepositoryBackendType.SFTP -> if (trimmed.startsWith("sftp:")) trimmed else "sftp:$trimmed"
             RepositoryBackendType.REST -> if (trimmed.startsWith("rest:")) trimmed else "rest:$trimmed"
             RepositoryBackendType.S3 -> if (trimmed.startsWith("s3:")) trimmed else "s3:$trimmed"
+            RepositoryBackendType.RCLONE -> {
+                val withoutPrefix = trimmed.removePrefix("rclone:")
+                if (trimmed.startsWith("rclone:") && withoutPrefix.contains(":")) {
+                    trimmed
+                } else {
+                    "rclone:$trimmed"
+                }
+            }
         }
     }
 
@@ -1435,5 +1494,80 @@ class RepositoriesRepository(
                 sftpKeyFilePath = sftpKeyFilePath
             )
         )
+    }
+
+    fun getRcloneConfigFile(): File {
+        return File(File(context.filesDir, "rclone"), "rclone.conf")
+    }
+
+    fun hasRcloneConfig(): Boolean = getRcloneConfigFile().exists()
+
+    fun getRcloneConfigContent(): String? {
+        val file = getRcloneConfigFile()
+        return if (file.exists()) file.readText() else null
+    }
+
+    fun saveRcloneConfig(content: String): Result<Unit> {
+        return runCatching {
+            val file = getRcloneConfigFile()
+            file.parentFile?.mkdirs()
+            val atomicFile = android.util.AtomicFile(file)
+            val out = atomicFile.startWrite()
+            try {
+                out.write(content.toByteArray(Charsets.UTF_8))
+                atomicFile.finishWrite(out)
+            } catch (e: Throwable) {
+                atomicFile.failWrite(out)
+                throw e
+            }
+        }
+    }
+
+    fun deleteRcloneConfig(): Boolean {
+        return getRcloneConfigFile().delete()
+    }
+
+    fun getRcloneRemotes(): List<String> {
+        val content = getRcloneConfigContent() ?: return emptyList()
+        val regex = Regex("""^\s*\[([^\]]+)\]\s*$""", RegexOption.MULTILINE)
+        return regex.findAll(content).map { it.groupValues[1].trim() }.filter { it.isNotBlank() }.toList()
+    }
+
+    fun extractRcloneRemote(path: String): String? {
+        val withoutPrefix = path.trim().removePrefix("rclone:")
+        return if (withoutPrefix.contains(":")) {
+            withoutPrefix.substringBefore(":").trim().ifEmpty { null }
+        } else {
+            null
+        }
+    }
+
+    fun getRcloneRemoteType(remoteName: String): String? {
+        val content = getRcloneConfigContent() ?: return null
+        val targetRemote = remoteName.trim()
+        var inSection = false
+        for (line in content.lineSequence()) {
+            val trimmed = line.trim()
+            if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+                inSection = trimmed.substring(1, trimmed.length - 1).trim() == targetRemote
+            } else if (inSection && trimmed.startsWith("type", ignoreCase = true)) {
+                val parts = trimmed.split("=", limit = 2)
+                if (parts.size == 2 && parts[0].trim().equals("type", ignoreCase = true)) {
+                    return parts[1].trim()
+                }
+            }
+        }
+        return null
+    }
+
+    fun isRemoteRepository(repository: LocalRepository?): Boolean {
+        val isRcloneLocal = if (repository?.backendType == RepositoryBackendType.RCLONE) {
+            val remote = extractRcloneRemote(repository.path)
+            val type = remote?.let { getRcloneRemoteType(it) }
+            type.equals("local", ignoreCase = true)
+        } else {
+            false
+        }
+        return isRemoteBackend(repository?.backendType, isRcloneLocal)
     }
 }
