@@ -1,1 +1,1 @@
-Siguran i dedupliciran backup za aplikacije i datoteke koji pokreće restic engine.
+Siguran, dedupliciran backup za aplikacije i datoteke koji pokreće restic.

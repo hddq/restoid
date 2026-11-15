@@ -1,1 +1,1 @@
-Sichere, deduplizierte Backups für Apps und Dateien, angetrieben von der restic-Engine.
+Sichere, deduplizierte Backups für Apps und Dateien mit der Restic-Engine.
