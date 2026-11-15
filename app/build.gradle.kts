@@ -1,43 +1,3 @@
-import java.io.File
-
-// This task builds the restic binary from the submodule for each required Android architecture.
-tasks.register<Exec>("buildBundledRestic") {
-    group = "restic"
-    description = "Builds restic binary from submodule using bash script"
-    doNotTrackState("Binaries are built only if missing from jniLibs")
-
-    onlyIf("binaries not yet built") {
-        !file("src/main/jniLibs/arm64-v8a/librestic.so").exists() ||
-                !file("src/main/jniLibs/x86_64/librestic.so").exists()
-    }
-
-    workingDir = rootProject.projectDir
-    commandLine = listOf("bash", "scripts/build_restic.sh")
-}
-
-// This task builds the rclone binary from the submodule for each required Android architecture.
-tasks.register<Exec>("buildBundledRclone") {
-    group = "rclone"
-    description = "Builds rclone binary from submodule using bash script"
-
-    // Track only the files that identify the rclone revision and the build recipe.
-    // (Hashing the whole submodule tree fails on files with non-UTF-8 names.)
-    inputs.files(
-        rootProject.file("scripts/build_rclone.sh"),
-        rootProject.file(".go-version"),
-        rootProject.file("rclone/go.mod"),
-        rootProject.file("rclone/go.sum"),
-        rootProject.file("rclone/fs/versiontag.go"),
-    ).withPropertyName("rcloneBuildInputs")
-    outputs.files(
-        file("src/main/jniLibs/arm64-v8a/librclone.so"),
-        file("src/main/jniLibs/x86_64/librclone.so"),
-    )
-
-    workingDir = rootProject.projectDir
-    commandLine = listOf("bash", "scripts/build_rclone.sh")
-}
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -218,6 +178,66 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+}
+
+// This task builds the restic binary from the submodule for each required Android architecture.
+tasks.register<Exec>("buildBundledRestic") {
+    group = "restic"
+    description = "Builds restic binary from submodule using bash script"
+
+    inputs.files(
+        rootProject.file("scripts/build_restic.sh"),
+        rootProject.file(".go-version"),
+    ).withPropertyName("resticBuildInputs")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.files(
+        rootProject.fileTree("restic") {
+            // Skip git metadata, Go tests/testdata, and unreadable/non-UTF-8 paths that fail Gradle hashing.
+            exclude("**/.git", "**/.git/**", "**/testdata/**", "**/*_test.go")
+            exclude { !it.file.exists() }
+        }
+    ).withPropertyName("resticSourceFiles")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.property("ndkVersion", android.ndkVersion)
+    inputs.property("minSdk", android.defaultConfig.minSdk ?: 0)
+
+    outputs.files(
+        file("src/main/jniLibs/arm64-v8a/librestic.so"),
+        file("src/main/jniLibs/x86_64/librestic.so"),
+    ).withPropertyName("resticBinaries")
+
+    workingDir = rootProject.projectDir
+    commandLine = listOf("bash", "scripts/build_restic.sh")
+}
+
+// This task builds the rclone binary from the submodule for each required Android architecture.
+tasks.register<Exec>("buildBundledRclone") {
+    group = "rclone"
+    description = "Builds rclone binary from submodule using bash script"
+
+    inputs.files(
+        rootProject.file("scripts/build_rclone.sh"),
+        rootProject.file(".go-version"),
+    ).withPropertyName("rcloneBuildInputs")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.files(
+        rootProject.fileTree("rclone") {
+            // Skip git metadata, Go tests/testdata, excluded cmd/gui dist.zip, and non-UTF-8 paths.
+            exclude("**/.git", "**/.git/**", "**/testdata/**", "**/*_test.go", "cmd/gui/dist.zip")
+            exclude { !it.file.exists() }
+        }
+    ).withPropertyName("rcloneSourceFiles")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.property("ndkVersion", android.ndkVersion)
+    inputs.property("minSdk", android.defaultConfig.minSdk ?: 0)
+
+    outputs.files(
+        file("src/main/jniLibs/arm64-v8a/librclone.so"),
+        file("src/main/jniLibs/x86_64/librclone.so"),
+    ).withPropertyName("rcloneBinaries")
+
+    workingDir = rootProject.projectDir
+    commandLine = listOf("bash", "scripts/build_rclone.sh")
 }
 
 tasks.named("preBuild").configure {
