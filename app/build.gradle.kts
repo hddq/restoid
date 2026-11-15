@@ -44,6 +44,9 @@ val hasReleaseSigning = listOf(
     signingKeyPassword
 ).all { !it.isNullOrBlank() }
 
+// Bump by 1 for every release tag, stable or pre-release (e.g. v0.9.0-beta.1 -> 29, v0.9.0 -> 30).
+// Per-ABI APK version code: 10 * base + abiCode. Keep the defaultConfig version code below equal to
+// this value as a literal: F-Droid's checkupdates regex-parses it and cannot resolve variables.
 val baseAppVersionCode = 28
 
 android {
