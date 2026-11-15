@@ -74,6 +74,37 @@ declare -A ABI_TO_CC=(
     ["x86_64"]="$TOOLCHAIN/bin/x86_64-linux-android${API}-clang"
 )
 
+# Exclude rclone's web GUI (cmd/gui embeds a prebuilt dist.zip, which is deleted for F-Droid).
+# A Go build overlay drops the blank import from cmd/all/all.go without touching the submodule.
+RCLONE_ALL_GO="$RCLONE_DIR/cmd/all/all.go"
+RCLONE_GUI_IMPORT_RE='^[[:space:]]*_[[:space:]]*"github\.com/rclone/rclone/cmd/gui"[[:space:]]*$'
+
+if ! grep -q "$RCLONE_GUI_IMPORT_RE" "$RCLONE_ALL_GO"; then
+    echo "Error: cmd/gui import not found in $RCLONE_ALL_GO; update build_rclone.sh"
+    exit 1
+fi
+
+if grep -rl --include='*.go' --exclude='*_test.go' '"github\.com/rclone/rclone/cmd/gui"' "$RCLONE_DIR" | grep -vxF "$RCLONE_ALL_GO" | grep -q .; then
+    echo "Error: unexpected cmd/gui import found outside $RCLONE_ALL_GO; update build_rclone.sh"
+    exit 1
+fi
+
+OVERLAY_DIR="$(mktemp -d)"
+trap 'rm -rf "$OVERLAY_DIR"' EXIT
+grep -v "$RCLONE_GUI_IMPORT_RE" "$RCLONE_ALL_GO" > "$OVERLAY_DIR/all.go"
+json_escape() {
+    local s="${1//\\/\\\\}"
+    s="${s//\"/\\\"}"
+    if [[ "$s" == *[[:cntrl:]]* ]]; then
+        echo "Error: path contains control characters: $1" >&2
+        exit 1
+    fi
+    printf '%s' "$s"
+}
+OVERLAY_SRC_JSON="$(json_escape "$RCLONE_ALL_GO")"
+OVERLAY_DST_JSON="$(json_escape "$OVERLAY_DIR/all.go")"
+printf '{"Replace":{"%s":"%s"}}\n' "$OVERLAY_SRC_JSON" "$OVERLAY_DST_JSON" > "$OVERLAY_DIR/overlay.json"
+
 for abi in "${!ABI_TO_GOARCH[@]}"; do
     goarch="${ABI_TO_GOARCH[$abi]}"
     cc="${ABI_TO_CC[$abi]}"
@@ -96,6 +127,7 @@ for abi in "${!ABI_TO_GOARCH[@]}"; do
             -tags "noselfupdate" \
             -ldflags="-s -w -buildid=" \
             -trimpath \
+            -overlay "$OVERLAY_DIR/overlay.json" \
             -o "$out_file" \
             .
 
