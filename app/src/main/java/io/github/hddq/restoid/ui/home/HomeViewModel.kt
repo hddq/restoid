@@ -20,6 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.update
@@ -29,6 +30,12 @@ import kotlinx.coroutines.withContext
 data class SnapshotWithMetadata(
     val snapshotInfo: SnapshotInfo,
     val metadata: RestoidMetadata?
+)
+
+private data class SelectedRepoSnapshotState(
+    val repoKey: String?,
+    val repos: List<LocalRepository>,
+    val snapshots: List<SnapshotInfo>?
 )
 
 enum class HomeAuthFailure {
@@ -95,15 +102,33 @@ class HomeViewModel(
             }
         }
 
-        combine(
+        val selectedRepoSnapshotState = combine(
             repositoriesRepository.selectedRepository,
-            resticBinaryManager.resticState, // Observe state from Manager
-            resticRepository.snapshots,
             repositoriesRepository.repositories,
-            refreshTrigger
-        ) { repoKey, restic, snapshots, repos, _ ->
+            resticRepository.snapshotsByRepoPath
+        ) { repoKey, repos, snapshotsByRepoPath ->
+            val selectedRepository = repoKey?.let { key ->
+                repos.find { repositoriesRepository.repositoryKey(it) == key }
+                    ?: repositoriesRepository.getRepositoryByKey(key)
+            }
+            val snapshots = selectedRepository?.path?.let { snapshotsByRepoPath[it] }
+            SelectedRepoSnapshotState(
+                repoKey = repoKey,
+                repos = repos,
+                snapshots = snapshots
+            )
+        }.distinctUntilChanged()
 
-            val selectedRepository = repoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
+        combine(
+            selectedRepoSnapshotState,
+            resticBinaryManager.resticState, // Observe state from Manager
+            refreshTrigger
+        ) { (repoKey, repos, snapshots), restic, _ ->
+
+            val selectedRepository = repoKey?.let { key ->
+                repos.find { repositoriesRepository.repositoryKey(it) == key }
+                    ?: repositoriesRepository.getRepositoryByKey(key)
+            }
             val repoPath = selectedRepository?.path
             val env = repoKey?.let { repositoriesRepository.getExecutionEnvironmentVariables(it) }.orEmpty()
             val resticOptions = repoKey?.let { repositoriesRepository.getExecutionResticOptions(it) }.orEmpty()
@@ -153,7 +178,7 @@ class HomeViewModel(
                 val canLoadSelectedRepo = repoPath != null && restic is ResticState.Installed
 
                 if (snapshots != null) {
-                    resticRepository.clearSnapshots()
+                    resticRepository.clearSnapshots(repoPath)
                 }
 
                 _uiState.update {
@@ -183,7 +208,7 @@ class HomeViewModel(
             }
 
             if (repoPath == null || restic !is ResticState.Installed) {
-                resticRepository.clearSnapshots()
+                resticRepository.clearSnapshots(repoPath)
                 _uiState.update {
                     it.copy(
                         snapshotsWithMetadata = emptyList(),
@@ -290,6 +315,7 @@ class HomeViewModel(
 
         viewModelScope.launch {
             if (repository.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpCredentials(repoKey)) {
+                if (repositoriesRepository.selectedRepository.value != repoKey) return@launch
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -312,6 +338,7 @@ class HomeViewModel(
                 repository.restAuthRequired &&
                 !repositoriesRepository.hasRestCredentials(repoKey)
             ) {
+                if (repositoriesRepository.selectedRepository.value != repoKey) return@launch
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -332,6 +359,7 @@ class HomeViewModel(
                 repository.s3AuthRequired &&
                 !repositoriesRepository.hasS3Credentials(repoKey)
             ) {
+                if (repositoriesRepository.selectedRepository.value != repoKey) return@launch
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -349,6 +377,7 @@ class HomeViewModel(
 
             val password = repositoriesRepository.getRepositoryPassword(repoKey)
             if (password == null) {
+                if (repositoriesRepository.selectedRepository.value != repoKey) return@launch
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -365,6 +394,7 @@ class HomeViewModel(
             }
             val result = resticRepository.getSnapshots(repoPath, password, environmentVariables, resticOptions)
             if (result.isFailure) {
+                if (repositoriesRepository.selectedRepository.value != repoKey) return@launch
                 val rawMessage = result.exceptionOrNull()?.message ?: context.getString(R.string.error_unknown)
                 val authFailure = classifyAuthenticationFailure(repository, rawMessage)
                 _uiState.update {

@@ -29,11 +29,34 @@ class PreferencesRepository(private val context: Context) {
             putInt("maintenance_keepDaily", state.keepDaily)
             putInt("maintenance_keepWeekly", state.keepWeekly)
             putInt("maintenance_keepMonthly", state.keepMonthly)
+            putBoolean("maintenance_forgetAllHosts", state.forgetAllHosts)
+            putStringSet(
+                "maintenance_forgetHosts",
+                state.forgetHosts.map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+            )
             apply()
         }
     }
 
     fun loadMaintenanceState(): MaintenanceConfig {
+        val hasSavedForgetAllHosts = prefs.contains("maintenance_forgetAllHosts")
+        val hasSavedForgetHosts = prefs.contains("maintenance_forgetHosts")
+        val forgetAllHosts = if (hasSavedForgetAllHosts) {
+            prefs.getBoolean("maintenance_forgetAllHosts", false)
+        } else {
+            false
+        }
+        val forgetHosts = if (hasSavedForgetHosts) {
+            (prefs.getStringSet("maintenance_forgetHosts", emptySet()) ?: emptySet())
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .distinct()
+                .sorted()
+        } else if (!forgetAllHosts) {
+            listOf(getDeviceHostname())
+        } else {
+            emptyList()
+        }
         return MaintenanceConfig(
             checkRepo = prefs.getBoolean("maintenance_checkRepo", true),
             pruneRepo = prefs.getBoolean("maintenance_pruneRepo", false),
@@ -43,7 +66,9 @@ class PreferencesRepository(private val context: Context) {
             keepLast = prefs.getInt("maintenance_keepLast", 5),
             keepDaily = prefs.getInt("maintenance_keepDaily", 7),
             keepWeekly = prefs.getInt("maintenance_keepWeekly", 4),
-            keepMonthly = prefs.getInt("maintenance_keepMonthly", 6)
+            keepMonthly = prefs.getInt("maintenance_keepMonthly", 6),
+            forgetAllHosts = forgetAllHosts,
+            forgetHosts = forgetHosts
         )
     }
 

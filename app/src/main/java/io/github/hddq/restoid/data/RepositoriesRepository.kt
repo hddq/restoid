@@ -986,7 +986,7 @@ class RepositoriesRepository(
                     metadataRestoreSuccess = false
                 }
             }
-            resticRepository.clearSnapshots()
+            resticRepository.clearSnapshots(repo.path)
             saveNewRepository(
                 repo = repo.copy(id = repoId),
                 password = password,
@@ -1121,7 +1121,7 @@ class RepositoriesRepository(
             }
 
             if (restoreOutcome.isSuccess) {
-                resticRepository.clearSnapshots()
+                resticRepository.clearSnapshots(repoPath)
             }
 
             restoreOutcome

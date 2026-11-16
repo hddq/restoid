@@ -31,16 +31,30 @@ import java.io.File
  */
 class ResticRepository(
     private val context: Context,
-    private val executor: ResticExecutor
+    private val executor: ResticExecutor,
+    private val stringResolver: (Int) -> String = { context.getString(it) }
 ) {
 
-    private val _snapshots = MutableStateFlow<List<SnapshotInfo>?>(null)
-    val snapshots = _snapshots.asStateFlow()
+    private val _snapshotsByRepoPath = MutableStateFlow<Map<String, List<SnapshotInfo>>>(emptyMap())
+    val snapshotsByRepoPath = _snapshotsByRepoPath.asStateFlow()
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    fun clearSnapshots() {
-        _snapshots.value = null
+    fun clearSnapshots(repoPath: String? = null) {
+        if (repoPath == null) {
+            _snapshotsByRepoPath.value = emptyMap()
+        } else {
+            _snapshotsByRepoPath.update { it - repoPath }
+        }
+    }
+
+    fun getSnapshotsForRepo(repoPath: String?): List<SnapshotInfo>? {
+        if (repoPath == null) return null
+        return _snapshotsByRepoPath.value[repoPath]
+    }
+
+    private fun updateSharedSnapshots(repoPath: String, snapshots: List<SnapshotInfo>) {
+        _snapshotsByRepoPath.update { it + (repoPath to snapshots) }
     }
 
     private suspend fun fetchSnapshotsRaw(
@@ -67,7 +81,7 @@ class ResticRepository(
     ): Result<List<SnapshotInfo>> {
         return fetchSnapshotsRaw(repoPath, password, environmentVariables, resticOptions).map { output ->
             val snapshots = parseSnapshotsJson(output)
-            _snapshots.value = snapshots
+            updateSharedSnapshots(repoPath, snapshots)
             snapshots
         }
     }
@@ -92,9 +106,9 @@ class ResticRepository(
             onSuccess = { output ->
                 val strictResult = parseSnapshotsJsonStrict(output)
                 strictResult.onSuccess { snapshots ->
-                    _snapshots.value = snapshots
+                    updateSharedSnapshots(repoPath, snapshots)
                 }.onFailure {
-                    _snapshots.value = parseSnapshotsJson(output)
+                    updateSharedSnapshots(repoPath, parseSnapshotsJson(output))
                 }
                 strictResult
             },
@@ -490,8 +504,39 @@ class ResticRepository(
         keepDaily: Int,
         keepWeekly: Int,
         keepMonthly: Int,
+        forgetAllHosts: Boolean = true,
+        forgetHosts: List<String> = emptyList(),
         environmentVariables: Map<String, String> = emptyMap(),
         resticOptions: Map<String, String> = emptyMap()
+    ): Result<String> {
+        val forgetCommand = buildForgetCommand(
+            keepLast = keepLast,
+            keepDaily = keepDaily,
+            keepWeekly = keepWeekly,
+            keepMonthly = keepMonthly,
+            forgetAllHosts = forgetAllHosts,
+            forgetHosts = forgetHosts
+        ).getOrElse { failure ->
+            return Result.failure(failure)
+        }
+
+        return executor.execute(
+            repoPath,
+            password,
+            forgetCommand,
+            context.getString(R.string.restic_failure_forget_snapshots),
+            environmentVariables = environmentVariables,
+            resticOptions = resticOptions
+        )
+    }
+
+    internal fun buildForgetCommand(
+        keepLast: Int,
+        keepDaily: Int,
+        keepWeekly: Int,
+        keepMonthly: Int,
+        forgetAllHosts: Boolean = true,
+        forgetHosts: List<String> = emptyList()
     ): Result<String> {
         val forgetOptions = buildString {
             if (keepLast > 0) append(" --keep-last $keepLast")
@@ -501,18 +546,24 @@ class ResticRepository(
         }
 
         if (forgetOptions.isBlank()) {
-            return Result.failure(Exception(context.getString(R.string.restic_failure_no_forget_policy)))
+            return Result.failure(Exception(stringResolver(R.string.restic_failure_no_forget_policy)))
+        }
+
+        val hostOptions = if (forgetAllHosts) {
+            ""
+        } else {
+            val normalizedHosts = forgetHosts
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .distinct()
+            if (normalizedHosts.isEmpty()) {
+                return Result.failure(Exception(stringResolver(R.string.restic_failure_no_forget_hosts)))
+            }
+            normalizedHosts.joinToString("") { " --host ${shellQuote(it)}" }
         }
 
         val groupingAndTagOptions = " --group-by host,tags --tag 'restoid' --tag 'backup'"
-        return executor.execute(
-            repoPath,
-            password,
-            "forget$forgetOptions$groupingAndTagOptions",
-            context.getString(R.string.restic_failure_forget_snapshots),
-            environmentVariables = environmentVariables,
-            resticOptions = resticOptions
-        )
+        return Result.success("forget$forgetOptions$hostOptions$groupingAndTagOptions")
     }
 
     suspend fun forgetSnapshot(
@@ -531,8 +582,9 @@ class ResticRepository(
             resticOptions = resticOptions
         )
             .map {
-                _snapshots.update { currentSnapshots ->
-                    currentSnapshots?.filterNot { it.id == snapshotId || it.id.startsWith(snapshotId) }
+                _snapshotsByRepoPath.update { currentMap ->
+                    val existing = currentMap[repoPath] ?: return@update currentMap
+                    currentMap + (repoPath to existing.filterNot { it.id == snapshotId || it.id.startsWith(snapshotId) })
                 }
             }
     }

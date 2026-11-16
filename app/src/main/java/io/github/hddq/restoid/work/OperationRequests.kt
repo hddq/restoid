@@ -67,7 +67,9 @@ data class MaintenanceWorkRequest(
     val keepLast: Int,
     val keepDaily: Int,
     val keepWeekly: Int,
-    val keepMonthly: Int
+    val keepMonthly: Int,
+    val forgetAllHosts: Boolean = true,
+    val forgetHosts: List<String> = emptyList()
 )
 
 @Serializable
@@ -86,7 +88,9 @@ data class RunTasksConfig(
     val keepLast: Int,
     val keepDaily: Int,
     val keepWeekly: Int,
-    val keepMonthly: Int
+    val keepMonthly: Int,
+    val forgetAllHosts: Boolean = true,
+    val forgetHosts: List<String> = emptyList()
 )
 
 @Serializable
@@ -107,6 +111,8 @@ data class RunTasksWorkRequest(
     val keepDaily: Int,
     val keepWeekly: Int,
     val keepMonthly: Int,
+    val forgetAllHosts: Boolean = true,
+    val forgetHosts: List<String> = emptyList(),
     val scheduleName: String? = null,
     val requireUnmeteredNetwork: Boolean = false
 )

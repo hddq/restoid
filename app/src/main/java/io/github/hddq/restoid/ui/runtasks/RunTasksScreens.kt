@@ -27,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -211,13 +212,23 @@ fun ForgetConfigScreen(
     viewModel: RunTasksViewModel,
     modifier: Modifier = Modifier
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     io.github.hddq.restoid.ui.shared.ForgetConfigScreen(
         maintenance = uiState.maintenance,
         onKeepLastChange = viewModel::setKeepLast,
         onKeepDailyChange = viewModel::setKeepDaily,
         onKeepWeeklyChange = viewModel::setKeepWeekly,
         onKeepMonthlyChange = viewModel::setKeepMonthly,
+        availableHosts = uiState.availableForgetHosts,
+        areRepoSnapshotsLoaded = uiState.areRepoSnapshotsLoaded,
+        isLoadingHosts = uiState.isLoadingForgetHosts,
+        hostsError = uiState.forgetHostsError,
+        onToggleAllHosts = viewModel::toggleAllForgetHosts,
+        onToggleHost = viewModel::toggleForgetHost,
+        onAddHost = viewModel::addCustomForgetHost,
+        onRemoveHost = viewModel::removeCustomForgetHost,
+        onRefreshHosts = { viewModel.refreshForgetHosts(userInitiated = true) },
+        onAutoLoadHosts = { viewModel.refreshForgetHosts(userInitiated = false) },
         modifier = modifier
     )
 }

@@ -6,14 +6,21 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.AppInfoRepository
+import io.github.hddq.restoid.data.PreferencesRepository
 import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.RepositoryBackendType
+import io.github.hddq.restoid.data.ResticBinaryManager
+import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.data.ScheduleRepository
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.Schedule
 import io.github.hddq.restoid.model.TriggerConditions
 import io.github.hddq.restoid.model.MaintenanceConfig
 import io.github.hddq.restoid.ui.shared.BackupTypes
+import io.github.hddq.restoid.ui.shared.ForgetHostOption
+import io.github.hddq.restoid.ui.shared.ForgetHostsController
+import io.github.hddq.restoid.ui.shared.ForgetHostsSlice
+import io.github.hddq.restoid.ui.shared.normalizeForgetHosts
 import io.github.hddq.restoid.ui.shared.toUiModel
 import io.github.hddq.restoid.util.StorageUtils
 import io.github.hddq.restoid.work.BackupWorkRequest
@@ -56,7 +63,11 @@ data class AddEditScheduleUiState(
     val customDirectoriesBackupEnabled: Boolean = false,
     val customDirectories: List<io.github.hddq.restoid.model.CustomDirectory> = emptyList(),
     val excludedCustomDirectories: List<io.github.hddq.restoid.model.CustomDirectory> = emptyList(),
-    val exclusionConflicts: List<ExclusionConflict> = emptyList()
+    val exclusionConflicts: List<ExclusionConflict> = emptyList(),
+    val availableForgetHosts: List<ForgetHostOption> = emptyList(),
+    val areRepoSnapshotsLoaded: Boolean = false,
+    val isLoadingForgetHosts: Boolean = false,
+    val forgetHostsError: String? = null
 )
 
 sealed interface SchedulesUiEvent {
@@ -68,7 +79,10 @@ class SchedulesViewModel(
     private val scheduleRepository: ScheduleRepository,
     private val repositoriesRepository: RepositoriesRepository,
     private val appInfoRepository: AppInfoRepository,
-    private val rootRepository: io.github.hddq.restoid.data.RootRepository
+    private val rootRepository: io.github.hddq.restoid.data.RootRepository,
+    private val resticBinaryManager: ResticBinaryManager,
+    private val resticRepository: ResticRepository,
+    private val preferencesRepository: PreferencesRepository
 ) : ViewModel() {
 
     val rootState = rootRepository.rootState
@@ -87,6 +101,46 @@ class SchedulesViewModel(
     private var cachedRawExclusions: List<String> = emptyList()
     private var cachedResolvedExclusions: List<String> = emptyList()
     private var conflictResolutionJob: Job? = null
+    private var addEditSessionId: Long = 0L
+
+    private val forgetHostsController = ForgetHostsController(
+        context = application,
+        scope = viewModelScope,
+        repositoriesRepository = repositoriesRepository,
+        resticBinaryManager = resticBinaryManager,
+        resticRepository = resticRepository,
+        preferencesRepository = preferencesRepository,
+        readSlice = {
+            val state = _addEditState.value
+            ForgetHostsSlice(
+                maintenance = state.maintenance,
+                availableForgetHosts = state.availableForgetHosts,
+                areRepoSnapshotsLoaded = state.areRepoSnapshotsLoaded,
+                isLoadingForgetHosts = state.isLoadingForgetHosts,
+                forgetHostsError = state.forgetHostsError
+            )
+        },
+        updateSlice = { transform ->
+            _addEditState.update { state ->
+                val updated = transform(
+                    ForgetHostsSlice(
+                        maintenance = state.maintenance,
+                        availableForgetHosts = state.availableForgetHosts,
+                        areRepoSnapshotsLoaded = state.areRepoSnapshotsLoaded,
+                        isLoadingForgetHosts = state.isLoadingForgetHosts,
+                        forgetHostsError = state.forgetHostsError
+                    )
+                )
+                state.copy(
+                    maintenance = updated.maintenance,
+                    availableForgetHosts = updated.availableForgetHosts,
+                    areRepoSnapshotsLoaded = updated.areRepoSnapshotsLoaded,
+                    isLoadingForgetHosts = updated.isLoadingForgetHosts,
+                    forgetHostsError = updated.forgetHostsError
+                )
+            }
+        }
+    )
 
     init {
         viewModelScope.launch {
@@ -143,12 +197,22 @@ class SchedulesViewModel(
 
     // Add/Edit Screen methods
     fun startAddSchedule() {
-        val newState = AddEditScheduleUiState()
+        val sessionId = ++addEditSessionId
+        val defaultHostname = preferencesRepository.getDeviceHostname()
+        val newState = AddEditScheduleUiState(
+            maintenance = MaintenanceConfig(
+                forgetAllHosts = false,
+                forgetHosts = listOf(defaultHostname)
+            )
+        )
         _addEditState.value = newState
-        initialState = newState
-        loadAppsForAddEdit()
+        forgetHostsController.setManualHosts(listOf(defaultHostname))
+        initialState = _addEditState.value
+        loadAppsForAddEdit(sessionId = sessionId)
     }
     fun startEditSchedule(schedule: Schedule) {
+        val sessionId = ++addEditSessionId
+        val normalizedHosts = normalizeForgetHosts(schedule.config.forgetHosts)
         val newState = AddEditScheduleUiState(
             id = schedule.id,
             name = schedule.name,
@@ -166,7 +230,9 @@ class SchedulesViewModel(
                 keepLast = schedule.config.keepLast,
                 keepDaily = schedule.config.keepDaily,
                 keepWeekly = schedule.config.keepWeekly,
-                keepMonthly = schedule.config.keepMonthly
+                keepMonthly = schedule.config.keepMonthly,
+                forgetAllHosts = schedule.config.forgetAllHosts,
+                forgetHosts = normalizedHosts
             ),
             triggerConditions = schedule.triggerConditions,
             lastRunTimestamp = schedule.lastRunTimestamp,
@@ -176,14 +242,19 @@ class SchedulesViewModel(
         )
         val withConflicts = recomputeConflicts(newState)
         _addEditState.value = withConflicts
-        initialState = withConflicts
-        loadAppsForAddEdit(schedule.config.selectedPackageNames)
+        forgetHostsController.setManualHosts(normalizedHosts)
+        initialState = _addEditState.value
+        loadAppsForAddEdit(schedule.config.selectedPackageNames, sessionId = sessionId)
     }
 
-    private fun loadAppsForAddEdit(selectedPackageNames: List<String>? = null) {
+    private fun loadAppsForAddEdit(
+        selectedPackageNames: List<String>? = null,
+        sessionId: Long = addEditSessionId
+    ) {
         viewModelScope.launch {
             _addEditState.update { it.copy(isLoadingApps = true) }
             val allApps = appInfoRepository.getInstalledUserApps()
+            if (addEditSessionId != sessionId) return@launch
             val currentTypes = _addEditState.value.appBackupTypes
             val defaultTypes = _addEditState.value.backupTypes
             val apps = if (selectedPackageNames != null) {
@@ -194,11 +265,22 @@ class SchedulesViewModel(
             val appBackupTypes = apps.associate { app ->
                 app.packageName to (currentTypes[app.packageName] ?: defaultTypes)
             }
-            _addEditState.update { 
+            _addEditState.update {
+                if (addEditSessionId != sessionId) return@update it
                 val updated = recomputeConflicts(it.copy(apps = apps, appBackupTypes = appBackupTypes, isLoadingApps = false))
                 // Update initialState if it was just set (apps are loaded asynchronously)
-                if (initialState?.apps?.isEmpty() == true && apps.isNotEmpty()) {
-                    initialState = updated
+                val currentInitial = initialState
+                if (currentInitial != null && currentInitial.apps.isEmpty() && apps.isNotEmpty()) {
+                    val initialAppBackupTypes = apps.associate { app ->
+                        app.packageName to (currentInitial.appBackupTypes[app.packageName] ?: currentInitial.backupTypes)
+                    }
+                    initialState = recomputeConflicts(
+                        currentInitial.copy(
+                            apps = apps,
+                            appBackupTypes = initialAppBackupTypes,
+                            isLoadingApps = false
+                        )
+                    )
                 }
                 updated
             }
@@ -263,7 +345,9 @@ class SchedulesViewModel(
                 keepLast = state.maintenance.keepLast,
                 keepDaily = state.maintenance.keepDaily,
                 keepWeekly = state.maintenance.keepWeekly,
-                keepMonthly = state.maintenance.keepMonthly
+                keepMonthly = state.maintenance.keepMonthly,
+                forgetAllHosts = state.maintenance.forgetAllHosts,
+                forgetHosts = if (state.maintenance.forgetAllHosts) emptyList() else normalizeForgetHosts(state.maintenance.forgetHosts)
             ),
             triggerConditions = state.triggerConditions,
             lastRunTimestamp = state.lastRunTimestamp
@@ -272,8 +356,56 @@ class SchedulesViewModel(
 
     fun runCurrentScheduleNow() {
         val repoKey = _uiState.value.selectedRepoKey ?: return
-        val schedule = buildScheduleFromState(_addEditState.value)
-        scheduleRepository.runNow(repoKey, schedule)
+        val repository = repositoriesRepository.getRepositoryByKey(repoKey) ?: return
+        val repoId = repository.id ?: return
+        val sessionId = addEditSessionId
+        val state = _addEditState.value
+        if (state.maintenance.forgetSnapshots && !state.maintenance.forgetAllHosts && normalizeForgetHosts(state.maintenance.forgetHosts).isEmpty()) {
+            Toast.makeText(
+                application,
+                application.getString(R.string.error_no_forget_hosts_selected),
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+        val schedule = buildScheduleFromState(state)
+        viewModelScope.launch {
+            if (hasChanges(state)) {
+                _addEditState.update { current ->
+                    if (addEditSessionId == sessionId) {
+                        current.copy(id = schedule.id, isSaving = true)
+                    } else {
+                        current
+                    }
+                }
+                scheduleRepository.saveSchedule(repoKey, repoId, schedule)
+                if (addEditSessionId == sessionId) {
+                    val currentInitial = initialState
+                    initialState = if (state.apps.isEmpty() && !currentInitial?.apps.isNullOrEmpty()) {
+                        recomputeConflicts(
+                            state.copy(
+                                id = schedule.id,
+                                isSaving = false,
+                                isLoadingApps = false,
+                                apps = currentInitial.apps,
+                                appBackupTypes = currentInitial.appBackupTypes
+                            )
+                        )
+                    } else {
+                        state.copy(id = schedule.id, isSaving = false)
+                    }
+                    _addEditState.update { current ->
+                        if (addEditSessionId == sessionId) {
+                            current.copy(id = schedule.id, isSaving = false)
+                        } else {
+                            current
+                        }
+                    }
+                }
+                loadSchedules()
+            }
+            scheduleRepository.runNow(repoKey, schedule)
+        }
     }
 
     fun saveSchedule() {
@@ -281,7 +413,17 @@ class SchedulesViewModel(
         val repository = repositoriesRepository.getRepositoryByKey(repoKey) ?: return
         val repoId = repository.id ?: return
 
-        val schedule = buildScheduleFromState(_addEditState.value)
+        val state = _addEditState.value
+        if (state.maintenance.forgetSnapshots && !state.maintenance.forgetAllHosts && normalizeForgetHosts(state.maintenance.forgetHosts).isEmpty()) {
+            Toast.makeText(
+                application,
+                application.getString(R.string.error_no_forget_hosts_selected),
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+
+        val schedule = buildScheduleFromState(state)
 
         viewModelScope.launch {
             _addEditState.update { it.copy(isSaving = true) }
@@ -447,6 +589,13 @@ class SchedulesViewModel(
     fun setKeepDaily(value: Int) = _addEditState.update { it.copy(maintenance = it.maintenance.copy(keepDaily = value)) }
     fun setKeepWeekly(value: Int) = _addEditState.update { it.copy(maintenance = it.maintenance.copy(keepWeekly = value)) }
     fun setKeepMonthly(value: Int) = _addEditState.update { it.copy(maintenance = it.maintenance.copy(keepMonthly = value)) }
+
+    fun toggleAllForgetHosts() = forgetHostsController.toggleAll()
+    fun toggleForgetHost(hostname: String) = forgetHostsController.toggleHost(hostname)
+    fun addCustomForgetHost(hostname: String) = forgetHostsController.addCustomHost(hostname)
+    fun removeCustomForgetHost(hostname: String) = forgetHostsController.removeCustomHost(hostname)
+    fun refreshForgetHosts(userInitiated: Boolean = true) =
+        forgetHostsController.refreshHosts(selectedRepoKeyOverride = _uiState.value.selectedRepoKey, userInitiated = userInitiated)
 
     fun setRequireBatteryNotLow(value: Boolean) = _addEditState.update { it.copy(triggerConditions = it.triggerConditions.copy(requireBatteryNotLow = value)) }
     fun setRequireCharging(value: Boolean) = _addEditState.update { it.copy(triggerConditions = it.triggerConditions.copy(requireCharging = value)) }

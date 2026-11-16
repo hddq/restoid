@@ -9,9 +9,14 @@ import io.github.hddq.restoid.data.OperationType
 import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.RepositoryBackendType
 import io.github.hddq.restoid.data.ResticBinaryManager
+import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.ui.shared.BackupTypes
+import io.github.hddq.restoid.ui.shared.ForgetHostOption
+import io.github.hddq.restoid.ui.shared.ForgetHostsController
+import io.github.hddq.restoid.ui.shared.ForgetHostsSlice
 import io.github.hddq.restoid.ui.shared.OperationProgress
+import io.github.hddq.restoid.ui.shared.normalizeForgetHosts
 import io.github.hddq.restoid.util.StorageUtils
 import io.github.hddq.restoid.work.BackupWorkRequest
 import io.github.hddq.restoid.work.ExclusionConflict
@@ -44,7 +49,11 @@ data class RunTasksUiState(
     val customDirectoriesBackupEnabled: Boolean = false,
     val customDirectories: List<CustomDirectory> = emptyList(),
     val excludedCustomDirectories: List<CustomDirectory> = emptyList(),
-    val exclusionConflicts: List<ExclusionConflict> = emptyList()
+    val exclusionConflicts: List<ExclusionConflict> = emptyList(),
+    val availableForgetHosts: List<ForgetHostOption> = emptyList(),
+    val areRepoSnapshotsLoaded: Boolean = false,
+    val isLoadingForgetHosts: Boolean = false,
+    val forgetHostsError: String? = null
 )
 
 sealed interface RunTasksUiEvent {
@@ -56,6 +65,7 @@ class RunTasksViewModel(
     private val rootRepository: io.github.hddq.restoid.data.RootRepository,
     private val repositoriesRepository: RepositoriesRepository,
     private val resticBinaryManager: ResticBinaryManager,
+    private val resticRepository: ResticRepository,
     private val appInfoRepository: io.github.hddq.restoid.data.AppInfoRepository,
     private val preferencesRepository: io.github.hddq.restoid.data.PreferencesRepository,
     private val operationWorkRepository: OperationWorkRepository
@@ -94,6 +104,46 @@ class RunTasksViewModel(
     private var cachedRawExclusions: List<String> = emptyList()
     private var cachedResolvedExclusions: List<String> = emptyList()
     private var conflictResolutionJob: Job? = null
+
+    private val forgetHostsController = ForgetHostsController(
+        context = application,
+        scope = viewModelScope,
+        repositoriesRepository = repositoriesRepository,
+        resticBinaryManager = resticBinaryManager,
+        resticRepository = resticRepository,
+        preferencesRepository = preferencesRepository,
+        initialManualHosts = _uiState.value.maintenance.forgetHosts,
+        readSlice = {
+            val state = _uiState.value
+            ForgetHostsSlice(
+                maintenance = state.maintenance,
+                availableForgetHosts = state.availableForgetHosts,
+                areRepoSnapshotsLoaded = state.areRepoSnapshotsLoaded,
+                isLoadingForgetHosts = state.isLoadingForgetHosts,
+                forgetHostsError = state.forgetHostsError
+            )
+        },
+        updateSlice = { transform ->
+            _uiState.update { state ->
+                val updated = transform(
+                    ForgetHostsSlice(
+                        maintenance = state.maintenance,
+                        availableForgetHosts = state.availableForgetHosts,
+                        areRepoSnapshotsLoaded = state.areRepoSnapshotsLoaded,
+                        isLoadingForgetHosts = state.isLoadingForgetHosts,
+                        forgetHostsError = state.forgetHostsError
+                    )
+                )
+                state.copy(
+                    maintenance = updated.maintenance,
+                    availableForgetHosts = updated.availableForgetHosts,
+                    areRepoSnapshotsLoaded = updated.areRepoSnapshotsLoaded,
+                    isLoadingForgetHosts = updated.isLoadingForgetHosts,
+                    forgetHostsError = updated.forgetHostsError
+                )
+            }
+        }
+    )
 
     init {
         loadInstalledApps()
@@ -184,6 +234,7 @@ class RunTasksViewModel(
 
         val errorState = preflightChecks()
         if (errorState != null) {
+            errorState.error?.let { Toast.makeText(application, it, Toast.LENGTH_LONG).show() }
             _uiState.update { it.copy(isRunning = false, progress = errorState) }
             return
         }
@@ -223,7 +274,9 @@ class RunTasksViewModel(
             keepLast = maintenance.keepLast,
             keepDaily = maintenance.keepDaily,
             keepWeekly = maintenance.keepWeekly,
-            keepMonthly = maintenance.keepMonthly
+            keepMonthly = maintenance.keepMonthly,
+            forgetAllHosts = maintenance.forgetAllHosts,
+            forgetHosts = if (maintenance.forgetAllHosts) emptyList() else normalizeForgetHosts(maintenance.forgetHosts)
         )
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -259,6 +312,14 @@ class RunTasksViewModel(
                 isFinished = true,
                 error = application.getString(R.string.maintenance_error_no_tasks),
                 finalSummary = application.getString(R.string.maintenance_summary_no_tasks)
+            )
+        }
+
+        if (maintenance.forgetSnapshots && !maintenance.forgetAllHosts && normalizeForgetHosts(maintenance.forgetHosts).isEmpty()) {
+            return OperationProgress(
+                isFinished = true,
+                error = application.getString(R.string.error_no_forget_hosts_selected),
+                finalSummary = application.getString(R.string.summary_no_forget_hosts_selected)
             )
         }
 
@@ -466,6 +527,12 @@ class RunTasksViewModel(
     fun setKeepDaily(value: Int) = _uiState.update { it.copy(maintenance = it.maintenance.copy(keepDaily = value)) }
     fun setKeepWeekly(value: Int) = _uiState.update { it.copy(maintenance = it.maintenance.copy(keepWeekly = value)) }
     fun setKeepMonthly(value: Int) = _uiState.update { it.copy(maintenance = it.maintenance.copy(keepMonthly = value)) }
+
+    fun toggleAllForgetHosts() = forgetHostsController.toggleAll()
+    fun toggleForgetHost(hostname: String) = forgetHostsController.toggleHost(hostname)
+    fun addCustomForgetHost(hostname: String) = forgetHostsController.addCustomHost(hostname)
+    fun removeCustomForgetHost(hostname: String) = forgetHostsController.removeCustomHost(hostname)
+    fun refreshForgetHosts(userInitiated: Boolean = true) = forgetHostsController.refreshHosts(userInitiated = userInitiated)
 
     fun toggleAppSelection(packageName: String) {
         _uiState.update { state ->
