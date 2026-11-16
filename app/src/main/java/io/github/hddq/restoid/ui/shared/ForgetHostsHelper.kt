@@ -155,10 +155,9 @@ class ForgetHostsController(
         scope.launch {
             combine(
                 repositoriesRepository.selectedRepository,
-                resticRepository.snapshotsByRepoPath,
-                resticRepository.snapshots,
-                resticRepository.snapshotsRepoPath
-            ) { repoKey, _, _, _ ->
+                repositoriesRepository.repositories,
+                resticRepository.snapshotsByRepoPath
+            ) { repoKey, _, _ ->
                 val repoPath = repoKey?.let { repositoriesRepository.getRepositoryByKey(it)?.path }
                 resticRepository.getSnapshotsForRepo(repoPath)
             }.collect { snapshots ->

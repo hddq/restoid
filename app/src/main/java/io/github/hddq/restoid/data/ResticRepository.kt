@@ -35,35 +35,26 @@ class ResticRepository(
     private val stringResolver: (Int) -> String = { context.getString(it) }
 ) {
 
-    private val _snapshots = MutableStateFlow<List<SnapshotInfo>?>(null)
-    val snapshots = _snapshots.asStateFlow()
-
-    private val _snapshotsRepoPath = MutableStateFlow<String?>(null)
-    val snapshotsRepoPath = _snapshotsRepoPath.asStateFlow()
-
     private val _snapshotsByRepoPath = MutableStateFlow<Map<String, List<SnapshotInfo>>>(emptyMap())
     val snapshotsByRepoPath = _snapshotsByRepoPath.asStateFlow()
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    fun clearSnapshots() {
-        _snapshotsRepoPath.value = null
-        _snapshots.value = null
+    fun clearSnapshots(repoPath: String? = null) {
+        if (repoPath == null) {
+            _snapshotsByRepoPath.value = emptyMap()
+        } else {
+            _snapshotsByRepoPath.update { it - repoPath }
+        }
     }
 
     fun getSnapshotsForRepo(repoPath: String?): List<SnapshotInfo>? {
         if (repoPath == null) return null
         return _snapshotsByRepoPath.value[repoPath]
-            ?: _snapshots.value?.takeIf { _snapshotsRepoPath.value == repoPath }
     }
 
     private fun updateSharedSnapshots(repoPath: String, snapshots: List<SnapshotInfo>) {
         _snapshotsByRepoPath.update { it + (repoPath to snapshots) }
-        val currentRepoPath = _snapshotsRepoPath.value
-        if (currentRepoPath == null || currentRepoPath == repoPath) {
-            _snapshotsRepoPath.value = repoPath
-            _snapshots.value = snapshots
-        }
     }
 
     private suspend fun fetchSnapshotsRaw(
@@ -594,11 +585,6 @@ class ResticRepository(
                 _snapshotsByRepoPath.update { currentMap ->
                     val existing = currentMap[repoPath] ?: return@update currentMap
                     currentMap + (repoPath to existing.filterNot { it.id == snapshotId || it.id.startsWith(snapshotId) })
-                }
-                if (_snapshotsRepoPath.value == null || _snapshotsRepoPath.value == repoPath) {
-                    _snapshots.update { currentSnapshots ->
-                        currentSnapshots?.filterNot { it.id == snapshotId || it.id.startsWith(snapshotId) }
-                    }
                 }
             }
     }

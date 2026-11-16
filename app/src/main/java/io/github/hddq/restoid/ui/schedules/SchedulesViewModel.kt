@@ -101,6 +101,7 @@ class SchedulesViewModel(
     private var cachedRawExclusions: List<String> = emptyList()
     private var cachedResolvedExclusions: List<String> = emptyList()
     private var conflictResolutionJob: Job? = null
+    private var addEditSessionId: Long = 0L
 
     private val forgetHostsController = ForgetHostsController(
         context = application,
@@ -196,6 +197,7 @@ class SchedulesViewModel(
 
     // Add/Edit Screen methods
     fun startAddSchedule() {
+        val sessionId = ++addEditSessionId
         val defaultHostname = preferencesRepository.getDeviceHostname()
         val newState = AddEditScheduleUiState(
             maintenance = MaintenanceConfig(
@@ -206,9 +208,10 @@ class SchedulesViewModel(
         _addEditState.value = newState
         forgetHostsController.setManualHosts(listOf(defaultHostname))
         initialState = _addEditState.value
-        loadAppsForAddEdit()
+        loadAppsForAddEdit(sessionId = sessionId)
     }
     fun startEditSchedule(schedule: Schedule) {
+        val sessionId = ++addEditSessionId
         val normalizedHosts = normalizeForgetHosts(schedule.config.forgetHosts)
         val newState = AddEditScheduleUiState(
             id = schedule.id,
@@ -241,13 +244,17 @@ class SchedulesViewModel(
         _addEditState.value = withConflicts
         forgetHostsController.setManualHosts(normalizedHosts)
         initialState = _addEditState.value
-        loadAppsForAddEdit(schedule.config.selectedPackageNames)
+        loadAppsForAddEdit(schedule.config.selectedPackageNames, sessionId = sessionId)
     }
 
-    private fun loadAppsForAddEdit(selectedPackageNames: List<String>? = null) {
+    private fun loadAppsForAddEdit(
+        selectedPackageNames: List<String>? = null,
+        sessionId: Long = addEditSessionId
+    ) {
         viewModelScope.launch {
             _addEditState.update { it.copy(isLoadingApps = true) }
             val allApps = appInfoRepository.getInstalledUserApps()
+            if (addEditSessionId != sessionId) return@launch
             val currentTypes = _addEditState.value.appBackupTypes
             val defaultTypes = _addEditState.value.backupTypes
             val apps = if (selectedPackageNames != null) {
@@ -258,11 +265,22 @@ class SchedulesViewModel(
             val appBackupTypes = apps.associate { app ->
                 app.packageName to (currentTypes[app.packageName] ?: defaultTypes)
             }
-            _addEditState.update { 
+            _addEditState.update {
+                if (addEditSessionId != sessionId) return@update it
                 val updated = recomputeConflicts(it.copy(apps = apps, appBackupTypes = appBackupTypes, isLoadingApps = false))
                 // Update initialState if it was just set (apps are loaded asynchronously)
-                if (initialState?.apps?.isEmpty() == true && apps.isNotEmpty()) {
-                    initialState = updated
+                val currentInitial = initialState
+                if (currentInitial != null && currentInitial.apps.isEmpty() && apps.isNotEmpty()) {
+                    val initialAppBackupTypes = apps.associate { app ->
+                        app.packageName to (currentInitial.appBackupTypes[app.packageName] ?: currentInitial.backupTypes)
+                    }
+                    initialState = recomputeConflicts(
+                        currentInitial.copy(
+                            apps = apps,
+                            appBackupTypes = initialAppBackupTypes,
+                            isLoadingApps = false
+                        )
+                    )
                 }
                 updated
             }
@@ -340,6 +358,7 @@ class SchedulesViewModel(
         val repoKey = _uiState.value.selectedRepoKey ?: return
         val repository = repositoriesRepository.getRepositoryByKey(repoKey) ?: return
         val repoId = repository.id ?: return
+        val sessionId = addEditSessionId
         val state = _addEditState.value
         if (state.maintenance.forgetSnapshots && !state.maintenance.forgetAllHosts && normalizeForgetHosts(state.maintenance.forgetHosts).isEmpty()) {
             Toast.makeText(
@@ -352,10 +371,37 @@ class SchedulesViewModel(
         val schedule = buildScheduleFromState(state)
         viewModelScope.launch {
             if (hasChanges(state)) {
-                _addEditState.update { it.copy(isSaving = true) }
+                _addEditState.update { current ->
+                    if (addEditSessionId == sessionId) {
+                        current.copy(id = schedule.id, isSaving = true)
+                    } else {
+                        current
+                    }
+                }
                 scheduleRepository.saveSchedule(repoKey, repoId, schedule)
-                _addEditState.update { it.copy(id = schedule.id, isSaving = false) }
-                initialState = _addEditState.value
+                if (addEditSessionId == sessionId) {
+                    val currentInitial = initialState
+                    initialState = if (state.apps.isEmpty() && !currentInitial?.apps.isNullOrEmpty()) {
+                        recomputeConflicts(
+                            state.copy(
+                                id = schedule.id,
+                                isSaving = false,
+                                isLoadingApps = false,
+                                apps = currentInitial.apps,
+                                appBackupTypes = currentInitial.appBackupTypes
+                            )
+                        )
+                    } else {
+                        state.copy(id = schedule.id, isSaving = false)
+                    }
+                    _addEditState.update { current ->
+                        if (addEditSessionId == sessionId) {
+                            current.copy(id = schedule.id, isSaving = false)
+                        } else {
+                            current
+                        }
+                    }
+                }
                 loadSchedules()
             }
             scheduleRepository.runNow(repoKey, schedule)
