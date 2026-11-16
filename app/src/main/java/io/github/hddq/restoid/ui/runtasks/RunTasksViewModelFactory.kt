@@ -7,6 +7,7 @@ import io.github.hddq.restoid.data.AppInfoRepository
 import io.github.hddq.restoid.data.PreferencesRepository
 import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.ResticBinaryManager
+import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.work.OperationWorkRepository
 
 class RunTasksViewModelFactory(
@@ -14,6 +15,7 @@ class RunTasksViewModelFactory(
     private val rootRepository: io.github.hddq.restoid.data.RootRepository,
     private val repositoriesRepository: RepositoriesRepository,
     private val resticBinaryManager: ResticBinaryManager,
+    private val resticRepository: ResticRepository,
     private val appInfoRepository: AppInfoRepository,
     private val preferencesRepository: PreferencesRepository,
     private val operationWorkRepository: OperationWorkRepository
@@ -26,6 +28,7 @@ class RunTasksViewModelFactory(
                 rootRepository = rootRepository,
                 repositoriesRepository = repositoriesRepository,
                 resticBinaryManager = resticBinaryManager,
+                resticRepository = resticRepository,
                 appInfoRepository = appInfoRepository,
                 preferencesRepository = preferencesRepository,
                 operationWorkRepository = operationWorkRepository

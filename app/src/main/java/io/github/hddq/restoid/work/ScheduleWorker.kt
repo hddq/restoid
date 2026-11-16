@@ -54,6 +54,8 @@ class ScheduleWorker(
             keepDaily = schedule.config.keepDaily,
             keepWeekly = schedule.config.keepWeekly,
             keepMonthly = schedule.config.keepMonthly,
+            forgetAllHosts = schedule.config.forgetAllHosts,
+            forgetHosts = schedule.config.forgetHosts,
             scheduleName = schedule.name,
             requireUnmeteredNetwork = schedule.triggerConditions.requireUnmeteredNetwork
         )

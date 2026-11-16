@@ -9,9 +9,17 @@ import io.github.hddq.restoid.data.OperationType
 import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.RepositoryBackendType
 import io.github.hddq.restoid.data.ResticBinaryManager
+import io.github.hddq.restoid.data.ResticRepository
+import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.ui.shared.BackupTypes
+import io.github.hddq.restoid.ui.shared.ForgetHostOption
 import io.github.hddq.restoid.ui.shared.OperationProgress
+import io.github.hddq.restoid.ui.shared.buildAvailableForgetHosts
+import io.github.hddq.restoid.ui.shared.normalizeForgetHosts
+import io.github.hddq.restoid.ui.shared.toggleAllForgetHostsSelection
+import io.github.hddq.restoid.ui.shared.toggleForgetHostSelection
+import io.github.hddq.restoid.util.DeviceUtils
 import io.github.hddq.restoid.util.StorageUtils
 import io.github.hddq.restoid.work.BackupWorkRequest
 import io.github.hddq.restoid.work.ExclusionConflict
@@ -44,7 +52,11 @@ data class RunTasksUiState(
     val customDirectoriesBackupEnabled: Boolean = false,
     val customDirectories: List<CustomDirectory> = emptyList(),
     val excludedCustomDirectories: List<CustomDirectory> = emptyList(),
-    val exclusionConflicts: List<ExclusionConflict> = emptyList()
+    val exclusionConflicts: List<ExclusionConflict> = emptyList(),
+    val availableForgetHosts: List<ForgetHostOption> = emptyList(),
+    val areRepoSnapshotsLoaded: Boolean = false,
+    val isLoadingForgetHosts: Boolean = false,
+    val forgetHostsError: String? = null
 )
 
 sealed interface RunTasksUiEvent {
@@ -56,6 +68,7 @@ class RunTasksViewModel(
     private val rootRepository: io.github.hddq.restoid.data.RootRepository,
     private val repositoriesRepository: RepositoriesRepository,
     private val resticBinaryManager: ResticBinaryManager,
+    private val resticRepository: ResticRepository,
     private val appInfoRepository: io.github.hddq.restoid.data.AppInfoRepository,
     private val preferencesRepository: io.github.hddq.restoid.data.PreferencesRepository,
     private val operationWorkRepository: OperationWorkRepository
@@ -94,11 +107,15 @@ class RunTasksViewModel(
     private var cachedRawExclusions: List<String> = emptyList()
     private var cachedResolvedExclusions: List<String> = emptyList()
     private var conflictResolutionJob: Job? = null
+    private var manualForgetHosts: List<String> = _uiState.value.maintenance.forgetHosts
+    private var latestRepoSnapshots: List<SnapshotInfo>? = resticRepository.snapshots.value
 
     init {
+        refreshAvailableForgetHosts()
         loadInstalledApps()
         observeOperationState()
         observeRootState()
+        observeRepoSnapshots()
         val initialExcluded = if (_uiState.value.customDirectoriesBackupEnabled) {
             _uiState.value.excludedCustomDirectories.filter { it.isSelected }.map { it.uri }
         } else {
@@ -106,6 +123,30 @@ class RunTasksViewModel(
         }
         if (initialExcluded.isNotEmpty()) {
             triggerBackgroundExclusionResolution(initialExcluded)
+        }
+    }
+
+    private fun observeRepoSnapshots() {
+        viewModelScope.launch {
+            resticRepository.snapshots.collect { snapshots ->
+                latestRepoSnapshots = snapshots
+                refreshAvailableForgetHosts()
+            }
+        }
+    }
+
+    private fun refreshAvailableForgetHosts() {
+        val currentHostname = preferencesRepository.getDeviceHostname()
+        _uiState.update { state ->
+            state.copy(
+                availableForgetHosts = buildAvailableForgetHosts(
+                    currentDeviceHostname = currentHostname,
+                    snapshots = latestRepoSnapshots,
+                    selectedHosts = state.maintenance.forgetHosts,
+                    manualHosts = manualForgetHosts
+                ),
+                areRepoSnapshotsLoaded = latestRepoSnapshots != null
+            )
         }
     }
 
@@ -184,6 +225,7 @@ class RunTasksViewModel(
 
         val errorState = preflightChecks()
         if (errorState != null) {
+            errorState.error?.let { Toast.makeText(application, it, Toast.LENGTH_LONG).show() }
             _uiState.update { it.copy(isRunning = false, progress = errorState) }
             return
         }
@@ -223,7 +265,9 @@ class RunTasksViewModel(
             keepLast = maintenance.keepLast,
             keepDaily = maintenance.keepDaily,
             keepWeekly = maintenance.keepWeekly,
-            keepMonthly = maintenance.keepMonthly
+            keepMonthly = maintenance.keepMonthly,
+            forgetAllHosts = maintenance.forgetAllHosts,
+            forgetHosts = if (maintenance.forgetAllHosts) emptyList() else normalizeForgetHosts(maintenance.forgetHosts)
         )
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -259,6 +303,14 @@ class RunTasksViewModel(
                 isFinished = true,
                 error = application.getString(R.string.maintenance_error_no_tasks),
                 finalSummary = application.getString(R.string.maintenance_summary_no_tasks)
+            )
+        }
+
+        if (maintenance.forgetSnapshots && !maintenance.forgetAllHosts && normalizeForgetHosts(maintenance.forgetHosts).isEmpty()) {
+            return OperationProgress(
+                isFinished = true,
+                error = application.getString(R.string.error_no_forget_hosts_selected),
+                finalSummary = application.getString(R.string.summary_no_forget_hosts_selected)
             )
         }
 
@@ -466,6 +518,141 @@ class RunTasksViewModel(
     fun setKeepDaily(value: Int) = _uiState.update { it.copy(maintenance = it.maintenance.copy(keepDaily = value)) }
     fun setKeepWeekly(value: Int) = _uiState.update { it.copy(maintenance = it.maintenance.copy(keepWeekly = value)) }
     fun setKeepMonthly(value: Int) = _uiState.update { it.copy(maintenance = it.maintenance.copy(keepMonthly = value)) }
+
+    fun toggleAllForgetHosts() {
+        _uiState.update { state ->
+            val updatedHosts = toggleAllForgetHostsSelection(
+                availableHostnames = state.availableForgetHosts.map { it.hostname },
+                selectedHosts = state.maintenance.forgetHosts,
+                forgetAllHosts = state.maintenance.forgetAllHosts
+            )
+            state.copy(
+                maintenance = state.maintenance.copy(
+                    forgetAllHosts = false,
+                    forgetHosts = updatedHosts
+                )
+            )
+        }
+        refreshAvailableForgetHosts()
+    }
+
+    fun toggleForgetHost(hostname: String) {
+        val cleanHost = hostname.trim()
+        if (cleanHost.isEmpty()) return
+        manualForgetHosts = (manualForgetHosts + cleanHost).distinct()
+        _uiState.update { state ->
+            val baseSelected = if (state.maintenance.forgetAllHosts) {
+                state.availableForgetHosts.map { it.hostname }
+            } else {
+                state.maintenance.forgetHosts
+            }
+            state.copy(
+                maintenance = state.maintenance.copy(
+                    forgetAllHosts = false,
+                    forgetHosts = toggleForgetHostSelection(baseSelected, cleanHost)
+                )
+            )
+        }
+        refreshAvailableForgetHosts()
+    }
+
+    fun addCustomForgetHost(hostname: String) {
+        val cleanHost = DeviceUtils.sanitizeHostname(hostname)
+        if (cleanHost.isEmpty()) return
+        manualForgetHosts = (manualForgetHosts + cleanHost).distinct()
+        _uiState.update { state ->
+            val baseSelected = if (state.maintenance.forgetAllHosts) {
+                state.availableForgetHosts.map { it.hostname }
+            } else {
+                state.maintenance.forgetHosts
+            }
+            val updatedSelected = (normalizeForgetHosts(baseSelected) + cleanHost).distinct()
+            state.copy(
+                maintenance = state.maintenance.copy(
+                    forgetAllHosts = false,
+                    forgetHosts = updatedSelected
+                ),
+                forgetHostsError = null
+            )
+        }
+        refreshAvailableForgetHosts()
+    }
+
+    fun removeCustomForgetHost(hostname: String) {
+        val cleanHost = hostname.trim()
+        if (cleanHost.isEmpty()) return
+        manualForgetHosts = manualForgetHosts.filterNot { it.trim() == cleanHost }
+        _uiState.update { state ->
+            state.copy(
+                maintenance = state.maintenance.copy(
+                    forgetAllHosts = false,
+                    forgetHosts = state.maintenance.forgetHosts.filterNot { it.trim() == cleanHost }
+                )
+            )
+        }
+        refreshAvailableForgetHosts()
+    }
+
+    fun refreshForgetHosts(userInitiated: Boolean = true) {
+        if (!userInitiated && latestRepoSnapshots != null) return
+        if (_uiState.value.isLoadingForgetHosts) return
+
+        val selectedRepoKey = repositoriesRepository.selectedRepository.value
+        val repository = selectedRepoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
+        if (selectedRepoKey == null || repository == null) {
+            if (userInitiated) {
+                _uiState.update { it.copy(forgetHostsError = application.getString(R.string.no_repository_selected)) }
+            }
+            return
+        }
+        if (!resticBinaryManager.isInstalled) {
+            if (userInitiated) {
+                _uiState.update { it.copy(forgetHostsError = application.getString(R.string.restic_not_available_check_settings)) }
+            }
+            return
+        }
+
+        val password = repositoriesRepository.getRepositoryPassword(selectedRepoKey)
+        val hasMissingBackendCreds = when (repository.backendType) {
+            RepositoryBackendType.SFTP -> !repositoriesRepository.hasSftpCredentials(selectedRepoKey)
+            RepositoryBackendType.REST -> repository.restAuthRequired && !repositoriesRepository.hasRestCredentials(selectedRepoKey)
+            RepositoryBackendType.S3 -> repository.s3AuthRequired && !repositoriesRepository.hasS3Credentials(selectedRepoKey)
+            else -> false
+        }
+        if (password == null || hasMissingBackendCreds) {
+            if (userInitiated) {
+                _uiState.update { it.copy(forgetHostsError = application.getString(R.string.forget_hosts_credentials_required)) }
+            }
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingForgetHosts = true, forgetHostsError = null) }
+            val env = repositoriesRepository.getExecutionEnvironmentVariables(selectedRepoKey)
+            val resticOptions = repositoriesRepository.getExecutionResticOptions(selectedRepoKey)
+            val result = resticRepository.getSnapshots(
+                repoPath = repository.path,
+                password = password,
+                environmentVariables = env,
+                resticOptions = resticOptions
+            )
+            result.fold(
+                onSuccess = { snapshots ->
+                    latestRepoSnapshots = snapshots
+                    _uiState.update { it.copy(isLoadingForgetHosts = false, forgetHostsError = null) }
+                    refreshAvailableForgetHosts()
+                },
+                onFailure = { error ->
+                    _uiState.update {
+                        it.copy(
+                            isLoadingForgetHosts = false,
+                            forgetHostsError = error.message ?: application.getString(R.string.restic_failure_load_snapshots)
+                        )
+                    }
+                }
+            )
+        }
+    }
 
     fun toggleAppSelection(packageName: String) {
         _uiState.update { state ->

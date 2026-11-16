@@ -31,7 +31,8 @@ import java.io.File
  */
 class ResticRepository(
     private val context: Context,
-    private val executor: ResticExecutor
+    private val executor: ResticExecutor,
+    private val stringResolver: (Int) -> String = { context.getString(it) }
 ) {
 
     private val _snapshots = MutableStateFlow<List<SnapshotInfo>?>(null)
@@ -490,8 +491,39 @@ class ResticRepository(
         keepDaily: Int,
         keepWeekly: Int,
         keepMonthly: Int,
+        forgetAllHosts: Boolean = true,
+        forgetHosts: List<String> = emptyList(),
         environmentVariables: Map<String, String> = emptyMap(),
         resticOptions: Map<String, String> = emptyMap()
+    ): Result<String> {
+        val forgetCommand = buildForgetCommand(
+            keepLast = keepLast,
+            keepDaily = keepDaily,
+            keepWeekly = keepWeekly,
+            keepMonthly = keepMonthly,
+            forgetAllHosts = forgetAllHosts,
+            forgetHosts = forgetHosts
+        ).getOrElse { failure ->
+            return Result.failure(failure)
+        }
+
+        return executor.execute(
+            repoPath,
+            password,
+            forgetCommand,
+            context.getString(R.string.restic_failure_forget_snapshots),
+            environmentVariables = environmentVariables,
+            resticOptions = resticOptions
+        )
+    }
+
+    internal fun buildForgetCommand(
+        keepLast: Int,
+        keepDaily: Int,
+        keepWeekly: Int,
+        keepMonthly: Int,
+        forgetAllHosts: Boolean = true,
+        forgetHosts: List<String> = emptyList()
     ): Result<String> {
         val forgetOptions = buildString {
             if (keepLast > 0) append(" --keep-last $keepLast")
@@ -501,18 +533,24 @@ class ResticRepository(
         }
 
         if (forgetOptions.isBlank()) {
-            return Result.failure(Exception(context.getString(R.string.restic_failure_no_forget_policy)))
+            return Result.failure(Exception(stringResolver(R.string.restic_failure_no_forget_policy)))
+        }
+
+        val hostOptions = if (forgetAllHosts) {
+            ""
+        } else {
+            val normalizedHosts = forgetHosts
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .distinct()
+            if (normalizedHosts.isEmpty()) {
+                return Result.failure(Exception(stringResolver(R.string.restic_failure_no_forget_hosts)))
+            }
+            normalizedHosts.joinToString("") { " --host ${shellQuote(it)}" }
         }
 
         val groupingAndTagOptions = " --group-by host,tags --tag 'restoid' --tag 'backup'"
-        return executor.execute(
-            repoPath,
-            password,
-            "forget$forgetOptions$groupingAndTagOptions",
-            context.getString(R.string.restic_failure_forget_snapshots),
-            environmentVariables = environmentVariables,
-            resticOptions = resticOptions
-        )
+        return Result.success("forget$forgetOptions$hostOptions$groupingAndTagOptions")
     }
 
     suspend fun forgetSnapshot(

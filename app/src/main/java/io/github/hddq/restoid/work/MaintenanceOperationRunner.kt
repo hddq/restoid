@@ -83,14 +83,16 @@ class MaintenanceOperationRunner(
                 tasksToRun.add(
                     forgetTaskName to {
                         resticRepository.forget(
-                            selectedRepoPath,
-                            password,
-                            request.keepLast,
-                            request.keepDaily,
-                            request.keepWeekly,
-                            request.keepMonthly,
-                            repositoryEnvironment,
-                            repositoryResticOptions
+                            repoPath = selectedRepoPath,
+                            password = password,
+                            keepLast = request.keepLast,
+                            keepDaily = request.keepDaily,
+                            keepWeekly = request.keepWeekly,
+                            keepMonthly = request.keepMonthly,
+                            forgetAllHosts = request.forgetAllHosts,
+                            forgetHosts = request.forgetHosts,
+                            environmentVariables = repositoryEnvironment,
+                            resticOptions = repositoryResticOptions
                         )
                     }
                 )
@@ -243,6 +245,13 @@ class MaintenanceOperationRunner(
                 isFinished = true,
                 error = context.getString(R.string.maintenance_error_no_tasks),
                 finalSummary = context.getString(R.string.maintenance_summary_no_tasks)
+            )
+        }
+        if (request.forgetSnapshots && !request.forgetAllHosts && request.forgetHosts.none { it.isNotBlank() }) {
+            return OperationProgress(
+                isFinished = true,
+                error = context.getString(R.string.error_no_forget_hosts_selected),
+                finalSummary = context.getString(R.string.summary_no_forget_hosts_selected)
             )
         }
         if (!resticBinaryManager.isInstalled) {

@@ -77,6 +77,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.hddq.restoid.LocalAppBarActions
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.model.Schedule
@@ -544,13 +545,23 @@ fun ScheduleBackupConfigScreen(
 
 @Composable
 fun ScheduleForgetConfigScreen(viewModel: SchedulesViewModel, modifier: Modifier = Modifier) {
-    val state by viewModel.addEditState.collectAsState()
+    val state by viewModel.addEditState.collectAsStateWithLifecycle()
     io.github.hddq.restoid.ui.shared.ForgetConfigScreen(
         maintenance = state.maintenance,
         onKeepLastChange = viewModel::setKeepLast,
         onKeepDailyChange = viewModel::setKeepDaily,
         onKeepWeeklyChange = viewModel::setKeepWeekly,
         onKeepMonthlyChange = viewModel::setKeepMonthly,
+        availableHosts = state.availableForgetHosts,
+        areRepoSnapshotsLoaded = state.areRepoSnapshotsLoaded,
+        isLoadingHosts = state.isLoadingForgetHosts,
+        hostsError = state.forgetHostsError,
+        onToggleAllHosts = viewModel::toggleAllForgetHosts,
+        onToggleHost = viewModel::toggleForgetHost,
+        onAddHost = viewModel::addCustomForgetHost,
+        onRemoveHost = viewModel::removeCustomForgetHost,
+        onRefreshHosts = { viewModel.refreshForgetHosts(userInitiated = true) },
+        onAutoLoadHosts = { viewModel.refreshForgetHosts(userInitiated = false) },
         modifier = modifier
     )
 }

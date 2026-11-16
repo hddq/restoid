@@ -6,15 +6,25 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.AppInfoRepository
+import io.github.hddq.restoid.data.PreferencesRepository
 import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.RepositoryBackendType
+import io.github.hddq.restoid.data.ResticBinaryManager
+import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.data.ScheduleRepository
+import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.Schedule
 import io.github.hddq.restoid.model.TriggerConditions
 import io.github.hddq.restoid.model.MaintenanceConfig
 import io.github.hddq.restoid.ui.shared.BackupTypes
+import io.github.hddq.restoid.ui.shared.ForgetHostOption
+import io.github.hddq.restoid.ui.shared.buildAvailableForgetHosts
+import io.github.hddq.restoid.ui.shared.normalizeForgetHosts
 import io.github.hddq.restoid.ui.shared.toUiModel
+import io.github.hddq.restoid.ui.shared.toggleAllForgetHostsSelection
+import io.github.hddq.restoid.ui.shared.toggleForgetHostSelection
+import io.github.hddq.restoid.util.DeviceUtils
 import io.github.hddq.restoid.util.StorageUtils
 import io.github.hddq.restoid.work.BackupWorkRequest
 import io.github.hddq.restoid.work.ExclusionConflict
@@ -56,7 +66,11 @@ data class AddEditScheduleUiState(
     val customDirectoriesBackupEnabled: Boolean = false,
     val customDirectories: List<io.github.hddq.restoid.model.CustomDirectory> = emptyList(),
     val excludedCustomDirectories: List<io.github.hddq.restoid.model.CustomDirectory> = emptyList(),
-    val exclusionConflicts: List<ExclusionConflict> = emptyList()
+    val exclusionConflicts: List<ExclusionConflict> = emptyList(),
+    val availableForgetHosts: List<ForgetHostOption> = emptyList(),
+    val areRepoSnapshotsLoaded: Boolean = false,
+    val isLoadingForgetHosts: Boolean = false,
+    val forgetHostsError: String? = null
 )
 
 sealed interface SchedulesUiEvent {
@@ -68,7 +82,10 @@ class SchedulesViewModel(
     private val scheduleRepository: ScheduleRepository,
     private val repositoriesRepository: RepositoriesRepository,
     private val appInfoRepository: AppInfoRepository,
-    private val rootRepository: io.github.hddq.restoid.data.RootRepository
+    private val rootRepository: io.github.hddq.restoid.data.RootRepository,
+    private val resticBinaryManager: ResticBinaryManager,
+    private val resticRepository: ResticRepository,
+    private val preferencesRepository: PreferencesRepository
 ) : ViewModel() {
 
     val rootState = rootRepository.rootState
@@ -87,6 +104,8 @@ class SchedulesViewModel(
     private var cachedRawExclusions: List<String> = emptyList()
     private var cachedResolvedExclusions: List<String> = emptyList()
     private var conflictResolutionJob: Job? = null
+    private var manualForgetHosts: List<String> = emptyList()
+    private var latestRepoSnapshots: List<SnapshotInfo>? = resticRepository.snapshots.value
 
     init {
         viewModelScope.launch {
@@ -99,6 +118,28 @@ class SchedulesViewModel(
             rootRepository.rootState.collect {
                 _addEditState.update { recomputeConflicts(it) }
             }
+        }
+        viewModelScope.launch {
+            resticRepository.snapshots.collect { snapshots ->
+                latestRepoSnapshots = snapshots
+                refreshAvailableForgetHosts()
+            }
+        }
+        refreshAvailableForgetHosts()
+    }
+
+    private fun refreshAvailableForgetHosts() {
+        val currentHostname = preferencesRepository.getDeviceHostname()
+        _addEditState.update { state ->
+            state.copy(
+                availableForgetHosts = buildAvailableForgetHosts(
+                    currentDeviceHostname = currentHostname,
+                    snapshots = latestRepoSnapshots,
+                    selectedHosts = state.maintenance.forgetHosts,
+                    manualHosts = manualForgetHosts
+                ),
+                areRepoSnapshotsLoaded = latestRepoSnapshots != null
+            )
         }
     }
 
@@ -143,12 +184,22 @@ class SchedulesViewModel(
 
     // Add/Edit Screen methods
     fun startAddSchedule() {
-        val newState = AddEditScheduleUiState()
+        val defaultHostname = preferencesRepository.getDeviceHostname()
+        manualForgetHosts = listOf(defaultHostname)
+        val newState = AddEditScheduleUiState(
+            maintenance = MaintenanceConfig(
+                forgetAllHosts = false,
+                forgetHosts = listOf(defaultHostname)
+            )
+        )
         _addEditState.value = newState
         initialState = newState
+        refreshAvailableForgetHosts()
         loadAppsForAddEdit()
     }
     fun startEditSchedule(schedule: Schedule) {
+        val normalizedHosts = normalizeForgetHosts(schedule.config.forgetHosts)
+        manualForgetHosts = normalizedHosts
         val newState = AddEditScheduleUiState(
             id = schedule.id,
             name = schedule.name,
@@ -166,7 +217,9 @@ class SchedulesViewModel(
                 keepLast = schedule.config.keepLast,
                 keepDaily = schedule.config.keepDaily,
                 keepWeekly = schedule.config.keepWeekly,
-                keepMonthly = schedule.config.keepMonthly
+                keepMonthly = schedule.config.keepMonthly,
+                forgetAllHosts = schedule.config.forgetAllHosts,
+                forgetHosts = normalizedHosts
             ),
             triggerConditions = schedule.triggerConditions,
             lastRunTimestamp = schedule.lastRunTimestamp,
@@ -177,6 +230,7 @@ class SchedulesViewModel(
         val withConflicts = recomputeConflicts(newState)
         _addEditState.value = withConflicts
         initialState = withConflicts
+        refreshAvailableForgetHosts()
         loadAppsForAddEdit(schedule.config.selectedPackageNames)
     }
 
@@ -263,7 +317,9 @@ class SchedulesViewModel(
                 keepLast = state.maintenance.keepLast,
                 keepDaily = state.maintenance.keepDaily,
                 keepWeekly = state.maintenance.keepWeekly,
-                keepMonthly = state.maintenance.keepMonthly
+                keepMonthly = state.maintenance.keepMonthly,
+                forgetAllHosts = state.maintenance.forgetAllHosts,
+                forgetHosts = if (state.maintenance.forgetAllHosts) emptyList() else normalizeForgetHosts(state.maintenance.forgetHosts)
             ),
             triggerConditions = state.triggerConditions,
             lastRunTimestamp = state.lastRunTimestamp
@@ -272,7 +328,16 @@ class SchedulesViewModel(
 
     fun runCurrentScheduleNow() {
         val repoKey = _uiState.value.selectedRepoKey ?: return
-        val schedule = buildScheduleFromState(_addEditState.value)
+        val state = _addEditState.value
+        if (state.maintenance.forgetSnapshots && !state.maintenance.forgetAllHosts && normalizeForgetHosts(state.maintenance.forgetHosts).isEmpty()) {
+            Toast.makeText(
+                application,
+                application.getString(R.string.error_no_forget_hosts_selected),
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+        val schedule = buildScheduleFromState(state)
         scheduleRepository.runNow(repoKey, schedule)
     }
 
@@ -281,7 +346,17 @@ class SchedulesViewModel(
         val repository = repositoriesRepository.getRepositoryByKey(repoKey) ?: return
         val repoId = repository.id ?: return
 
-        val schedule = buildScheduleFromState(_addEditState.value)
+        val state = _addEditState.value
+        if (state.maintenance.forgetSnapshots && !state.maintenance.forgetAllHosts && normalizeForgetHosts(state.maintenance.forgetHosts).isEmpty()) {
+            Toast.makeText(
+                application,
+                application.getString(R.string.error_no_forget_hosts_selected),
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+
+        val schedule = buildScheduleFromState(state)
 
         viewModelScope.launch {
             _addEditState.update { it.copy(isSaving = true) }
@@ -447,6 +522,141 @@ class SchedulesViewModel(
     fun setKeepDaily(value: Int) = _addEditState.update { it.copy(maintenance = it.maintenance.copy(keepDaily = value)) }
     fun setKeepWeekly(value: Int) = _addEditState.update { it.copy(maintenance = it.maintenance.copy(keepWeekly = value)) }
     fun setKeepMonthly(value: Int) = _addEditState.update { it.copy(maintenance = it.maintenance.copy(keepMonthly = value)) }
+
+    fun toggleAllForgetHosts() {
+        _addEditState.update { state ->
+            val updatedHosts = toggleAllForgetHostsSelection(
+                availableHostnames = state.availableForgetHosts.map { it.hostname },
+                selectedHosts = state.maintenance.forgetHosts,
+                forgetAllHosts = state.maintenance.forgetAllHosts
+            )
+            state.copy(
+                maintenance = state.maintenance.copy(
+                    forgetAllHosts = false,
+                    forgetHosts = updatedHosts
+                )
+            )
+        }
+        refreshAvailableForgetHosts()
+    }
+
+    fun toggleForgetHost(hostname: String) {
+        val cleanHost = hostname.trim()
+        if (cleanHost.isEmpty()) return
+        manualForgetHosts = (manualForgetHosts + cleanHost).distinct()
+        _addEditState.update { state ->
+            val baseSelected = if (state.maintenance.forgetAllHosts) {
+                state.availableForgetHosts.map { it.hostname }
+            } else {
+                state.maintenance.forgetHosts
+            }
+            state.copy(
+                maintenance = state.maintenance.copy(
+                    forgetAllHosts = false,
+                    forgetHosts = toggleForgetHostSelection(baseSelected, cleanHost)
+                )
+            )
+        }
+        refreshAvailableForgetHosts()
+    }
+
+    fun addCustomForgetHost(hostname: String) {
+        val cleanHost = DeviceUtils.sanitizeHostname(hostname)
+        if (cleanHost.isEmpty()) return
+        manualForgetHosts = (manualForgetHosts + cleanHost).distinct()
+        _addEditState.update { state ->
+            val baseSelected = if (state.maintenance.forgetAllHosts) {
+                state.availableForgetHosts.map { it.hostname }
+            } else {
+                state.maintenance.forgetHosts
+            }
+            val updatedSelected = (normalizeForgetHosts(baseSelected) + cleanHost).distinct()
+            state.copy(
+                maintenance = state.maintenance.copy(
+                    forgetAllHosts = false,
+                    forgetHosts = updatedSelected
+                ),
+                forgetHostsError = null
+            )
+        }
+        refreshAvailableForgetHosts()
+    }
+
+    fun removeCustomForgetHost(hostname: String) {
+        val cleanHost = hostname.trim()
+        if (cleanHost.isEmpty()) return
+        manualForgetHosts = manualForgetHosts.filterNot { it.trim() == cleanHost }
+        _addEditState.update { state ->
+            state.copy(
+                maintenance = state.maintenance.copy(
+                    forgetAllHosts = false,
+                    forgetHosts = state.maintenance.forgetHosts.filterNot { it.trim() == cleanHost }
+                )
+            )
+        }
+        refreshAvailableForgetHosts()
+    }
+
+    fun refreshForgetHosts(userInitiated: Boolean = true) {
+        if (!userInitiated && latestRepoSnapshots != null) return
+        if (_addEditState.value.isLoadingForgetHosts) return
+
+        val selectedRepoKey = _uiState.value.selectedRepoKey ?: repositoriesRepository.selectedRepository.value
+        val repository = selectedRepoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
+        if (selectedRepoKey == null || repository == null) {
+            if (userInitiated) {
+                _addEditState.update { it.copy(forgetHostsError = application.getString(R.string.no_repository_selected)) }
+            }
+            return
+        }
+        if (!resticBinaryManager.isInstalled) {
+            if (userInitiated) {
+                _addEditState.update { it.copy(forgetHostsError = application.getString(R.string.restic_not_available_check_settings)) }
+            }
+            return
+        }
+
+        val password = repositoriesRepository.getRepositoryPassword(selectedRepoKey)
+        val hasMissingBackendCreds = when (repository.backendType) {
+            RepositoryBackendType.SFTP -> !repositoriesRepository.hasSftpCredentials(selectedRepoKey)
+            RepositoryBackendType.REST -> repository.restAuthRequired && !repositoriesRepository.hasRestCredentials(selectedRepoKey)
+            RepositoryBackendType.S3 -> repository.s3AuthRequired && !repositoriesRepository.hasS3Credentials(selectedRepoKey)
+            else -> false
+        }
+        if (password == null || hasMissingBackendCreds) {
+            if (userInitiated) {
+                _addEditState.update { it.copy(forgetHostsError = application.getString(R.string.forget_hosts_credentials_required)) }
+            }
+            return
+        }
+
+        viewModelScope.launch {
+            _addEditState.update { it.copy(isLoadingForgetHosts = true, forgetHostsError = null) }
+            val env = repositoriesRepository.getExecutionEnvironmentVariables(selectedRepoKey)
+            val resticOptions = repositoriesRepository.getExecutionResticOptions(selectedRepoKey)
+            val result = resticRepository.getSnapshots(
+                repoPath = repository.path,
+                password = password,
+                environmentVariables = env,
+                resticOptions = resticOptions
+            )
+            result.fold(
+                onSuccess = { snapshots ->
+                    latestRepoSnapshots = snapshots
+                    _addEditState.update { it.copy(isLoadingForgetHosts = false, forgetHostsError = null) }
+                    refreshAvailableForgetHosts()
+                },
+                onFailure = { error ->
+                    _addEditState.update {
+                        it.copy(
+                            isLoadingForgetHosts = false,
+                            forgetHostsError = error.message ?: application.getString(R.string.restic_failure_load_snapshots)
+                        )
+                    }
+                }
+            )
+        }
+    }
 
     fun setRequireBatteryNotLow(value: Boolean) = _addEditState.update { it.copy(triggerConditions = it.triggerConditions.copy(requireBatteryNotLow = value)) }
     fun setRequireCharging(value: Boolean) = _addEditState.update { it.copy(triggerConditions = it.triggerConditions.copy(requireCharging = value)) }

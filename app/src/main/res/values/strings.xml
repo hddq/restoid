@@ -119,6 +119,38 @@
     <string name="run_tasks_backup_subtitle">%1$d apps selected - %2$s</string>
     <string name="run_tasks_forget_snapshots">Forget Snapshots</string>
     <string name="run_tasks_forget_subtitle">Keep last %1$d, daily %2$d, weekly %3$d, monthly %4$d</string>
+    <string name="run_tasks_forget_subtitle_with_hosts">%1$s · %2$s</string>
+    <string name="forget_section_retention_policy">Retention policy</string>
+    <string name="forget_section_hosts">Hosts</string>
+    <string name="forget_hosts_all_title">All hosts</string>
+    <string name="forget_hosts_this_device">This device</string>
+    <string name="forget_hosts_manual_entry">Added manually</string>
+    <plurals name="forget_host_snapshot_count">
+        <item quantity="one">%1$d snapshot</item>
+        <item quantity="other">%1$d snapshots</item>
+    </plurals>
+    <string name="forget_hosts_empty_warning">Select at least one host.</string>
+    <string name="forget_hosts_not_loaded_hint">Repository snapshots have not been loaded yet. Refresh hosts from the repository or add a hostname manually.</string>
+    <string name="forget_hosts_action_add">Add host</string>
+    <string name="forget_hosts_action_refresh">Refresh hosts</string>
+    <string name="forget_hosts_loading">Loading hosts from repository…</string>
+    <string name="forget_hosts_dialog_add_title">Add Host</string>
+    <string name="forget_hosts_dialog_add_description">Enter the exact hostname used by the device whose snapshots you want to include.</string>
+    <string name="forget_hosts_dialog_add_label">Hostname</string>
+    <string name="forget_hosts_dialog_add_confirm">Add</string>
+    <string name="forget_hosts_subtitle_none">No hosts selected</string>
+    <string name="forget_hosts_subtitle_single">%1$s</string>
+    <plurals name="forget_hosts_subtitle_count">
+        <item quantity="one">%1$d host</item>
+        <item quantity="other">%1$d hosts</item>
+    </plurals>
+    <string name="forget_hosts_credentials_required">Open the repository on Home or save its credentials to load hosts.</string>
+    <string name="forget_hosts_picker_title">Target hosts</string>
+    <string name="forget_hosts_sheet_title">Select hosts</string>
+    <string name="forget_hosts_sheet_empty">No hosts available yet. Refresh hosts or add a hostname manually.</string>
+    <string name="forget_hosts_toggle_all_title">Toggle all devices</string>
+    <string name="forget_hosts_toggle_all_subtitle">Select or deselect all available hosts</string>
+    <string name="cd_remove_host">Remove host</string>
     <string name="run_tasks_check_integrity">Check Integrity</string>
     <string name="run_tasks_check_metadata_only">Metadata only</string>
     <string name="run_tasks_check_read_all_data_description">Verify repository data packs in addition to metadata.</string>
@@ -420,6 +452,8 @@
     <string name="summary_no_items_selected">No items were selected.</string>
     <string name="error_no_backup_types_selected">No backup types selected.</string>
     <string name="summary_no_backup_types_selected">No backup types were selected.</string>
+    <string name="error_no_forget_hosts_selected">No hosts selected for forget policy.</string>
+    <string name="summary_no_forget_hosts_selected">Select at least one host in Forget Policy settings.</string>
     <string name="error_restic_not_installed">Restic is not installed.</string>
     <string name="summary_restic_binary_not_installed">Restic binary is not installed.</string>
     <string name="error_no_backup_repository_selected">No backup repository selected.</string>
@@ -563,6 +597,7 @@
     <string name="restic_failure_prune_repository">Failed to prune repository</string>
     <string name="restic_failure_unlock_repository">Failed to unlock repository</string>
     <string name="restic_failure_no_forget_policy">No \'keep\' policy was specified for the forget operation.</string>
+    <string name="restic_failure_no_forget_hosts">No hosts were selected for the forget operation.</string>
     <string name="restic_failure_forget_snapshots">Failed to forget snapshots</string>
     <string name="restic_failure_delete_snapshot">Failed to delete snapshot</string>
     <string name="restic_failure_forget_metadata">Failed to forget metadata snapshots</string>

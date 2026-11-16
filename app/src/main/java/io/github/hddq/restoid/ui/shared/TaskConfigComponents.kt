@@ -1,7 +1,10 @@
 package io.github.hddq.restoid.ui.shared
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -22,12 +25,14 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -40,20 +45,26 @@ import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.FolderOff
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.ManageSearch
 import androidx.compose.material.icons.outlined.PermMedia
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.SdCard
 import androidx.compose.material.icons.outlined.SelectAll
 import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Today
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -61,21 +72,29 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -83,6 +102,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -96,6 +116,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.model.AppInfo
+import io.github.hddq.restoid.util.DeviceUtils
 import io.github.hddq.restoid.work.ExclusionConflict
 import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
@@ -665,6 +686,7 @@ fun BackupConfigScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ForgetConfigScreen(
     maintenance: io.github.hddq.restoid.model.MaintenanceConfig,
@@ -672,52 +694,640 @@ fun ForgetConfigScreen(
     onKeepDailyChange: (Int) -> Unit,
     onKeepWeeklyChange: (Int) -> Unit,
     onKeepMonthlyChange: (Int) -> Unit,
+    availableHosts: List<ForgetHostOption>,
+    areRepoSnapshotsLoaded: Boolean,
+    isLoadingHosts: Boolean,
+    hostsError: String?,
+    onToggleAllHosts: () -> Unit,
+    onToggleHost: (String) -> Unit,
+    onAddHost: (String) -> Unit,
+    onRemoveHost: (String) -> Unit,
+    onRefreshHosts: () -> Unit,
+    onAutoLoadHosts: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showHostsSheet by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        if (!areRepoSnapshotsLoaded) {
+            onAutoLoadHosts()
+        }
+    }
+
+    val selectedHosts = remember(maintenance.forgetHosts) {
+        normalizeForgetHosts(maintenance.forgetHosts)
+    }
+    val selectedHostSet = remember(selectedHosts) {
+        selectedHosts.toSet()
+    }
+
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp, top = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        item {
-            ExpressiveCardGroup {
-                ExpressiveSegmentedSurface(index = 0, count = 4) {
-                    PolicySlider(
-                        label = stringResource(R.string.maintenance_keep_last),
-                        value = maintenance.keepLast,
-                        range = 0..20,
-                        icon = Icons.Outlined.History,
-                        onValueChange = onKeepLastChange
+        item(key = "retention_policy_section", contentType = "retention_policy") {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                ExpressiveSectionHeader(title = stringResource(R.string.forget_section_retention_policy))
+                ExpressiveCardGroup {
+                    ExpressiveSegmentedSurface(index = 0, count = 4) {
+                        PolicySlider(
+                            label = stringResource(R.string.maintenance_keep_last),
+                            value = maintenance.keepLast,
+                            range = 0..20,
+                            icon = Icons.Outlined.History,
+                            onValueChange = onKeepLastChange
+                        )
+                    }
+                    ExpressiveSegmentedSurface(index = 1, count = 4) {
+                        PolicySlider(
+                            label = stringResource(R.string.maintenance_keep_daily),
+                            value = maintenance.keepDaily,
+                            range = 0..30,
+                            icon = Icons.Outlined.Today,
+                            onValueChange = onKeepDailyChange
+                        )
+                    }
+                    ExpressiveSegmentedSurface(index = 2, count = 4) {
+                        PolicySlider(
+                            label = stringResource(R.string.maintenance_keep_weekly),
+                            value = maintenance.keepWeekly,
+                            range = 0..12,
+                            icon = Icons.Outlined.DateRange,
+                            onValueChange = onKeepWeeklyChange
+                        )
+                    }
+                    ExpressiveSegmentedSurface(index = 3, count = 4) {
+                        PolicySlider(
+                            label = stringResource(R.string.maintenance_keep_monthly),
+                            value = maintenance.keepMonthly,
+                            range = 0..24,
+                            icon = Icons.Outlined.CalendarMonth,
+                            onValueChange = onKeepMonthlyChange
+                        )
+                    }
+                }
+            }
+        }
+
+        item(key = "hosts_mode_section", contentType = "hosts_mode") {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                ExpressiveSectionHeader(title = stringResource(R.string.forget_section_hosts))
+
+                val isEmptySelection = !maintenance.forgetAllHosts && selectedHosts.isEmpty()
+                val containerColor by animateColorAsState(
+                    targetValue = if (isEmptySelection) {
+                        MaterialTheme.colorScheme.errorContainer
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainer
+                    },
+                    animationSpec = tween(220, easing = FastOutSlowInEasing),
+                    label = "ForgetHostsPickerContainerColor"
+                )
+                val contentColor by animateColorAsState(
+                    targetValue = if (isEmptySelection) {
+                        MaterialTheme.colorScheme.onErrorContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                    animationSpec = tween(220, easing = FastOutSlowInEasing),
+                    label = "ForgetHostsPickerContentColor"
+                )
+                val secondaryColor by animateColorAsState(
+                    targetValue = if (isEmptySelection) {
+                        MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.85f)
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    animationSpec = tween(220, easing = FastOutSlowInEasing),
+                    label = "ForgetHostsPickerSecondaryColor"
+                )
+                val pickerSubtitle = when {
+                    maintenance.forgetAllHosts -> stringResource(R.string.forget_hosts_all_title)
+                    isEmptySelection -> stringResource(R.string.forget_hosts_empty_warning)
+                    else -> selectedHosts.joinToString(", ")
+                }
+
+                ExpressiveSegmentedSurface(
+                    index = 0,
+                    count = 1,
+                    containerColor = containerColor,
+                    contentColor = contentColor,
+                    modifier = Modifier.animateContentSize(
+                        animationSpec = tween(220, easing = FastOutSlowInEasing)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showHostsSheet = true }
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = if (isEmptySelection) Icons.Outlined.WarningAmber else Icons.Outlined.Dns,
+                            contentDescription = null,
+                            tint = if (isEmptySelection) contentColor else MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(Modifier.width(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.forget_hosts_picker_title),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = contentColor
+                            )
+                            Text(
+                                text = pickerSubtitle,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = secondaryColor,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        if (!isEmptySelection && !maintenance.forgetAllHosts) {
+                            Surface(
+                                shape = RoundedCornerShape(50),
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            ) {
+                                Text(
+                                    text = selectedHosts.size.toString(),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                )
+                            }
+                            Spacer(Modifier.width(8.dp))
+                        }
+                        Icon(
+                            imageVector = Icons.Outlined.ChevronRight,
+                            contentDescription = null,
+                            tint = secondaryColor
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showHostsSheet) {
+        ForgetHostsBottomSheet(
+            availableHosts = availableHosts,
+            selectedHostSet = selectedHostSet,
+            selectedCount = selectedHosts.size,
+            forgetAllHosts = maintenance.forgetAllHosts,
+            areRepoSnapshotsLoaded = areRepoSnapshotsLoaded,
+            isLoadingHosts = isLoadingHosts,
+            hostsError = hostsError,
+            onToggleAllHosts = onToggleAllHosts,
+            onToggleHost = onToggleHost,
+            onAddHost = onAddHost,
+            onRemoveHost = onRemoveHost,
+            onRefreshHosts = onRefreshHosts,
+            onDismissRequest = { showHostsSheet = false }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun ForgetHostsBottomSheet(
+    availableHosts: List<ForgetHostOption>,
+    selectedHostSet: Set<String>,
+    selectedCount: Int,
+    forgetAllHosts: Boolean,
+    areRepoSnapshotsLoaded: Boolean,
+    isLoadingHosts: Boolean,
+    hostsError: String?,
+    onToggleAllHosts: () -> Unit,
+    onToggleHost: (String) -> Unit,
+    onAddHost: (String) -> Unit,
+    onRemoveHost: (String) -> Unit,
+    onRefreshHosts: () -> Unit,
+    onDismissRequest: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var showAddHostDialog by rememberSaveable { mutableStateOf(false) }
+    var customHostInput by rememberSaveable { mutableStateOf("") }
+
+    val isAllSelected = forgetAllHosts ||
+        (availableHosts.isNotEmpty() && availableHosts.all { it.hostname in selectedHostSet })
+
+    val selectionSubtitle = when {
+        forgetAllHosts -> stringResource(R.string.forget_hosts_all_title)
+        selectedCount == 0 -> stringResource(R.string.forget_hosts_subtitle_none)
+        selectedCount == 1 -> stringResource(R.string.forget_hosts_subtitle_single, selectedHostSet.first())
+        else -> pluralStringResource(R.plurals.forget_hosts_subtitle_count, selectedCount, selectedCount)
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .animateContentSize(
+                    animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing)
+                )
+                .padding(start = 16.dp, end = 16.dp, bottom = 28.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.forget_hosts_sheet_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = selectionSubtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
-                ExpressiveSegmentedSurface(index = 1, count = 4) {
-                    PolicySlider(
-                        label = stringResource(R.string.maintenance_keep_daily),
-                        value = maintenance.keepDaily,
-                        range = 0..30,
-                        icon = Icons.Outlined.Today,
-                        onValueChange = onKeepDailyChange
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = {
+                            customHostInput = ""
+                            showAddHostDialog = true
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Add,
+                            contentDescription = stringResource(R.string.forget_hosts_action_add),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    IconButton(
+                        onClick = onRefreshHosts,
+                        enabled = !isLoadingHosts
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Refresh,
+                            contentDescription = stringResource(R.string.forget_hosts_action_refresh),
+                            tint = if (isLoadingHosts) {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            } else {
+                                MaterialTheme.colorScheme.primary
+                            }
+                        )
+                    }
                 }
-                ExpressiveSegmentedSurface(index = 2, count = 4) {
-                    PolicySlider(
-                        label = stringResource(R.string.maintenance_keep_weekly),
-                        value = maintenance.keepWeekly,
-                        range = 0..12,
-                        icon = Icons.Outlined.DateRange,
-                        onValueChange = onKeepWeeklyChange
-                    )
-                }
-                ExpressiveSegmentedSurface(index = 3, count = 4) {
-                    PolicySlider(
-                        label = stringResource(R.string.maintenance_keep_monthly),
-                        value = maintenance.keepMonthly,
-                        range = 0..24,
-                        icon = Icons.Outlined.CalendarMonth,
-                        onValueChange = onKeepMonthlyChange
+            }
+
+            Spacer(Modifier.height(8.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+            AnimatedVisibility(
+                visible = hostsError != null && !isLoadingHosts,
+                enter = fadeIn(tween(200)) + expandVertically(tween(220)),
+                exit = fadeOut(tween(150)) + shrinkVertically(tween(200))
+            ) {
+                Column {
+                    Spacer(Modifier.height(12.dp))
+                    ForgetHostStatusCard(
+                        icon = Icons.Outlined.WarningAmber,
+                        text = hostsError.orEmpty(),
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer
                     )
                 }
             }
+
+            AnimatedVisibility(
+                visible = !isLoadingHosts && hostsError == null && !areRepoSnapshotsLoaded,
+                enter = fadeIn(tween(200)) + expandVertically(tween(220)),
+                exit = fadeOut(tween(150)) + shrinkVertically(tween(200))
+            ) {
+                Column {
+                    Spacer(Modifier.height(12.dp))
+                    ForgetHostStatusCard(
+                        icon = Icons.Outlined.Info,
+                        text = stringResource(R.string.forget_hosts_not_loaded_hint),
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 360.dp)
+            ) {
+                when {
+                    isLoadingHosts -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(160.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                LoadingIndicator()
+                                Text(
+                                    text = stringResource(R.string.forget_hosts_loading),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    availableHosts.isEmpty() -> {
+                        Text(
+                            text = stringResource(R.string.forget_hosts_sheet_empty),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(vertical = 24.dp)
+                        )
+                    }
+
+                    else -> {
+                        val totalRows = availableHosts.size + 1
+                        LazyColumn(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            item(key = "toggle_all_hosts") {
+                                ExpressiveSegmentedSurface(
+                                    index = 0,
+                                    count = totalRows
+                                ) {
+                                    ForgetToggleAllHostsRow(
+                                        checked = isAllSelected,
+                                        onToggle = onToggleAllHosts
+                                    )
+                                }
+                            }
+                            itemsIndexed(
+                                items = availableHosts,
+                                key = { _, option -> option.hostname }
+                            ) { index, hostOption ->
+                                ExpressiveSegmentedSurface(
+                                    index = index + 1,
+                                    count = totalRows
+                                ) {
+                                    ForgetHostItemRow(
+                                        option = hostOption,
+                                        selected = forgetAllHosts || hostOption.hostname in selectedHostSet,
+                                        onToggle = { onToggleHost(hostOption.hostname) },
+                                        onRemove = { onRemoveHost(hostOption.hostname) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+            Button(
+                onClick = onDismissRequest,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(stringResource(R.string.action_done))
+            }
+        }
+    }
+
+    if (showAddHostDialog) {
+        val sanitizedInput = DeviceUtils.sanitizeHostname(customHostInput)
+        AlertDialog(
+            onDismissRequest = { showAddHostDialog = false },
+            title = { Text(stringResource(R.string.forget_hosts_dialog_add_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = stringResource(R.string.forget_hosts_dialog_add_description),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedTextField(
+                        value = customHostInput,
+                        onValueChange = { customHostInput = it },
+                        label = { Text(stringResource(R.string.forget_hosts_dialog_add_label)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = sanitizedInput.isNotEmpty(),
+                    onClick = {
+                        onAddHost(sanitizedInput)
+                        showAddHostDialog = false
+                        customHostInput = ""
+                    }
+                ) {
+                    Text(stringResource(R.string.forget_hosts_dialog_add_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddHostDialog = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun ForgetToggleAllHostsRow(
+    checked: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onToggle)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.SelectAll,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(end = 16.dp)
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.forget_hosts_toggle_all_title),
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = stringResource(R.string.forget_hosts_toggle_all_subtitle),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Spacer(Modifier.width(16.dp))
+        Switch(
+            checked = checked,
+            onCheckedChange = { onToggle() },
+            thumbContent = if (checked) {
+                {
+                    Icon(
+                        imageVector = Icons.Filled.Check,
+                        contentDescription = null,
+                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                    )
+                }
+            } else {
+                null
+            }
+        )
+    }
+}
+
+@Composable
+private fun ForgetHostItemRow(
+    option: ForgetHostOption,
+    selected: Boolean,
+    onToggle: () -> Unit,
+    onRemove: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onToggle)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = if (option.isCurrentDevice) Icons.Outlined.Smartphone else Icons.Outlined.Dns,
+            contentDescription = null,
+            tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(end = 16.dp)
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = option.hostname,
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+                if (option.isCurrentDevice) {
+                    Surface(
+                        shape = RoundedCornerShape(50),
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    ) {
+                        Text(
+                            text = stringResource(R.string.forget_hosts_this_device),
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
+            val subtitle = when {
+                option.snapshotCount != null -> pluralStringResource(
+                    R.plurals.forget_host_snapshot_count,
+                    option.snapshotCount,
+                    option.snapshotCount
+                )
+                option.isRemovable -> stringResource(R.string.forget_hosts_manual_entry)
+                else -> null
+            }
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        if (option.isRemovable) {
+            Spacer(Modifier.width(4.dp))
+            IconButton(onClick = onRemove) {
+                Icon(
+                    imageVector = Icons.Outlined.Delete,
+                    contentDescription = stringResource(R.string.cd_remove_host),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(Modifier.width(4.dp))
+        } else {
+            Spacer(Modifier.width(16.dp))
+        }
+        Switch(
+            checked = selected,
+            onCheckedChange = { onToggle() },
+            thumbContent = if (selected) {
+                {
+                    Icon(
+                        imageVector = Icons.Filled.Check,
+                        contentDescription = null,
+                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                    )
+                }
+            } else {
+                null
+            }
+        )
+    }
+}
+
+@Composable
+private fun ForgetHostStatusCard(
+    icon: ImageVector,
+    text: String,
+    containerColor: androidx.compose.ui.graphics.Color,
+    contentColor: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = containerColor,
+            contentColor = contentColor
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(20.dp)
+            )
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodySmall,
+                color = contentColor
+            )
         }
     }
 }
@@ -806,13 +1416,27 @@ fun selectedBulkBackupTypes(
 }
 
 fun buildForgetSubtitle(config: io.github.hddq.restoid.model.MaintenanceConfig, context: android.content.Context): String {
-    return context.getString(
+    val policyText = context.getString(
         R.string.run_tasks_forget_subtitle,
         config.keepLast,
         config.keepDaily,
         config.keepWeekly,
         config.keepMonthly
     )
+    if (config.forgetAllHosts) {
+        return policyText
+    }
+    val selectedHosts = normalizeForgetHosts(config.forgetHosts)
+    val hostsText = when (selectedHosts.size) {
+        0 -> context.getString(R.string.forget_hosts_subtitle_none)
+        1 -> context.getString(R.string.forget_hosts_subtitle_single, selectedHosts.first())
+        else -> context.resources.getQuantityString(
+            R.plurals.forget_hosts_subtitle_count,
+            selectedHosts.size,
+            selectedHosts.size
+        )
+    }
+    return context.getString(R.string.run_tasks_forget_subtitle_with_hosts, policyText, hostsText)
 }
 
 fun buildCheckSubtitle(config: io.github.hddq.restoid.model.MaintenanceConfig, context: android.content.Context): String {

@@ -148,7 +148,9 @@ class RunTasksOperationRunner(
                     keepLast = request.keepLast,
                     keepDaily = request.keepDaily,
                     keepWeekly = request.keepWeekly,
-                    keepMonthly = request.keepMonthly
+                    keepMonthly = request.keepMonthly,
+                    forgetAllHosts = request.forgetAllHosts,
+                    forgetHosts = request.forgetHosts
                 )
 
                 val result = maintenanceRunner.run(
