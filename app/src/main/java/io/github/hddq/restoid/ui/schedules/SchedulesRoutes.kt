@@ -5,6 +5,7 @@ object SchedulesRoutes {
     const val AddEdit = "schedules/add_edit"
     const val BackupConfig = "schedules/backup_config"
     const val CustomDirectoriesConfig = "schedules/custom_directories_config"
+    const val DeviceDataConfig = "schedules/device_data_config"
     const val ForgetConfig = "schedules/forget_config"
     const val CheckConfig = "schedules/check_config"
 }

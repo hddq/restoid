@@ -117,6 +117,7 @@ class SnapshotDetailsViewModel(
                                 type !in io.github.hddq.restoid.model.AppMetadata.METADATA_ONLY_BACKUP_TYPES
                             }
                         } || initialMetadata.customDirectories.values.any { it.size == 0L }
+                            || initialMetadata.deviceData.values.any { it.size == 0L }
                     ) {
                         val populatedResult = resticRepository.populateMetadataSizes(
                             repoPath = repoPath,

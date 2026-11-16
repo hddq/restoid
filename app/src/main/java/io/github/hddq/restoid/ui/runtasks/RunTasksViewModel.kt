@@ -5,11 +5,14 @@ import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.hddq.restoid.R
+import io.github.hddq.restoid.data.DeviceDataPermissionHelper
 import io.github.hddq.restoid.data.OperationType
 import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.RepositoryBackendType
 import io.github.hddq.restoid.data.ResticBinaryManager
 import io.github.hddq.restoid.model.AppInfo
+import io.github.hddq.restoid.model.DeviceDataSelection
+import io.github.hddq.restoid.model.DeviceDataType
 import io.github.hddq.restoid.ui.shared.BackupTypes
 import io.github.hddq.restoid.ui.shared.OperationProgress
 import io.github.hddq.restoid.util.StorageUtils
@@ -44,7 +47,9 @@ data class RunTasksUiState(
     val customDirectoriesBackupEnabled: Boolean = false,
     val customDirectories: List<CustomDirectory> = emptyList(),
     val excludedCustomDirectories: List<CustomDirectory> = emptyList(),
-    val exclusionConflicts: List<ExclusionConflict> = emptyList()
+    val exclusionConflicts: List<ExclusionConflict> = emptyList(),
+    val deviceDataBackupEnabled: Boolean = false,
+    val deviceDataSelection: DeviceDataSelection = DeviceDataSelection(contacts = true, callHistory = true, calendar = true)
 )
 
 sealed interface RunTasksUiEvent {
@@ -80,7 +85,9 @@ class RunTasksViewModel(
                     uri = uri,
                     isSelected = preferencesRepository.loadExcludedCustomDirectoriesSelected().contains(uri)
                 )
-            }
+            },
+            deviceDataBackupEnabled = preferencesRepository.loadDeviceDataBackupEnabled(),
+            deviceDataSelection = preferencesRepository.loadDeviceDataSelection()
         )
     )
     val uiState = _uiState.asStateFlow()
@@ -181,6 +188,8 @@ class RunTasksViewModel(
         preferencesRepository.saveCustomDirectories(allCustomDirs, selectedCustomDirs)
         val selectedExcludedCustomDirs = _uiState.value.excludedCustomDirectories.filter { it.isSelected }.map { it.uri }.toSet()
         persistExcludedCustomDirectories()
+        preferencesRepository.saveDeviceDataBackupEnabled(_uiState.value.deviceDataBackupEnabled)
+        preferencesRepository.saveDeviceDataSelection(_uiState.value.deviceDataSelection)
 
         val errorState = preflightChecks()
         if (errorState != null) {
@@ -204,17 +213,19 @@ class RunTasksViewModel(
 
         val maintenance = _uiState.value.maintenance
         val hasCustomDirs = _uiState.value.customDirectoriesBackupEnabled && selectedCustomDirs.isNotEmpty()
+        val hasDeviceData = _uiState.value.deviceDataBackupEnabled && _uiState.value.deviceDataSelection.anyEnabled()
         val hasRoot = rootState.value == io.github.hddq.restoid.data.RootState.Granted
         val backupAppsEnabled = _uiState.value.backupEnabled && hasRoot
         
         val request = RunTasksWorkRequest(
             repositoryKey = selectedRepoKey,
-            backupEnabled = backupAppsEnabled || hasCustomDirs,
+            backupEnabled = backupAppsEnabled || hasCustomDirs || hasDeviceData,
             backupTypes = _uiState.value.backupTypes.toSelection(),
             selectedPackageNames = if (backupAppsEnabled) _uiState.value.apps.filter { it.isSelected }.map { it.packageName } else emptyList(),
             appBackupTypes = if (backupAppsEnabled) selectedAppBackupTypes().mapValues { it.value.toSelection() } else emptyMap(),
             customDirectories = if (hasCustomDirs) selectedCustomDirs.toList() else emptyList(),
             excludedCustomDirectories = if (_uiState.value.customDirectoriesBackupEnabled) selectedExcludedCustomDirs.toList() else emptyList(),
+            deviceData = if (hasDeviceData) _uiState.value.deviceDataSelection else DeviceDataSelection(),
             unlockRepo = maintenance.unlockRepo,
             forgetSnapshots = maintenance.forgetSnapshots,
             pruneRepo = maintenance.pruneRepo,
@@ -251,10 +262,11 @@ class RunTasksViewModel(
         val maintenance = state.maintenance
         val hasMaintenanceTask = maintenance.unlockRepo || maintenance.forgetSnapshots || maintenance.pruneRepo || maintenance.checkRepo
         val hasCustomDirs = state.customDirectoriesBackupEnabled && state.customDirectories.any { it.isSelected }
+        val hasDeviceData = state.deviceDataBackupEnabled && state.deviceDataSelection.anyEnabled()
         val hasRoot = rootState.value == io.github.hddq.restoid.data.RootState.Granted
         val backupAppsEnabled = state.backupEnabled && hasRoot
         
-        if (!backupAppsEnabled && !hasCustomDirs && !hasMaintenanceTask) {
+        if (!backupAppsEnabled && !hasCustomDirs && !hasDeviceData && !hasMaintenanceTask) {
             return OperationProgress(
                 isFinished = true,
                 error = application.getString(R.string.maintenance_error_no_tasks),
@@ -263,7 +275,7 @@ class RunTasksViewModel(
         }
 
         if (backupAppsEnabled) {
-            if (state.apps.none { it.isSelected } && !hasCustomDirs) {
+            if (state.apps.none { it.isSelected } && !hasCustomDirs && !hasDeviceData) {
                 return OperationProgress(
                     isFinished = true,
                     error = application.getString(R.string.error_no_items_selected),
@@ -272,7 +284,7 @@ class RunTasksViewModel(
             }
             val hasSelectedBackupType = state.apps
                 .filter { it.isSelected }
-                .any { app -> effectiveBackupTypes(state, app.packageName).anyEnabled() } || hasCustomDirs
+                .any { app -> effectiveBackupTypes(state, app.packageName).anyEnabled() } || hasCustomDirs || hasDeviceData
             if (!hasSelectedBackupType) {
                 return OperationProgress(
                     isFinished = true,
@@ -280,6 +292,14 @@ class RunTasksViewModel(
                     finalSummary = application.getString(R.string.summary_no_backup_types_selected)
                 )
             }
+        }
+
+        if (hasDeviceData && DeviceDataPermissionHelper.missingBackupPermissions(application, state.deviceDataSelection).isNotEmpty()) {
+            return OperationProgress(
+                isFinished = true,
+                error = application.getString(R.string.error_device_data_permissions_required),
+                finalSummary = application.getString(R.string.summary_device_data_permissions_required)
+            )
         }
 
         if (!resticBinaryManager.isInstalled) {
@@ -354,6 +374,19 @@ class RunTasksViewModel(
     fun setCustomDirectoriesBackupEnabled(enabled: Boolean) {
         _uiState.update { recomputeConflicts(it.copy(customDirectoriesBackupEnabled = enabled)) }
         preferencesRepository.saveCustomDirectoriesBackupEnabled(enabled)
+    }
+
+    fun setDeviceDataBackupEnabled(enabled: Boolean) {
+        _uiState.update { it.copy(deviceDataBackupEnabled = enabled) }
+        preferencesRepository.saveDeviceDataBackupEnabled(enabled)
+    }
+
+    fun toggleDeviceDataType(type: DeviceDataType) {
+        _uiState.update { state ->
+            val updated = state.deviceDataSelection.withType(type, !state.deviceDataSelection.isEnabled(type))
+            state.copy(deviceDataSelection = updated)
+        }
+        preferencesRepository.saveDeviceDataSelection(_uiState.value.deviceDataSelection)
     }
 
     fun addCustomDirectory(uriString: String) {

@@ -203,7 +203,12 @@ class ResticRepository(
                 resticOptions = resticOptions
             )
             scanResult.map { scanned ->
-                applySnapshotSizesToMetadata(metadata, scanned.appSizes, scanned.customDirSizes)
+                applySnapshotSizesToMetadata(
+                    metadata = metadata,
+                    appSizes = scanned.appSizes,
+                    customDirSizes = scanned.customDirSizes,
+                    deviceDataSizes = scanned.deviceDataSizes
+                )
             }
         }
     }
@@ -253,7 +258,12 @@ class ResticRepository(
                 } else {
                     emptyMap()
                 }
-                applySnapshotSizesToMetadata(recoveredMetadata, scanned.appSizes, customDirSizes)
+                applySnapshotSizesToMetadata(
+                    metadata = recoveredMetadata,
+                    appSizes = scanned.appSizes,
+                    customDirSizes = customDirSizes,
+                    deviceDataSizes = scanned.deviceDataSizes
+                )
             }
         }
     }
@@ -262,6 +272,7 @@ class ResticRepository(
         val restoidJsonPath: String?,
         val appSizes: Map<String, Map<String, Long>>,
         val customDirSizes: Map<String, Long>,
+        val deviceDataSizes: Map<String, Long>,
         val otherFileSizes: List<Pair<String, Long>>
     )
 
@@ -282,6 +293,7 @@ class ResticRepository(
         var restoidJsonPath: String? = null
         val appSizes = mutableMapOf<String, MutableMap<String, Long>>()
         val customDirSizes = mutableMapOf<String, Long>()
+        val deviceDataSizes = mutableMapOf<String, Long>()
         val otherFileSizes = mutableListOf<Pair<String, Long>>()
 
         val callback = object : CallbackList<String>(Runnable::run) {
@@ -307,15 +319,23 @@ class ResticRepository(
                         val (pkg, component) = appMatch
                         val pkgSizes = appSizes.getOrPut(pkg) { mutableMapOf() }
                         pkgSizes[component] = (pkgSizes[component] ?: 0L) + size
-                    } else if (customDirPrefixes.isNotEmpty()) {
-                        for ((dirPath, prefixWithSlash) in customDirPrefixes) {
-                            if (path == dirPath || path.startsWith(prefixWithSlash)) {
-                                customDirSizes[dirPath] = (customDirSizes[dirPath] ?: 0L) + size
-                                break
+                    } else {
+                        val deviceDataType = io.github.hddq.restoid.model.DeviceDataType.fromSnapshotPath(path)
+                        if (deviceDataType != null) {
+                            deviceDataSizes[deviceDataType.key] = (deviceDataSizes[deviceDataType.key] ?: 0L) + size
+                        } else {
+                            var matchedCustom = false
+                            for ((dirPath, prefixWithSlash) in customDirPrefixes) {
+                                if (path == dirPath || path.startsWith(prefixWithSlash)) {
+                                    customDirSizes[dirPath] = (customDirSizes[dirPath] ?: 0L) + size
+                                    matchedCustom = true
+                                    break
+                                }
+                            }
+                            if (!matchedCustom) {
+                                otherFileSizes.add(path to size)
                             }
                         }
-                    } else {
-                        otherFileSizes.add(path to size)
                     }
                 } catch (_: Exception) {
                 }
@@ -337,6 +357,7 @@ class ResticRepository(
                 restoidJsonPath = restoidJsonPath,
                 appSizes = appSizes,
                 customDirSizes = customDirSizes,
+                deviceDataSizes = deviceDataSizes,
                 otherFileSizes = otherFileSizes
             )
         }
@@ -421,10 +442,11 @@ class ResticRepository(
         }
     }
 
-    private fun applySnapshotSizesToMetadata(
+    internal fun applySnapshotSizesToMetadata(
         metadata: io.github.hddq.restoid.model.RestoidMetadata,
         appSizes: Map<String, Map<String, Long>>,
-        customDirSizes: Map<String, Long>
+        customDirSizes: Map<String, Long>,
+        deviceDataSizes: Map<String, Long> = emptyMap()
     ): io.github.hddq.restoid.model.RestoidMetadata {
         val updatedApps = metadata.apps.mapValues { (packageName, appMeta) ->
             val detailedSizes = appSizes[packageName].orEmpty()
@@ -446,7 +468,30 @@ class ResticRepository(
         } else {
             metadata.customDirectories
         }
-        return metadata.copy(apps = updatedApps, customDirectories = updatedCustomDirs)
+        val updatedDeviceData = if (deviceDataSizes.isNotEmpty()) {
+            val result = metadata.deviceData.toMutableMap()
+            deviceDataSizes.forEach { (key, calculatedSize) ->
+                val existing = result[key]
+                if (existing != null) {
+                    if (calculatedSize > 0L) {
+                        result[key] = existing.copy(size = calculatedSize)
+                    }
+                } else if (calculatedSize > 0L) {
+                    result[key] = io.github.hddq.restoid.model.DeviceDataMetadata(
+                        size = calculatedSize,
+                        itemCount = 0
+                    )
+                }
+            }
+            result
+        } else {
+            metadata.deviceData
+        }
+        return metadata.copy(
+            apps = updatedApps,
+            customDirectories = updatedCustomDirs,
+            deviceData = updatedDeviceData
+        )
     }
 
     suspend fun dump(

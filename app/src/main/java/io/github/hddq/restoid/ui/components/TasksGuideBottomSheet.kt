@@ -28,6 +28,7 @@ import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.LockOpen
+import androidx.compose.material.icons.outlined.PermDeviceInformation
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -156,18 +157,25 @@ fun TasksGuideBottomSheet(
 
             ExpressiveSectionHeader(title = stringResource(R.string.operation_backup))
             ExpressiveCardGroup {
-                ExpressiveSegmentedSurface(index = 0, count = 2) {
+                ExpressiveSegmentedSurface(index = 0, count = 3) {
                     GuideItem(
                         icon = Icons.Outlined.Apps,
                         title = stringResource(R.string.tasks_guide_apps_title),
                         description = stringResource(R.string.tasks_guide_apps_desc)
                     )
                 }
-                ExpressiveSegmentedSurface(index = 1, count = 2) {
+                ExpressiveSegmentedSurface(index = 1, count = 3) {
                     GuideItem(
                         icon = Icons.Outlined.Folder,
                         title = stringResource(R.string.tasks_guide_files_title),
                         description = stringResource(R.string.tasks_guide_files_desc)
+                    )
+                }
+                ExpressiveSegmentedSurface(index = 2, count = 3) {
+                    GuideItem(
+                        icon = Icons.Outlined.PermDeviceInformation,
+                        title = stringResource(R.string.tasks_guide_device_data_title),
+                        description = stringResource(R.string.tasks_guide_device_data_desc)
                     )
                 }
             }

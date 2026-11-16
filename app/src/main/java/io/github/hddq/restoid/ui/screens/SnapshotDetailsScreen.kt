@@ -82,9 +82,13 @@ import io.github.hddq.restoid.R
 import io.github.hddq.restoid.RestoidApplication
 import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.model.BackupDetail
+import io.github.hddq.restoid.model.DeviceDataMetadata
+import io.github.hddq.restoid.model.DeviceDataType
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
 import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
 import io.github.hddq.restoid.ui.components.SortableSectionHeader
+import io.github.hddq.restoid.ui.shared.deviceDataIcon
+import io.github.hddq.restoid.ui.shared.deviceDataLabelRes
 import coil.compose.AsyncImage
 import io.github.hddq.restoid.ui.snapshot.ForgetResult
 import io.github.hddq.restoid.ui.snapshot.SnapshotDetailsViewModel
@@ -175,6 +179,10 @@ fun SnapshotDetailsScreen(
             snapshot != null -> {
                 val customDirs = metadata?.customDirectories ?: emptyMap()
                 val dirsList = customDirs.toList()
+                val deviceDataMap = metadata?.deviceData ?: emptyMap()
+                val deviceDataList = DeviceDataType.entries.mapNotNull { type ->
+                    deviceDataMap[type.key]?.let { type to it }
+                }
 
                 LazyColumn(
                     modifier = Modifier.weight(1f),
@@ -236,8 +244,33 @@ fun SnapshotDetailsScreen(
                             }
                         }
                     }
+                    if (deviceDataList.isNotEmpty()) {
+                        item(key = "device_data_header", contentType = "device_data_header") {
+                            ExpressiveSectionHeader(
+                                title = stringResource(R.string.snapshot_detail_device_data_title, deviceDataList.size),
+                                modifier = Modifier.padding(
+                                    top = if (backupDetails.isNotEmpty() || dirsList.isNotEmpty()) 14.dp else 0.dp
+                                )
+                            )
+                        }
+                        itemsIndexed(
+                            items = deviceDataList,
+                            key = { _, (type, _) -> "device_data_${type.key}" },
+                            contentType = { _, _ -> "backed_up_device_data" }
+                        ) { index, (type, deviceDataMeta) ->
+                            ExpressiveSegmentedSurface(
+                                index = index,
+                                count = deviceDataList.size
+                            ) {
+                                BackedUpDeviceDataItem(
+                                    type = type,
+                                    metadata = deviceDataMeta
+                                )
+                            }
+                        }
+                    }
 
-                    if (backupDetails.isEmpty() && customDirs.isEmpty() && !isLoading) {
+                    if (backupDetails.isEmpty() && customDirs.isEmpty() && deviceDataList.isEmpty() && !isLoading) {
                         item(key = "empty_metadata", contentType = "empty_metadata") {
                             if (metadata == null) {
                                 Text(
@@ -257,6 +290,59 @@ fun SnapshotDetailsScreen(
                 }
             }
             else -> if (!isLoading) Text(stringResource(R.string.snapshot_not_found))
+        }
+    }
+}
+
+@Composable
+fun BackedUpDeviceDataItem(
+    type: DeviceDataType,
+    metadata: DeviceDataMetadata,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val countText = pluralStringResource(
+        R.plurals.device_data_items_count,
+        metadata.itemCount,
+        metadata.itemCount
+    )
+    val detailText = if (metadata.size > 0L) {
+        stringResource(
+            R.string.device_data_size_and_count,
+            Formatter.formatShortFileSize(context, metadata.size),
+            countText
+        )
+    } else {
+        countText
+    }
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = deviceDataIcon(type),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(deviceDataLabelRes(type)),
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = detailText,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

@@ -1,5 +1,6 @@
 package io.github.hddq.restoid.work
 
+import io.github.hddq.restoid.model.DeviceDataSelection
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -42,6 +43,7 @@ data class BackupWorkRequest(
     val appBackupTypes: Map<String, BackupTypeSelection> = emptyMap(),
     val customDirectories: List<String> = emptyList(),
     val excludedCustomDirectories: List<String> = emptyList(),
+    val deviceData: DeviceDataSelection = DeviceDataSelection(),
     val requireUnmeteredNetwork: Boolean = false
 )
 
@@ -53,7 +55,8 @@ data class RestoreWorkRequest(
     val allowDowngrade: Boolean,
     val selectedApps: List<RestoreAppSelection>,
     val appRestoreTypes: Map<String, RestoreTypeSelection> = emptyMap(),
-    val selectedCustomDirectories: List<String> = emptyList()
+    val selectedCustomDirectories: List<String> = emptyList(),
+    val deviceData: DeviceDataSelection = DeviceDataSelection()
 )
 
 @Serializable
@@ -78,6 +81,7 @@ data class RunTasksConfig(
     val appBackupTypes: Map<String, BackupTypeSelection> = emptyMap(),
     val customDirectories: List<String> = emptyList(),
     val excludedCustomDirectories: List<String> = emptyList(),
+    val deviceData: DeviceDataSelection = DeviceDataSelection(),
     val unlockRepo: Boolean,
     val forgetSnapshots: Boolean,
     val pruneRepo: Boolean,
@@ -98,6 +102,7 @@ data class RunTasksWorkRequest(
     val appBackupTypes: Map<String, BackupTypeSelection> = emptyMap(),
     val customDirectories: List<String> = emptyList(),
     val excludedCustomDirectories: List<String> = emptyList(),
+    val deviceData: DeviceDataSelection = DeviceDataSelection(),
     val unlockRepo: Boolean,
     val forgetSnapshots: Boolean,
     val pruneRepo: Boolean,

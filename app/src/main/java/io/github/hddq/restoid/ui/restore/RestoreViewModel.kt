@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.AppInfoRepository
+import io.github.hddq.restoid.data.DeviceDataPermissionHelper
 import io.github.hddq.restoid.data.MetadataRepository
 import io.github.hddq.restoid.data.OperationType
 import io.github.hddq.restoid.data.RepositoriesRepository
@@ -15,6 +16,9 @@ import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.BackupDetail
 import io.github.hddq.restoid.model.CustomDirectoryMetadata
+import io.github.hddq.restoid.model.DeviceDataMetadata
+import io.github.hddq.restoid.model.DeviceDataSelection
+import io.github.hddq.restoid.model.DeviceDataType
 import io.github.hddq.restoid.model.RestoidMetadata
 import io.github.hddq.restoid.ui.shared.AppSortOrder
 import io.github.hddq.restoid.ui.shared.OperationProgress
@@ -114,6 +118,15 @@ class RestoreViewModel(
     private val _customDirectoryMetadata = MutableStateFlow<Map<String, CustomDirectoryMetadata>>(emptyMap())
     val customDirectoryMetadata = _customDirectoryMetadata.asStateFlow()
 
+    private val _deviceDataSelection = MutableStateFlow(DeviceDataSelection())
+    val deviceDataSelection = _deviceDataSelection.asStateFlow()
+
+    private val _availableDeviceData = MutableStateFlow<Set<DeviceDataType>>(emptySet())
+    val availableDeviceData = _availableDeviceData.asStateFlow()
+
+    private val _deviceDataMetadata = MutableStateFlow<Map<DeviceDataType, DeviceDataMetadata>>(emptyMap())
+    val deviceDataMetadata = _deviceDataMetadata.asStateFlow()
+
     private val _isLoading = MutableStateFlow(true)
     val isLoading = _isLoading.asStateFlow()
 
@@ -134,6 +147,9 @@ class RestoreViewModel(
 
     private val _restoreCustomDirectoriesEnabled = MutableStateFlow(false)
     val restoreCustomDirectoriesEnabled = _restoreCustomDirectoriesEnabled.asStateFlow()
+
+    private val _restoreDeviceDataEnabled = MutableStateFlow(false)
+    val restoreDeviceDataEnabled = _restoreDeviceDataEnabled.asStateFlow()
 
     private val _isRestoring = MutableStateFlow(false)
     val isRestoring = _isRestoring.asStateFlow()
@@ -298,6 +314,18 @@ class RestoreViewModel(
         if (_customDirectories.value.isNotEmpty()) {
             _restoreCustomDirectoriesEnabled.value = true
         }
+
+        val metaDeviceData = metadata?.deviceData.orEmpty()
+            .mapNotNull { (key, value) -> DeviceDataType.fromKey(key)?.let { it to value } }
+            .toMap()
+        val pathDeviceDataTypes = snapshot.paths
+            .mapNotNull { DeviceDataType.fromSnapshotPath(it) }
+            .toSet()
+        val availableTypes = metaDeviceData.keys + pathDeviceDataTypes
+        _deviceDataMetadata.value = metaDeviceData
+        _availableDeviceData.value = availableTypes
+        _deviceDataSelection.value = DeviceDataSelection.fromTypes(availableTypes)
+        _restoreDeviceDataEnabled.value = availableTypes.isNotEmpty()
     }
 
     fun setSortOrder(order: AppSortOrder) {
@@ -313,6 +341,17 @@ class RestoreViewModel(
 
     fun setRestoreCustomDirectoriesEnabled(enabled: Boolean) {
         _restoreCustomDirectoriesEnabled.value = enabled
+    }
+
+    fun setRestoreDeviceDataEnabled(enabled: Boolean) {
+        _restoreDeviceDataEnabled.value = enabled
+    }
+
+    fun toggleDeviceDataType(type: DeviceDataType) {
+        if (type !in _availableDeviceData.value) return
+        _deviceDataSelection.update { current ->
+            current.withType(type, !current.isEnabled(type))
+        }
     }
 
     private fun findBackedUpItems(
@@ -368,6 +407,16 @@ class RestoreViewModel(
             emptyList()
         }
 
+        val selectedDeviceData = if (_restoreDeviceDataEnabled.value) {
+            DeviceDataSelection.fromTypes(
+                _deviceDataSelection.value.selectedTypes()
+                    .filter { it in _availableDeviceData.value }
+                    .toSet()
+            )
+        } else {
+            DeviceDataSelection()
+        }
+
         if (!resticBinaryManager.isInstalled || selectedRepoPath == null || currentSnapshot == null) {
             _restoreProgress.value = OperationProgress(
                 isFinished = true,
@@ -377,7 +426,7 @@ class RestoreViewModel(
             return
         }
 
-        if (selectedApps.isEmpty() && selectedCustomDirectories.isEmpty()) {
+        if (selectedApps.isEmpty() && selectedCustomDirectories.isEmpty() && !selectedDeviceData.anyEnabled()) {
             _restoreProgress.value = OperationProgress(
                 isFinished = true,
                 error = application.getString(R.string.restore_error_no_items_selected),
@@ -391,6 +440,15 @@ class RestoreViewModel(
                 isFinished = true,
                 error = application.getString(R.string.restore_error_no_restore_types_selected),
                 finalSummary = application.getString(R.string.restore_error_no_restore_types_selected)
+            )
+            return
+        }
+
+        if (selectedDeviceData.anyEnabled() && DeviceDataPermissionHelper.missingRestorePermissions(application, selectedDeviceData).isNotEmpty()) {
+            _restoreProgress.value = OperationProgress(
+                isFinished = true,
+                error = application.getString(R.string.error_device_data_restore_permissions_required),
+                finalSummary = application.getString(R.string.summary_device_data_permissions_required)
             )
             return
         }
@@ -452,7 +510,8 @@ class RestoreViewModel(
                 )
             },
             appRestoreTypes = selectedApps.associate { it.appInfo.packageName to effectiveRestoreTypes(it.appInfo.packageName).toSelection() },
-            selectedCustomDirectories = selectedCustomDirectories
+            selectedCustomDirectories = selectedCustomDirectories,
+            deviceData = selectedDeviceData
         )
 
         viewModelScope.launch(Dispatchers.IO) {

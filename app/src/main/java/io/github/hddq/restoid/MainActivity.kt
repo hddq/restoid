@@ -85,6 +85,7 @@ import io.github.hddq.restoid.ui.runtasks.BackupConfigScreen
 import io.github.hddq.restoid.ui.runtasks.CustomDirectoriesConfigScreen
 import io.github.hddq.restoid.ui.runtasks.CheckConfigScreen
 import io.github.hddq.restoid.ui.runtasks.ForgetConfigScreen
+import io.github.hddq.restoid.ui.runtasks.RunTasksDeviceDataConfigScreen
 import io.github.hddq.restoid.ui.runtasks.RunTasksRoutes
 import io.github.hddq.restoid.ui.runtasks.RunTasksScreen
 import androidx.compose.foundation.layout.fillMaxSize
@@ -95,6 +96,7 @@ import io.github.hddq.restoid.ui.schedules.AddEditScheduleScreen
 import io.github.hddq.restoid.ui.schedules.ScheduleBackupConfigScreen
 import io.github.hddq.restoid.ui.schedules.ScheduleCustomDirectoriesConfigScreen
 import io.github.hddq.restoid.ui.schedules.ScheduleCheckConfigScreen
+import io.github.hddq.restoid.ui.schedules.ScheduleDeviceDataConfigScreen
 import io.github.hddq.restoid.ui.schedules.ScheduleForgetConfigScreen
 import io.github.hddq.restoid.ui.schedules.SchedulesRoutes
 import io.github.hddq.restoid.ui.schedules.SchedulesScreen
@@ -608,6 +610,7 @@ class MainActivity : FragmentActivity() {
                                             onNavigateBack = { navController.navigateUp() },
                                             onNavigateToBackupConfig = { navController.navigate(SchedulesRoutes.BackupConfig) },
                                             onNavigateToCustomDirectoriesConfig = { navController.navigate(SchedulesRoutes.CustomDirectoriesConfig) },
+                                            onNavigateToDeviceDataConfig = { navController.navigate(SchedulesRoutes.DeviceDataConfig) },
                                             onNavigateToForgetConfig = { navController.navigate(SchedulesRoutes.ForgetConfig) },
                                             onNavigateToCheckConfig = { navController.navigate(SchedulesRoutes.CheckConfig) }
                                         )
@@ -677,6 +680,22 @@ class MainActivity : FragmentActivity() {
                                         ScheduleCustomDirectoriesConfigScreen(viewModel = vm)
                                     }
                                 }
+                                composable(SchedulesRoutes.DeviceDataConfig) { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry(Screen.Schedules.route)
+                                    }
+                                    val vm: SchedulesViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository)
+                                    )
+                                    DestinationScaffold(
+                                        titleRes = R.string.device_data_title,
+                                        isTopLevel = false,
+                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
+                                    ) {
+                                        ScheduleDeviceDataConfigScreen(viewModel = vm)
+                                    }
+                                }
                             }
                             navigation(
                                 startDestination = RunTasksRoutes.Main,
@@ -721,6 +740,7 @@ class MainActivity : FragmentActivity() {
                                             },
                                             onNavigateToBackupConfig = { navController.navigate(RunTasksRoutes.BackupConfig) },
                                             onNavigateToCustomDirectoriesConfig = { navController.navigate(RunTasksRoutes.CustomDirectoriesConfig) },
+                                            onNavigateToDeviceDataConfig = { navController.navigate(RunTasksRoutes.DeviceDataConfig) },
                                             onNavigateToForgetConfig = { navController.navigate(RunTasksRoutes.ForgetConfig) },
                                             onNavigateToCheckConfig = { navController.navigate(RunTasksRoutes.CheckConfig) }
                                         )
@@ -772,6 +792,30 @@ class MainActivity : FragmentActivity() {
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
                                     ) {
                                         CustomDirectoriesConfigScreen(viewModel = vm)
+                                    }
+                                }
+                                composable(RunTasksRoutes.DeviceDataConfig) { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry(Screen.RunTasks.route)
+                                    }
+                                    val vm: RunTasksViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = RunTasksViewModelFactory(
+                                            app,
+                                            app.rootRepository,
+                                            app.repositoriesRepository,
+                                            app.resticBinaryManager,
+                                            app.appInfoRepository,
+                                            app.preferencesRepository,
+                                            app.operationWorkRepository
+                                        )
+                                    )
+                                    DestinationScaffold(
+                                        titleRes = R.string.device_data_title,
+                                        isTopLevel = false,
+                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
+                                    ) {
+                                        RunTasksDeviceDataConfigScreen(viewModel = vm)
                                     }
                                 }
                                 composable(RunTasksRoutes.ForgetConfig) { backStackEntry ->
@@ -895,7 +939,8 @@ class MainActivity : FragmentActivity() {
                                             viewModel = viewModel,
                                             onNavigateToOperationProgress = { navController.navigate(Screen.OperationProgress.route) { launchSingleTop = true } },
                                             onNavigateToAppsConfig = { navController.navigate(io.github.hddq.restoid.ui.restore.RestoreRoutes.AppsConfig) },
-                                            onNavigateToCustomDirectoriesConfig = { navController.navigate(io.github.hddq.restoid.ui.restore.RestoreRoutes.CustomDirectoriesConfig) }
+                                            onNavigateToCustomDirectoriesConfig = { navController.navigate(io.github.hddq.restoid.ui.restore.RestoreRoutes.CustomDirectoriesConfig) },
+                                            onNavigateToDeviceDataConfig = { navController.navigate(io.github.hddq.restoid.ui.restore.RestoreRoutes.DeviceDataConfig) }
                                         )
                                     }
                                 }
@@ -953,6 +998,34 @@ class MainActivity : FragmentActivity() {
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
                                     ) {
                                         io.github.hddq.restoid.ui.screens.RestoreCustomDirectoriesConfigScreen(viewModel = vm)
+                                    }
+                                }
+                                composable(io.github.hddq.restoid.ui.restore.RestoreRoutes.DeviceDataConfig) { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry("restore_graph/{snapshotId}")
+                                    }
+                                    val snapshotId = parentEntry.arguments?.getString("snapshotId") ?: ""
+                                    val vm: RestoreViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = RestoreViewModelFactory(
+                                            app,
+                                            app.repositoriesRepository,
+                                            app.rootRepository,
+                                            app.resticBinaryManager,
+                                            app.resticRepository,
+                                            app.appInfoRepository,
+                                            app.metadataRepository,
+                                            app.preferencesRepository,
+                                            app.operationWorkRepository,
+                                            snapshotId
+                                        )
+                                    )
+                                    DestinationScaffold(
+                                        titleRes = R.string.device_data_title,
+                                        isTopLevel = false,
+                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
+                                    ) {
+                                        io.github.hddq.restoid.ui.screens.RestoreDeviceDataConfigScreen(viewModel = vm)
                                     }
                                 }
                             }

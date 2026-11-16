@@ -128,6 +128,42 @@ class PreferencesRepository(private val context: Context) {
         return prefs.getStringSet("runtasks_excluded_custom_directories_selected", emptySet()) ?: emptySet()
     }
 
+    // Device Data Backup Preferences
+    fun saveDeviceDataBackupEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("runtasks_device_data_enabled", enabled).apply()
+    }
+
+    fun loadDeviceDataBackupEnabled(): Boolean {
+        return prefs.getBoolean("runtasks_device_data_enabled", false)
+    }
+
+    fun saveDeviceDataSelection(selection: io.github.hddq.restoid.model.DeviceDataSelection) {
+        with(prefs.edit()) {
+            putBoolean("runtasks_device_data_contacts", selection.contacts)
+            putBoolean("runtasks_device_data_call_history", selection.callHistory)
+            putBoolean("runtasks_device_data_calendar", selection.calendar)
+            apply()
+        }
+    }
+
+    fun loadDeviceDataSelection(): io.github.hddq.restoid.model.DeviceDataSelection {
+        return io.github.hddq.restoid.model.DeviceDataSelection(
+            contacts = prefs.getBoolean("runtasks_device_data_contacts", true),
+            callHistory = prefs.getBoolean("runtasks_device_data_call_history", true),
+            calendar = prefs.getBoolean("runtasks_device_data_calendar", true)
+        )
+    }
+
+    fun saveDeniedDeviceDataPermissions(permissions: Set<String>) {
+        prefs.edit()
+            .putStringSet("device_data_denied_permissions", permissions.toSet())
+            .apply()
+    }
+
+    fun loadDeniedDeviceDataPermissions(): Set<String> {
+        return prefs.getStringSet("device_data_denied_permissions", emptySet())?.toSet() ?: emptySet()
+    }
+
     // Backup Preferences
     fun saveBackupTypes(types: BackupTypes) {
         with(prefs.edit()) {

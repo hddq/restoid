@@ -8,6 +8,8 @@ import android.util.Log
 import com.topjohnwu.superuser.CallbackList
 import com.topjohnwu.superuser.Shell
 import io.github.hddq.restoid.R
+import io.github.hddq.restoid.data.DeviceDataPermissionHelper
+import io.github.hddq.restoid.data.DeviceDataRepository
 import io.github.hddq.restoid.data.MetadataRepository
 import io.github.hddq.restoid.data.OperationLockManager
 import io.github.hddq.restoid.data.RepositoriesRepository
@@ -16,6 +18,7 @@ import io.github.hddq.restoid.data.ResticBinaryManager
 import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.data.SpecialPermissionsManager
+import io.github.hddq.restoid.model.DeviceDataType
 import io.github.hddq.restoid.ui.shared.OperationProgress
 import io.github.hddq.restoid.util.ResticOutputParser
 import io.github.hddq.restoid.util.buildCustomDirectoryRestoreCommand
@@ -32,7 +35,8 @@ class RestoreOperationRunner(
     private val resticBinaryManager: ResticBinaryManager,
     private val resticRepository: ResticRepository,
     private val metadataRepository: MetadataRepository,
-    private val operationLockManager: OperationLockManager
+    private val operationLockManager: OperationLockManager,
+    private val deviceDataRepository: DeviceDataRepository = DeviceDataRepository(context)
 ) {
 
     suspend fun run(
@@ -63,6 +67,8 @@ class RestoreOperationRunner(
 
         val selectedAppPackages = request.selectedApps.map { it.packageName }
         val selectedAppNames = request.selectedApps.associate { it.packageName to it.appName }
+        val selectedDeviceDataTypes = request.deviceData.selectedTypes()
+        val totalItemsCount = selectedAppPackages.size + request.selectedCustomDirectories.size + selectedDeviceDataTypes.size
         val effectiveRestoreTypes = selectedAppPackages.associateWith { packageName ->
             request.appRestoreTypes[packageName] ?: request.restoreTypes
         }
@@ -76,6 +82,7 @@ class RestoreOperationRunner(
         val stageList = mutableListOf(context.getString(R.string.restore_stage_restore_files))
         if (apkRestoreSelected || anyDataRestoreSelected || metadataRestoreSelected) stageList.add(context.getString(R.string.restore_stage_processing_apps))
         if (request.selectedCustomDirectories.isNotEmpty()) stageList.add(context.getString(R.string.restore_stage_processing_custom_directories))
+        if (selectedDeviceDataTypes.isNotEmpty()) stageList.add(context.getString(R.string.restore_stage_processing_device_data))
         stageList.add(context.getString(R.string.restore_stage_cleanup))
         val totalStages = stageList.size
         var currentStageNum = 1
@@ -90,12 +97,19 @@ class RestoreOperationRunner(
                 throw IllegalStateException(context.getString(R.string.restore_error_preflight_failed))
             }
 
-            if (selectedAppPackages.isEmpty() && request.selectedCustomDirectories.isEmpty()) {
+            if (selectedAppPackages.isEmpty() && request.selectedCustomDirectories.isEmpty() && selectedDeviceDataTypes.isEmpty()) {
                 throw IllegalStateException(context.getString(R.string.restore_error_no_items_selected))
             }
 
             if (selectedAppPackages.isNotEmpty() && !Shell.getShell().isRoot) {
                 throw IllegalStateException(context.getString(R.string.root_access_denied))
+            }
+
+            if (selectedDeviceDataTypes.isNotEmpty()) {
+                val missingPerms = DeviceDataPermissionHelper.missingRestorePermissions(context, request.deviceData)
+                if (missingPerms.isNotEmpty()) {
+                    throw IllegalStateException(context.getString(R.string.error_device_data_restore_permissions_required))
+                }
             }
 
             val currentSnapshot = findSnapshot(request)
@@ -134,6 +148,15 @@ class RestoreOperationRunner(
 
             val pathsToRestore = generatePathsToRestore(selectedAppPackages, currentSnapshot, request.restoreTypes, request.appRestoreTypes).toMutableList()
             pathsToRestore.addAll(request.selectedCustomDirectories)
+            selectedDeviceDataTypes.forEach { type ->
+                pathsToRestore.add(type.snapshotPath)
+                currentSnapshot.paths.filter { DeviceDataType.fromSnapshotPath(it) == type }
+                    .forEach { matchedPath ->
+                        if (matchedPath !in pathsToRestore) {
+                            pathsToRestore.add(matchedPath)
+                        }
+                    }
+            }
             val metadata = selectedRepository.id?.let { repoId ->
                 metadataRepository.getMetadataForSnapshot(repoId, currentSnapshot.id)
             }
@@ -240,7 +263,7 @@ class RestoreOperationRunner(
                         isOverallIndeterminate = false,
                         currentFile = appName,
                         filesProcessed = index + 1,
-                        totalFiles = selectedAppPackages.size + request.selectedCustomDirectories.size,
+                        totalFiles = totalItemsCount,
                         isFinished = false,
                         elapsedTime = (SystemClock.elapsedRealtime() - startTime) / 1000
                     )
@@ -400,7 +423,7 @@ class RestoreOperationRunner(
                         isOverallIndeterminate = false,
                         currentFile = path.substringAfterLast("/").ifEmpty { path },
                         filesProcessed = successes + 1,
-                        totalFiles = selectedAppPackages.size + request.selectedCustomDirectories.size,
+                        totalFiles = totalItemsCount,
                         isFinished = false,
                         elapsedTime = (SystemClock.elapsedRealtime() - startTime) / 1000
                     )
@@ -442,6 +465,58 @@ class RestoreOperationRunner(
                     }
                     
                     if (processSuccess) successes++ else failures++
+                }
+            }
+
+            val deviceDataStageIndex = stageList.indexOf(context.getString(R.string.restore_stage_processing_device_data))
+            if (deviceDataStageIndex != -1) {
+                currentStageNum = deviceDataStageIndex + 1
+                val processingStageTitle = context.getString(
+                    R.string.restore_stage_processing_template_device_data,
+                    currentStageNum,
+                    totalStages
+                )
+
+                for ((index, type) in selectedDeviceDataTypes.withIndex()) {
+                    throwIfCancelled()
+                    val typeLabel = context.getString(deviceDataTitleRes(type))
+                    val processProgress = (index + 1).toFloat() / selectedDeviceDataTypes.size.toFloat()
+
+                    progressState = progressState.copy(
+                        stageTitle = processingStageTitle,
+                        stagePercentage = processProgress,
+                        overallPercentage = (deviceDataStageIndex + processProgress) / totalStages.toFloat(),
+                        isStageIndeterminate = false,
+                        isOverallIndeterminate = false,
+                        currentFile = typeLabel,
+                        filesProcessed = successes + 1,
+                        totalFiles = totalItemsCount,
+                        isFinished = false,
+                        elapsedTime = (SystemClock.elapsedRealtime() - startTime) / 1000
+                    )
+                    onProgress(progressState)
+
+                    val restoredFile = resolveRestoredDeviceDataFile(tempRestoreDir, type)
+                    if (restoredFile == null || !restoredFile.isFile) {
+                        failures++
+                        failureDetails.add(context.getString(R.string.restore_failure_device_data_missing_file, typeLabel))
+                    } else {
+                        try {
+                            deviceDataRepository.restoreFromFile(type, restoredFile, shouldStop)
+                            successes++
+                        } catch (e: OperationCancelledException) {
+                            throw e
+                        } catch (e: Exception) {
+                            failures++
+                            failureDetails.add(
+                                context.getString(
+                                    R.string.restore_failure_device_data,
+                                    typeLabel,
+                                    e.message ?: e.javaClass.simpleName
+                                )
+                            )
+                        }
+                    }
                 }
             }
 
@@ -491,7 +566,7 @@ class RestoreOperationRunner(
                 error = if (failures > 0) failureDetails.joinToString(", ") else null,
                 elapsedTime = finalElapsedTime,
                 filesProcessed = successes,
-                totalFiles = selectedAppPackages.size
+                totalFiles = totalItemsCount
             )
 
             OperationRunResult(success = failures == 0, progress = finalProgress)
@@ -808,6 +883,25 @@ class RestoreOperationRunner(
         } catch (_: Exception) {
             false
         }
+    }
+
+    private fun resolveRestoredDeviceDataFile(
+        tempRestoreDir: File,
+        type: DeviceDataType
+    ): File? {
+        val direct = File(tempRestoreDir, type.relativePath)
+        if (direct.isFile) return direct
+        return tempRestoreDir.walkTopDown().firstOrNull { file ->
+            file.isFile && DeviceDataType.fromSnapshotPath(
+                "/" + file.relativeTo(tempRestoreDir).invariantSeparatorsPath
+            ) == type
+        }
+    }
+
+    private fun deviceDataTitleRes(type: DeviceDataType): Int = when (type) {
+        DeviceDataType.CONTACTS -> R.string.device_data_contacts
+        DeviceDataType.CALL_HISTORY -> R.string.device_data_call_history
+        DeviceDataType.CALENDAR -> R.string.device_data_calendar
     }
 
     private fun formatElapsedTime(seconds: Long): String {

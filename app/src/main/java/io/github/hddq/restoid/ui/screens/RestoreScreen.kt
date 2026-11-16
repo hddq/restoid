@@ -34,6 +34,7 @@ import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.Key
+import androidx.compose.material.icons.outlined.PermDeviceInformation
 import androidx.compose.material.icons.outlined.PermMedia
 import androidx.compose.material.icons.outlined.SdCard
 import androidx.compose.material.icons.outlined.Shield
@@ -56,6 +57,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
@@ -76,6 +78,7 @@ import io.github.hddq.restoid.ui.restore.RestoreTypes
 import io.github.hddq.restoid.ui.restore.RestoreUiEvent
 import io.github.hddq.restoid.ui.restore.RestoreViewModel
 import io.github.hddq.restoid.ui.shared.TaskRow
+import io.github.hddq.restoid.ui.shared.buildDeviceDataSummary
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -84,19 +87,23 @@ fun RestoreScreen(
     onNavigateToOperationProgress: () -> Unit,
     onNavigateToAppsConfig: () -> Unit,
     onNavigateToCustomDirectoriesConfig: () -> Unit,
+    onNavigateToDeviceDataConfig: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val application = LocalContext.current.applicationContext as RestoidApplication
-    val backupDetails by viewModel.backupDetails.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-    val allowDowngrade by viewModel.allowDowngrade.collectAsState()
-    val operationBlocked by viewModel.operationBlocked.collectAsState()
-    val customDirectories by viewModel.customDirectories.collectAsState()
+    val backupDetails by viewModel.backupDetails.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val allowDowngrade by viewModel.allowDowngrade.collectAsStateWithLifecycle()
+    val operationBlocked by viewModel.operationBlocked.collectAsStateWithLifecycle()
+    val customDirectories by viewModel.customDirectories.collectAsStateWithLifecycle()
 
-    val restoreAppsEnabled by viewModel.restoreAppsEnabled.collectAsState()
-    val restoreCustomDirectoriesEnabled by viewModel.restoreCustomDirectoriesEnabled.collectAsState()
-    val restoreTypes by viewModel.restoreTypes.collectAsState()
-    val appRestoreTypes by viewModel.appRestoreTypes.collectAsState()
+    val restoreAppsEnabled by viewModel.restoreAppsEnabled.collectAsStateWithLifecycle()
+    val restoreCustomDirectoriesEnabled by viewModel.restoreCustomDirectoriesEnabled.collectAsStateWithLifecycle()
+    val restoreDeviceDataEnabled by viewModel.restoreDeviceDataEnabled.collectAsStateWithLifecycle()
+    val deviceDataSelection by viewModel.deviceDataSelection.collectAsStateWithLifecycle()
+    val availableDeviceData by viewModel.availableDeviceData.collectAsStateWithLifecycle()
+    val restoreTypes by viewModel.restoreTypes.collectAsStateWithLifecycle()
+    val appRestoreTypes by viewModel.appRestoreTypes.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
 
@@ -121,15 +128,16 @@ fun RestoreScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            val rootState by viewModel.rootState.collectAsState()
+            val rootState by viewModel.rootState.collectAsStateWithLifecycle()
             val hasRoot = rootState == io.github.hddq.restoid.data.RootState.Granted
             val selectableBackupDetails = backupDetails.filter { allowDowngrade || !it.isDowngrade }
             val customDirsList = customDirectories.map { io.github.hddq.restoid.model.CustomDirectory(it.key, it.value) }
+            val hasAvailableDeviceData = availableDeviceData.isNotEmpty()
 
             Column(modifier = Modifier.fillMaxWidth()) {
                 ExpressiveSectionHeader(title = stringResource(R.string.operation_restore))
                 ExpressiveCardGroup {
-                    ExpressiveSegmentedSurface(index = 0, count = 2) {
+                    ExpressiveSegmentedSurface(index = 0, count = 3) {
                         TaskRow(
                             title = stringResource(R.string.run_tasks_applications),
                             subtitle = if (hasRoot) buildSelectedRestoreTypesSummary(selectableBackupDetails, appRestoreTypes, restoreTypes, context) else stringResource(R.string.root_access_denied),
@@ -140,7 +148,7 @@ fun RestoreScreen(
                             enabled = hasRoot
                         )
                     }
-                    ExpressiveSegmentedSurface(index = 1, count = 2) {
+                    ExpressiveSegmentedSurface(index = 1, count = 3) {
                         TaskRow(
                             title = stringResource(R.string.run_tasks_custom_directories),
                             subtitle = io.github.hddq.restoid.ui.shared.buildCustomDirectoriesSubtitle(customDirsList, context),
@@ -148,6 +156,17 @@ fun RestoreScreen(
                             checked = restoreCustomDirectoriesEnabled,
                             onCheckedChange = viewModel::setRestoreCustomDirectoriesEnabled,
                             onNavigate = onNavigateToCustomDirectoriesConfig
+                        )
+                    }
+                    ExpressiveSegmentedSurface(index = 2, count = 3) {
+                        TaskRow(
+                            title = stringResource(R.string.device_data_title),
+                            subtitle = buildDeviceDataSummary(deviceDataSelection, context, availableDeviceData),
+                            icon = Icons.Outlined.PermDeviceInformation,
+                            checked = if (hasAvailableDeviceData) restoreDeviceDataEnabled else false,
+                            onCheckedChange = viewModel::setRestoreDeviceDataEnabled,
+                            onNavigate = if (hasAvailableDeviceData) onNavigateToDeviceDataConfig else null,
+                            enabled = hasAvailableDeviceData
                         )
                     }
                 }
@@ -328,6 +347,24 @@ fun RestoreCustomDirectoriesConfigScreen(
             }
         }
     }
+}
+
+@Composable
+fun RestoreDeviceDataConfigScreen(
+    viewModel: RestoreViewModel,
+    modifier: Modifier = Modifier
+) {
+    val selection by viewModel.deviceDataSelection.collectAsStateWithLifecycle()
+    val availableTypes by viewModel.availableDeviceData.collectAsStateWithLifecycle()
+    val snapshotMetadata by viewModel.deviceDataMetadata.collectAsStateWithLifecycle()
+    io.github.hddq.restoid.ui.shared.DeviceDataConfigScreen(
+        selection = selection,
+        isRestoreMode = true,
+        onToggleType = viewModel::toggleDeviceDataType,
+        modifier = modifier,
+        availableTypes = availableTypes,
+        snapshotMetadata = snapshotMetadata
+    )
 }
 
 @Composable

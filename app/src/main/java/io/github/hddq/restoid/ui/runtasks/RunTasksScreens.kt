@@ -16,13 +16,13 @@ import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.FactCheck
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.LockOpen
+import androidx.compose.material.icons.outlined.PermDeviceInformation
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.hddq.restoid.LocalAppBarActions
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
@@ -43,6 +44,7 @@ import io.github.hddq.restoid.ui.shared.TaskRow
 import io.github.hddq.restoid.ui.shared.buildBackupSubtitle
 import io.github.hddq.restoid.ui.shared.buildCheckSubtitle
 import io.github.hddq.restoid.ui.shared.buildCustomDirectoriesSubtitle
+import io.github.hddq.restoid.ui.shared.buildDeviceDataSummary
 import io.github.hddq.restoid.ui.shared.buildForgetSubtitle
 
 @Composable
@@ -51,13 +53,14 @@ fun RunTasksScreen(
     onNavigateToOperationProgress: () -> Unit,
     onNavigateToBackupConfig: () -> Unit,
     onNavigateToCustomDirectoriesConfig: () -> Unit,
+    onNavigateToDeviceDataConfig: () -> Unit,
     onNavigateToForgetConfig: () -> Unit,
     onNavigateToCheckConfig: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val uiState by viewModel.uiState.collectAsState()
-    val operationBlocked by viewModel.operationBlocked.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val operationBlocked by viewModel.operationBlocked.collectAsStateWithLifecycle()
     val appBarActions = LocalAppBarActions.current
     var showGuideSheet by remember { mutableStateOf(false) }
 
@@ -96,14 +99,14 @@ fun RunTasksScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            val rootState by viewModel.rootState.collectAsState()
+            val rootState by viewModel.rootState.collectAsStateWithLifecycle()
             val hasRoot = rootState == io.github.hddq.restoid.data.RootState.Granted
 
             Column(modifier = Modifier.fillMaxWidth()) {
                 ExclusionConflictWarningCard(conflicts = uiState.exclusionConflicts)
                 ExpressiveSectionHeader(title = context.getString(R.string.operation_backup))
                 ExpressiveCardGroup {
-                    ExpressiveSegmentedSurface(index = 0, count = 2) {
+                    ExpressiveSegmentedSurface(index = 0, count = 3) {
                         TaskRow(
                             title = context.getString(R.string.run_tasks_applications),
                             subtitle = if (hasRoot) buildBackupSubtitle(uiState.apps, uiState.appBackupTypes, uiState.backupTypes, context) else context.getString(R.string.root_access_denied),
@@ -114,7 +117,7 @@ fun RunTasksScreen(
                             enabled = hasRoot
                         )
                     }
-                    ExpressiveSegmentedSurface(index = 1, count = 2) {
+                    ExpressiveSegmentedSurface(index = 1, count = 3) {
                         TaskRow(
                             title = context.getString(R.string.run_tasks_custom_directories),
                             subtitle = buildCustomDirectoriesSubtitle(uiState.customDirectories, uiState.excludedCustomDirectories, context),
@@ -122,6 +125,16 @@ fun RunTasksScreen(
                             checked = uiState.customDirectoriesBackupEnabled,
                             onCheckedChange = viewModel::setCustomDirectoriesBackupEnabled,
                             onNavigate = onNavigateToCustomDirectoriesConfig
+                        )
+                    }
+                    ExpressiveSegmentedSurface(index = 2, count = 3) {
+                        TaskRow(
+                            title = context.getString(R.string.device_data_title),
+                            subtitle = buildDeviceDataSummary(uiState.deviceDataSelection, context),
+                            icon = Icons.Outlined.PermDeviceInformation,
+                            checked = uiState.deviceDataBackupEnabled,
+                            onCheckedChange = viewModel::setDeviceDataBackupEnabled,
+                            onNavigate = onNavigateToDeviceDataConfig
                         )
                     }
                 }
@@ -183,7 +196,7 @@ fun BackupConfigScreen(
     viewModel: RunTasksViewModel,
     modifier: Modifier = Modifier
 ) {
-    val rootState by viewModel.rootState.collectAsState()
+    val rootState by viewModel.rootState.collectAsStateWithLifecycle()
     if (rootState != io.github.hddq.restoid.data.RootState.Granted) {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(stringResource(R.string.root_access_denied))
@@ -191,7 +204,7 @@ fun BackupConfigScreen(
         return
     }
 
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     io.github.hddq.restoid.ui.shared.BackupConfigScreen(
         isLoadingApps = uiState.isLoadingApps,
         apps = uiState.apps,
@@ -211,7 +224,7 @@ fun ForgetConfigScreen(
     viewModel: RunTasksViewModel,
     modifier: Modifier = Modifier
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     io.github.hddq.restoid.ui.shared.ForgetConfigScreen(
         maintenance = uiState.maintenance,
         onKeepLastChange = viewModel::setKeepLast,
@@ -227,7 +240,7 @@ fun CheckConfigScreen(
     viewModel: RunTasksViewModel,
     modifier: Modifier = Modifier
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     io.github.hddq.restoid.ui.shared.CheckConfigScreen(
         maintenance = uiState.maintenance,
         onReadDataChange = viewModel::setReadData,
@@ -240,7 +253,7 @@ fun CustomDirectoriesConfigScreen(
     viewModel: RunTasksViewModel,
     modifier: Modifier = Modifier
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     io.github.hddq.restoid.ui.shared.CustomDirectoriesConfigScreen(
         customDirectories = uiState.customDirectories,
         onAddDirectory = viewModel::addCustomDirectory,
@@ -250,6 +263,20 @@ fun CustomDirectoriesConfigScreen(
         onAddExcludedDirectory = viewModel::addExcludedCustomDirectory,
         onToggleExcludedDirectory = viewModel::toggleExcludedCustomDirectory,
         onRemoveExcludedDirectory = viewModel::removeExcludedCustomDirectory,
+        modifier = modifier
+    )
+}
+
+@Composable
+fun RunTasksDeviceDataConfigScreen(
+    viewModel: RunTasksViewModel,
+    modifier: Modifier = Modifier
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    io.github.hddq.restoid.ui.shared.DeviceDataConfigScreen(
+        selection = uiState.deviceDataSelection,
+        isRestoreMode = false,
+        onToggleType = viewModel::toggleDeviceDataType,
         modifier = modifier
     )
 }

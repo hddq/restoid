@@ -7,6 +7,8 @@ import com.topjohnwu.superuser.CallbackList
 import com.topjohnwu.superuser.Shell
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.AppInfoRepository
+import io.github.hddq.restoid.data.DeviceDataPermissionHelper
+import io.github.hddq.restoid.data.DeviceDataRepository
 import io.github.hddq.restoid.data.OperationLockManager
 import io.github.hddq.restoid.data.PreferencesRepository
 import io.github.hddq.restoid.data.RepositoriesRepository
@@ -16,8 +18,10 @@ import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.data.SpecialPermissionsManager
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.AppMetadata
-import io.github.hddq.restoid.model.RestoidMetadata
 import io.github.hddq.restoid.model.CustomDirectoryMetadata
+import io.github.hddq.restoid.model.DeviceDataMetadata
+import io.github.hddq.restoid.model.DeviceDataSelection
+import io.github.hddq.restoid.model.RestoidMetadata
 import io.github.hddq.restoid.ui.shared.OperationProgress
 import io.github.hddq.restoid.util.ResticOutputParser
 import io.github.hddq.restoid.util.buildResticExcludeFlags
@@ -37,8 +41,16 @@ class BackupOperationRunner(
     private val resticRepository: ResticRepository,
     private val appInfoRepository: AppInfoRepository,
     private val operationLockManager: OperationLockManager,
-    private val preferencesRepository: PreferencesRepository = PreferencesRepository(context)
+    private val preferencesRepository: PreferencesRepository = PreferencesRepository(context),
+    private val deviceDataRepository: DeviceDataRepository = DeviceDataRepository(context)
 ) {
+
+    private data class PreparedBackupData(
+        val pathsToBackup: MutableList<String>,
+        val excludePatterns: List<String>,
+        val metadata: RestoidMetadata,
+        val stagingRoot: File?
+    )
 
     suspend fun run(
         request: BackupWorkRequest,
@@ -128,14 +140,20 @@ class BackupOperationRunner(
             )
             throwIfCancelled()
 
-            val (pathsToBackup, excludePatterns, metadata) = prepareBackupData(
-                selectedApps,
-                request.backupTypes,
-                request.appBackupTypes,
-                request.customDirectories,
-                request.excludedCustomDirectories,
-                shouldStop
+            val prepared = prepareBackupData(
+                selectedApps = selectedApps,
+                backupTypes = request.backupTypes,
+                appBackupTypes = request.appBackupTypes,
+                customDirectories = request.customDirectories,
+                excludedCustomDirectories = request.excludedCustomDirectories,
+                deviceData = request.deviceData,
+                shouldStop = shouldStop
             )
+            val pathsToBackup = prepared.pathsToBackup
+            val excludePatterns = prepared.excludePatterns
+            val metadata = prepared.metadata
+            stagingRoot = prepared.stagingRoot
+
             restoidMetadataFile = File(context.cacheDir, "restoid.json")
             val json = Json { prettyPrint = true }
             restoidMetadataFile.writeText(json.encodeToString(metadata))
@@ -143,7 +161,8 @@ class BackupOperationRunner(
 
             if (pathsToBackup.size <= 1 &&
                 metadata.apps.values.none { it.types.any { type -> type in AppMetadata.METADATA_ONLY_BACKUP_TYPES } } &&
-                metadata.customDirectories.isEmpty()
+                metadata.customDirectories.isEmpty() &&
+                metadata.deviceData.isEmpty()
             ) {
                 throw IllegalStateException(context.getString(R.string.backup_error_no_files_selected_for_items))
             }
@@ -158,11 +177,16 @@ class BackupOperationRunner(
             throwIfCancelled()
 
             val mediaRwRegex = Regex("^/mnt/media_rw/([A-Fa-f0-9-]+)(?:/(.*))?$")
-            val effectivePathsToBackup = if (!Shell.getShell().isRoot && pathsToBackup.any { mediaRwRegex.matches(it) }) {
+            val needsMediaRwStaging = !Shell.getShell().isRoot && pathsToBackup.any { mediaRwRegex.matches(it) }
+            if (needsMediaRwStaging && stagingRoot == null) {
                 val root = File(context.cacheDir, "restic-staging")
                 Shell.cmd("rm -rf ${shellQuote(root.absolutePath)}").exec()
-                val mediaRwDir = File(root, "mnt/media_rw").also { it.mkdirs() }
+                root.mkdirs()
                 stagingRoot = root
+            }
+
+            val effectivePathsToBackup = if (needsMediaRwStaging && stagingRoot != null) {
+                val mediaRwDir = File(stagingRoot, "mnt/media_rw").also { it.mkdirs() }
                 val linkedUuids = mutableSetOf<String>()
                 pathsToBackup.distinct().flatMap { path ->
                     val match = mediaRwRegex.matchEntire(path)
@@ -351,11 +375,12 @@ class BackupOperationRunner(
             emitStageProgress(stage3Title, 1f, 1f, false)
 
             isSuccess = true
+            val totalBackedUpItems = selectedApps.size + request.customDirectories.size + metadata.deviceData.size
             summary = finalSummaryProgress?.finalSummary
                 ?: context.resources.getQuantityString(
                     R.plurals.backup_summary_success_items,
-                    selectedApps.size,
-                    selectedApps.size
+                    totalBackedUpItems,
+                    totalBackedUpItems
                 )
         } catch (e: OperationCancelledException) {
             isSuccess = false
@@ -404,8 +429,9 @@ class BackupOperationRunner(
         appBackupTypes: Map<String, BackupTypeSelection>,
         customDirectories: List<String>,
         excludedCustomDirectories: List<String>,
+        deviceData: DeviceDataSelection,
         shouldStop: () -> Boolean
-    ): Triple<MutableList<String>, List<String>, RestoidMetadata> {
+    ): PreparedBackupData {
         fun throwIfCancelled() {
             if (shouldStop()) {
                 throw OperationCancelledException(context.getString(R.string.operation_interrupted))
@@ -510,15 +536,44 @@ class BackupOperationRunner(
             val shellPath = io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(realPath)
             excludePatterns.add(escapeResticPattern(shellPath))
         }
-        val metadata = RestoidMetadata(apps = appMetadataMap, customDirectories = customDirectoryMetadataMap)
-        return Triple(pathsToBackup, excludePatterns, metadata)
+
+        var deviceDataStagingRoot: File? = null
+        val deviceDataMetadataMap = mutableMapOf<String, DeviceDataMetadata>()
+        if (deviceData.anyEnabled()) {
+            val root = File(context.cacheDir, "restic-staging")
+            Shell.cmd("rm -rf ${shellQuote(root.absolutePath)}").exec()
+            root.mkdirs()
+            deviceDataStagingRoot = root
+
+            val exported = deviceDataRepository.exportSelectedDeviceData(
+                selection = deviceData,
+                stagingRoot = root,
+                shouldStop = shouldStop
+            )
+            exported.forEach { result ->
+                pathsToBackup.add(result.type.relativePath)
+                deviceDataMetadataMap[result.type.key] = result.toMetadata()
+            }
+        }
+
+        val metadata = RestoidMetadata(
+            apps = appMetadataMap,
+            customDirectories = customDirectoryMetadataMap,
+            deviceData = deviceDataMetadataMap
+        )
+        return PreparedBackupData(
+            pathsToBackup = pathsToBackup,
+            excludePatterns = excludePatterns,
+            metadata = metadata,
+            stagingRoot = deviceDataStagingRoot
+        )
     }
 
     private fun preflightChecks(
         request: BackupWorkRequest,
         selectedApps: List<AppInfo>
     ): OperationProgress? {
-        if (selectedApps.isEmpty() && request.customDirectories.isEmpty()) {
+        if (selectedApps.isEmpty() && request.customDirectories.isEmpty() && !request.deviceData.anyEnabled()) {
             return OperationProgress(
                 isFinished = true,
                 error = context.getString(R.string.error_no_items_selected),
@@ -542,6 +597,17 @@ class BackupOperationRunner(
             )
         }
 
+        if (request.deviceData.anyEnabled()) {
+            val missingPerms = DeviceDataPermissionHelper.missingBackupPermissions(context, request.deviceData)
+            if (missingPerms.isNotEmpty()) {
+                return OperationProgress(
+                    isFinished = true,
+                    error = context.getString(R.string.error_device_data_permissions_required),
+                    finalSummary = context.getString(R.string.summary_device_data_permissions_required)
+                )
+            }
+        }
+
         val hasAnyBackupType = selectedApps.any { app ->
             val backupOptions = request.appBackupTypes[app.packageName] ?: request.backupTypes
             backupOptions.apk ||
@@ -553,7 +619,7 @@ class BackupOperationRunner(
                     backupOptions.permissions ||
                     backupOptions.specialAccess ||
                     backupOptions.accessibility
-        } || request.customDirectories.isNotEmpty()
+        } || request.customDirectories.isNotEmpty() || request.deviceData.anyEnabled()
         if (!hasAnyBackupType) {
             return OperationProgress(
                 isFinished = true,

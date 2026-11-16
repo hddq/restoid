@@ -664,4 +664,36 @@
     <string name="action_collapse">Collapse</string>
     <string name="action_copy_log">Copy Log</string>
     <string name="action_clear">Clear</string>
+
+    <!-- Device Data -->
+    <string name="device_data_title">Device Data</string>
+    <string name="device_data_desc">Contacts, call history, and calendar events</string>
+    <string name="device_data_contacts">Contacts</string>
+    <string name="device_data_contacts_desc">Phone numbers, emails, groups, and photos</string>
+    <string name="device_data_call_history">Call history</string>
+    <string name="device_data_call_history_desc">Incoming, outgoing, and missed call logs</string>
+    <string name="device_data_calendar">Calendar</string>
+    <string name="device_data_calendar_desc">Events, recurrence rules, and reminders</string>
+    <string name="device_data_summary_none">None selected</string>
+    <string name="device_data_categories_header">Categories</string>
+    <string name="device_data_grant_all_permissions">Grant missing permissions</string>
+    <string name="device_data_permission_granted">Permission granted</string>
+    <string name="device_data_permission_missing_backup">Read permission required to back up</string>
+    <string name="device_data_permission_missing_restore">Read &amp; write permissions required to restore</string>
+    <string name="device_data_not_in_snapshot">Not included in this snapshot</string>
+    <string name="device_data_size_and_count">%1$s · %2$s</string>
+    <plurals name="device_data_items_count">
+        <item quantity="one">%1$d item</item>
+        <item quantity="other">%1$d items</item>
+    </plurals>
+    <string name="snapshot_detail_device_data_title">Device Data (%1$d)</string>
+    <string name="tasks_guide_device_data_title">Device Data</string>
+    <string name="tasks_guide_device_data_desc">Backs up contacts, call history, and calendar events without root access using standard Android permissions.</string>
+    <string name="error_device_data_permissions_required">Missing required permissions for device data backup</string>
+    <string name="summary_device_data_permissions_required">Device data permissions required</string>
+    <string name="error_device_data_restore_permissions_required">Missing required permissions for device data restore</string>
+    <string name="restore_stage_processing_device_data">Restoring Device Data</string>
+    <string name="restore_stage_processing_template_device_data">[%1$d/%2$d] Restoring device data…</string>
+    <string name="restore_failure_device_data">Failed to restore %1$s (%2$s)</string>
+    <string name="restore_failure_device_data_missing_file">Backup data for %1$s was not found in snapshot</string>
 </resources>

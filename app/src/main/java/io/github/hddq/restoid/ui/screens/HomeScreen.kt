@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.PermDeviceInformation
 import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
@@ -662,7 +663,8 @@ private fun SnapshotItem(
 
             val appCount = snapshotWithMetadata.metadata?.apps?.size ?: 0
             val customDirCount = snapshotWithMetadata.metadata?.customDirectories?.size ?: 0
-            val totalCount = appCount + customDirCount
+            val deviceDataCount = snapshotWithMetadata.metadata?.deviceData?.size ?: 0
+            val totalCount = appCount + customDirCount + deviceDataCount
 
             if (totalCount > 0) {
                 Text(
@@ -672,7 +674,8 @@ private fun SnapshotItem(
                 val iconSize = 32.dp
                 val spacing = 8.dp
                 val customDirSlot = if (customDirCount > 0) 1 else 0
-                val availableSlotsForApps = (maxIconsPossible - customDirSlot).coerceAtLeast(0)
+                val deviceDataSlot = if (deviceDataCount > 0) 1 else 0
+                val availableSlotsForApps = (maxIconsPossible - customDirSlot - deviceDataSlot).coerceAtLeast(0)
                 val showCounter = appCount > availableSlotsForApps
                 val limit = if (showCounter) (availableSlotsForApps - 1).coerceAtLeast(0) else availableSlotsForApps
 
@@ -721,6 +724,32 @@ private fun SnapshotItem(
                                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                                 fontWeight = FontWeight.Bold
                             )
+                        }
+                    }
+                    if (deviceDataCount > 0) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.secondaryContainer,
+                            modifier = Modifier.size(iconSize)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxSize(),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.PermDeviceInformation,
+                                    contentDescription = stringResource(R.string.device_data_title),
+                                    modifier = Modifier.size(14.dp),
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                                Text(
+                                    text = deviceDataCount.toString(),
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                 }

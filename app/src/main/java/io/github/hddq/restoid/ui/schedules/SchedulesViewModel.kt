@@ -10,6 +10,8 @@ import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.RepositoryBackendType
 import io.github.hddq.restoid.data.ScheduleRepository
 import io.github.hddq.restoid.model.AppInfo
+import io.github.hddq.restoid.model.DeviceDataSelection
+import io.github.hddq.restoid.model.DeviceDataType
 import io.github.hddq.restoid.model.Schedule
 import io.github.hddq.restoid.model.TriggerConditions
 import io.github.hddq.restoid.model.MaintenanceConfig
@@ -56,7 +58,9 @@ data class AddEditScheduleUiState(
     val customDirectoriesBackupEnabled: Boolean = false,
     val customDirectories: List<io.github.hddq.restoid.model.CustomDirectory> = emptyList(),
     val excludedCustomDirectories: List<io.github.hddq.restoid.model.CustomDirectory> = emptyList(),
-    val exclusionConflicts: List<ExclusionConflict> = emptyList()
+    val exclusionConflicts: List<ExclusionConflict> = emptyList(),
+    val deviceDataBackupEnabled: Boolean = false,
+    val deviceDataSelection: DeviceDataSelection = DeviceDataSelection(contacts = true, callHistory = true, calendar = true)
 )
 
 sealed interface SchedulesUiEvent {
@@ -172,7 +176,13 @@ class SchedulesViewModel(
             lastRunTimestamp = schedule.lastRunTimestamp,
             customDirectoriesBackupEnabled = schedule.config.customDirectories.isNotEmpty(),
             customDirectories = schedule.config.customDirectories.map { io.github.hddq.restoid.model.CustomDirectory(it, true) },
-            excludedCustomDirectories = schedule.config.excludedCustomDirectories.map { io.github.hddq.restoid.model.CustomDirectory(it, true) }
+            excludedCustomDirectories = schedule.config.excludedCustomDirectories.map { io.github.hddq.restoid.model.CustomDirectory(it, true) },
+            deviceDataBackupEnabled = schedule.config.deviceData.anyEnabled(),
+            deviceDataSelection = if (schedule.config.deviceData.anyEnabled()) {
+                schedule.config.deviceData
+            } else {
+                DeviceDataSelection(contacts = true, callHistory = true, calendar = true)
+            }
         )
         val withConflicts = recomputeConflicts(newState)
         _addEditState.value = withConflicts
@@ -219,7 +229,9 @@ class SchedulesViewModel(
                 current.triggerConditions != initial.triggerConditions ||
                 current.customDirectoriesBackupEnabled != initial.customDirectoriesBackupEnabled ||
                 current.customDirectories != initial.customDirectories ||
-                current.excludedCustomDirectories != initial.excludedCustomDirectories
+                current.excludedCustomDirectories != initial.excludedCustomDirectories ||
+                current.deviceDataBackupEnabled != initial.deviceDataBackupEnabled ||
+                current.deviceDataSelection != initial.deviceDataSelection
     }
 
     fun onBackPress() {
@@ -255,6 +267,7 @@ class SchedulesViewModel(
                 appBackupTypes = if (actualBackupEnabled) selectedAppBackupTypes(state).mapValues { it.value.toSelection() } else emptyMap(),
                 customDirectories = if (state.customDirectoriesBackupEnabled) state.customDirectories.filter { it.isSelected }.map { it.uri } else emptyList(),
                 excludedCustomDirectories = if (state.customDirectoriesBackupEnabled) state.excludedCustomDirectories.filter { it.isSelected }.map { it.uri } else emptyList(),
+                deviceData = if (state.deviceDataBackupEnabled) state.deviceDataSelection else DeviceDataSelection(),
                 unlockRepo = state.maintenance.unlockRepo,
                 forgetSnapshots = state.maintenance.forgetSnapshots,
                 pruneRepo = state.maintenance.pruneRepo,
@@ -307,6 +320,21 @@ class SchedulesViewModel(
 
     fun setCustomDirectoriesBackupEnabled(enabled: Boolean) {
         _addEditState.update { recomputeConflicts(it.copy(customDirectoriesBackupEnabled = enabled)) }
+    }
+
+    fun setDeviceDataBackupEnabled(enabled: Boolean) {
+        _addEditState.update { it.copy(deviceDataBackupEnabled = enabled) }
+    }
+
+    fun toggleDeviceDataType(type: DeviceDataType) {
+        _addEditState.update { state ->
+            state.copy(
+                deviceDataSelection = state.deviceDataSelection.withType(
+                    type,
+                    !state.deviceDataSelection.isEnabled(type)
+                )
+            )
+        }
     }
 
     fun addCustomDirectory(uriString: String) {
