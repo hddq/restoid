@@ -116,7 +116,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.model.AppInfo
-import io.github.hddq.restoid.util.DeviceUtils
 import io.github.hddq.restoid.work.ExclusionConflict
 import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
@@ -1075,7 +1074,7 @@ private fun ForgetHostsBottomSheet(
                             }
                             itemsIndexed(
                                 items = availableHosts,
-                                key = { _, option -> option.hostname }
+                                key = { _, option -> "host_${option.hostname}" }
                             ) { index, hostOption ->
                                 ExpressiveSegmentedSurface(
                                     index = index + 1,
@@ -1105,7 +1104,7 @@ private fun ForgetHostsBottomSheet(
     }
 
     if (showAddHostDialog) {
-        val sanitizedInput = DeviceUtils.sanitizeHostname(customHostInput)
+        val sanitizedInput = normalizeCustomForgetHostname(customHostInput)
         AlertDialog(
             onDismissRequest = { showAddHostDialog = false },
             title = { Text(stringResource(R.string.forget_hosts_dialog_add_title)) },

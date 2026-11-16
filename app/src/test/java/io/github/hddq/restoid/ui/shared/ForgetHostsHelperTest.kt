@@ -142,4 +142,11 @@ class ForgetHostsHelperTest {
 
         assertTrue(result.isEmpty())
     }
+
+    @Test
+    fun normalizeCustomForgetHostname_preservesInteriorWhitespaceAndStripsControlCharacters() {
+        val normalized = normalizeCustomForgetHostname("  Work  Tablet\u0000\n ")
+
+        assertEquals("Work  Tablet", normalized)
+    }
 }
