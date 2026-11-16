@@ -78,12 +78,6 @@
           mkdir -p "$GRADLE_USER_HOME" "$ANDROID_USER_HOME"
 
           echo "sdk.dir=$ANDROID_HOME" > local.properties
-
-          echo "Go: $(go version)"
-          echo "Java: $(java -version 2>&1 | head -n 1)"
-          echo "Gradle: $(gradle --version | sed -n '3p')"
-          echo "Android SDK: $ANDROID_HOME"
-          echo "adb: $(command -v adb)"
         '';
       };
     };
