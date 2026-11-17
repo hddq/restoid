@@ -47,6 +47,7 @@ data class RunTasksUiState(
     val isRunning: Boolean = false,
     val progress: OperationProgress = OperationProgress(),
     val customDirectoriesBackupEnabled: Boolean = false,
+    val deviceDataBackupEnabled: Boolean = false,
     val customDirectories: List<CustomDirectory> = emptyList(),
     val excludedCustomDirectories: List<CustomDirectory> = emptyList(),
     val exclusionConflicts: List<ExclusionConflict> = emptyList(),
@@ -415,6 +416,10 @@ class RunTasksViewModel(
     fun setCustomDirectoriesBackupEnabled(enabled: Boolean) {
         _uiState.update { recomputeConflicts(it.copy(customDirectoriesBackupEnabled = enabled)) }
         preferencesRepository.saveCustomDirectoriesBackupEnabled(enabled)
+    }
+
+    fun setDeviceDataBackupEnabled(enabled: Boolean) {
+        _uiState.update { it.copy(deviceDataBackupEnabled = enabled) }
     }
 
     fun addCustomDirectory(uriString: String) {

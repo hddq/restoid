@@ -37,6 +37,7 @@ import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.PermMedia
 import androidx.compose.material.icons.outlined.SdCard
 import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -56,6 +57,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
@@ -84,6 +86,7 @@ fun RestoreScreen(
     onNavigateToOperationProgress: () -> Unit,
     onNavigateToAppsConfig: () -> Unit,
     onNavigateToCustomDirectoriesConfig: () -> Unit,
+    onNavigateToDeviceDataConfig: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val application = LocalContext.current.applicationContext as RestoidApplication
@@ -95,6 +98,7 @@ fun RestoreScreen(
 
     val restoreAppsEnabled by viewModel.restoreAppsEnabled.collectAsState()
     val restoreCustomDirectoriesEnabled by viewModel.restoreCustomDirectoriesEnabled.collectAsState()
+    val restoreDeviceDataEnabled by viewModel.restoreDeviceDataEnabled.collectAsStateWithLifecycle()
     val restoreTypes by viewModel.restoreTypes.collectAsState()
     val appRestoreTypes by viewModel.appRestoreTypes.collectAsState()
 
@@ -129,7 +133,7 @@ fun RestoreScreen(
             Column(modifier = Modifier.fillMaxWidth()) {
                 ExpressiveSectionHeader(title = stringResource(R.string.operation_restore))
                 ExpressiveCardGroup {
-                    ExpressiveSegmentedSurface(index = 0, count = 2) {
+                    ExpressiveSegmentedSurface(index = 0, count = 3) {
                         TaskRow(
                             title = stringResource(R.string.run_tasks_applications),
                             subtitle = if (hasRoot) buildSelectedRestoreTypesSummary(selectableBackupDetails, appRestoreTypes, restoreTypes, context) else stringResource(R.string.root_access_denied),
@@ -140,7 +144,7 @@ fun RestoreScreen(
                             enabled = hasRoot
                         )
                     }
-                    ExpressiveSegmentedSurface(index = 1, count = 2) {
+                    ExpressiveSegmentedSurface(index = 1, count = 3) {
                         TaskRow(
                             title = stringResource(R.string.run_tasks_custom_directories),
                             subtitle = io.github.hddq.restoid.ui.shared.buildCustomDirectoriesSubtitle(customDirsList, context),
@@ -148,6 +152,16 @@ fun RestoreScreen(
                             checked = restoreCustomDirectoriesEnabled,
                             onCheckedChange = viewModel::setRestoreCustomDirectoriesEnabled,
                             onNavigate = onNavigateToCustomDirectoriesConfig
+                        )
+                    }
+                    ExpressiveSegmentedSurface(index = 2, count = 3) {
+                        TaskRow(
+                            title = stringResource(R.string.run_tasks_device_data),
+                            subtitle = stringResource(R.string.run_tasks_device_data_subtitle),
+                            icon = Icons.Outlined.Smartphone,
+                            checked = restoreDeviceDataEnabled,
+                            onCheckedChange = viewModel::setRestoreDeviceDataEnabled,
+                            onNavigate = onNavigateToDeviceDataConfig
                         )
                     }
                 }
@@ -328,6 +342,13 @@ fun RestoreCustomDirectoriesConfigScreen(
             }
         }
     }
+}
+
+@Composable
+fun RestoreDeviceDataConfigScreen(
+    modifier: Modifier = Modifier
+) {
+    io.github.hddq.restoid.ui.shared.DeviceDataConfigScreen(modifier = modifier)
 }
 
 @Composable

@@ -78,6 +78,10 @@
     <string name="run_tasks_custom_directories_subtitle_none">No files or folders selected</string>
     <string name="run_tasks_custom_directories_subtitle_count">%1$d paths selected</string>
     <string name="run_tasks_custom_directories_subtitle_with_exclusions">%1$d paths selected, %2$d excluded</string>
+    <string name="run_tasks_device_data">Device Data</string>
+    <string name="run_tasks_device_data_subtitle">No items available yet</string>
+    <string name="title_device_data">Device Data</string>
+    <string name="device_data_empty_desc">Options for backing up and restoring device data, such as contacts, will appear here in a future update.</string>
     <string name="action_add_directory">Add File or Folder</string>
     <string name="action_add_excluded_directory">Exclude File or Folder</string>
     <string name="folder_browser_select_this_folder">Select this path</string>

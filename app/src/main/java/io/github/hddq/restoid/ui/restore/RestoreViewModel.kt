@@ -135,6 +135,9 @@ class RestoreViewModel(
     private val _restoreCustomDirectoriesEnabled = MutableStateFlow(false)
     val restoreCustomDirectoriesEnabled = _restoreCustomDirectoriesEnabled.asStateFlow()
 
+    private val _restoreDeviceDataEnabled = MutableStateFlow(false)
+    val restoreDeviceDataEnabled = _restoreDeviceDataEnabled.asStateFlow()
+
     private val _isRestoring = MutableStateFlow(false)
     val isRestoring = _isRestoring.asStateFlow()
 
@@ -313,6 +316,10 @@ class RestoreViewModel(
 
     fun setRestoreCustomDirectoriesEnabled(enabled: Boolean) {
         _restoreCustomDirectoriesEnabled.value = enabled
+    }
+
+    fun setRestoreDeviceDataEnabled(enabled: Boolean) {
+        _restoreDeviceDataEnabled.value = enabled
     }
 
     private fun findBackedUpItems(

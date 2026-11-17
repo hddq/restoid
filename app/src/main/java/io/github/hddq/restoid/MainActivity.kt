@@ -84,6 +84,7 @@ import io.github.hddq.restoid.ui.restore.RestoreViewModelFactory
 import io.github.hddq.restoid.ui.runtasks.BackupConfigScreen
 import io.github.hddq.restoid.ui.runtasks.CustomDirectoriesConfigScreen
 import io.github.hddq.restoid.ui.runtasks.CheckConfigScreen
+import io.github.hddq.restoid.ui.runtasks.DeviceDataConfigScreen
 import io.github.hddq.restoid.ui.runtasks.ForgetConfigScreen
 import io.github.hddq.restoid.ui.runtasks.RunTasksRoutes
 import io.github.hddq.restoid.ui.runtasks.RunTasksScreen
@@ -722,6 +723,7 @@ class MainActivity : FragmentActivity() {
                                             },
                                             onNavigateToBackupConfig = { navController.navigate(RunTasksRoutes.BackupConfig) },
                                             onNavigateToCustomDirectoriesConfig = { navController.navigate(RunTasksRoutes.CustomDirectoriesConfig) },
+                                            onNavigateToDeviceDataConfig = { navController.navigate(RunTasksRoutes.DeviceDataConfig) },
                                             onNavigateToForgetConfig = { navController.navigate(RunTasksRoutes.ForgetConfig) },
                                             onNavigateToCheckConfig = { navController.navigate(RunTasksRoutes.CheckConfig) }
                                         )
@@ -775,6 +777,15 @@ class MainActivity : FragmentActivity() {
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
                                     ) {
                                         CustomDirectoriesConfigScreen(viewModel = vm)
+                                    }
+                                }
+                                composable(RunTasksRoutes.DeviceDataConfig) {
+                                    DestinationScaffold(
+                                        titleRes = R.string.title_device_data,
+                                        isTopLevel = false,
+                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
+                                    ) {
+                                        DeviceDataConfigScreen()
                                     }
                                 }
                                 composable(RunTasksRoutes.ForgetConfig) { backStackEntry ->
@@ -900,7 +911,8 @@ class MainActivity : FragmentActivity() {
                                             viewModel = viewModel,
                                             onNavigateToOperationProgress = { navController.navigate(Screen.OperationProgress.route) { launchSingleTop = true } },
                                             onNavigateToAppsConfig = { navController.navigate(io.github.hddq.restoid.ui.restore.RestoreRoutes.AppsConfig) },
-                                            onNavigateToCustomDirectoriesConfig = { navController.navigate(io.github.hddq.restoid.ui.restore.RestoreRoutes.CustomDirectoriesConfig) }
+                                            onNavigateToCustomDirectoriesConfig = { navController.navigate(io.github.hddq.restoid.ui.restore.RestoreRoutes.CustomDirectoriesConfig) },
+                                            onNavigateToDeviceDataConfig = { navController.navigate(io.github.hddq.restoid.ui.restore.RestoreRoutes.DeviceDataConfig) }
                                         )
                                     }
                                 }
@@ -958,6 +970,15 @@ class MainActivity : FragmentActivity() {
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
                                     ) {
                                         io.github.hddq.restoid.ui.screens.RestoreCustomDirectoriesConfigScreen(viewModel = vm)
+                                    }
+                                }
+                                composable(io.github.hddq.restoid.ui.restore.RestoreRoutes.DeviceDataConfig) {
+                                    DestinationScaffold(
+                                        titleRes = R.string.title_device_data,
+                                        isTopLevel = false,
+                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
+                                    ) {
+                                        io.github.hddq.restoid.ui.screens.RestoreDeviceDataConfigScreen()
                                     }
                                 }
                             }

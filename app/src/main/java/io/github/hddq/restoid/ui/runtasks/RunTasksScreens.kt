@@ -16,6 +16,7 @@ import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.FactCheck
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.LockOpen
+import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -52,6 +53,7 @@ fun RunTasksScreen(
     onNavigateToOperationProgress: () -> Unit,
     onNavigateToBackupConfig: () -> Unit,
     onNavigateToCustomDirectoriesConfig: () -> Unit,
+    onNavigateToDeviceDataConfig: () -> Unit,
     onNavigateToForgetConfig: () -> Unit,
     onNavigateToCheckConfig: () -> Unit,
     modifier: Modifier = Modifier
@@ -104,7 +106,7 @@ fun RunTasksScreen(
                 ExclusionConflictWarningCard(conflicts = uiState.exclusionConflicts)
                 ExpressiveSectionHeader(title = context.getString(R.string.operation_backup))
                 ExpressiveCardGroup {
-                    ExpressiveSegmentedSurface(index = 0, count = 2) {
+                    ExpressiveSegmentedSurface(index = 0, count = 3) {
                         TaskRow(
                             title = context.getString(R.string.run_tasks_applications),
                             subtitle = if (hasRoot) buildBackupSubtitle(uiState.apps, uiState.appBackupTypes, uiState.backupTypes, context) else context.getString(R.string.root_access_denied),
@@ -115,7 +117,7 @@ fun RunTasksScreen(
                             enabled = hasRoot
                         )
                     }
-                    ExpressiveSegmentedSurface(index = 1, count = 2) {
+                    ExpressiveSegmentedSurface(index = 1, count = 3) {
                         TaskRow(
                             title = context.getString(R.string.run_tasks_custom_directories),
                             subtitle = buildCustomDirectoriesSubtitle(uiState.customDirectories, uiState.excludedCustomDirectories, context),
@@ -123,6 +125,16 @@ fun RunTasksScreen(
                             checked = uiState.customDirectoriesBackupEnabled,
                             onCheckedChange = viewModel::setCustomDirectoriesBackupEnabled,
                             onNavigate = onNavigateToCustomDirectoriesConfig
+                        )
+                    }
+                    ExpressiveSegmentedSurface(index = 2, count = 3) {
+                        TaskRow(
+                            title = stringResource(R.string.run_tasks_device_data),
+                            subtitle = stringResource(R.string.run_tasks_device_data_subtitle),
+                            icon = Icons.Outlined.Smartphone,
+                            checked = uiState.deviceDataBackupEnabled,
+                            onCheckedChange = viewModel::setDeviceDataBackupEnabled,
+                            onNavigate = onNavigateToDeviceDataConfig
                         )
                     }
                 }
@@ -263,4 +275,11 @@ fun CustomDirectoriesConfigScreen(
         onRemoveExcludedDirectory = viewModel::removeExcludedCustomDirectory,
         modifier = modifier
     )
+}
+
+@Composable
+fun DeviceDataConfigScreen(
+    modifier: Modifier = Modifier
+) {
+    io.github.hddq.restoid.ui.shared.DeviceDataConfigScreen(modifier = modifier)
 }
