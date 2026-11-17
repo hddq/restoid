@@ -9,15 +9,25 @@ import io.github.hddq.restoid.model.ContactsBackupMetadata
 import io.github.hddq.restoid.model.DeviceDataMetadata
 import io.github.hddq.restoid.model.RestoidMetadata
 import io.github.hddq.restoid.model.buildContactDedupKeys
+import io.github.hddq.restoid.model.coalesceContactsForImport
 import io.github.hddq.restoid.model.normalizePhoneForDedup
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
+import java.io.File
+import java.nio.file.Files
 
 class ContactsSerializationTest {
+
+    @get:Rule
+    val tempFolder = TemporaryFolder()
 
     private val json = Json {
         prettyPrint = true
@@ -115,23 +125,42 @@ class ContactsSerializationTest {
     }
 
     @Test
-    fun `normalizePhoneForDedup and buildContactDedupKeys match equivalent formats and fall back to name`() {
-        assertEquals("5551234567", normalizePhoneForDedup("+1 (555) 123-4567"))
-        assertEquals("5551234567", normalizePhoneForDedup("555-123-4567"))
+    fun `normalizePhoneForDedup preserves country codes and equates local forms only when country is known`() {
+        val usIntl = normalizePhoneForDedup("+1 207 946 0958")
+        val ukIntl = normalizePhoneForDedup("+44 20 7946 0958")
+        assertEquals("+12079460958", usIntl)
+        assertEquals("+442079460958", ukIntl)
+        assertNotEquals(usIntl, ukIntl)
+
+        assertEquals("+442079460958", normalizePhoneForDedup("0044 20 7946 0958"))
+
+        // Known country equates local and international forms
+        assertEquals("+15551234567", normalizePhoneForDedup("+1 (555) 123-4567", "US"))
+        assertEquals("+15551234567", normalizePhoneForDedup("555-123-4567", "US"))
+        assertEquals("+442079460958", normalizePhoneForDedup("020 7946 0958", "GB"))
+
+        // Unknown country does not equate local number to international number
+        assertEquals("5551234567", normalizePhoneForDedup("555-123-4567", null))
+        assertNotEquals(
+            normalizePhoneForDedup("+1 (555) 123-4567", null),
+            normalizePhoneForDedup("555-123-4567", null)
+        )
         assertEquals("12345", normalizePhoneForDedup("123-45"))
         assertEquals("", normalizePhoneForDedup("   "))
 
         val keysWithPhoneAndEmail = buildContactDedupKeys(
             displayName = "Alice Example",
             phones = listOf("+1 (555) 123-4567"),
-            emails = listOf("Alice@Example.com")
+            emails = listOf("Alice@Example.com"),
+            defaultCountryIso = "US"
         )
-        assertEquals(setOf("p:5551234567", "e:alice@example.com"), keysWithPhoneAndEmail)
+        assertEquals(setOf("p:+15551234567", "e:alice@example.com"), keysWithPhoneAndEmail)
 
         val matchingFormattedKeys = buildContactDedupKeys(
             displayName = "A. Example",
             phones = listOf("5551234567"),
-            emails = emptyList()
+            emails = emptyList(),
+            defaultCountryIso = "US"
         )
         assertTrue(matchingFormattedKeys.any { it in keysWithPhoneAndEmail })
 
@@ -141,5 +170,89 @@ class ContactsSerializationTest {
             emails = emptyList()
         )
         assertEquals(setOf("n:bob without details"), nameFallbackKeys)
+    }
+
+    @Test
+    fun `coalesceContactsForImport combines linked raw contacts without dropping emails, groups, or photos`() {
+        val googleRaw = BackedUpRawContact(
+            accountName = "alice@gmail.com",
+            accountType = "com.google",
+            displayName = "Alice Example",
+            photoFileName = null,
+            groupTitles = listOf("Work"),
+            dataRows = listOf(
+                BackedUpContactDataRow(
+                    mimeType = "vnd.android.cursor.item/name",
+                    data = mapOf("data1" to "Alice Example", "data2" to "Alice")
+                ),
+                BackedUpContactDataRow(
+                    mimeType = "vnd.android.cursor.item/phone_v2",
+                    isPrimary = true,
+                    data = mapOf("data1" to "+1 (207) 946-0958", "data2" to "2")
+                )
+            )
+        )
+        val localRaw = BackedUpRawContact(
+            starred = true,
+            sendToVoicemail = true,
+            displayName = "Alice Example",
+            photoFileName = "contact_2.jpg",
+            groupTitles = listOf("Family"),
+            dataRows = listOf(
+                BackedUpContactDataRow(
+                    mimeType = "vnd.android.cursor.item/phone_v2",
+                    data = mapOf("data1" to "207-946-0958", "data2" to "2")
+                ),
+                BackedUpContactDataRow(
+                    mimeType = "vnd.android.cursor.item/email_v2",
+                    data = mapOf("data1" to "alice@example.com", "data2" to "1")
+                )
+            )
+        )
+        val distinctUkContact = BackedUpRawContact(
+            displayName = "Bob UK",
+            dataRows = listOf(
+                BackedUpContactDataRow(
+                    mimeType = "vnd.android.cursor.item/phone_v2",
+                    data = mapOf("data1" to "+44 20 7946 0958", "data2" to "2")
+                )
+            )
+        )
+
+        val coalesced = coalesceContactsForImport(
+            contacts = listOf(googleRaw, localRaw, distinctUkContact),
+            defaultCountryIso = "US"
+        )
+
+        assertEquals(2, coalesced.size)
+        val mergedAlice = coalesced[0]
+        assertTrue(mergedAlice.starred)
+        assertTrue(mergedAlice.sendToVoicemail)
+        assertEquals("contact_2.jpg", mergedAlice.photoFileName)
+        assertEquals(listOf("Work", "Family"), mergedAlice.groupTitles)
+        assertEquals(3, mergedAlice.dataRows.size)
+        assertTrue(
+            mergedAlice.dataRows.any {
+                it.mimeType == "vnd.android.cursor.item/email_v2" && it.data["data1"] == "alice@example.com"
+            }
+        )
+        assertEquals("Bob UK", coalesced[1].displayName)
+    }
+
+    @Test
+    fun `resolveSafePhotoFile rejects traversal, absolute paths, and symlinks outside photosDir`() {
+        val root = tempFolder.newFolder("backup")
+        val photosDir = File(root, "photos").apply { mkdirs() }
+        val validPhoto = File(photosDir, "contact_1.jpg").apply { writeBytes(byteArrayOf(1, 2, 3)) }
+        val outsideSecret = File(root, "secret.jpg").apply { writeBytes(byteArrayOf(9, 9, 9)) }
+
+        assertEquals(validPhoto.canonicalFile, resolveSafePhotoFile(photosDir, "contact_1.jpg")?.canonicalFile)
+        assertNull(resolveSafePhotoFile(photosDir, "../secret.jpg"))
+        assertNull(resolveSafePhotoFile(photosDir, outsideSecret.absolutePath))
+        assertFalse(validPhoto.name.contains(".."))
+
+        val symlink = photosDir.toPath().resolve("link.jpg")
+        Files.createSymbolicLink(symlink, outsideSecret.toPath())
+        assertNull(resolveSafePhotoFile(photosDir, "link.jpg"))
     }
 }

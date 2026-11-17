@@ -509,11 +509,19 @@ class RestoreOperationRunner(
                         }
                     )
                     throwIfCancelled()
-                    if (importResult.failedCount == 0) {
+                    if (importResult.failedCount == 0 && importResult.failedGroupCount == 0 && importResult.failedPhotoCount == 0) {
                         successes++
                     } else {
                         failures++
-                        failureDetails.add(context.getString(R.string.restore_failure_contacts, importResult.failedCount))
+                        if (importResult.failedCount > 0) {
+                            failureDetails.add(context.getString(R.string.restore_failure_contacts, importResult.failedCount))
+                        }
+                        if (importResult.failedGroupCount > 0) {
+                            failureDetails.add(context.getString(R.string.restore_failure_contact_groups, importResult.failedGroupCount))
+                        }
+                        if (importResult.failedPhotoCount > 0) {
+                            failureDetails.add(context.getString(R.string.restore_failure_contact_photos, importResult.failedPhotoCount))
+                        }
                     }
                 } else {
                     failures++

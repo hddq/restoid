@@ -9,17 +9,25 @@ import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
 import android.provider.ContactsContract
+import android.telephony.PhoneNumberUtils
+import android.telephony.TelephonyManager
 import androidx.core.content.ContextCompat
 import io.github.hddq.restoid.model.BackedUpContactDataRow
 import io.github.hddq.restoid.model.BackedUpContactGroup
 import io.github.hddq.restoid.model.BackedUpRawContact
 import io.github.hddq.restoid.model.ContactsBackupArchive
 import io.github.hddq.restoid.model.buildContactDedupKeys
+import io.github.hddq.restoid.model.coalesceContactsForImport
+import io.github.hddq.restoid.model.extractDedupKeys
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.LinkOption
+import java.nio.file.Path
+import java.util.Locale
 
 data class ExportedContactsResult(
     val contactCount: Int,
@@ -30,8 +38,33 @@ data class ExportedContactsResult(
 data class ImportedContactsResult(
     val restoredCount: Int,
     val skippedCount: Int,
-    val failedCount: Int
+    val failedCount: Int,
+    val failedGroupCount: Int = 0,
+    val failedPhotoCount: Int = 0
 )
+
+private data class EnsureLocalGroupsResult(
+    val titleToId: Map<String, Long>,
+    val failedTitles: Set<String>
+)
+
+internal fun resolveSafePhotoFile(photosDir: File, photoFileName: String): File? {
+    if (photoFileName.isBlank()) return null
+    val photosRealPath = runCatching { photosDir.toPath().toRealPath() }.getOrNull() ?: return null
+    val candidatePath = runCatching { photosRealPath.resolve(photoFileName).normalize() }.getOrNull() ?: return null
+    if (!candidatePath.startsWith(photosRealPath) || candidatePath == photosRealPath) return null
+
+    var current: Path? = candidatePath
+    while (current != null && current != photosRealPath) {
+        if (Files.isSymbolicLink(current)) return null
+        current = current.parent
+    }
+
+    val realCandidate = runCatching { candidatePath.toRealPath() }.getOrNull() ?: return null
+    if (!realCandidate.startsWith(photosRealPath) || realCandidate == photosRealPath) return null
+    if (!Files.isRegularFile(realCandidate, LinkOption.NOFOLLOW_LINKS)) return null
+    return realCandidate.toFile()
+}
 
 class ContactsBackupRepository(private val context: Context) {
 
@@ -239,35 +272,62 @@ class ContactsBackupRepository(private val context: Context) {
         val archive = json.decodeFromString<ContactsBackupArchive>(archiveFile.readText())
         val photosDir = File(inputDir, PHOTOS_DIR_NAME)
         val resolver = context.contentResolver
-        val existingKeys = if (hasReadContactsPermission()) loadExistingDedupKeys().toMutableSet() else mutableSetOf()
-        val groupTitleToId = ensureLocalGroups(archive.groups, shouldStop)
+        val deviceCountryIso = resolveDeviceCountryIso()
+        val e164Formatter: (String, String) -> String? = { number, country ->
+            PhoneNumberUtils.formatNumberToE164(number, country)
+        }
+
+        val contactsToImport = coalesceContactsForImport(archive.contacts, deviceCountryIso, e164Formatter)
+        val existingKeys = if (hasReadContactsPermission()) {
+            loadExistingDedupKeys(deviceCountryIso, e164Formatter).toMutableSet()
+        } else {
+            mutableSetOf()
+        }
+        val groupsResult = ensureLocalGroups(archive.groups, shouldStop)
+        val failedGroupTitles = groupsResult.failedTitles.toMutableSet()
 
         var restoredCount = 0
         var skippedCount = 0
         var failedCount = 0
-        val total = archive.contacts.size
+        var failedPhotoCount = 0
+        val total = contactsToImport.size
 
-        archive.contacts.forEachIndexed { index, contact ->
-            if (shouldStop()) return@withContext ImportedContactsResult(restoredCount, skippedCount, failedCount)
+        contactsToImport.forEachIndexed { index, contact ->
+            if (shouldStop()) {
+                return@withContext ImportedContactsResult(
+                    restoredCount = restoredCount,
+                    skippedCount = skippedCount,
+                    failedCount = failedCount,
+                    failedGroupCount = failedGroupTitles.size,
+                    failedPhotoCount = failedPhotoCount
+                )
+            }
             onContactProcessed(index + 1, total, contact.displayName)
 
-            val phones = contact.dataRows
-                .filter { it.mimeType == ContactsContract.CommonDataKinds.Phone.CONTENT_ITEM_TYPE }
-                .mapNotNull { it.data[ContactsContract.CommonDataKinds.Phone.NUMBER] }
-            val emails = contact.dataRows
-                .filter { it.mimeType == ContactsContract.CommonDataKinds.Email.CONTENT_ITEM_TYPE }
-                .mapNotNull { it.data[ContactsContract.CommonDataKinds.Email.ADDRESS] }
-            val dedupKeys = buildContactDedupKeys(contact.displayName, phones, emails)
+            val dedupKeys = contact.extractDedupKeys(deviceCountryIso, e164Formatter)
 
             if (dedupKeys.isNotEmpty() && dedupKeys.any { it in existingKeys }) {
                 skippedCount++
                 return@forEachIndexed
             }
 
-            val photoBytes = contact.photoFileName
-                ?.let { File(photosDir, it) }
-                ?.takeIf { it.isFile }
-                ?.readBytes()
+            var photoBytes: ByteArray? = null
+            var contactPhotoFailed = false
+            val photoFileName = contact.photoFileName?.takeIf { it.isNotBlank() }
+            if (photoFileName != null) {
+                val safePhotoFile = resolveSafePhotoFile(photosDir, photoFileName)
+                if (safePhotoFile == null) {
+                    android.util.Log.w(TAG, "Rejected or missing contact photo path: $photoFileName")
+                    contactPhotoFailed = true
+                } else {
+                    photoBytes = runCatching { safePhotoFile.readBytes() }.onFailure { e ->
+                        android.util.Log.w(TAG, "Failed to read contact photo: $photoFileName", e)
+                    }.getOrNull()
+                    if (photoBytes == null) {
+                        contactPhotoFailed = true
+                    }
+                }
+            }
 
             val ops = ArrayList<ContentProviderOperation>()
             ops.add(
@@ -294,8 +354,15 @@ class ContactsBackupRepository(private val context: Context) {
                 ops.add(builder.build())
             }
 
-            contact.groupTitles.forEach { title ->
-                val groupId = groupTitleToId[title] ?: return@forEach
+            contact.groupTitles.forEach { rawTitle ->
+                val title = rawTitle.trim()
+                if (title.isEmpty()) return@forEach
+                val groupId = groupsResult.titleToId[title]
+                if (groupId == null) {
+                    android.util.Log.w(TAG, "Missing local group ID for '$title' on contact ${contact.displayName}")
+                    failedGroupTitles.add(title)
+                    return@forEach
+                }
                 ops.add(
                     ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
                         .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
@@ -317,21 +384,48 @@ class ContactsBackupRepository(private val context: Context) {
 
             try {
                 val insertedRawUri = resolver.applyBatch(ContactsContract.AUTHORITY, ops).firstOrNull()?.uri
-                if (insertedRawUri != null && photoBytes != null && photoBytes.size > INLINE_PHOTO_LIMIT_BYTES) {
-                    writeDisplayPhotoBytes(insertedRawUri, photoBytes)
+                if (insertedRawUri == null) {
+                    android.util.Log.w(TAG, "Contact insert returned no URI for ${contact.displayName}")
+                    failedCount++
+                    return@forEachIndexed
+                }
+                if (photoBytes != null && photoBytes.size > INLINE_PHOTO_LIMIT_BYTES) {
+                    if (!writeDisplayPhotoBytes(insertedRawUri, photoBytes)) {
+                        contactPhotoFailed = true
+                    }
+                }
+                if (contactPhotoFailed) {
+                    failedPhotoCount++
                 }
                 existingKeys.addAll(dedupKeys)
                 restoredCount++
             } catch (e: Exception) {
-                android.util.Log.w("ContactsBackupRepository", "Failed to import contact ${contact.displayName}", e)
+                android.util.Log.w(TAG, "Failed to import contact ${contact.displayName}", e)
                 failedCount++
             }
         }
 
-        ImportedContactsResult(restoredCount, skippedCount, failedCount)
+        ImportedContactsResult(
+            restoredCount = restoredCount,
+            skippedCount = skippedCount,
+            failedCount = failedCount,
+            failedGroupCount = failedGroupTitles.size,
+            failedPhotoCount = failedPhotoCount
+        )
     }
 
-    private fun loadExistingDedupKeys(): Set<String> {
+    private fun resolveDeviceCountryIso(): String? {
+        val telephony = context.getSystemService(TelephonyManager::class.java)
+        val simOrNetwork = telephony?.simCountryIso?.takeIf { it.length == 2 }
+            ?: telephony?.networkCountryIso?.takeIf { it.length == 2 }
+        val country = simOrNetwork ?: Locale.getDefault().country.takeIf { it.length == 2 }
+        return country?.uppercase(Locale.US)
+    }
+
+    private fun loadExistingDedupKeys(
+        defaultCountryIso: String?,
+        e164Formatter: (String, String) -> String?
+    ): Set<String> {
         val phonesByContact = mutableMapOf<Long, MutableList<String>>()
         val emailsByContact = mutableMapOf<Long, MutableList<String>>()
         val namesByContact = mutableMapOf<Long, String>()
@@ -375,7 +469,9 @@ class ContactsBackupRepository(private val context: Context) {
             buildContactDedupKeys(
                 displayName = namesByContact[cid],
                 phones = phonesByContact[cid].orEmpty(),
-                emails = emailsByContact[cid].orEmpty()
+                emails = emailsByContact[cid].orEmpty(),
+                defaultCountryIso = defaultCountryIso,
+                e164Formatter = e164Formatter
             )
         }
     }
@@ -383,15 +479,16 @@ class ContactsBackupRepository(private val context: Context) {
     private fun ensureLocalGroups(
         groups: List<BackedUpContactGroup>,
         shouldStop: () -> Boolean
-    ): Map<String, Long> {
+    ): EnsureLocalGroupsResult {
         val result = mutableMapOf<String, Long>()
+        val failedTitles = linkedSetOf<String>()
         val resolver = context.contentResolver
 
         if (hasReadContactsPermission()) {
             resolver.query(
                 ContactsContract.Groups.CONTENT_URI,
                 arrayOf(ContactsContract.Groups._ID, ContactsContract.Groups.TITLE),
-                "${ContactsContract.Groups.DELETED} = 0",
+                "${ContactsContract.Groups.DELETED} = 0 AND ${ContactsContract.Groups.ACCOUNT_NAME} IS NULL AND ${ContactsContract.Groups.ACCOUNT_TYPE} IS NULL",
                 null,
                 null
             )?.use { cursor ->
@@ -403,7 +500,7 @@ class ContactsBackupRepository(private val context: Context) {
         }
 
         groups.forEach { group ->
-            if (shouldStop()) return result
+            if (shouldStop()) return EnsureLocalGroupsResult(result, failedTitles)
             val title = group.title.trim()
             if (title.isEmpty() || title in result) return@forEach
             val op = ContentProviderOperation.newInsert(ContactsContract.Groups.CONTENT_URI)
@@ -414,13 +511,21 @@ class ContactsBackupRepository(private val context: Context) {
                     if (!group.notes.isNullOrEmpty()) withValue(ContactsContract.Groups.NOTES, group.notes)
                 }
                 .build()
-            runCatching {
-                resolver.applyBatch(ContactsContract.AUTHORITY, arrayListOf(op)).firstOrNull()?.uri?.let { uri ->
-                    result[title] = ContentUris.parseId(uri)
+            try {
+                val uri = resolver.applyBatch(ContactsContract.AUTHORITY, arrayListOf(op)).firstOrNull()?.uri
+                val groupId = uri?.let { ContentUris.parseId(it) } ?: -1L
+                if (groupId > 0L) {
+                    result[title] = groupId
+                } else {
+                    android.util.Log.w(TAG, "Creating local group '$title' returned no valid URI")
+                    failedTitles.add(title)
                 }
+            } catch (e: Exception) {
+                android.util.Log.w(TAG, "Failed to create local group '$title'", e)
+                failedTitles.add(title)
             }
         }
-        return result
+        return EnsureLocalGroupsResult(result, failedTitles)
     }
 
     private fun readDisplayPhotoBytes(rawContactId: Long): ByteArray? {
@@ -433,12 +538,22 @@ class ContactsBackupRepository(private val context: Context) {
         }.getOrNull()?.takeIf { it.isNotEmpty() }
     }
 
-    private fun writeDisplayPhotoBytes(rawContactUri: Uri, bytes: ByteArray) {
+    private fun writeDisplayPhotoBytes(rawContactUri: Uri, bytes: ByteArray): Boolean {
         val uri = Uri.withAppendedPath(rawContactUri, ContactsContract.RawContacts.DisplayPhoto.CONTENT_DIRECTORY)
-        runCatching {
-            context.contentResolver.openAssetFileDescriptor(uri, "rw")?.use { afd ->
-                afd.createOutputStream().use { it.write(bytes) }
+        return try {
+            val afd = context.contentResolver.openAssetFileDescriptor(uri, "rw")
+            if (afd == null) {
+                android.util.Log.w(TAG, "DisplayPhoto descriptor was null for $rawContactUri")
+                false
+            } else {
+                afd.use { descriptor ->
+                    descriptor.createOutputStream().use { it.write(bytes) }
+                }
+                true
             }
+        } catch (e: Exception) {
+            android.util.Log.w(TAG, "Failed to write display photo for $rawContactUri", e)
+            false
         }
     }
 
@@ -446,6 +561,7 @@ class ContactsBackupRepository(private val context: Context) {
         const val CONTACTS_FILE_NAME = "contacts.json"
         const val PHOTOS_DIR_NAME = "photos"
         const val CONTACTS_RELATIVE_STAGING_PATH = "device-data/contacts"
+        private const val TAG = "ContactsBackupRepository"
         private const val INLINE_PHOTO_LIMIT_BYTES = 250_000
     }
 }

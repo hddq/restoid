@@ -514,6 +514,8 @@
     <string name="restore_stage_processing_device_data">Processing Device Data</string>
     <string name="restore_stage_processing_template_device_data">[%1$d/%2$d] Processing Device Data</string>
     <string name="restore_failure_contacts">Failed to restore %1$d contacts.</string>
+    <string name="restore_failure_contact_groups">Failed to restore %1$d contact groups.</string>
+    <string name="restore_failure_contact_photos">Failed to restore %1$d contact photos.</string>
     <string name="restore_failure_contacts_missing">Contacts backup data not found in snapshot.</string>
     <string name="restore_summary_finished_in">Restore finished in %1$s. </string>
     <plurals name="restore_summary_processed_items">
