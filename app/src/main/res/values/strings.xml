@@ -79,9 +79,17 @@
     <string name="run_tasks_custom_directories_subtitle_count">%1$d paths selected</string>
     <string name="run_tasks_custom_directories_subtitle_with_exclusions">%1$d paths selected, %2$d excluded</string>
     <string name="run_tasks_device_data">Device Data</string>
-    <string name="run_tasks_device_data_subtitle">No items available yet</string>
     <string name="title_device_data">Device Data</string>
-    <string name="device_data_empty_desc">Options for backing up and restoring device data, such as contacts, will appear here in a future update.</string>
+    <string name="device_data_contacts">Contacts</string>
+    <string name="device_data_include_read_only_contacts">Include read-only contacts</string>
+    <string name="device_data_contacts_permission_required">Contacts permission required</string>
+    <string name="device_data_contacts_not_in_snapshot">Not included in this snapshot</string>
+    <string name="device_data_none_selected">No items selected</string>
+    <plurals name="device_data_contacts_count">
+        <item quantity="one">%1$d contact</item>
+        <item quantity="other">%1$d contacts</item>
+    </plurals>
+    <string name="device_data_contacts_count_size">%1$s - Size: %2$s</string>
     <string name="action_add_directory">Add File or Folder</string>
     <string name="action_add_excluded_directory">Exclude File or Folder</string>
     <string name="folder_browser_select_this_folder">Select this path</string>
@@ -120,6 +128,9 @@
     <string name="warning_exclusion_conflict_show_less">Show less</string>
     <string name="error_all_files_access_required">All files access is required to back up custom directories.</string>
     <string name="summary_all_files_access_required">Grant All files access, then try again.</string>
+    <string name="error_contacts_read_permission_required">Contacts permission is required to back up contacts.</string>
+    <string name="summary_contacts_read_permission_required">Grant Contacts permission, then try again.</string>
+    <string name="error_contacts_write_permission_required">Contacts permission is required to restore contacts.</string>
     <string name="run_tasks_backup_subtitle">%1$d apps selected - %2$s</string>
     <string name="run_tasks_forget_snapshots">Forget Snapshots</string>
     <string name="run_tasks_forget_subtitle">Keep last %1$d, daily %2$d, weekly %3$d, monthly %4$d</string>
@@ -241,6 +252,7 @@
         <item quantity="one">Backed up Custom Directory (%1$d)</item>
         <item quantity="other">Backed up Custom Directories (%1$d)</item>
     </plurals>
+    <string name="snapshot_backed_up_device_data">Backed up Device Data</string>
     <string name="snapshot_not_found">No snapshot found.</string>
     <string name="snapshot_forgetting">Forgetting snapshot…</string>
     <string name="snapshot_id">ID: %1$s</string>
@@ -499,6 +511,10 @@
     <string name="restore_failure_accessibility_partial">%1$s: Failed to restore some accessibility services: %2$s</string>
     <string name="restore_stage_processing_custom_directories">Processing Custom Directories…</string>
     <string name="restore_failure_custom_directory">Failed to restore custom directory %1$s</string>
+    <string name="restore_stage_processing_device_data">Processing Device Data</string>
+    <string name="restore_stage_processing_template_device_data">[%1$d/%2$d] Processing Device Data</string>
+    <string name="restore_failure_contacts">Failed to restore %1$d contacts.</string>
+    <string name="restore_failure_contacts_missing">Contacts backup data not found in snapshot.</string>
     <string name="restore_summary_finished_in">Restore finished in %1$s. </string>
     <plurals name="restore_summary_processed_items">
         <item quantity="one">Successfully processed %1$d item.</item>

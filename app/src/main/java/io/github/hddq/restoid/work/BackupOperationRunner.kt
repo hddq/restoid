@@ -7,6 +7,7 @@ import com.topjohnwu.superuser.CallbackList
 import com.topjohnwu.superuser.Shell
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.AppInfoRepository
+import io.github.hddq.restoid.data.ContactsBackupRepository
 import io.github.hddq.restoid.data.OperationLockManager
 import io.github.hddq.restoid.data.PreferencesRepository
 import io.github.hddq.restoid.data.RepositoriesRepository
@@ -16,8 +17,10 @@ import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.data.SpecialPermissionsManager
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.AppMetadata
+import io.github.hddq.restoid.model.ContactsBackupMetadata
 import io.github.hddq.restoid.model.RestoidMetadata
 import io.github.hddq.restoid.model.CustomDirectoryMetadata
+import io.github.hddq.restoid.model.DeviceDataMetadata
 import io.github.hddq.restoid.ui.shared.OperationProgress
 import io.github.hddq.restoid.util.ResticOutputParser
 import io.github.hddq.restoid.util.buildResticExcludeFlags
@@ -37,7 +40,8 @@ class BackupOperationRunner(
     private val resticRepository: ResticRepository,
     private val appInfoRepository: AppInfoRepository,
     private val operationLockManager: OperationLockManager,
-    private val preferencesRepository: PreferencesRepository = PreferencesRepository(context)
+    private val preferencesRepository: PreferencesRepository = PreferencesRepository(context),
+    private val contactsBackupRepository: ContactsBackupRepository = ContactsBackupRepository(context)
 ) {
 
     suspend fun run(
@@ -65,6 +69,7 @@ class BackupOperationRunner(
         var passwordFile: File? = null
         var restoidMetadataFile: File? = null
         var stagingRoot: File? = null
+        var contactsStagingDir: File? = null
         var isSuccess = false
         var summary = ""
         var finalSummaryProgress: OperationProgress? = null
@@ -128,12 +133,16 @@ class BackupOperationRunner(
             )
             throwIfCancelled()
 
+            if (request.deviceData.contacts) {
+                contactsStagingDir = File(context.cacheDir, ContactsBackupRepository.CONTACTS_RELATIVE_STAGING_PATH)
+            }
             val (pathsToBackup, excludePatterns, metadata) = prepareBackupData(
                 selectedApps,
                 request.backupTypes,
                 request.appBackupTypes,
                 request.customDirectories,
                 request.excludedCustomDirectories,
+                request.deviceData,
                 shouldStop
             )
             restoidMetadataFile = File(context.cacheDir, "restoid.json")
@@ -143,7 +152,8 @@ class BackupOperationRunner(
 
             if (pathsToBackup.size <= 1 &&
                 metadata.apps.values.none { it.types.any { type -> type in AppMetadata.METADATA_ONLY_BACKUP_TYPES } } &&
-                metadata.customDirectories.isEmpty()
+                metadata.customDirectories.isEmpty() &&
+                metadata.deviceData?.contacts == null
             ) {
                 throw IllegalStateException(context.getString(R.string.backup_error_no_files_selected_for_items))
             }
@@ -373,6 +383,7 @@ class BackupOperationRunner(
             stagingRoot?.let { root ->
                 Shell.cmd("rm -rf ${shellQuote(root.absolutePath)}").exec()
             }
+            contactsStagingDir?.deleteRecursively()
         }
 
         val finalProgress = progressState.copy(
@@ -404,6 +415,7 @@ class BackupOperationRunner(
         appBackupTypes: Map<String, BackupTypeSelection>,
         customDirectories: List<String>,
         excludedCustomDirectories: List<String>,
+        deviceData: DeviceDataBackupSelection,
         shouldStop: () -> Boolean
     ): Triple<MutableList<String>, List<String>, RestoidMetadata> {
         fun throwIfCancelled() {
@@ -510,7 +522,30 @@ class BackupOperationRunner(
             val shellPath = io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(realPath)
             excludePatterns.add(escapeResticPattern(shellPath))
         }
-        val metadata = RestoidMetadata(apps = appMetadataMap, customDirectories = customDirectoryMetadataMap)
+        val deviceDataMetadata = if (deviceData.contacts) {
+            throwIfCancelled()
+            val contactsDir = File(context.cacheDir, ContactsBackupRepository.CONTACTS_RELATIVE_STAGING_PATH)
+            val exported = contactsBackupRepository.exportContacts(
+                outputDir = contactsDir,
+                includeReadOnly = deviceData.includeReadOnlyContacts,
+                shouldStop = shouldStop
+            )
+            pathsToBackup.add(exported.outputDir.absolutePath)
+            DeviceDataMetadata(
+                contacts = ContactsBackupMetadata(
+                    count = exported.contactCount,
+                    size = exported.totalSizeBytes,
+                    path = exported.outputDir.absolutePath
+                )
+            )
+        } else {
+            null
+        }
+        val metadata = RestoidMetadata(
+            apps = appMetadataMap,
+            customDirectories = customDirectoryMetadataMap,
+            deviceData = deviceDataMetadata
+        )
         return Triple(pathsToBackup, excludePatterns, metadata)
     }
 
@@ -518,7 +553,7 @@ class BackupOperationRunner(
         request: BackupWorkRequest,
         selectedApps: List<AppInfo>
     ): OperationProgress? {
-        if (selectedApps.isEmpty() && request.customDirectories.isEmpty()) {
+        if (selectedApps.isEmpty() && request.customDirectories.isEmpty() && !request.deviceData.anyEnabled()) {
             return OperationProgress(
                 isFinished = true,
                 error = context.getString(R.string.error_no_items_selected),
@@ -531,6 +566,14 @@ class BackupOperationRunner(
                 isFinished = true,
                 error = context.getString(R.string.error_all_files_access_required),
                 finalSummary = context.getString(R.string.summary_all_files_access_required)
+            )
+        }
+
+        if (request.deviceData.contacts && !contactsBackupRepository.hasReadContactsPermission()) {
+            return OperationProgress(
+                isFinished = true,
+                error = context.getString(R.string.error_contacts_read_permission_required),
+                finalSummary = context.getString(R.string.summary_contacts_read_permission_required)
             )
         }
 
@@ -553,7 +596,7 @@ class BackupOperationRunner(
                     backupOptions.permissions ||
                     backupOptions.specialAccess ||
                     backupOptions.accessibility
-        } || request.customDirectories.isNotEmpty()
+        } || request.customDirectories.isNotEmpty() || request.deviceData.anyEnabled()
         if (!hasAnyBackupType) {
             return OperationProgress(
                 isFinished = true,

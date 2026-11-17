@@ -1,5 +1,8 @@
 package io.github.hddq.restoid.ui.screens
 
+import android.Manifest
+import android.content.Context
+import android.text.format.Formatter
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -29,6 +32,7 @@ import androidx.compose.material.icons.outlined.AdminPanelSettings
 import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Contacts
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.History
@@ -70,6 +74,7 @@ import coil.compose.rememberAsyncImagePainter
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.RestoidApplication
 import io.github.hddq.restoid.model.BackupDetail
+import io.github.hddq.restoid.model.ContactsBackupMetadata
 import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
 import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
@@ -78,6 +83,7 @@ import io.github.hddq.restoid.ui.restore.RestoreTypes
 import io.github.hddq.restoid.ui.restore.RestoreUiEvent
 import io.github.hddq.restoid.ui.restore.RestoreViewModel
 import io.github.hddq.restoid.ui.shared.TaskRow
+import io.github.hddq.restoid.ui.shared.rememberPermissionsState
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -95,14 +101,38 @@ fun RestoreScreen(
     val allowDowngrade by viewModel.allowDowngrade.collectAsState()
     val operationBlocked by viewModel.operationBlocked.collectAsState()
     val customDirectories by viewModel.customDirectories.collectAsState()
+    val contactsMetadata by viewModel.contactsMetadata.collectAsStateWithLifecycle()
 
     val restoreAppsEnabled by viewModel.restoreAppsEnabled.collectAsState()
     val restoreCustomDirectoriesEnabled by viewModel.restoreCustomDirectoriesEnabled.collectAsState()
     val restoreDeviceDataEnabled by viewModel.restoreDeviceDataEnabled.collectAsStateWithLifecycle()
+    val restoreContactsEnabled by viewModel.restoreContactsEnabled.collectAsStateWithLifecycle()
     val restoreTypes by viewModel.restoreTypes.collectAsState()
     val appRestoreTypes by viewModel.appRestoreTypes.collectAsState()
 
     val context = LocalContext.current
+    val contactsWritePermissionError = stringResource(R.string.error_contacts_write_permission_required)
+    var pendingStartRestore by remember { mutableStateOf(false) }
+    val (hasWriteContactsPermission, requestContactsPermissions) = rememberPermissionsState(
+        Manifest.permission.READ_CONTACTS,
+        Manifest.permission.WRITE_CONTACTS,
+        onGranted = {
+            if (pendingStartRestore) {
+                pendingStartRestore = false
+                viewModel.startRestore()
+            }
+        },
+        onDenied = {
+            if (pendingStartRestore) {
+                pendingStartRestore = false
+                Toast.makeText(
+                    context,
+                    contactsWritePermissionError,
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    )
 
     LaunchedEffect(operationBlocked) {
         if (operationBlocked) {
@@ -115,6 +145,13 @@ fun RestoreScreen(
         viewModel.uiEvents.collect { event ->
             when (event) {
                 RestoreUiEvent.NavigateToOperationProgress -> onNavigateToOperationProgress()
+                RestoreUiEvent.RequestContactsPermission -> {
+                    pendingStartRestore = true
+                    requestContactsPermissions()
+                }
+                is RestoreUiEvent.ShowError -> {
+                    Toast.makeText(context, event.message, Toast.LENGTH_LONG).show()
+                }
             }
         }
     }
@@ -129,6 +166,13 @@ fun RestoreScreen(
             val hasRoot = rootState == io.github.hddq.restoid.data.RootState.Granted
             val selectableBackupDetails = backupDetails.filter { allowDowngrade || !it.isDowngrade }
             val customDirsList = customDirectories.map { io.github.hddq.restoid.model.CustomDirectory(it.key, it.value) }
+            val hasContactsInSnapshot = contactsMetadata != null
+            val deviceDataSubtitle = when {
+                contactsMetadata == null -> stringResource(R.string.device_data_contacts_not_in_snapshot)
+                !restoreContactsEnabled -> stringResource(R.string.device_data_none_selected)
+                restoreDeviceDataEnabled && !hasWriteContactsPermission -> stringResource(R.string.device_data_contacts_permission_required)
+                else -> formatContactsSummary(context, contactsMetadata!!)
+            }
 
             Column(modifier = Modifier.fillMaxWidth()) {
                 ExpressiveSectionHeader(title = stringResource(R.string.operation_restore))
@@ -157,11 +201,17 @@ fun RestoreScreen(
                     ExpressiveSegmentedSurface(index = 2, count = 3) {
                         TaskRow(
                             title = stringResource(R.string.run_tasks_device_data),
-                            subtitle = stringResource(R.string.run_tasks_device_data_subtitle),
+                            subtitle = deviceDataSubtitle,
                             icon = Icons.Outlined.Smartphone,
-                            checked = restoreDeviceDataEnabled,
-                            onCheckedChange = viewModel::setRestoreDeviceDataEnabled,
-                            onNavigate = onNavigateToDeviceDataConfig
+                            checked = if (hasContactsInSnapshot) restoreDeviceDataEnabled else false,
+                            onCheckedChange = { enabled ->
+                                viewModel.setRestoreDeviceDataEnabled(enabled)
+                                if (enabled && hasContactsInSnapshot && restoreContactsEnabled && !hasWriteContactsPermission) {
+                                    requestContactsPermissions()
+                                }
+                            },
+                            onNavigate = if (hasContactsInSnapshot) onNavigateToDeviceDataConfig else null,
+                            enabled = hasContactsInSnapshot
                         )
                     }
                 }
@@ -346,9 +396,99 @@ fun RestoreCustomDirectoriesConfigScreen(
 
 @Composable
 fun RestoreDeviceDataConfigScreen(
+    viewModel: RestoreViewModel,
     modifier: Modifier = Modifier
 ) {
-    io.github.hddq.restoid.ui.shared.DeviceDataConfigScreen(modifier = modifier)
+    val context = LocalContext.current
+    val contactsMetadata by viewModel.contactsMetadata.collectAsStateWithLifecycle()
+    val restoreContactsEnabled by viewModel.restoreContactsEnabled.collectAsStateWithLifecycle()
+
+    val (hasWriteContactsPermission, requestContactsPermissions) = rememberPermissionsState(
+        Manifest.permission.READ_CONTACTS,
+        Manifest.permission.WRITE_CONTACTS,
+        onGranted = { viewModel.setRestoreContactsEnabled(true) }
+    )
+
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 88.dp, top = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item(key = "restore_device_data_contacts") {
+            val currentMetadata = contactsMetadata
+            val isAvailable = currentMetadata != null
+            val checked = isAvailable && restoreContactsEnabled
+            val subtitle = when {
+                currentMetadata == null -> stringResource(R.string.device_data_contacts_not_in_snapshot)
+                restoreContactsEnabled && !hasWriteContactsPermission -> stringResource(R.string.device_data_contacts_permission_required)
+                else -> formatContactsSummary(context, currentMetadata)
+            }
+
+            ExpressiveCardGroup {
+                ExpressiveSegmentedSurface(index = 0, count = 1) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = isAvailable) {
+                                if (!hasWriteContactsPermission) requestContactsPermissions() else viewModel.setRestoreContactsEnabled(!restoreContactsEnabled)
+                            }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Contacts,
+                            contentDescription = null,
+                            tint = if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(end = 16.dp)
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.device_data_contacts),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = if (isAvailable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                            )
+                            Text(
+                                text = subtitle,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (isAvailable) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        Spacer(Modifier.width(16.dp))
+                        Switch(
+                            checked = checked,
+                            enabled = isAvailable,
+                            onCheckedChange = { enabled ->
+                                if (enabled && !hasWriteContactsPermission) requestContactsPermissions() else viewModel.setRestoreContactsEnabled(enabled)
+                            },
+                            thumbContent = if (checked) {
+                                {
+                                    Icon(
+                                        imageVector = Icons.Filled.Check,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                                    )
+                                }
+                            } else {
+                                null
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun formatContactsSummary(context: Context, metadata: ContactsBackupMetadata): String {
+    val countText = context.resources.getQuantityString(
+        R.plurals.device_data_contacts_count,
+        metadata.count,
+        metadata.count
+    )
+    val sizeText = Formatter.formatShortFileSize(context, metadata.size)
+    return context.getString(R.string.device_data_contacts_count_size, countText, sizeText)
 }
 
 @Composable

@@ -29,6 +29,21 @@ data class RestoreTypeSelection(
 )
 
 @Serializable
+data class DeviceDataBackupSelection(
+    val contacts: Boolean = false,
+    val includeReadOnlyContacts: Boolean = false
+) {
+    fun anyEnabled(): Boolean = contacts
+}
+
+@Serializable
+data class DeviceDataRestoreSelection(
+    val contacts: Boolean = false
+) {
+    fun anyEnabled(): Boolean = contacts
+}
+
+@Serializable
 data class RestoreAppSelection(
     val packageName: String,
     val appName: String
@@ -42,6 +57,7 @@ data class BackupWorkRequest(
     val appBackupTypes: Map<String, BackupTypeSelection> = emptyMap(),
     val customDirectories: List<String> = emptyList(),
     val excludedCustomDirectories: List<String> = emptyList(),
+    val deviceData: DeviceDataBackupSelection = DeviceDataBackupSelection(),
     val requireUnmeteredNetwork: Boolean = false
 )
 
@@ -53,7 +69,8 @@ data class RestoreWorkRequest(
     val allowDowngrade: Boolean,
     val selectedApps: List<RestoreAppSelection>,
     val appRestoreTypes: Map<String, RestoreTypeSelection> = emptyMap(),
-    val selectedCustomDirectories: List<String> = emptyList()
+    val selectedCustomDirectories: List<String> = emptyList(),
+    val deviceData: DeviceDataRestoreSelection = DeviceDataRestoreSelection()
 )
 
 @Serializable
@@ -80,6 +97,7 @@ data class RunTasksConfig(
     val appBackupTypes: Map<String, BackupTypeSelection> = emptyMap(),
     val customDirectories: List<String> = emptyList(),
     val excludedCustomDirectories: List<String> = emptyList(),
+    val deviceData: DeviceDataBackupSelection = DeviceDataBackupSelection(),
     val unlockRepo: Boolean,
     val forgetSnapshots: Boolean,
     val pruneRepo: Boolean,
@@ -102,6 +120,7 @@ data class RunTasksWorkRequest(
     val appBackupTypes: Map<String, BackupTypeSelection> = emptyMap(),
     val customDirectories: List<String> = emptyList(),
     val excludedCustomDirectories: List<String> = emptyList(),
+    val deviceData: DeviceDataBackupSelection = DeviceDataBackupSelection(),
     val unlockRepo: Boolean,
     val forgetSnapshots: Boolean,
     val pruneRepo: Boolean,

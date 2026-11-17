@@ -609,6 +609,7 @@ class MainActivity : FragmentActivity() {
                                             onNavigateBack = { navController.navigateUp() },
                                             onNavigateToBackupConfig = { navController.navigate(SchedulesRoutes.BackupConfig) },
                                             onNavigateToCustomDirectoriesConfig = { navController.navigate(SchedulesRoutes.CustomDirectoriesConfig) },
+                                            onNavigateToDeviceDataConfig = { navController.navigate(SchedulesRoutes.DeviceDataConfig) },
                                             onNavigateToForgetConfig = { navController.navigate(SchedulesRoutes.ForgetConfig) },
                                             onNavigateToCheckConfig = { navController.navigate(SchedulesRoutes.CheckConfig) }
                                         )
@@ -676,6 +677,22 @@ class MainActivity : FragmentActivity() {
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
                                     ) {
                                         ScheduleCustomDirectoriesConfigScreen(viewModel = vm)
+                                    }
+                                }
+                                composable(SchedulesRoutes.DeviceDataConfig) { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry(Screen.Schedules.route)
+                                    }
+                                    val vm: SchedulesViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository, app.resticBinaryManager, app.resticRepository, app.preferencesRepository)
+                                    )
+                                    DestinationScaffold(
+                                        titleRes = R.string.title_device_data,
+                                        isTopLevel = false,
+                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
+                                    ) {
+                                        io.github.hddq.restoid.ui.schedules.ScheduleDeviceDataConfigScreen(viewModel = vm)
                                     }
                                 }
                             }
@@ -779,13 +796,29 @@ class MainActivity : FragmentActivity() {
                                         CustomDirectoriesConfigScreen(viewModel = vm)
                                     }
                                 }
-                                composable(RunTasksRoutes.DeviceDataConfig) {
+                                composable(RunTasksRoutes.DeviceDataConfig) { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry(Screen.RunTasks.route)
+                                    }
+                                    val vm: RunTasksViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = RunTasksViewModelFactory(
+                                            app,
+                                            app.rootRepository,
+                                            app.repositoriesRepository,
+                                            app.resticBinaryManager,
+                                            app.resticRepository,
+                                            app.appInfoRepository,
+                                            app.preferencesRepository,
+                                            app.operationWorkRepository
+                                        )
+                                    )
                                     DestinationScaffold(
                                         titleRes = R.string.title_device_data,
                                         isTopLevel = false,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
                                     ) {
-                                        DeviceDataConfigScreen()
+                                        DeviceDataConfigScreen(viewModel = vm)
                                     }
                                 }
                                 composable(RunTasksRoutes.ForgetConfig) { backStackEntry ->
@@ -972,13 +1005,32 @@ class MainActivity : FragmentActivity() {
                                         io.github.hddq.restoid.ui.screens.RestoreCustomDirectoriesConfigScreen(viewModel = vm)
                                     }
                                 }
-                                composable(io.github.hddq.restoid.ui.restore.RestoreRoutes.DeviceDataConfig) {
+                                composable(io.github.hddq.restoid.ui.restore.RestoreRoutes.DeviceDataConfig) { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry("restore_graph/{snapshotId}")
+                                    }
+                                    val snapshotId = parentEntry.arguments?.getString("snapshotId") ?: ""
+                                    val vm: RestoreViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = RestoreViewModelFactory(
+                                            app,
+                                            app.repositoriesRepository,
+                                            app.rootRepository,
+                                            app.resticBinaryManager,
+                                            app.resticRepository,
+                                            app.appInfoRepository,
+                                            app.metadataRepository,
+                                            app.preferencesRepository,
+                                            app.operationWorkRepository,
+                                            snapshotId
+                                        )
+                                    )
                                     DestinationScaffold(
                                         titleRes = R.string.title_device_data,
                                         isTopLevel = false,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
                                     ) {
-                                        io.github.hddq.restoid.ui.screens.RestoreDeviceDataConfigScreen()
+                                        io.github.hddq.restoid.ui.screens.RestoreDeviceDataConfigScreen(viewModel = vm)
                                     }
                                 }
                             }

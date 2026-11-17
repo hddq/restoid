@@ -14,11 +14,13 @@ import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.BackupDetail
+import io.github.hddq.restoid.model.ContactsBackupMetadata
 import io.github.hddq.restoid.model.CustomDirectoryMetadata
 import io.github.hddq.restoid.model.RestoidMetadata
 import io.github.hddq.restoid.ui.shared.AppSortOrder
 import io.github.hddq.restoid.ui.shared.OperationProgress
 import io.github.hddq.restoid.ui.shared.sortBackupDetails
+import io.github.hddq.restoid.work.DeviceDataRestoreSelection
 import io.github.hddq.restoid.work.OperationWorkRepository
 import io.github.hddq.restoid.work.RestoreAppSelection
 import io.github.hddq.restoid.work.RestoreTypeSelection
@@ -82,6 +84,8 @@ fun RestoreTypeSelection.toUiModel(): RestoreTypes {
 
 sealed interface RestoreUiEvent {
     data object NavigateToOperationProgress : RestoreUiEvent
+    data object RequestContactsPermission : RestoreUiEvent
+    data class ShowError(val message: String) : RestoreUiEvent
 }
 
 class RestoreViewModel(
@@ -114,6 +118,9 @@ class RestoreViewModel(
     private val _customDirectoryMetadata = MutableStateFlow<Map<String, CustomDirectoryMetadata>>(emptyMap())
     val customDirectoryMetadata = _customDirectoryMetadata.asStateFlow()
 
+    private val _contactsMetadata = MutableStateFlow<ContactsBackupMetadata?>(null)
+    val contactsMetadata = _contactsMetadata.asStateFlow()
+
     private val _isLoading = MutableStateFlow(true)
     val isLoading = _isLoading.asStateFlow()
 
@@ -137,6 +144,9 @@ class RestoreViewModel(
 
     private val _restoreDeviceDataEnabled = MutableStateFlow(false)
     val restoreDeviceDataEnabled = _restoreDeviceDataEnabled.asStateFlow()
+
+    private val _restoreContactsEnabled = MutableStateFlow(false)
+    val restoreContactsEnabled = _restoreContactsEnabled.asStateFlow()
 
     private val _isRestoring = MutableStateFlow(false)
     val isRestoring = _isRestoring.asStateFlow()
@@ -301,6 +311,11 @@ class RestoreViewModel(
         if (_customDirectories.value.isNotEmpty()) {
             _restoreCustomDirectoriesEnabled.value = true
         }
+
+        val contactsMeta = metadata?.deviceData?.contacts
+        _contactsMetadata.value = contactsMeta
+        _restoreContactsEnabled.value = contactsMeta != null
+        _restoreDeviceDataEnabled.value = contactsMeta != null
     }
 
     fun setSortOrder(order: AppSortOrder) {
@@ -320,6 +335,10 @@ class RestoreViewModel(
 
     fun setRestoreDeviceDataEnabled(enabled: Boolean) {
         _restoreDeviceDataEnabled.value = enabled
+    }
+
+    fun setRestoreContactsEnabled(enabled: Boolean) {
+        _restoreContactsEnabled.value = enabled
     }
 
     private fun findBackedUpItems(
@@ -375,38 +394,44 @@ class RestoreViewModel(
             emptyList()
         }
 
-        if (!resticBinaryManager.isInstalled || selectedRepoPath == null || currentSnapshot == null) {
+        val restoreContacts = _restoreDeviceDataEnabled.value && _contactsMetadata.value != null && _restoreContactsEnabled.value
+
+        fun failPreflight(error: String, summary: String = error) {
             _restoreProgress.value = OperationProgress(
                 isFinished = true,
-                error = application.getString(R.string.restore_error_preflight_failed),
-                finalSummary = application.getString(R.string.restore_error_preflight_failed)
+                error = error,
+                finalSummary = summary
             )
+            _uiEvents.tryEmit(RestoreUiEvent.ShowError(error))
+        }
+
+        if (!resticBinaryManager.isInstalled || selectedRepoPath == null || currentSnapshot == null) {
+            failPreflight(application.getString(R.string.restore_error_preflight_failed))
             return
         }
 
-        if (selectedApps.isEmpty() && selectedCustomDirectories.isEmpty()) {
-            _restoreProgress.value = OperationProgress(
-                isFinished = true,
-                error = application.getString(R.string.restore_error_no_items_selected),
-                finalSummary = application.getString(R.string.restore_error_no_items_selected)
-            )
+        if (selectedApps.isEmpty() && selectedCustomDirectories.isEmpty() && !restoreContacts) {
+            failPreflight(application.getString(R.string.restore_error_no_items_selected))
             return
+        }
+
+        if (restoreContacts) {
+            val contactsRepo = io.github.hddq.restoid.data.ContactsBackupRepository(application)
+            if (!contactsRepo.hasReadContactsPermission() || !contactsRepo.hasWriteContactsPermission()) {
+                _uiEvents.tryEmit(RestoreUiEvent.RequestContactsPermission)
+                return
+            }
         }
 
         if (selectedApps.isNotEmpty() && selectedApps.none { effectiveRestoreTypes(it.appInfo.packageName).anyEnabled() }) {
-            _restoreProgress.value = OperationProgress(
-                isFinished = true,
-                error = application.getString(R.string.restore_error_no_restore_types_selected),
-                finalSummary = application.getString(R.string.restore_error_no_restore_types_selected)
-            )
+            failPreflight(application.getString(R.string.restore_error_no_restore_types_selected))
             return
         }
 
         if (selectedRepository.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpCredentials(selectedRepoKey)) {
-            _restoreProgress.value = OperationProgress(
-                isFinished = true,
-                error = application.getString(R.string.error_sftp_password_not_found_for_repository),
-                finalSummary = application.getString(R.string.summary_sftp_password_not_found)
+            failPreflight(
+                application.getString(R.string.error_sftp_password_not_found_for_repository),
+                application.getString(R.string.summary_sftp_password_not_found)
             )
             return
         }
@@ -416,10 +441,9 @@ class RestoreViewModel(
             selectedRepository.restAuthRequired &&
             !repositoriesRepository.hasRestCredentials(selectedRepoKey)
         ) {
-            _restoreProgress.value = OperationProgress(
-                isFinished = true,
-                error = application.getString(R.string.error_rest_credentials_not_found_for_repository),
-                finalSummary = application.getString(R.string.summary_rest_credentials_not_found)
+            failPreflight(
+                application.getString(R.string.error_rest_credentials_not_found_for_repository),
+                application.getString(R.string.summary_rest_credentials_not_found)
             )
             return
         }
@@ -429,20 +453,18 @@ class RestoreViewModel(
             selectedRepository.s3AuthRequired &&
             !repositoriesRepository.hasS3Credentials(selectedRepoKey)
         ) {
-            _restoreProgress.value = OperationProgress(
-                isFinished = true,
-                error = application.getString(R.string.error_s3_credentials_not_found_for_repository),
-                finalSummary = application.getString(R.string.summary_s3_credentials_not_found)
+            failPreflight(
+                application.getString(R.string.error_s3_credentials_not_found_for_repository),
+                application.getString(R.string.summary_s3_credentials_not_found)
             )
             return
         }
 
         val password = repositoriesRepository.getRepositoryPassword(selectedRepoKey)
         if (password == null) {
-            _restoreProgress.value = OperationProgress(
-                isFinished = true,
-                error = application.getString(R.string.restore_error_password_not_found),
-                finalSummary = application.getString(R.string.summary_password_not_found)
+            failPreflight(
+                application.getString(R.string.restore_error_password_not_found),
+                application.getString(R.string.summary_password_not_found)
             )
             return
         }
@@ -459,7 +481,8 @@ class RestoreViewModel(
                 )
             },
             appRestoreTypes = selectedApps.associate { it.appInfo.packageName to effectiveRestoreTypes(it.appInfo.packageName).toSelection() },
-            selectedCustomDirectories = selectedCustomDirectories
+            selectedCustomDirectories = selectedCustomDirectories,
+            deviceData = DeviceDataRestoreSelection(contacts = restoreContacts)
         )
 
         viewModelScope.launch(Dispatchers.IO) {
