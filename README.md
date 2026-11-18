@@ -4,7 +4,7 @@ Secure, deduplicated backup tool for Android powered by [`restic`](https://githu
 [![F-Droid Downloads](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fkitswas%2Ffdroid-metrics-dashboard%2Frefs%2Fheads%2Fmain%2Fprocessed%2Ftotal%2Fio.github.hddq.restoid.json&query=%24.total_downloads&logo=fdroid&label=F-Droid%20downloads)](https://f-droid.org/packages/io.github.hddq.restoid)
 [![GitHub Downloads](https://img.shields.io/github/downloads/hddq/restoid/total?logo=github&label=GitHub%20downloads)](https://github.com/hddq/restoid/releases)
 
-Restoid is a modern, privacy-focused backup solution for Android powered by the robust, open-source restic engine. Keep your apps, data, photos, and documents safe with enterprise-grade encryption and lightning-fast, space-saving deduplication.
+Restoid is a modern, privacy-focused backup solution for Android powered by the robust, open-source restic engine. Keep your apps, data, contacts, call logs, photos, and documents safe with enterprise-grade encryption and lightning-fast, space-saving deduplication.
 
 Whether you want to back up photos to a home NAS, store encrypted snapshots in the cloud, or preserve full app data on a rooted device, Restoid gives you complete control without trackers, ads, or proprietary lock-in.
 
@@ -35,8 +35,9 @@ Whether you want to back up photos to a home NAS, store encrypted snapshots in t
 * ☁️ **Flexible Storage Backends**: Store backups on local storage (internal memory, SD card, USB OTG), natively over the network (SFTP/SSH, REST server, and Amazon S3-compatible object storage like Garage, MinIO, Wasabi, Cloudflare R2, or Backblaze B2), or across dozens of cloud providers and protocols (such as Google Drive, OneDrive, Dropbox, WebDAV, Nextcloud, pCloud, and more) via built-in [`rclone`](https://rclone.org/) support using your `rclone.conf`.
 * 📱 **Full App & Data Backup (Root Required)**: Selectively back up installed user applications with granular control: APKs, app user data, device-protected data, and external/OBB storage.
 * 📁 **Custom Files & Media**: Back up personal folders and files (DCIM, Documents, Downloads, or any directory) without requiring root.
+* 👤 **Contacts & Call Logs**: Back up and restore your contacts (including groups and photos) and call logs without requiring root, manually or on automated schedules.
 * ⏰ **Automated Schedules**: Set up recurring backups with customizable intervals and smart trigger constraints (charging only, unmetered Wi-Fi).
-* 🔄 **Surgical & Safe Restore**: Restore entire apps or specific parts (like app data without overwriting the installed APK), with downgrade protection to prevent version conflicts.
+* 🔄 **Surgical & Safe Restore**: Restore entire apps or specific parts (like app data without overwriting the installed APK), custom directories, or device data (contacts and call logs), with downgrade protection to prevent version conflicts.
 * 🔓 **Zero Vendor Lock-in**: Restoid uses the standard, native `restic` repository format. You can always access, inspect, mount (`restic mount`), or restore your data on any computer (Linux, macOS, Windows) using the official `restic` CLI—no proprietary container or phone required.
 * 🧹 **Maintenance & Repository Health**: Automated snapshot retention policies (prune old snapshots by day, week, month), repository integrity checks, and stale lock management.
 * 🎨 **Material 3 Expressive UI**: Built with modern Jetpack Compose and Material 3 Expressive design, featuring dynamic theming, smooth animations, and edge-to-edge layout.
@@ -44,7 +45,7 @@ Whether you want to back up photos to a home NAS, store encrypted snapshots in t
 
 ## ⚠️ Requirements
 
-* **Root Access (Optional)**: Root access is only required to back up installed apps and their private data. Custom folders, photos, and documents can be backed up completely without root.
+* **Root Access (Optional)**: Root access is only required to back up installed apps and their private data. Custom folders, photos, documents, contacts, and call logs can be backed up completely without root.
 * **Android Version**: Minimum SDK 29 (Android 10), with SDK 37 (Android 17) recommended.
 
 ## 🤝 How to Contribute
