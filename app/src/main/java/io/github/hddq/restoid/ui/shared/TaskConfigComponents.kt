@@ -110,6 +110,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
@@ -139,12 +140,13 @@ fun TaskRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     onNavigate: (() -> Unit)? = null,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier
 ) {
     val rowClick = onNavigate ?: { onCheckedChange(!checked) }
 
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .alpha(if (enabled) 1f else 0.5f)
             .clickable(enabled = enabled, onClick = rowClick)
@@ -2053,6 +2055,13 @@ fun DeviceDataConfigScreen(
         Manifest.permission.READ_CALL_LOG,
         onGranted = { onCallLogsEnabledChange(true) }
     )
+    var showContactsOptionsSheet by rememberSaveable { mutableStateOf(false) }
+
+    val contactsSubtitle = when {
+        contactsEnabled && !hasReadPermission -> stringResource(R.string.device_data_contacts_permission_required)
+        includeReadOnlyContacts -> stringResource(R.string.device_data_include_read_only_contacts)
+        else -> null
+    }
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -2061,67 +2070,19 @@ fun DeviceDataConfigScreen(
     ) {
         item(key = "device_data_items") {
             ExpressiveCardGroup {
-                ExpressiveSegmentedSurface(index = 0, count = 3) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                if (!contactsEnabled && !hasReadPermission) requestReadPermission() else onContactsEnabledChange(!contactsEnabled)
-                            }
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Contacts,
-                            contentDescription = null,
-                            tint = if (contactsEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(end = 16.dp)
-                        )
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.device_data_contacts),
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            if (contactsEnabled && !hasReadPermission) {
-                                Text(
-                                    text = stringResource(R.string.device_data_contacts_permission_required),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-                        Spacer(Modifier.width(16.dp))
-                        Switch(
-                            checked = contactsEnabled,
-                            onCheckedChange = { enabled ->
-                                if (enabled && !hasReadPermission) requestReadPermission() else onContactsEnabledChange(enabled)
-                            },
-                            thumbContent = if (contactsEnabled) {
-                                {
-                                    Icon(
-                                        imageVector = Icons.Filled.Check,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                                    )
-                                }
-                            } else {
-                                null
-                            }
-                        )
-                    }
-                }
-                ExpressiveSegmentedSurface(index = 1, count = 3) {
+                ExpressiveSegmentedSurface(index = 0, count = 2) {
                     TaskRow(
-                        title = stringResource(R.string.device_data_include_read_only_contacts),
-                        icon = Icons.Outlined.Group,
-                        checked = includeReadOnlyContacts,
-                        onCheckedChange = onIncludeReadOnlyContactsChange,
-                        enabled = contactsEnabled
+                        title = stringResource(R.string.device_data_contacts),
+                        subtitle = contactsSubtitle,
+                        icon = Icons.Outlined.Contacts,
+                        checked = contactsEnabled,
+                        onCheckedChange = { enabled ->
+                            if (enabled && !hasReadPermission) requestReadPermission() else onContactsEnabledChange(enabled)
+                        },
+                        onNavigate = { showContactsOptionsSheet = true }
                     )
                 }
-                ExpressiveSegmentedSurface(index = 2, count = 3) {
+                ExpressiveSegmentedSurface(index = 1, count = 2) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -2171,6 +2132,51 @@ fun DeviceDataConfigScreen(
                             }
                         )
                     }
+                }
+            }
+        }
+    }
+
+    if (showContactsOptionsSheet) {
+        ContactsOptionsBottomSheet(
+            includeReadOnlyContacts = includeReadOnlyContacts,
+            onIncludeReadOnlyContactsChange = onIncludeReadOnlyContactsChange,
+            onDismissRequest = { showContactsOptionsSheet = false }
+        )
+    }
+}
+
+internal const val INCLUDE_READ_ONLY_CONTACTS_ROW_TAG = "include_read_only_contacts_row"
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ContactsOptionsBottomSheet(
+    includeReadOnlyContacts: Boolean,
+    onIncludeReadOnlyContactsChange: (Boolean) -> Unit,
+    onDismissRequest: () -> Unit
+) {
+    ModalBottomSheet(onDismissRequest = onDismissRequest) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(start = 16.dp, end = 16.dp, bottom = 32.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.device_data_contacts),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+            ExpressiveCardGroup {
+                ExpressiveSegmentedSurface(index = 0, count = 1) {
+                    TaskRow(
+                        title = stringResource(R.string.device_data_include_read_only_contacts),
+                        icon = Icons.Outlined.Group,
+                        checked = includeReadOnlyContacts,
+                        onCheckedChange = onIncludeReadOnlyContactsChange,
+                        modifier = Modifier.testTag(INCLUDE_READ_ONLY_CONTACTS_ROW_TAG)
+                    )
                 }
             }
         }
