@@ -6,13 +6,17 @@ import android.content.IntentFilter
 import android.os.Bundle
 import android.os.SystemClock
 import androidx.activity.BackEventCompat
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -69,22 +73,30 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -136,6 +148,7 @@ val LocalAppBarActions = compositionLocalOf<MutableState<(@Composable RowScope.(
 
 class MainActivity : FragmentActivity() {
     private companion object {
+        const val TOP_LEVEL_ROUTE = "top_level"
         const val STATE_APP_UNLOCKED = "state_app_unlocked"
         const val STATE_OPEN_OPERATION_PROGRESS = "state_open_operation_progress"
         const val STATE_OPEN_OPERATION_LOG_ID = "state_open_operation_log_id"
@@ -326,27 +339,20 @@ class MainActivity : FragmentActivity() {
                     val topLevelTabOrder = remember {
                         mapOf(
                             Screen.Home.route to 0,
-                            SchedulesRoutes.Main to 1,
+                            Screen.Schedules.route to 1,
                             Screen.Settings.route to 2
                         )
                     }
-                    val topLevelRoutes = topLevelTabOrder.keys
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
                     val currentRoute = navBackStackEntry?.destination?.route
-                    val currentTopLevelScreen = when (currentRoute) {
-                        null, Screen.Home.route -> Screen.Home
-                        SchedulesRoutes.Main -> Screen.Schedules
+                    val showBottomBar = currentRoute == null || currentRoute == TOP_LEVEL_ROUTE
+                    var selectedTabRoute by rememberSaveable { mutableStateOf(Screen.Home.route) }
+                    val selectedTopLevelScreen = when (selectedTabRoute) {
+                        Screen.Schedules.route -> Screen.Schedules
                         Screen.Settings.route -> Screen.Settings
-                        else -> null
+                        else -> Screen.Home
                     }
-                    var lastSelectedScreen by remember { mutableStateOf<Screen>(Screen.Home) }
-                    LaunchedEffect(currentTopLevelScreen) {
-                        if (currentTopLevelScreen != null) {
-                            lastSelectedScreen = currentTopLevelScreen
-                        }
-                    }
-                    val selectedTopLevelScreen = currentTopLevelScreen ?: lastSelectedScreen
-                    val showBottomBar = currentRoute == null || currentRoute in topLevelRoutes
+                    var tabSelectionOrder by remember { mutableIntStateOf(0) }
 
                     val homeViewModel: HomeViewModel = viewModel(
                         factory = HomeViewModelFactory(app, app.repositoriesRepository, app.resticBinaryManager, app.resticRepository, app.appInfoRepository, app.metadataRepository, app.operationWorkRepository)
@@ -378,145 +384,68 @@ class MainActivity : FragmentActivity() {
                     val predictiveEasing = remember { CubicBezierEasing(0.4f, 0.0f, 0.2f, 1.0f) }
                     val fadeOutEasing = remember { CubicBezierEasing(0.4f, 0.0f, 1.0f, 1.0f) }
                     val motionScheme = MaterialTheme.motionScheme
-                    val tabSlideEnterSpec = motionScheme.defaultSpatialSpec<IntOffset>()
-                    val tabSlideExitSpec = motionScheme.fastSpatialSpec<IntOffset>()
-                    val tabEnterScaleSpec = motionScheme.defaultSpatialSpec<Float>()
-                    val tabEnterEffectsSpec = motionScheme.defaultEffectsSpec<Float>()
                     val bottomBarEnterSpatialSpec = motionScheme.defaultSpatialSpec<IntOffset>()
                     val bottomBarExitSpatialSpec = motionScheme.fastSpatialSpec<IntOffset>()
                     val bottomBarEnterEffectsSpec = motionScheme.defaultEffectsSpec<Float>()
                     val bottomBarExitEffectsSpec = motionScheme.fastEffectsSpec<Float>()
 
-                    val navigateToTopLevel: (Screen) -> Unit = { screen ->
+                    val selectTopLevelTab: (Screen) -> Unit = { screen ->
                         val liveRoute = navController.currentBackStackEntry?.destination?.route
-                        if (liveRoute == null || liveRoute in topLevelRoutes) {
-                            navController.navigate(screen.route) {
-                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
+                        if ((liveRoute == null || liveRoute == TOP_LEVEL_ROUTE) && screen.route != selectedTabRoute) {
+                            tabSelectionOrder += 1
+                            selectedTabRoute = screen.route
                         }
                     }
 
                     Box(modifier = Modifier.fillMaxSize()) {
                         NavHost(
                             navController = navController,
-                            startDestination = Screen.Home.route,
+                            startDestination = TOP_LEVEL_ROUTE,
                             modifier = Modifier.fillMaxSize(),
                             enterTransition = {
-                                val fromIndex = topLevelTabOrder[initialState.destination.route]
-                                val toIndex = topLevelTabOrder[targetState.destination.route]
-                                if (fromIndex != null && toIndex != null) {
-                                    val slideDirection = if (toIndex > fromIndex) {
-                                        AnimatedContentTransitionScope.SlideDirection.Start
-                                    } else {
-                                        AnimatedContentTransitionScope.SlideDirection.End
-                                    }
-                                    slideIntoContainer(
-                                        towards = slideDirection,
-                                        animationSpec = tabSlideEnterSpec,
-                                        initialOffset = { it / 12 }
-                                    ) + scaleIn(
-                                        initialScale = 0.97f,
-                                        animationSpec = tabEnterScaleSpec
-                                    ) + fadeIn(animationSpec = tabEnterEffectsSpec)
-                                } else {
-                                    slideIntoContainer(
-                                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                                        animationSpec = tween(320, easing = standardEasing),
-                                        initialOffset = { it / 4 }
-                                    ) + scaleIn(
-                                        initialScale = 0.95f,
-                                        animationSpec = tween(320, easing = standardEasing)
-                                    ) + fadeIn(animationSpec = tween(200, easing = standardEasing))
-                                }
+                                slideIntoContainer(
+                                    towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                                    animationSpec = tween(320, easing = standardEasing),
+                                    initialOffset = { it / 4 }
+                                ) + scaleIn(
+                                    initialScale = 0.95f,
+                                    animationSpec = tween(320, easing = standardEasing)
+                                ) + fadeIn(animationSpec = tween(200, easing = standardEasing))
                             },
                             exitTransition = {
-                                val fromIndex = topLevelTabOrder[initialState.destination.route]
-                                val toIndex = topLevelTabOrder[targetState.destination.route]
-                                if (fromIndex != null && toIndex != null) {
-                                    val slideDirection = if (toIndex > fromIndex) {
-                                        AnimatedContentTransitionScope.SlideDirection.Start
-                                    } else {
-                                        AnimatedContentTransitionScope.SlideDirection.End
-                                    }
-                                    slideOutOfContainer(
-                                        towards = slideDirection,
-                                        animationSpec = tabSlideExitSpec,
-                                        targetOffset = { it / 16 }
-                                    ) + fadeOut(
-                                        animationSpec = tween(durationMillis = 100, easing = fadeOutEasing)
-                                    )
-                                } else {
-                                    slideOutOfContainer(
-                                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                                        animationSpec = tween(320, easing = standardEasing),
-                                        targetOffset = { it / 6 }
-                                    ) + scaleOut(
-                                        targetScale = 0.95f,
-                                        animationSpec = tween(320, easing = standardEasing)
-                                    ) + fadeOut(animationSpec = tween(1, delayMillis = 320))
-                                }
+                                slideOutOfContainer(
+                                    towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                                    animationSpec = tween(320, easing = standardEasing),
+                                    targetOffset = { it / 6 }
+                                ) + scaleOut(
+                                    targetScale = 0.95f,
+                                    animationSpec = tween(320, easing = standardEasing)
+                                ) + fadeOut(animationSpec = tween(1, delayMillis = 320))
                             },
                             popEnterTransition = {
-                                val fromIndex = topLevelTabOrder[initialState.destination.route]
-                                val toIndex = topLevelTabOrder[targetState.destination.route]
-                                if (fromIndex != null && toIndex != null) {
-                                    val slideDirection = if (toIndex > fromIndex) {
-                                        AnimatedContentTransitionScope.SlideDirection.Start
-                                    } else {
-                                        AnimatedContentTransitionScope.SlideDirection.End
-                                    }
-                                    slideIntoContainer(
-                                        towards = slideDirection,
-                                        animationSpec = tabSlideEnterSpec,
-                                        initialOffset = { it / 12 }
-                                    ) + scaleIn(
-                                        initialScale = 0.97f,
-                                        animationSpec = tabEnterScaleSpec
-                                    ) + fadeIn(animationSpec = tabEnterEffectsSpec)
-                                } else {
-                                    slideIntoContainer(
-                                        towards = AnimatedContentTransitionScope.SlideDirection.End,
-                                        animationSpec = tween(320, easing = predictiveEasing),
-                                        initialOffset = { it / 5 }
-                                    ) + scaleIn(
-                                        initialScale = 0.94f,
-                                        animationSpec = tween(320, easing = predictiveEasing)
-                                    ) + fadeIn(
-                                        initialAlpha = 0.6f,
-                                        animationSpec = tween(320, easing = predictiveEasing)
-                                    )
-                                }
+                                slideIntoContainer(
+                                    towards = AnimatedContentTransitionScope.SlideDirection.End,
+                                    animationSpec = tween(320, easing = predictiveEasing),
+                                    initialOffset = { it / 5 }
+                                ) + scaleIn(
+                                    initialScale = 0.94f,
+                                    animationSpec = tween(320, easing = predictiveEasing)
+                                ) + fadeIn(
+                                    initialAlpha = 0.6f,
+                                    animationSpec = tween(320, easing = predictiveEasing)
+                                )
                             },
                             popExitTransition = {
-                                val fromIndex = topLevelTabOrder[initialState.destination.route]
-                                val toIndex = topLevelTabOrder[targetState.destination.route]
-                                if (fromIndex != null && toIndex != null) {
-                                    val slideDirection = if (toIndex > fromIndex) {
-                                        AnimatedContentTransitionScope.SlideDirection.Start
-                                    } else {
-                                        AnimatedContentTransitionScope.SlideDirection.End
-                                    }
-                                    slideOutOfContainer(
-                                        towards = slideDirection,
-                                        animationSpec = tabSlideExitSpec,
-                                        targetOffset = { it / 16 }
-                                    ) + fadeOut(
-                                        animationSpec = tween(durationMillis = 100, easing = fadeOutEasing)
-                                    )
-                                } else {
-                                    scaleOut(
-                                        targetScale = 0.92f,
-                                        animationSpec = tween(320, easing = predictiveEasing)
-                                    ) + slideOutOfContainer(
-                                        towards = AnimatedContentTransitionScope.SlideDirection.End,
-                                        animationSpec = tween(320, easing = predictiveEasing),
-                                        targetOffset = { it / 4 }
-                                    ) + fadeOut(
-                                        animationSpec = tween(190, delayMillis = 130, easing = fadeOutEasing)
-                                    )
-                                }
+                                scaleOut(
+                                    targetScale = 0.92f,
+                                    animationSpec = tween(320, easing = predictiveEasing)
+                                ) + slideOutOfContainer(
+                                    towards = AnimatedContentTransitionScope.SlideDirection.End,
+                                    animationSpec = tween(320, easing = predictiveEasing),
+                                    targetOffset = { it / 4 }
+                                ) + fadeOut(
+                                    animationSpec = tween(190, delayMillis = 130, easing = fadeOutEasing)
+                                )
                             },
                             predictivePopEnterTransition = { swipeEdge ->
                                 val slideDirection = if (swipeEdge == BackEventCompat.EDGE_RIGHT) {
@@ -556,112 +485,135 @@ class MainActivity : FragmentActivity() {
                                 )
                             }
                         ) {
-                        composable(Screen.Home.route) {
-                            val isRepoReady = homeUiState.isRepoReady
-                            DestinationScaffold(
-                                titleRes = R.string.home_title,
-                                isTopLevel = true,
-                                isHome = true,
-                                onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() },
-                                actions = {
-                                    IconButton(onClick = { navController.navigate(Screen.OperationLogs.route) }) {
-                                        Icon(
-                                            imageVector = Icons.AutoMirrored.Outlined.ReceiptLong,
-                                            contentDescription = stringResource(R.string.screen_operation_logs)
-                                        )
-                                    }
-                                },
-                                floatingActionButton = {
-                                    ExtendedFloatingActionButton(
-                                        text = { Text(stringResource(R.string.screen_tasks)) },
-                                        icon = { Icon(Icons.Outlined.PlayArrow, contentDescription = stringResource(R.string.screen_tasks)) },
-                                        onClick = { if (isRepoReady) { navController.navigate(Screen.RunTasks.route) } },
-                                        shape = RoundedCornerShape(20.dp),
-                                        containerColor = if (isRepoReady) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
-                                        contentColor = if (isRepoReady) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
-                                    )
-                                }
-                            ) {
-                                HomeScreen(
-                                    onSnapshotClick = { snapshotId -> navController.navigate("${Screen.SnapshotDetails.route}/$snapshotId") },
-                                    onRestoreSnapshotClick = { snapshotId -> navController.navigate("${Screen.Restore.route}/$snapshotId") },
-                                    onRequestForgetSnapshot = { snapshotId -> homeViewModel.requestForgetSnapshot(snapshotId) },
-                                    onConfirmForgetSnapshot = { homeViewModel.confirmForgetSnapshot() },
-                                    onDismissForgetDialog = { homeViewModel.dismissForgetDialog() },
-                                    onDismissForgetErrorDialog = { homeViewModel.dismissForgetErrorDialog() },
-                                    uiState = homeUiState,
-                                    onRefresh = { homeViewModel.refreshSnapshots() },
-                                    onPasswordEntered = { p, s -> homeViewModel.onPasswordEntered(p, s) },
-                                    onSftpPasswordEntered = { keyOrPassword, passphrase, save ->
-                                        homeViewModel.onSftpPasswordEntered(keyOrPassword, passphrase, save)
-                                    },
-                                    onRestCredentialsEntered = { u, p, s -> homeViewModel.onRestCredentialsEntered(u, p, s) },
-                                    onS3CredentialsEntered = { u, p, s -> homeViewModel.onS3CredentialsEntered(u, p, s) },
-                                    onRetryRepositoryPasswordEntry = { homeViewModel.onRetryRepositoryPasswordEntry() },
-                                    onRetrySftpPasswordEntry = { homeViewModel.onRetrySftpPasswordEntry() },
-                                    onRetryRestCredentialsEntry = { homeViewModel.onRetryRestCredentialsEntry() },
-                                    onRetryS3CredentialsEntry = { homeViewModel.onRetryS3CredentialsEntry() },
-                                    onDismissPasswordDialog = { homeViewModel.onDismissPasswordDialog() },
-                                    onDismissSftpPasswordDialog = { homeViewModel.onDismissSftpPasswordDialog() },
-                                    onDismissRestCredentialsDialog = { homeViewModel.onDismissRestCredentialsDialog() },
-                                    onDismissS3CredentialsDialog = { homeViewModel.onDismissS3CredentialsDialog() },
-                                    onOpenOperationProgress = {
-                                        navController.navigate(Screen.OperationProgress.route) {
-                                            launchSingleTop = true
-                                        }
-                                    },
-                                    onForceStopOperation = { homeViewModel.forceStopOperation() }
-                                )
+                        composable(TOP_LEVEL_ROUTE) { topLevelEntry ->
+                            val isNavDestinationExiting = transition.targetState == EnterExitState.PostExit
+                            BackHandler(enabled = selectedTopLevelScreen != Screen.Home && currentRoute == TOP_LEVEL_ROUTE) {
+                                selectTopLevelTab(Screen.Home)
                             }
-                        }
-                        composable(Screen.Settings.route) {
-                            val vm: SettingsViewModel = viewModel(
-                                factory = SettingsViewModelFactory(
-                                    applicationContext,
-                                    app.rootRepository,
-                                    app.resticBinaryManager,
-                                    app.resticRepository,
-                                    app.repositoriesRepository,
-                                    app.notificationRepository,
-                                    app.preferencesRepository,
-                                    app.storagePermissionRepository,
-                                    app.localNetworkPermissionRepository
-                                )
-                            )
-                            DestinationScaffold(
-                                titleRes = R.string.screen_settings,
-                                isTopLevel = true,
-                                onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
-                            ) {
-                                SettingsScreen(viewModel = vm, onNavigateToLicenses = { navController.navigate(Screen.Licenses.route) })
+                            TopLevelTabHost(
+                                selectedTab = selectedTopLevelScreen,
+                                tabOrder = topLevelTabOrder,
+                                tabSelectionOrder = tabSelectionOrder,
+                                isParentExiting = isNavDestinationExiting
+                            ) { tab, isExiting ->
+                                when (tab) {
+                                            Screen.Home -> {
+                                                val isRepoReady = homeUiState.isRepoReady
+                                                DestinationScaffold(
+                                                    titleRes = R.string.home_title,
+                                                    isTopLevel = true,
+                                                    isHome = true,
+                                                    isExiting = isExiting,
+                                                    onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() },
+                                                    actions = {
+                                                        IconButton(onClick = { navController.navigate(Screen.OperationLogs.route) }) {
+                                                            Icon(
+                                                                imageVector = Icons.AutoMirrored.Outlined.ReceiptLong,
+                                                                contentDescription = stringResource(R.string.screen_operation_logs)
+                                                            )
+                                                        }
+                                                    },
+                                                    floatingActionButton = {
+                                                        ExtendedFloatingActionButton(
+                                                            text = { Text(stringResource(R.string.screen_tasks)) },
+                                                            icon = { Icon(Icons.Outlined.PlayArrow, contentDescription = stringResource(R.string.screen_tasks)) },
+                                                            onClick = {
+                                                                if (isRepoReady && navController.currentBackStackEntry?.destination?.route == TOP_LEVEL_ROUTE) {
+                                                                    navController.navigate(Screen.RunTasks.route) {
+                                                                        launchSingleTop = true
+                                                                    }
+                                                                }
+                                                            },
+                                                            shape = RoundedCornerShape(20.dp),
+                                                            containerColor = if (isRepoReady) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                                                            contentColor = if (isRepoReady) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+                                                        )
+                                                    }
+                                                ) {
+                                                    HomeScreen(
+                                                        onSnapshotClick = { snapshotId -> navController.navigate("${Screen.SnapshotDetails.route}/$snapshotId") },
+                                                        onRestoreSnapshotClick = { snapshotId -> navController.navigate("${Screen.Restore.route}/$snapshotId") },
+                                                        onRequestForgetSnapshot = { snapshotId -> homeViewModel.requestForgetSnapshot(snapshotId) },
+                                                        onConfirmForgetSnapshot = { homeViewModel.confirmForgetSnapshot() },
+                                                        onDismissForgetDialog = { homeViewModel.dismissForgetDialog() },
+                                                        onDismissForgetErrorDialog = { homeViewModel.dismissForgetErrorDialog() },
+                                                        uiState = homeUiState,
+                                                        onRefresh = { homeViewModel.refreshSnapshots() },
+                                                        onPasswordEntered = { p, s -> homeViewModel.onPasswordEntered(p, s) },
+                                                        onSftpPasswordEntered = { keyOrPassword, passphrase, save ->
+                                                            homeViewModel.onSftpPasswordEntered(keyOrPassword, passphrase, save)
+                                                        },
+                                                        onRestCredentialsEntered = { u, p, s -> homeViewModel.onRestCredentialsEntered(u, p, s) },
+                                                        onS3CredentialsEntered = { u, p, s -> homeViewModel.onS3CredentialsEntered(u, p, s) },
+                                                        onRetryRepositoryPasswordEntry = { homeViewModel.onRetryRepositoryPasswordEntry() },
+                                                        onRetrySftpPasswordEntry = { homeViewModel.onRetrySftpPasswordEntry() },
+                                                        onRetryRestCredentialsEntry = { homeViewModel.onRetryRestCredentialsEntry() },
+                                                        onRetryS3CredentialsEntry = { homeViewModel.onRetryS3CredentialsEntry() },
+                                                        onDismissPasswordDialog = { homeViewModel.onDismissPasswordDialog() },
+                                                        onDismissSftpPasswordDialog = { homeViewModel.onDismissSftpPasswordDialog() },
+                                                        onDismissRestCredentialsDialog = { homeViewModel.onDismissRestCredentialsDialog() },
+                                                        onDismissS3CredentialsDialog = { homeViewModel.onDismissS3CredentialsDialog() },
+                                                        onOpenOperationProgress = {
+                                                            navController.navigate(Screen.OperationProgress.route) {
+                                                                launchSingleTop = true
+                                                            }
+                                                        },
+                                                        onForceStopOperation = { homeViewModel.forceStopOperation() }
+                                                    )
+                                                }
+                                            }
+                                            Screen.Schedules -> {
+                                                val vm: SchedulesViewModel = viewModel(
+                                                    viewModelStoreOwner = topLevelEntry,
+                                                    factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository, app.resticBinaryManager, app.resticRepository, app.preferencesRepository)
+                                                )
+                                                DestinationScaffold(
+                                                    titleRes = R.string.topbar_schedules,
+                                                    isTopLevel = true,
+                                                    isExiting = isExiting,
+                                                    onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
+                                                ) {
+                                                    SchedulesScreen(
+                                                        viewModel = vm,
+                                                        onNavigateToAddEditSchedule = { navController.navigate(SchedulesRoutes.AddEdit) }
+                                                    )
+                                                }
+                                            }
+                                            Screen.Settings -> {
+                                                val vm: SettingsViewModel = viewModel(
+                                                    viewModelStoreOwner = topLevelEntry,
+                                                    factory = SettingsViewModelFactory(
+                                                        applicationContext,
+                                                        app.rootRepository,
+                                                        app.resticBinaryManager,
+                                                        app.resticRepository,
+                                                        app.repositoriesRepository,
+                                                        app.notificationRepository,
+                                                        app.preferencesRepository,
+                                                        app.storagePermissionRepository,
+                                                        app.localNetworkPermissionRepository
+                                                    )
+                                                )
+                                                DestinationScaffold(
+                                                    titleRes = R.string.screen_settings,
+                                                    isTopLevel = true,
+                                                    isExiting = isExiting,
+                                                    onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
+                                                ) {
+                                                    SettingsScreen(viewModel = vm, onNavigateToLicenses = { navController.navigate(Screen.Licenses.route) })
+                                                }
+                                            }
+                                    else -> Unit
+                                }
                             }
                         }
                         navigation(
-                            startDestination = SchedulesRoutes.Main,
+                            startDestination = SchedulesRoutes.AddEdit,
                             route = Screen.Schedules.route
                         ) {
-                            composable(SchedulesRoutes.Main) { backStackEntry ->
-                                val parentEntry = remember(backStackEntry) {
-                                    navController.getBackStackEntry(Screen.Schedules.route)
-                                }
-                                val vm: SchedulesViewModel = viewModel(
-                                    viewModelStoreOwner = parentEntry,
-                                    factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository, app.resticBinaryManager, app.resticRepository, app.preferencesRepository)
-                                )
-                                DestinationScaffold(
-                                    titleRes = R.string.topbar_schedules,
-                                    isTopLevel = true,
-                                    onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
-                                ) {
-                                    SchedulesScreen(
-                                        viewModel = vm,
-                                        onNavigateToAddEditSchedule = { navController.navigate(SchedulesRoutes.AddEdit) }
-                                    )
-                                }
-                            }
                                 composable(SchedulesRoutes.AddEdit) { backStackEntry ->
                                     val parentEntry = remember(backStackEntry) {
-                                        navController.getBackStackEntry(Screen.Schedules.route)
+                                        navController.getBackStackEntry(TOP_LEVEL_ROUTE)
                                     }
                                     val vm: SchedulesViewModel = viewModel(
                                         viewModelStoreOwner = parentEntry,
@@ -671,6 +623,7 @@ class MainActivity : FragmentActivity() {
                                     DestinationScaffold(
                                         titleRes = if (state.id == null) R.string.topbar_add_schedule else R.string.topbar_edit_schedule,
                                         isTopLevel = false,
+                                        isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { vm.onBackPress() },
                                         floatingActionButton = {
                                             if (!state.isSaving) {
@@ -696,7 +649,7 @@ class MainActivity : FragmentActivity() {
                                 }
                                 composable(SchedulesRoutes.BackupConfig) { backStackEntry ->
                                     val parentEntry = remember(backStackEntry) {
-                                        navController.getBackStackEntry(Screen.Schedules.route)
+                                        navController.getBackStackEntry(TOP_LEVEL_ROUTE)
                                     }
                                     val vm: SchedulesViewModel = viewModel(
                                         viewModelStoreOwner = parentEntry,
@@ -705,6 +658,7 @@ class MainActivity : FragmentActivity() {
                                     DestinationScaffold(
                                         titleRes = R.string.topbar_backup_config,
                                         isTopLevel = false,
+                                        isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
                                     ) {
                                         ScheduleBackupConfigScreen(viewModel = vm)
@@ -712,7 +666,7 @@ class MainActivity : FragmentActivity() {
                                 }
                                 composable(SchedulesRoutes.ForgetConfig) { backStackEntry ->
                                     val parentEntry = remember(backStackEntry) {
-                                        navController.getBackStackEntry(Screen.Schedules.route)
+                                        navController.getBackStackEntry(TOP_LEVEL_ROUTE)
                                     }
                                     val vm: SchedulesViewModel = viewModel(
                                         viewModelStoreOwner = parentEntry,
@@ -721,6 +675,7 @@ class MainActivity : FragmentActivity() {
                                     DestinationScaffold(
                                         titleRes = R.string.topbar_forget_config,
                                         isTopLevel = false,
+                                        isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
                                     ) {
                                         ScheduleForgetConfigScreen(viewModel = vm)
@@ -728,7 +683,7 @@ class MainActivity : FragmentActivity() {
                                 }
                                 composable(SchedulesRoutes.CheckConfig) { backStackEntry ->
                                     val parentEntry = remember(backStackEntry) {
-                                        navController.getBackStackEntry(Screen.Schedules.route)
+                                        navController.getBackStackEntry(TOP_LEVEL_ROUTE)
                                     }
                                     val vm: SchedulesViewModel = viewModel(
                                         viewModelStoreOwner = parentEntry,
@@ -737,6 +692,7 @@ class MainActivity : FragmentActivity() {
                                     DestinationScaffold(
                                         titleRes = R.string.topbar_check_config,
                                         isTopLevel = false,
+                                        isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
                                     ) {
                                         ScheduleCheckConfigScreen(viewModel = vm)
@@ -744,7 +700,7 @@ class MainActivity : FragmentActivity() {
                                 }
                                 composable(SchedulesRoutes.CustomDirectoriesConfig) { backStackEntry ->
                                     val parentEntry = remember(backStackEntry) {
-                                        navController.getBackStackEntry(Screen.Schedules.route)
+                                        navController.getBackStackEntry(TOP_LEVEL_ROUTE)
                                     }
                                     val vm: SchedulesViewModel = viewModel(
                                         viewModelStoreOwner = parentEntry,
@@ -753,6 +709,7 @@ class MainActivity : FragmentActivity() {
                                     DestinationScaffold(
                                         titleRes = R.string.title_custom_directories,
                                         isTopLevel = false,
+                                        isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
                                     ) {
                                         ScheduleCustomDirectoriesConfigScreen(viewModel = vm)
@@ -760,7 +717,7 @@ class MainActivity : FragmentActivity() {
                                 }
                                 composable(SchedulesRoutes.DeviceDataConfig) { backStackEntry ->
                                     val parentEntry = remember(backStackEntry) {
-                                        navController.getBackStackEntry(Screen.Schedules.route)
+                                        navController.getBackStackEntry(TOP_LEVEL_ROUTE)
                                     }
                                     val vm: SchedulesViewModel = viewModel(
                                         viewModelStoreOwner = parentEntry,
@@ -769,6 +726,7 @@ class MainActivity : FragmentActivity() {
                                     DestinationScaffold(
                                         titleRes = R.string.title_device_data,
                                         isTopLevel = false,
+                                        isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
                                     ) {
                                         io.github.hddq.restoid.ui.schedules.ScheduleDeviceDataConfigScreen(viewModel = vm)
@@ -800,6 +758,7 @@ class MainActivity : FragmentActivity() {
                                     DestinationScaffold(
                                         titleRes = R.string.topbar_tasks,
                                         isTopLevel = false,
+                                        isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() },
                                         floatingActionButton = {
                                             if (!uiState.isRunning) {
@@ -845,6 +804,7 @@ class MainActivity : FragmentActivity() {
                                     DestinationScaffold(
                                         titleRes = R.string.topbar_backup_config,
                                         isTopLevel = false,
+                                        isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
                                     ) {
                                         BackupConfigScreen(viewModel = vm)
@@ -870,6 +830,7 @@ class MainActivity : FragmentActivity() {
                                     DestinationScaffold(
                                         titleRes = R.string.title_custom_directories,
                                         isTopLevel = false,
+                                        isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
                                     ) {
                                         CustomDirectoriesConfigScreen(viewModel = vm)
@@ -895,6 +856,7 @@ class MainActivity : FragmentActivity() {
                                     DestinationScaffold(
                                         titleRes = R.string.title_device_data,
                                         isTopLevel = false,
+                                        isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
                                     ) {
                                         DeviceDataConfigScreen(viewModel = vm)
@@ -920,6 +882,7 @@ class MainActivity : FragmentActivity() {
                                     DestinationScaffold(
                                         titleRes = R.string.topbar_forget_config,
                                         isTopLevel = false,
+                                        isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
                                     ) {
                                         ForgetConfigScreen(viewModel = vm)
@@ -945,6 +908,7 @@ class MainActivity : FragmentActivity() {
                                     DestinationScaffold(
                                         titleRes = R.string.topbar_check_config,
                                         isTopLevel = false,
+                                        isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
                                     ) {
                                         CheckConfigScreen(viewModel = vm)
@@ -959,6 +923,7 @@ class MainActivity : FragmentActivity() {
                                 DestinationScaffold(
                                     titleRes = R.string.topbar_snapshot_details,
                                     isTopLevel = false,
+                                    isExiting = transition.targetState == EnterExitState.PostExit,
                                     onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() },
                                     floatingActionButton = {
                                         ExtendedFloatingActionButton(
@@ -1007,6 +972,7 @@ class MainActivity : FragmentActivity() {
                                     DestinationScaffold(
                                         titleRes = R.string.topbar_restore_snapshot,
                                         isTopLevel = false,
+                                        isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() },
                                         floatingActionButton = {
                                             if (!isRestoring) {
@@ -1051,6 +1017,7 @@ class MainActivity : FragmentActivity() {
                                     DestinationScaffold(
                                         titleRes = R.string.apps_to_restore_title,
                                         isTopLevel = false,
+                                        isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
                                     ) {
                                         io.github.hddq.restoid.ui.screens.RestoreAppsConfigScreen(viewModel = vm)
@@ -1079,6 +1046,7 @@ class MainActivity : FragmentActivity() {
                                     DestinationScaffold(
                                         titleRes = R.string.title_custom_directories,
                                         isTopLevel = false,
+                                        isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
                                     ) {
                                         io.github.hddq.restoid.ui.screens.RestoreCustomDirectoriesConfigScreen(viewModel = vm)
@@ -1107,6 +1075,7 @@ class MainActivity : FragmentActivity() {
                                     DestinationScaffold(
                                         titleRes = R.string.title_device_data,
                                         isTopLevel = false,
+                                        isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
                                     ) {
                                         io.github.hddq.restoid.ui.screens.RestoreDeviceDataConfigScreen(viewModel = vm)
@@ -1117,6 +1086,7 @@ class MainActivity : FragmentActivity() {
                                 DestinationScaffold(
                                     titleRes = R.string.topbar_open_source_licenses,
                                     isTopLevel = false,
+                                    isExiting = transition.targetState == EnterExitState.PostExit,
                                     onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
                                 ) {
                                     LicensesScreen(onNavigateUp = { navController.navigateUp() })
@@ -1126,6 +1096,7 @@ class MainActivity : FragmentActivity() {
                                 DestinationScaffold(
                                     titleRes = R.string.topbar_operation_progress,
                                     isTopLevel = false,
+                                    isExiting = transition.targetState == EnterExitState.PostExit,
                                     onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
                                 ) {
                                     OperationProgressScreen(onNavigateUp = { navController.navigateUp() })
@@ -1148,6 +1119,7 @@ class MainActivity : FragmentActivity() {
                                 DestinationScaffold(
                                     titleRes = R.string.screen_operation_logs,
                                     isTopLevel = false,
+                                    isExiting = transition.targetState == EnterExitState.PostExit,
                                     onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
                                 ) {
                                     OperationLogsScreen(
@@ -1173,7 +1145,7 @@ class MainActivity : FragmentActivity() {
                             RestoidBottomNavigationBar(
                                 selectedScreen = selectedTopLevelScreen,
                                 interactionEnabled = showBottomBar,
-                                onSelectScreen = navigateToTopLevel
+                                onSelectScreen = selectTopLevelTab
                             )
                         }
                     }
@@ -1200,16 +1172,7 @@ private fun RestoidBottomNavigationBar(
     val iconCrossfadeSpec = motionScheme.fastEffectsSpec<Float>()
 
     NavigationBar(
-        modifier = Modifier.pointerInput(interactionEnabled) {
-            if (!interactionEnabled) {
-                awaitPointerEventScope {
-                    while (true) {
-                        val event = awaitPointerEvent(PointerEventPass.Initial)
-                        event.changes.forEach { it.consume() }
-                    }
-                }
-            }
-        },
+        modifier = Modifier.blockPointerInput(!interactionEnabled),
         containerColor = MaterialTheme.colorScheme.surfaceContainer
     ) {
         items.forEach { (screen, selectedIcon, unselectedIcon) ->
@@ -1255,12 +1218,74 @@ private fun RestoidBottomNavigationBar(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+internal fun TopLevelTabHost(
+    selectedTab: Screen,
+    tabOrder: Map<String, Int>,
+    tabSelectionOrder: Int,
+    isParentExiting: Boolean,
+    content: @Composable (tab: Screen, isExiting: Boolean) -> Unit
+) {
+    val saveableStateHolder = rememberSaveableStateHolder()
+    val fadeOutEasing = remember { CubicBezierEasing(0.4f, 0.0f, 1.0f, 1.0f) }
+    val motionScheme = MaterialTheme.motionScheme
+    val tabSlideEnterSpec = motionScheme.defaultSpatialSpec<IntOffset>()
+    val tabSlideExitSpec = motionScheme.fastSpatialSpec<IntOffset>()
+    val tabEnterScaleSpec = motionScheme.defaultSpatialSpec<Float>()
+    val tabEnterEffectsSpec = motionScheme.defaultEffectsSpec<Float>()
+
+    AnimatedContent(
+        targetState = selectedTab,
+        modifier = Modifier.fillMaxSize(),
+        contentKey = { it.route },
+        transitionSpec = {
+            val fromIndex = tabOrder[initialState.route] ?: 0
+            val toIndex = tabOrder[targetState.route] ?: 0
+            val slideDirection = if (toIndex > fromIndex) {
+                AnimatedContentTransitionScope.SlideDirection.Start
+            } else {
+                AnimatedContentTransitionScope.SlideDirection.End
+            }
+            ContentTransform(
+                targetContentEnter = slideIntoContainer(
+                    towards = slideDirection,
+                    animationSpec = tabSlideEnterSpec,
+                    initialOffset = { it / 12 }
+                ) + scaleIn(
+                    initialScale = 0.97f,
+                    animationSpec = tabEnterScaleSpec
+                ) + fadeIn(animationSpec = tabEnterEffectsSpec),
+                initialContentExit = slideOutOfContainer(
+                    towards = slideDirection,
+                    animationSpec = tabSlideExitSpec,
+                    targetOffset = { it / 16 }
+                ) + fadeOut(
+                    animationSpec = tween(durationMillis = 100, easing = fadeOutEasing)
+                ),
+                targetContentZIndex = tabSelectionOrder.toFloat(),
+                sizeTransform = null
+            )
+        },
+        label = "topLevelTabContent"
+    ) { tab ->
+        val isTabExiting = transition.targetState == EnterExitState.PostExit
+        val isExiting = isParentExiting || isTabExiting
+        saveableStateHolder.SaveableStateProvider(tab.route) {
+            ProvideTabLifecycleOwner(isActive = tab == selectedTab && !isParentExiting) {
+                content(tab, isExiting)
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DestinationScaffold(
+internal fun DestinationScaffold(
     titleRes: Int,
     isTopLevel: Boolean,
     isHome: Boolean = false,
+    isExiting: Boolean = false,
     onBack: () -> Unit,
     actions: @Composable RowScope.() -> Unit = {},
     floatingActionButton: @Composable () -> Unit = {},
@@ -1269,7 +1294,9 @@ private fun DestinationScaffold(
     val appBarActions = remember { mutableStateOf<(@Composable RowScope.() -> Unit)?>(null) }
     CompositionLocalProvider(LocalAppBarActions provides appBarActions) {
         Scaffold(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .blockPointerInput(isExiting),
             containerColor = MaterialTheme.colorScheme.background,
             topBar = {
                 TopAppBar(
@@ -1335,6 +1362,79 @@ private fun DestinationScaffold(
             ) {
                 content()
             }
+        }
+    }
+}
+
+private fun Modifier.blockPointerInput(blocked: Boolean): Modifier =
+    pointerInput(blocked) {
+        if (blocked) {
+            awaitPointerEventScope {
+                while (true) {
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    event.changes.forEach { it.consume() }
+                }
+            }
+        }
+    }
+
+@Composable
+internal fun ProvideTabLifecycleOwner(
+    isActive: Boolean,
+    content: @Composable () -> Unit
+) {
+    val parentLifecycleOwner = LocalLifecycleOwner.current
+    val currentIsActive by rememberUpdatedState(isActive)
+    val tabLifecycleOwner = remember(parentLifecycleOwner) { TabLifecycleOwner() }
+
+    DisposableEffect(parentLifecycleOwner) {
+        val observer = LifecycleEventObserver { source, _ ->
+            tabLifecycleOwner.updateState(source.lifecycle.currentState, currentIsActive)
+        }
+        tabLifecycleOwner.updateState(parentLifecycleOwner.lifecycle.currentState, currentIsActive)
+        parentLifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            parentLifecycleOwner.lifecycle.removeObserver(observer)
+            tabLifecycleOwner.destroy()
+        }
+    }
+
+    LaunchedEffect(parentLifecycleOwner, isActive) {
+        tabLifecycleOwner.updateState(parentLifecycleOwner.lifecycle.currentState, isActive)
+    }
+
+    CompositionLocalProvider(LocalLifecycleOwner provides tabLifecycleOwner) {
+        content()
+    }
+}
+
+internal fun resolveTabLifecycleState(parentState: Lifecycle.State, isActive: Boolean): Lifecycle.State =
+    when {
+        parentState == Lifecycle.State.DESTROYED -> Lifecycle.State.DESTROYED
+        !isActive && parentState.isAtLeast(Lifecycle.State.STARTED) -> Lifecycle.State.STARTED
+        else -> parentState
+    }
+
+private class TabLifecycleOwner : LifecycleOwner {
+    private val registry = LifecycleRegistry(this)
+
+    override val lifecycle: Lifecycle
+        get() = registry
+
+    fun updateState(parentState: Lifecycle.State, isActive: Boolean) {
+        if (registry.currentState == Lifecycle.State.DESTROYED) return
+        val targetState = resolveTabLifecycleState(parentState, isActive)
+        if (targetState == Lifecycle.State.DESTROYED && registry.currentState == Lifecycle.State.INITIALIZED) {
+            return
+        }
+        if (registry.currentState != targetState) {
+            registry.currentState = targetState
+        }
+    }
+
+    fun destroy() {
+        if (registry.currentState.isAtLeast(Lifecycle.State.CREATED)) {
+            registry.currentState = Lifecycle.State.DESTROYED
         }
     }
 }
