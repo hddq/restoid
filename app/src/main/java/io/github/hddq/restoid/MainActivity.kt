@@ -34,6 +34,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
@@ -62,6 +64,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
@@ -342,6 +345,7 @@ class MainActivity : FragmentActivity() {
                             lastSelectedScreen = currentTopLevelScreen
                         }
                     }
+                    val selectedTopLevelScreen = currentTopLevelScreen ?: lastSelectedScreen
                     val showBottomBar = currentRoute == null || currentRoute in topLevelRoutes
 
                     val homeViewModel: HomeViewModel = viewModel(
@@ -384,10 +388,13 @@ class MainActivity : FragmentActivity() {
                     val bottomBarExitEffectsSpec = motionScheme.fastEffectsSpec<Float>()
 
                     val navigateToTopLevel: (Screen) -> Unit = { screen ->
-                        navController.navigate(screen.route) {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
+                        val liveRoute = navController.currentBackStackEntry?.destination?.route
+                        if (liveRoute == null || liveRoute in topLevelRoutes) {
+                            navController.navigate(screen.route) {
+                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
                         }
                     }
 
@@ -1164,7 +1171,8 @@ class MainActivity : FragmentActivity() {
                             ) + fadeOut(animationSpec = bottomBarExitEffectsSpec)
                         ) {
                             RestoidBottomNavigationBar(
-                                selectedScreen = lastSelectedScreen,
+                                selectedScreen = selectedTopLevelScreen,
+                                interactionEnabled = showBottomBar,
                                 onSelectScreen = navigateToTopLevel
                             )
                         }
@@ -1179,6 +1187,7 @@ class MainActivity : FragmentActivity() {
 @Composable
 private fun RestoidBottomNavigationBar(
     selectedScreen: Screen,
+    interactionEnabled: Boolean = true,
     onSelectScreen: (Screen) -> Unit
 ) {
     val items = listOf(
@@ -1191,6 +1200,16 @@ private fun RestoidBottomNavigationBar(
     val iconCrossfadeSpec = motionScheme.fastEffectsSpec<Float>()
 
     NavigationBar(
+        modifier = Modifier.pointerInput(interactionEnabled) {
+            if (!interactionEnabled) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        event.changes.forEach { it.consume() }
+                    }
+                }
+            }
+        },
         containerColor = MaterialTheme.colorScheme.surfaceContainer
     ) {
         items.forEach { (screen, selectedIcon, unselectedIcon) ->
@@ -1220,12 +1239,14 @@ private fun RestoidBottomNavigationBar(
                 label = {
                     Text(
                         text = stringResource(screen.titleRes),
-                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal
+                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 },
                 selected = selected,
                 onClick = {
-                    if (!selected) {
+                    if (interactionEnabled && !selected) {
                         onSelectScreen(screen)
                     }
                 }
