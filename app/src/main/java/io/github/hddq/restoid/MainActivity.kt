@@ -74,12 +74,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -335,7 +334,7 @@ class MainActivity : FragmentActivity() {
                         return@Surface
                     }
 
-                    val navController = rememberNavController()
+                    val navController = key(TOP_LEVEL_ROUTE) { rememberNavController() }
                     val topLevelTabOrder = remember {
                         mapOf(
                             Screen.Home.route to 0,
@@ -352,7 +351,6 @@ class MainActivity : FragmentActivity() {
                         Screen.Settings.route -> Screen.Settings
                         else -> Screen.Home
                     }
-                    var tabSelectionOrder by remember { mutableIntStateOf(0) }
 
                     val homeViewModel: HomeViewModel = viewModel(
                         factory = HomeViewModelFactory(app, app.repositoriesRepository, app.resticBinaryManager, app.resticRepository, app.appInfoRepository, app.metadataRepository, app.operationWorkRepository)
@@ -392,8 +390,16 @@ class MainActivity : FragmentActivity() {
                     val selectTopLevelTab: (Screen) -> Unit = { screen ->
                         val liveRoute = navController.currentBackStackEntry?.destination?.route
                         if ((liveRoute == null || liveRoute == TOP_LEVEL_ROUTE) && screen.route != selectedTabRoute) {
-                            tabSelectionOrder += 1
                             selectedTabRoute = screen.route
+                        }
+                    }
+
+                    val navigateFromTab: (Screen, () -> Unit) -> Unit = { tab, action ->
+                        if (
+                            selectedTabRoute == tab.route &&
+                            navController.currentBackStackEntry?.destination?.route == TOP_LEVEL_ROUTE
+                        ) {
+                            action()
                         }
                     }
 
@@ -493,7 +499,6 @@ class MainActivity : FragmentActivity() {
                             TopLevelTabHost(
                                 selectedTab = selectedTopLevelScreen,
                                 tabOrder = topLevelTabOrder,
-                                tabSelectionOrder = tabSelectionOrder,
                                 isParentExiting = isNavDestinationExiting
                             ) { tab, isExiting ->
                                 when (tab) {
@@ -506,7 +511,15 @@ class MainActivity : FragmentActivity() {
                                                     isExiting = isExiting,
                                                     onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() },
                                                     actions = {
-                                                        IconButton(onClick = { navController.navigate(Screen.OperationLogs.route) }) {
+                                                        IconButton(
+                                                            onClick = {
+                                                                navigateFromTab(Screen.Home) {
+                                                                    navController.navigate(Screen.OperationLogs.route) {
+                                                                        launchSingleTop = true
+                                                                    }
+                                                                }
+                                                            }
+                                                        ) {
                                                             Icon(
                                                                 imageVector = Icons.AutoMirrored.Outlined.ReceiptLong,
                                                                 contentDescription = stringResource(R.string.screen_operation_logs)
@@ -518,9 +531,11 @@ class MainActivity : FragmentActivity() {
                                                             text = { Text(stringResource(R.string.screen_tasks)) },
                                                             icon = { Icon(Icons.Outlined.PlayArrow, contentDescription = stringResource(R.string.screen_tasks)) },
                                                             onClick = {
-                                                                if (isRepoReady && navController.currentBackStackEntry?.destination?.route == TOP_LEVEL_ROUTE) {
-                                                                    navController.navigate(Screen.RunTasks.route) {
-                                                                        launchSingleTop = true
+                                                                if (isRepoReady) {
+                                                                    navigateFromTab(Screen.Home) {
+                                                                        navController.navigate(Screen.RunTasks.route) {
+                                                                            launchSingleTop = true
+                                                                        }
                                                                     }
                                                                 }
                                                             },
@@ -531,8 +546,16 @@ class MainActivity : FragmentActivity() {
                                                     }
                                                 ) {
                                                     HomeScreen(
-                                                        onSnapshotClick = { snapshotId -> navController.navigate("${Screen.SnapshotDetails.route}/$snapshotId") },
-                                                        onRestoreSnapshotClick = { snapshotId -> navController.navigate("${Screen.Restore.route}/$snapshotId") },
+                                                        onSnapshotClick = { snapshotId ->
+                                                            navigateFromTab(Screen.Home) {
+                                                                navController.navigate("${Screen.SnapshotDetails.route}/$snapshotId")
+                                                            }
+                                                        },
+                                                        onRestoreSnapshotClick = { snapshotId ->
+                                                            navigateFromTab(Screen.Home) {
+                                                                navController.navigate("${Screen.Restore.route}/$snapshotId")
+                                                            }
+                                                        },
                                                         onRequestForgetSnapshot = { snapshotId -> homeViewModel.requestForgetSnapshot(snapshotId) },
                                                         onConfirmForgetSnapshot = { homeViewModel.confirmForgetSnapshot() },
                                                         onDismissForgetDialog = { homeViewModel.dismissForgetDialog() },
@@ -554,8 +577,10 @@ class MainActivity : FragmentActivity() {
                                                         onDismissRestCredentialsDialog = { homeViewModel.onDismissRestCredentialsDialog() },
                                                         onDismissS3CredentialsDialog = { homeViewModel.onDismissS3CredentialsDialog() },
                                                         onOpenOperationProgress = {
-                                                            navController.navigate(Screen.OperationProgress.route) {
-                                                                launchSingleTop = true
+                                                            navigateFromTab(Screen.Home) {
+                                                                navController.navigate(Screen.OperationProgress.route) {
+                                                                    launchSingleTop = true
+                                                                }
                                                             }
                                                         },
                                                         onForceStopOperation = { homeViewModel.forceStopOperation() }
@@ -575,7 +600,11 @@ class MainActivity : FragmentActivity() {
                                                 ) {
                                                     SchedulesScreen(
                                                         viewModel = vm,
-                                                        onNavigateToAddEditSchedule = { navController.navigate(SchedulesRoutes.AddEdit) }
+                                                        onNavigateToAddEditSchedule = {
+                                                            navigateFromTab(Screen.Schedules) {
+                                                                navController.navigate(SchedulesRoutes.AddEdit)
+                                                            }
+                                                        }
                                                     )
                                                 }
                                             }
@@ -600,7 +629,14 @@ class MainActivity : FragmentActivity() {
                                                     isExiting = isExiting,
                                                     onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
                                                 ) {
-                                                    SettingsScreen(viewModel = vm, onNavigateToLicenses = { navController.navigate(Screen.Licenses.route) })
+                                                    SettingsScreen(
+                                                        viewModel = vm,
+                                                        onNavigateToLicenses = {
+                                                            navigateFromTab(Screen.Settings) {
+                                                                navController.navigate(Screen.Licenses.route)
+                                                            }
+                                                        }
+                                                    )
                                                 }
                                             }
                                     else -> Unit
@@ -1223,7 +1259,6 @@ private fun RestoidBottomNavigationBar(
 internal fun TopLevelTabHost(
     selectedTab: Screen,
     tabOrder: Map<String, Int>,
-    tabSelectionOrder: Int,
     isParentExiting: Boolean,
     content: @Composable (tab: Screen, isExiting: Boolean) -> Unit
 ) {
@@ -1234,6 +1269,13 @@ internal fun TopLevelTabHost(
     val tabSlideExitSpec = motionScheme.fastSpatialSpec<IntOffset>()
     val tabEnterScaleSpec = motionScheme.defaultSpatialSpec<Float>()
     val tabEnterEffectsSpec = motionScheme.defaultEffectsSpec<Float>()
+
+    val parentLifecycleOwner = LocalLifecycleOwner.current
+    val activeTab = if (isParentExiting) null else selectedTab
+    val currentActiveTab by rememberUpdatedState(activeTab)
+    val tabLifecycleOwners = remember(parentLifecycleOwner) {
+        mutableMapOf<String, TabLifecycleOwner>()
+    }
 
     AnimatedContent(
         targetState = selectedTab,
@@ -1263,7 +1305,6 @@ internal fun TopLevelTabHost(
                 ) + fadeOut(
                     animationSpec = tween(durationMillis = 100, easing = fadeOutEasing)
                 ),
-                targetContentZIndex = tabSelectionOrder.toFloat(),
                 sizeTransform = null
             )
         },
@@ -1271,11 +1312,47 @@ internal fun TopLevelTabHost(
     ) { tab ->
         val isTabExiting = transition.targetState == EnterExitState.PostExit
         val isExiting = isParentExiting || isTabExiting
+        val tabLifecycleOwner = remember(parentLifecycleOwner, tab.route) {
+            tabLifecycleOwners.getOrPut(tab.route) { TabLifecycleOwner() }
+        }
+        DisposableEffect(tabLifecycleOwner) {
+            onDispose {
+                if (tabLifecycleOwners[tab.route] === tabLifecycleOwner) {
+                    tabLifecycleOwners.remove(tab.route)
+                }
+                tabLifecycleOwner.destroy()
+            }
+        }
         saveableStateHolder.SaveableStateProvider(tab.route) {
-            ProvideTabLifecycleOwner(isActive = tab == selectedTab && !isParentExiting) {
+            CompositionLocalProvider(LocalLifecycleOwner provides tabLifecycleOwner) {
                 content(tab, isExiting)
             }
         }
+    }
+
+    DisposableEffect(parentLifecycleOwner) {
+        val observer = LifecycleEventObserver { source, _ ->
+            syncTabLifecycles(
+                owners = tabLifecycleOwners,
+                parentState = source.lifecycle.currentState,
+                activeRoute = currentActiveTab?.route
+            )
+        }
+        parentLifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            parentLifecycleOwner.lifecycle.removeObserver(observer)
+            tabLifecycleOwners.values.toList().forEach { it.destroy() }
+            tabLifecycleOwners.clear()
+        }
+    }
+
+    DisposableEffect(parentLifecycleOwner, activeTab) {
+        syncTabLifecycles(
+            owners = tabLifecycleOwners,
+            parentState = parentLifecycleOwner.lifecycle.currentState,
+            activeRoute = activeTab?.route
+        )
+        onDispose { }
     }
 }
 
@@ -1378,33 +1455,19 @@ private fun Modifier.blockPointerInput(blocked: Boolean): Modifier =
         }
     }
 
-@Composable
-internal fun ProvideTabLifecycleOwner(
-    isActive: Boolean,
-    content: @Composable () -> Unit
+private fun syncTabLifecycles(
+    owners: Map<String, TabLifecycleOwner>,
+    parentState: Lifecycle.State,
+    activeRoute: String?
 ) {
-    val parentLifecycleOwner = LocalLifecycleOwner.current
-    val currentIsActive by rememberUpdatedState(isActive)
-    val tabLifecycleOwner = remember(parentLifecycleOwner) { TabLifecycleOwner() }
-
-    DisposableEffect(parentLifecycleOwner) {
-        val observer = LifecycleEventObserver { source, _ ->
-            tabLifecycleOwner.updateState(source.lifecycle.currentState, currentIsActive)
-        }
-        tabLifecycleOwner.updateState(parentLifecycleOwner.lifecycle.currentState, currentIsActive)
-        parentLifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            parentLifecycleOwner.lifecycle.removeObserver(observer)
-            tabLifecycleOwner.destroy()
+    // Demote outgoing/inactive tabs before promoting the active tab so ON_RESUME never sees two RESUMED tabs.
+    owners.entries.toList().forEach { (route, owner) ->
+        if (route != activeRoute) {
+            owner.updateState(parentState, isActive = false)
         }
     }
-
-    LaunchedEffect(parentLifecycleOwner, isActive) {
-        tabLifecycleOwner.updateState(parentLifecycleOwner.lifecycle.currentState, isActive)
-    }
-
-    CompositionLocalProvider(LocalLifecycleOwner provides tabLifecycleOwner) {
-        content()
+    if (activeRoute != null) {
+        owners[activeRoute]?.updateState(parentState, isActive = true)
     }
 }
 
