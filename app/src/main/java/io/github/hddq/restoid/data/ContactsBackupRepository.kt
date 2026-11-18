@@ -50,7 +50,10 @@ private data class EnsureLocalGroupsResult(
 
 internal fun resolveSafePhotoFile(photosDir: File, photoFileName: String): File? {
     if (photoFileName.isBlank()) return null
-    val photosRealPath = runCatching { photosDir.toPath().toRealPath() }.getOrNull() ?: return null
+    val photosPath = photosDir.toPath().normalize()
+    if (!Files.isDirectory(photosPath, LinkOption.NOFOLLOW_LINKS)) return null
+    if (photosPath.parent?.let { Files.isSymbolicLink(it) } == true) return null
+    val photosRealPath = runCatching { photosPath.toRealPath() }.getOrNull() ?: return null
     val candidatePath = runCatching { photosRealPath.resolve(photoFileName).normalize() }.getOrNull() ?: return null
     if (!candidatePath.startsWith(photosRealPath) || candidatePath == photosRealPath) return null
 

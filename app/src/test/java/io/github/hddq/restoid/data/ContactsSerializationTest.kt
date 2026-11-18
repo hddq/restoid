@@ -254,5 +254,23 @@ class ContactsSerializationTest {
         val symlink = photosDir.toPath().resolve("link.jpg")
         Files.createSymbolicLink(symlink, outsideSecret.toPath())
         assertNull(resolveSafePhotoFile(photosDir, "link.jpg"))
+
+        val externalTargetDir = tempFolder.newFolder("external_photos_target")
+        val targetSecret = File(externalTargetDir, "secret.jpg").apply { writeBytes(byteArrayOf(7, 7, 7)) }
+        assertTrue(targetSecret.exists())
+
+        val linkedPhotosDir = File(tempFolder.newFolder("linked_photos_backup"), "photos")
+        Files.createSymbolicLink(linkedPhotosDir.toPath(), externalTargetDir.toPath())
+        assertNull(resolveSafePhotoFile(linkedPhotosDir, "secret.jpg"))
+
+        val realTargetContactsDir = tempFolder.newFolder("real_contacts_target").apply {
+            File(this, "photos").apply {
+                mkdirs()
+                File(this, "secret.jpg").writeBytes(byteArrayOf(5, 5, 5))
+            }
+        }
+        val linkedContactsDir = File(root, "linked_contacts")
+        Files.createSymbolicLink(linkedContactsDir.toPath(), realTargetContactsDir.toPath())
+        assertNull(resolveSafePhotoFile(File(linkedContactsDir, "photos"), "secret.jpg"))
     }
 }
