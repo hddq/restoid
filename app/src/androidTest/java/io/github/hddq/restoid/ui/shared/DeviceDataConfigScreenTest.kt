@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -48,17 +49,18 @@ class DeviceDataConfigScreenTest {
         composeTestRule.onNodeWithText(contactsTitle).assertIsDisplayed()
         composeTestRule.onNodeWithText(callLogsTitle).assertIsDisplayed()
         composeTestRule.onNodeWithText(includeReadOnlyTitle).assertDoesNotExist()
+        composeTestRule.onNodeWithTag(INCLUDE_READ_ONLY_CONTACTS_ROW_TAG).assertDoesNotExist()
 
         composeTestRule.onNodeWithText(contactsTitle).performClick()
         composeTestRule.waitForIdle()
 
-        composeTestRule.onNodeWithText(includeReadOnlyTitle).assertIsDisplayed()
-        composeTestRule.onNodeWithText(includeReadOnlyTitle).performClick()
+        composeTestRule.onNodeWithTag(INCLUDE_READ_ONLY_CONTACTS_ROW_TAG).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(INCLUDE_READ_ONLY_CONTACTS_ROW_TAG).performClick()
         composeTestRule.waitForIdle()
 
         assertTrue(includeReadOnly)
 
-        composeTestRule.onNodeWithText(includeReadOnlyTitle).performClick()
+        composeTestRule.onNodeWithTag(INCLUDE_READ_ONLY_CONTACTS_ROW_TAG).performClick()
         composeTestRule.waitForIdle()
 
         assertFalse(includeReadOnly)

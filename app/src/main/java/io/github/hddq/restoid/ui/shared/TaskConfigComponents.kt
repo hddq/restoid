@@ -110,6 +110,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
@@ -139,12 +140,13 @@ fun TaskRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     onNavigate: (() -> Unit)? = null,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier
 ) {
     val rowClick = onNavigate ?: { onCheckedChange(!checked) }
 
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .alpha(if (enabled) 1f else 0.5f)
             .clickable(enabled = enabled, onClick = rowClick)
@@ -2144,6 +2146,8 @@ fun DeviceDataConfigScreen(
     }
 }
 
+internal const val INCLUDE_READ_ONLY_CONTACTS_ROW_TAG = "include_read_only_contacts_row"
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ContactsOptionsBottomSheet(
@@ -2170,7 +2174,8 @@ private fun ContactsOptionsBottomSheet(
                         title = stringResource(R.string.device_data_include_read_only_contacts),
                         icon = Icons.Outlined.Group,
                         checked = includeReadOnlyContacts,
-                        onCheckedChange = onIncludeReadOnlyContactsChange
+                        onCheckedChange = onIncludeReadOnlyContactsChange,
+                        modifier = Modifier.testTag(INCLUDE_READ_ONLY_CONTACTS_ROW_TAG)
                     )
                 }
             }
