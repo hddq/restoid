@@ -103,7 +103,8 @@ import java.util.Locale
 @Composable
 fun SchedulesScreen(
     viewModel: SchedulesViewModel,
-    onNavigateToAddEditSchedule: () -> Unit,
+    onAddSchedule: () -> Unit,
+    onEditSchedule: (Schedule) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -149,10 +150,7 @@ fun SchedulesScreen(
                         ) {
                             ScheduleItem(
                                 schedule = schedule,
-                                onEdit = {
-                                    viewModel.startEditSchedule(schedule)
-                                    onNavigateToAddEditSchedule()
-                                },
+                                onEdit = { onEditSchedule(schedule) },
                                 onDelete = { scheduleToDelete = schedule },
                                 onToggleEnabled = { viewModel.toggleScheduleEnabled(schedule) },
                                 onRunNow = { viewModel.runNow(schedule) }
@@ -169,8 +167,7 @@ fun SchedulesScreen(
         ExtendedFloatingActionButton(
             onClick = {
                 if (isRepoSelected) {
-                    viewModel.startAddSchedule()
-                    onNavigateToAddEditSchedule()
+                    onAddSchedule()
                 }
             },
             icon = { Icon(Icons.Outlined.Add, contentDescription = null) },
