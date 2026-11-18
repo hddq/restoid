@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Call
 import androidx.compose.material.icons.outlined.Contacts
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Description
@@ -83,6 +84,7 @@ import io.github.hddq.restoid.R
 import io.github.hddq.restoid.RestoidApplication
 import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.model.BackupDetail
+import io.github.hddq.restoid.model.CallLogsBackupMetadata
 import io.github.hddq.restoid.model.ContactsBackupMetadata
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
 import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
@@ -178,6 +180,8 @@ fun SnapshotDetailsScreen(
                 val customDirs = metadata?.customDirectories ?: emptyMap()
                 val dirsList = customDirs.toList()
                 val contactsMeta = metadata?.deviceData?.contacts
+                val callLogsMeta = metadata?.deviceData?.callLogs
+                val deviceDataItemsCount = (if (contactsMeta != null) 1 else 0) + (if (callLogsMeta != null) 1 else 0)
 
                 LazyColumn(
                     modifier = Modifier.weight(1f),
@@ -239,7 +243,7 @@ fun SnapshotDetailsScreen(
                             }
                         }
                     }
-                    if (contactsMeta != null) {
+                    if (deviceDataItemsCount > 0) {
                         item(key = "device_data_header", contentType = "device_data_header") {
                             ExpressiveSectionHeader(
                                 title = stringResource(R.string.snapshot_backed_up_device_data),
@@ -248,17 +252,32 @@ fun SnapshotDetailsScreen(
                                 )
                             )
                         }
-                        item(key = "device_data_contacts", contentType = "device_data_contacts") {
-                            ExpressiveSegmentedSurface(
-                                index = 0,
-                                count = 1
-                            ) {
-                                BackedUpContactsItem(metadata = contactsMeta)
+                        var deviceDataIndex = 0
+                        if (contactsMeta != null) {
+                            val currentIndex = deviceDataIndex++
+                            item(key = "device_data_contacts", contentType = "device_data_contacts") {
+                                ExpressiveSegmentedSurface(
+                                    index = currentIndex,
+                                    count = deviceDataItemsCount
+                                ) {
+                                    BackedUpContactsItem(metadata = contactsMeta)
+                                }
+                            }
+                        }
+                        if (callLogsMeta != null) {
+                            val currentIndex = deviceDataIndex++
+                            item(key = "device_data_call_logs", contentType = "device_data_call_logs") {
+                                ExpressiveSegmentedSurface(
+                                    index = currentIndex,
+                                    count = deviceDataItemsCount
+                                ) {
+                                    BackedUpCallLogsItem(metadata = callLogsMeta)
+                                }
                             }
                         }
                     }
 
-                    if (backupDetails.isEmpty() && customDirs.isEmpty() && contactsMeta == null && !isLoading) {
+                    if (backupDetails.isEmpty() && customDirs.isEmpty() && contactsMeta == null && callLogsMeta == null && !isLoading) {
                         item(key = "empty_metadata", contentType = "empty_metadata") {
                             if (metadata == null) {
                                 Text(
@@ -644,6 +663,41 @@ fun BackedUpContactsItem(
             )
             Text(
                 stringResource(R.string.device_data_contacts_count_size, countText, sizeText),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+fun BackedUpCallLogsItem(
+    metadata: CallLogsBackupMetadata,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val countText = pluralStringResource(R.plurals.device_data_call_logs_count, metadata.count, metadata.count)
+    val sizeText = Formatter.formatShortFileSize(context, metadata.size)
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            Icons.Outlined.Call,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                stringResource(R.string.device_data_call_logs),
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                stringResource(R.string.device_data_call_logs_count_size, countText, sizeText),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

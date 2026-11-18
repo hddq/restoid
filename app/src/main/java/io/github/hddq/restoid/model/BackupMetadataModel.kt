@@ -17,8 +17,16 @@ data class ContactsBackupMetadata(
 )
 
 @Serializable
+data class CallLogsBackupMetadata(
+    val count: Int,
+    val size: Long,
+    val path: String
+)
+
+@Serializable
 data class DeviceDataMetadata(
-    val contacts: ContactsBackupMetadata? = null
+    val contacts: ContactsBackupMetadata? = null,
+    val callLogs: CallLogsBackupMetadata? = null
 )
 
 /**

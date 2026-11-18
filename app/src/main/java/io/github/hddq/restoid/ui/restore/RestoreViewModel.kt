@@ -14,6 +14,7 @@ import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.BackupDetail
+import io.github.hddq.restoid.model.CallLogsBackupMetadata
 import io.github.hddq.restoid.model.ContactsBackupMetadata
 import io.github.hddq.restoid.model.CustomDirectoryMetadata
 import io.github.hddq.restoid.model.RestoidMetadata
@@ -84,7 +85,7 @@ fun RestoreTypeSelection.toUiModel(): RestoreTypes {
 
 sealed interface RestoreUiEvent {
     data object NavigateToOperationProgress : RestoreUiEvent
-    data object RequestContactsPermission : RestoreUiEvent
+    data class RequestDeviceDataPermissions(val permissions: List<String>) : RestoreUiEvent
     data class ShowError(val message: String) : RestoreUiEvent
 }
 
@@ -121,6 +122,9 @@ class RestoreViewModel(
     private val _contactsMetadata = MutableStateFlow<ContactsBackupMetadata?>(null)
     val contactsMetadata = _contactsMetadata.asStateFlow()
 
+    private val _callLogsMetadata = MutableStateFlow<CallLogsBackupMetadata?>(null)
+    val callLogsMetadata = _callLogsMetadata.asStateFlow()
+
     private val _isLoading = MutableStateFlow(true)
     val isLoading = _isLoading.asStateFlow()
 
@@ -147,6 +151,9 @@ class RestoreViewModel(
 
     private val _restoreContactsEnabled = MutableStateFlow(false)
     val restoreContactsEnabled = _restoreContactsEnabled.asStateFlow()
+
+    private val _restoreCallLogsEnabled = MutableStateFlow(false)
+    val restoreCallLogsEnabled = _restoreCallLogsEnabled.asStateFlow()
 
     private val _isRestoring = MutableStateFlow(false)
     val isRestoring = _isRestoring.asStateFlow()
@@ -313,9 +320,12 @@ class RestoreViewModel(
         }
 
         val contactsMeta = metadata?.deviceData?.contacts
+        val callLogsMeta = metadata?.deviceData?.callLogs
         _contactsMetadata.value = contactsMeta
+        _callLogsMetadata.value = callLogsMeta
         _restoreContactsEnabled.value = contactsMeta != null
-        _restoreDeviceDataEnabled.value = contactsMeta != null
+        _restoreCallLogsEnabled.value = callLogsMeta != null
+        _restoreDeviceDataEnabled.value = contactsMeta != null || callLogsMeta != null
     }
 
     fun setSortOrder(order: AppSortOrder) {
@@ -339,6 +349,10 @@ class RestoreViewModel(
 
     fun setRestoreContactsEnabled(enabled: Boolean) {
         _restoreContactsEnabled.value = enabled
+    }
+
+    fun setRestoreCallLogsEnabled(enabled: Boolean) {
+        _restoreCallLogsEnabled.value = enabled
     }
 
     private fun findBackedUpItems(
@@ -395,6 +409,7 @@ class RestoreViewModel(
         }
 
         val restoreContacts = _restoreDeviceDataEnabled.value && _contactsMetadata.value != null && _restoreContactsEnabled.value
+        val restoreCallLogs = _restoreDeviceDataEnabled.value && _callLogsMetadata.value != null && _restoreCallLogsEnabled.value
 
         fun failPreflight(error: String, summary: String = error) {
             _restoreProgress.value = OperationProgress(
@@ -410,17 +425,26 @@ class RestoreViewModel(
             return
         }
 
-        if (selectedApps.isEmpty() && selectedCustomDirectories.isEmpty() && !restoreContacts) {
+        if (selectedApps.isEmpty() && selectedCustomDirectories.isEmpty() && !restoreContacts && !restoreCallLogs) {
             failPreflight(application.getString(R.string.restore_error_no_items_selected))
             return
         }
 
-        if (restoreContacts) {
-            val contactsRepo = io.github.hddq.restoid.data.ContactsBackupRepository(application)
-            if (!contactsRepo.hasReadContactsPermission() || !contactsRepo.hasWriteContactsPermission()) {
-                _uiEvents.tryEmit(RestoreUiEvent.RequestContactsPermission)
-                return
+        val missingPermissions = buildList {
+            if (restoreContacts) {
+                val contactsRepo = io.github.hddq.restoid.data.ContactsBackupRepository(application)
+                if (!contactsRepo.hasReadContactsPermission()) add(android.Manifest.permission.READ_CONTACTS)
+                if (!contactsRepo.hasWriteContactsPermission()) add(android.Manifest.permission.WRITE_CONTACTS)
             }
+            if (restoreCallLogs) {
+                val callLogsRepo = io.github.hddq.restoid.data.CallLogsBackupRepository(application)
+                if (!callLogsRepo.hasReadCallLogPermission()) add(android.Manifest.permission.READ_CALL_LOG)
+                if (!callLogsRepo.hasWriteCallLogPermission()) add(android.Manifest.permission.WRITE_CALL_LOG)
+            }
+        }
+        if (missingPermissions.isNotEmpty()) {
+            _uiEvents.tryEmit(RestoreUiEvent.RequestDeviceDataPermissions(missingPermissions))
+            return
         }
 
         if (selectedApps.isNotEmpty() && selectedApps.none { effectiveRestoreTypes(it.appInfo.packageName).anyEnabled() }) {
@@ -482,7 +506,10 @@ class RestoreViewModel(
             },
             appRestoreTypes = selectedApps.associate { it.appInfo.packageName to effectiveRestoreTypes(it.appInfo.packageName).toSelection() },
             selectedCustomDirectories = selectedCustomDirectories,
-            deviceData = DeviceDataRestoreSelection(contacts = restoreContacts)
+            deviceData = DeviceDataRestoreSelection(
+                contacts = restoreContacts,
+                callLogs = restoreCallLogs
+            )
         )
 
         viewModelScope.launch(Dispatchers.IO) {

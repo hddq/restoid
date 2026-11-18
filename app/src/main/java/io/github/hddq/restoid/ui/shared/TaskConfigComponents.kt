@@ -45,6 +45,7 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AdminPanelSettings
 import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Call
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Contacts
 import androidx.compose.material.icons.outlined.DateRange
@@ -1967,30 +1968,90 @@ fun rememberPermissionsState(
     return granted to { launcher.launch(arrayOf(*permissions)) }
 }
 
+@Composable
+fun rememberPermissionsMap(
+    vararg permissions: String,
+    onResult: (Map<String, Boolean>) -> Unit = {}
+): Pair<Map<String, Boolean>, (Array<String>) -> Unit> {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    fun checkAll(): Map<String, Boolean> = permissions.associateWith {
+        ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+    }
+    var statuses by remember { mutableStateOf(checkAll()) }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                statuses = checkAll()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) {
+        val updated = checkAll()
+        statuses = updated
+        onResult(updated)
+    }
+
+    return statuses to { toRequest ->
+        if (toRequest.isNotEmpty()) {
+            launcher.launch(toRequest)
+        } else {
+            val updated = checkAll()
+            statuses = updated
+            onResult(updated)
+        }
+    }
+}
+
 fun buildDeviceDataSubtitle(
     contactsEnabled: Boolean,
+    callLogsEnabled: Boolean,
     deviceDataBackupEnabled: Boolean,
     hasReadContactsPermission: Boolean,
+    hasReadCallLogPermission: Boolean,
     context: android.content.Context
 ): String {
-    return when {
-        !contactsEnabled -> context.getString(R.string.device_data_none_selected)
-        deviceDataBackupEnabled && !hasReadContactsPermission -> context.getString(R.string.device_data_contacts_permission_required)
-        else -> context.getString(R.string.device_data_contacts)
+    if (!contactsEnabled && !callLogsEnabled) {
+        return context.getString(R.string.device_data_none_selected)
     }
+    if (deviceDataBackupEnabled) {
+        val missingContacts = contactsEnabled && !hasReadContactsPermission
+        val missingCallLogs = callLogsEnabled && !hasReadCallLogPermission
+        when {
+            missingContacts && missingCallLogs -> return context.getString(R.string.device_data_permissions_required)
+            missingContacts -> return context.getString(R.string.device_data_contacts_permission_required)
+            missingCallLogs -> return context.getString(R.string.device_data_call_logs_permission_required)
+        }
+    }
+    return buildList {
+        if (contactsEnabled) add(context.getString(R.string.device_data_contacts))
+        if (callLogsEnabled) add(context.getString(R.string.device_data_call_logs))
+    }.joinToString(", ")
 }
 
 @Composable
 fun DeviceDataConfigScreen(
     contactsEnabled: Boolean,
     includeReadOnlyContacts: Boolean,
+    callLogsEnabled: Boolean,
     onContactsEnabledChange: (Boolean) -> Unit,
     onIncludeReadOnlyContactsChange: (Boolean) -> Unit,
+    onCallLogsEnabledChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val (hasReadPermission, requestReadPermission) = rememberPermissionsState(
         Manifest.permission.READ_CONTACTS,
         onGranted = { onContactsEnabledChange(true) }
+    )
+    val (hasReadCallLogPermission, requestReadCallLogPermission) = rememberPermissionsState(
+        Manifest.permission.READ_CALL_LOG,
+        onGranted = { onCallLogsEnabledChange(true) }
     )
 
     LazyColumn(
@@ -2000,12 +2061,12 @@ fun DeviceDataConfigScreen(
     ) {
         item(key = "device_data_items") {
             ExpressiveCardGroup {
-                ExpressiveSegmentedSurface(index = 0, count = 2) {
+                ExpressiveSegmentedSurface(index = 0, count = 3) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
-                                if (!hasReadPermission) requestReadPermission() else onContactsEnabledChange(!contactsEnabled)
+                                if (!contactsEnabled && !hasReadPermission) requestReadPermission() else onContactsEnabledChange(!contactsEnabled)
                             }
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -2051,7 +2112,7 @@ fun DeviceDataConfigScreen(
                         )
                     }
                 }
-                ExpressiveSegmentedSurface(index = 1, count = 2) {
+                ExpressiveSegmentedSurface(index = 1, count = 3) {
                     TaskRow(
                         title = stringResource(R.string.device_data_include_read_only_contacts),
                         icon = Icons.Outlined.Group,
@@ -2059,6 +2120,57 @@ fun DeviceDataConfigScreen(
                         onCheckedChange = onIncludeReadOnlyContactsChange,
                         enabled = contactsEnabled
                     )
+                }
+                ExpressiveSegmentedSurface(index = 2, count = 3) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                if (!callLogsEnabled && !hasReadCallLogPermission) requestReadCallLogPermission() else onCallLogsEnabledChange(!callLogsEnabled)
+                            }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Call,
+                            contentDescription = null,
+                            tint = if (callLogsEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(end = 16.dp)
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.device_data_call_logs),
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            if (callLogsEnabled && !hasReadCallLogPermission) {
+                                Text(
+                                    text = stringResource(R.string.device_data_call_logs_permission_required),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                        Spacer(Modifier.width(16.dp))
+                        Switch(
+                            checked = callLogsEnabled,
+                            onCheckedChange = { enabled ->
+                                if (enabled && !hasReadCallLogPermission) requestReadCallLogPermission() else onCallLogsEnabledChange(enabled)
+                            },
+                            thumbContent = if (callLogsEnabled) {
+                                {
+                                    Icon(
+                                        imageVector = Icons.Filled.Check,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                                    )
+                                }
+                            } else {
+                                null
+                            }
+                        )
+                    }
                 }
             }
         }

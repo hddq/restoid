@@ -8,6 +8,7 @@ import android.util.Log
 import com.topjohnwu.superuser.CallbackList
 import com.topjohnwu.superuser.Shell
 import io.github.hddq.restoid.R
+import io.github.hddq.restoid.data.CallLogsBackupRepository
 import io.github.hddq.restoid.data.ContactsBackupRepository
 import io.github.hddq.restoid.data.MetadataRepository
 import io.github.hddq.restoid.data.OperationLockManager
@@ -34,7 +35,8 @@ class RestoreOperationRunner(
     private val resticRepository: ResticRepository,
     private val metadataRepository: MetadataRepository,
     private val operationLockManager: OperationLockManager,
-    private val contactsBackupRepository: ContactsBackupRepository = ContactsBackupRepository(context)
+    private val contactsBackupRepository: ContactsBackupRepository = ContactsBackupRepository(context),
+    private val callLogsBackupRepository: CallLogsBackupRepository = CallLogsBackupRepository(context)
 ) {
 
     suspend fun run(
@@ -74,13 +76,13 @@ class RestoreOperationRunner(
         val metadataRestoreSelected = effectiveRestoreTypes.values.any {
             it.permissions || it.specialAccess || it.accessibility
         }
-        val deviceDataItemCount = if (request.deviceData.contacts) 1 else 0
+        val deviceDataItemCount = (if (request.deviceData.contacts) 1 else 0) + (if (request.deviceData.callLogs) 1 else 0)
         val totalRestoreItems = selectedAppPackages.size + request.selectedCustomDirectories.size + deviceDataItemCount
 
         val stageList = mutableListOf(context.getString(R.string.restore_stage_restore_files))
         if (apkRestoreSelected || anyDataRestoreSelected || metadataRestoreSelected) stageList.add(context.getString(R.string.restore_stage_processing_apps))
         if (request.selectedCustomDirectories.isNotEmpty()) stageList.add(context.getString(R.string.restore_stage_processing_custom_directories))
-        if (request.deviceData.contacts) stageList.add(context.getString(R.string.restore_stage_processing_device_data))
+        if (request.deviceData.anyEnabled()) stageList.add(context.getString(R.string.restore_stage_processing_device_data))
         stageList.add(context.getString(R.string.restore_stage_cleanup))
         val totalStages = stageList.size
         var currentStageNum = 1
@@ -105,6 +107,10 @@ class RestoreOperationRunner(
 
             if (request.deviceData.contacts && !contactsBackupRepository.hasWriteContactsPermission()) {
                 throw IllegalStateException(context.getString(R.string.error_contacts_write_permission_required))
+            }
+
+            if (request.deviceData.callLogs && !callLogsBackupRepository.hasWriteCallLogPermission()) {
+                throw IllegalStateException(context.getString(R.string.error_call_logs_write_permission_required))
             }
 
             val currentSnapshot = findSnapshot(request)
@@ -146,18 +152,42 @@ class RestoreOperationRunner(
             val metadata = selectedRepository.id?.let { repoId ->
                 metadataRepository.getMetadataForSnapshot(repoId, currentSnapshot.id)
             }
+            var cachedSnapshotPaths: List<String>? = null
+            suspend fun getSnapshotPaths(): List<String>? {
+                if (cachedSnapshotPaths == null) {
+                    cachedSnapshotPaths = resticRepository.ls(
+                        repoPath = selectedRepoPath,
+                        password = password,
+                        snapshotId = currentSnapshot.id,
+                        environmentVariables = repositoriesRepository.getExecutionEnvironmentVariables(request.repositoryKey),
+                        resticOptions = repositoriesRepository.getExecutionResticOptions(request.repositoryKey)
+                    ).getOrNull()
+                }
+                return cachedSnapshotPaths
+            }
             val contactsBackupPath = if (request.deviceData.contacts) {
-                metadata?.deviceData?.contacts?.path ?: resolveContactsPathFromSnapshot(
-                    repoPath = selectedRepoPath,
-                    password = password,
-                    snapshotId = currentSnapshot.id,
-                    repositoryKey = request.repositoryKey
+                metadata?.deviceData?.contacts?.path ?: resolveDeviceDataPathFromSnapshot(
+                    snapshotPaths = getSnapshotPaths(),
+                    relativeStagingPath = ContactsBackupRepository.CONTACTS_RELATIVE_STAGING_PATH,
+                    fileName = ContactsBackupRepository.CONTACTS_FILE_NAME
                 )
             } else {
                 null
             }
             if (contactsBackupPath != null) {
                 pathsToRestore.add(contactsBackupPath)
+            }
+            val callLogsBackupPath = if (request.deviceData.callLogs) {
+                metadata?.deviceData?.callLogs?.path ?: resolveDeviceDataPathFromSnapshot(
+                    snapshotPaths = getSnapshotPaths(),
+                    relativeStagingPath = CallLogsBackupRepository.CALL_LOGS_RELATIVE_STAGING_PATH,
+                    fileName = CallLogsBackupRepository.CALL_LOGS_FILE_NAME
+                )
+            } else {
+                null
+            }
+            if (callLogsBackupPath != null) {
+                pathsToRestore.add(callLogsBackupPath)
             }
 
             if (pathsToRestore.isEmpty() && !metadataRestoreSelected) {
@@ -468,7 +498,7 @@ class RestoreOperationRunner(
             }
 
             val deviceDataStageIndex = stageList.indexOf(context.getString(R.string.restore_stage_processing_device_data))
-            if (deviceDataStageIndex != -1 && request.deviceData.contacts) {
+            if (deviceDataStageIndex != -1 && request.deviceData.anyEnabled()) {
                 currentStageNum = deviceDataStageIndex + 1
                 val processingStageTitle = context.getString(
                     R.string.restore_stage_processing_template_device_data,
@@ -480,52 +510,105 @@ class RestoreOperationRunner(
                 if (Shell.getShell().isRoot) {
                     Shell.cmd("chmod -R a+rX ${shellQuote(tempRestoreDir.absolutePath)}").exec()
                 }
-                val contactsSourceDir = contactsBackupPath
-                    ?.let { File(tempRestoreDir, it.trimStart('/')) }
-                    ?.takeIf { File(it, ContactsBackupRepository.CONTACTS_FILE_NAME).exists() }
-                    ?: tempRestoreDir.walkTopDown().firstOrNull {
-                        it.isFile && it.name == ContactsBackupRepository.CONTACTS_FILE_NAME
-                    }?.parentFile
 
-                if (contactsSourceDir != null && File(contactsSourceDir, ContactsBackupRepository.CONTACTS_FILE_NAME).exists()) {
-                    val importResult = contactsBackupRepository.importContacts(
-                        inputDir = contactsSourceDir,
-                        shouldStop = shouldStop,
-                        onContactProcessed = { processed, total, displayName ->
-                            val stageFraction = if (total > 0) processed.toFloat() / total.toFloat() else 1f
-                            progressState = progressState.copy(
-                                stageTitle = processingStageTitle,
-                                stagePercentage = stageFraction,
-                                overallPercentage = (deviceDataStageIndex + stageFraction) / totalStages.toFloat(),
-                                isStageIndeterminate = total == 0,
-                                isOverallIndeterminate = false,
-                                currentFile = displayName ?: context.getString(R.string.device_data_contacts),
-                                filesProcessed = successes + 1,
-                                totalFiles = totalRestoreItems,
-                                isFinished = false,
-                                elapsedTime = (SystemClock.elapsedRealtime() - startTime) / 1000
-                            )
-                            onProgress(progressState)
+                val totalDeviceDataItems = deviceDataItemCount.coerceAtLeast(1)
+                var completedDeviceDataItems = 0
+
+                if (request.deviceData.contacts) {
+                    val contactsSourceDir = contactsBackupPath
+                        ?.let { File(tempRestoreDir, it.trimStart('/')) }
+                        ?.takeIf { File(it, ContactsBackupRepository.CONTACTS_FILE_NAME).exists() }
+                        ?: tempRestoreDir.walkTopDown().firstOrNull {
+                            it.isFile && it.name == ContactsBackupRepository.CONTACTS_FILE_NAME
+                        }?.parentFile
+
+                    if (contactsSourceDir != null && File(contactsSourceDir, ContactsBackupRepository.CONTACTS_FILE_NAME).exists()) {
+                        val importResult = contactsBackupRepository.importContacts(
+                            inputDir = contactsSourceDir,
+                            shouldStop = shouldStop,
+                            onContactProcessed = { processed, total, displayName ->
+                                val itemFraction = if (total > 0) processed.toFloat() / total.toFloat() else 1f
+                                val stageFraction = (completedDeviceDataItems + itemFraction) / totalDeviceDataItems.toFloat()
+                                progressState = progressState.copy(
+                                    stageTitle = processingStageTitle,
+                                    stagePercentage = stageFraction,
+                                    overallPercentage = (deviceDataStageIndex + stageFraction) / totalStages.toFloat(),
+                                    isStageIndeterminate = total == 0,
+                                    isOverallIndeterminate = false,
+                                    currentFile = displayName ?: context.getString(R.string.device_data_contacts),
+                                    filesProcessed = successes + 1,
+                                    totalFiles = totalRestoreItems,
+                                    isFinished = false,
+                                    elapsedTime = (SystemClock.elapsedRealtime() - startTime) / 1000
+                                )
+                                onProgress(progressState)
+                            }
+                        )
+                        throwIfCancelled()
+                        if (importResult.failedCount == 0 && importResult.failedGroupCount == 0 && importResult.failedPhotoCount == 0) {
+                            successes++
+                        } else {
+                            failures++
+                            if (importResult.failedCount > 0) {
+                                failureDetails.add(context.getString(R.string.restore_failure_contacts, importResult.failedCount))
+                            }
+                            if (importResult.failedGroupCount > 0) {
+                                failureDetails.add(context.getString(R.string.restore_failure_contact_groups, importResult.failedGroupCount))
+                            }
+                            if (importResult.failedPhotoCount > 0) {
+                                failureDetails.add(context.getString(R.string.restore_failure_contact_photos, importResult.failedPhotoCount))
+                            }
                         }
-                    )
-                    throwIfCancelled()
-                    if (importResult.failedCount == 0 && importResult.failedGroupCount == 0 && importResult.failedPhotoCount == 0) {
-                        successes++
                     } else {
                         failures++
-                        if (importResult.failedCount > 0) {
-                            failureDetails.add(context.getString(R.string.restore_failure_contacts, importResult.failedCount))
-                        }
-                        if (importResult.failedGroupCount > 0) {
-                            failureDetails.add(context.getString(R.string.restore_failure_contact_groups, importResult.failedGroupCount))
-                        }
-                        if (importResult.failedPhotoCount > 0) {
-                            failureDetails.add(context.getString(R.string.restore_failure_contact_photos, importResult.failedPhotoCount))
-                        }
+                        failureDetails.add(context.getString(R.string.restore_failure_contacts_missing))
                     }
-                } else {
-                    failures++
-                    failureDetails.add(context.getString(R.string.restore_failure_contacts_missing))
+                    completedDeviceDataItems++
+                }
+
+                if (request.deviceData.callLogs) {
+                    throwIfCancelled()
+                    val callLogsSourceDir = callLogsBackupPath
+                        ?.let { File(tempRestoreDir, it.trimStart('/')) }
+                        ?.takeIf { File(it, CallLogsBackupRepository.CALL_LOGS_FILE_NAME).exists() }
+                        ?: tempRestoreDir.walkTopDown().firstOrNull {
+                            it.isFile && it.name == CallLogsBackupRepository.CALL_LOGS_FILE_NAME
+                        }?.parentFile
+
+                    if (callLogsSourceDir != null && File(callLogsSourceDir, CallLogsBackupRepository.CALL_LOGS_FILE_NAME).exists()) {
+                        val importResult = callLogsBackupRepository.importCallLogs(
+                            inputDir = callLogsSourceDir,
+                            shouldStop = shouldStop,
+                            onCallLogProcessed = { processed, total, label ->
+                                val itemFraction = if (total > 0) processed.toFloat() / total.toFloat() else 1f
+                                val stageFraction = (completedDeviceDataItems + itemFraction) / totalDeviceDataItems.toFloat()
+                                progressState = progressState.copy(
+                                    stageTitle = processingStageTitle,
+                                    stagePercentage = stageFraction,
+                                    overallPercentage = (deviceDataStageIndex + stageFraction) / totalStages.toFloat(),
+                                    isStageIndeterminate = total == 0,
+                                    isOverallIndeterminate = false,
+                                    currentFile = label ?: context.getString(R.string.device_data_call_logs),
+                                    filesProcessed = successes + 1,
+                                    totalFiles = totalRestoreItems,
+                                    isFinished = false,
+                                    elapsedTime = (SystemClock.elapsedRealtime() - startTime) / 1000
+                                )
+                                onProgress(progressState)
+                            }
+                        )
+                        throwIfCancelled()
+                        if (importResult.failedCount == 0) {
+                            successes++
+                        } else {
+                            failures++
+                            failureDetails.add(context.getString(R.string.restore_failure_call_logs, importResult.failedCount))
+                        }
+                    } else {
+                        failures++
+                        failureDetails.add(context.getString(R.string.restore_failure_call_logs_missing))
+                    }
+                    completedDeviceDataItems++
                 }
             }
 
@@ -606,22 +689,15 @@ class RestoreOperationRunner(
         return finalResult
     }
 
-    private suspend fun resolveContactsPathFromSnapshot(
-        repoPath: String,
-        password: String,
-        snapshotId: String,
-        repositoryKey: String
+    private fun resolveDeviceDataPathFromSnapshot(
+        snapshotPaths: List<String>?,
+        relativeStagingPath: String,
+        fileName: String
     ): String? {
-        val paths = resticRepository.ls(
-            repoPath = repoPath,
-            password = password,
-            snapshotId = snapshotId,
-            environmentVariables = repositoriesRepository.getExecutionEnvironmentVariables(repositoryKey),
-            resticOptions = repositoriesRepository.getExecutionResticOptions(repositoryKey)
-        ).getOrNull() ?: return null
-        val contactsJsonSuffix = "/${ContactsBackupRepository.CONTACTS_RELATIVE_STAGING_PATH}/${ContactsBackupRepository.CONTACTS_FILE_NAME}"
-        val contactsJsonPath = paths.find { it.endsWith(contactsJsonSuffix) } ?: return null
-        return contactsJsonPath.removeSuffix("/${ContactsBackupRepository.CONTACTS_FILE_NAME}")
+        val paths = snapshotPaths ?: return null
+        val jsonSuffix = "/$relativeStagingPath/$fileName"
+        val jsonPath = paths.find { it.endsWith(jsonSuffix) } ?: return null
+        return jsonPath.removeSuffix("/$fileName")
     }
 
     private suspend fun findSnapshot(request: RestoreWorkRequest): SnapshotInfo? {
