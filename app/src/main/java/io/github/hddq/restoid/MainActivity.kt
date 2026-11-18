@@ -320,9 +320,14 @@ class MainActivity : FragmentActivity() {
                     }
 
                     val navController = rememberNavController()
-                    val topLevelRoutes = remember {
-                        setOf(Screen.Home.route, SchedulesRoutes.Main, Screen.Settings.route)
+                    val topLevelTabOrder = remember {
+                        mapOf(
+                            Screen.Home.route to 0,
+                            SchedulesRoutes.Main to 1,
+                            Screen.Settings.route to 2
+                        )
                     }
+                    val topLevelRoutes = topLevelTabOrder.keys
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
                     val currentRoute = navBackStackEntry?.destination?.route
                     val currentTopLevelScreen = when (currentRoute) {
@@ -369,7 +374,10 @@ class MainActivity : FragmentActivity() {
                     val predictiveEasing = remember { CubicBezierEasing(0.4f, 0.0f, 0.2f, 1.0f) }
                     val fadeOutEasing = remember { CubicBezierEasing(0.4f, 0.0f, 1.0f, 1.0f) }
                     val motionScheme = MaterialTheme.motionScheme
+                    val tabSlideEnterSpec = motionScheme.defaultSpatialSpec<IntOffset>()
+                    val tabSlideExitSpec = motionScheme.fastSpatialSpec<IntOffset>()
                     val tabEnterScaleSpec = motionScheme.defaultSpatialSpec<Float>()
+                    val tabEnterEffectsSpec = motionScheme.defaultEffectsSpec<Float>()
                     val bottomBarEnterSpatialSpec = motionScheme.defaultSpatialSpec<IntOffset>()
                     val bottomBarExitSpatialSpec = motionScheme.fastSpatialSpec<IntOffset>()
                     val bottomBarEnterEffectsSpec = motionScheme.defaultEffectsSpec<Float>()
@@ -389,19 +397,22 @@ class MainActivity : FragmentActivity() {
                             startDestination = Screen.Home.route,
                             modifier = Modifier.fillMaxSize(),
                             enterTransition = {
-                                val isTabSwitch = initialState.destination.route in topLevelRoutes &&
-                                    targetState.destination.route in topLevelRoutes
-                                if (isTabSwitch) {
-                                    fadeIn(
-                                        animationSpec = tween(
-                                            durationMillis = 210,
-                                            delayMillis = 70,
-                                            easing = standardEasing
-                                        )
+                                val fromIndex = topLevelTabOrder[initialState.destination.route]
+                                val toIndex = topLevelTabOrder[targetState.destination.route]
+                                if (fromIndex != null && toIndex != null) {
+                                    val slideDirection = if (toIndex > fromIndex) {
+                                        AnimatedContentTransitionScope.SlideDirection.Start
+                                    } else {
+                                        AnimatedContentTransitionScope.SlideDirection.End
+                                    }
+                                    slideIntoContainer(
+                                        towards = slideDirection,
+                                        animationSpec = tabSlideEnterSpec,
+                                        initialOffset = { it / 12 }
                                     ) + scaleIn(
-                                        initialScale = 0.94f,
+                                        initialScale = 0.97f,
                                         animationSpec = tabEnterScaleSpec
-                                    )
+                                    ) + fadeIn(animationSpec = tabEnterEffectsSpec)
                                 } else {
                                     slideIntoContainer(
                                         towards = AnimatedContentTransitionScope.SlideDirection.Start,
@@ -414,14 +425,21 @@ class MainActivity : FragmentActivity() {
                                 }
                             },
                             exitTransition = {
-                                val isTabSwitch = initialState.destination.route in topLevelRoutes &&
-                                    targetState.destination.route in topLevelRoutes
-                                if (isTabSwitch) {
-                                    fadeOut(animationSpec = tween(durationMillis = 90, easing = fadeOutEasing)) +
-                                        scaleOut(
-                                            targetScale = 0.96f,
-                                            animationSpec = tween(durationMillis = 90, easing = fadeOutEasing)
-                                        )
+                                val fromIndex = topLevelTabOrder[initialState.destination.route]
+                                val toIndex = topLevelTabOrder[targetState.destination.route]
+                                if (fromIndex != null && toIndex != null) {
+                                    val slideDirection = if (toIndex > fromIndex) {
+                                        AnimatedContentTransitionScope.SlideDirection.Start
+                                    } else {
+                                        AnimatedContentTransitionScope.SlideDirection.End
+                                    }
+                                    slideOutOfContainer(
+                                        towards = slideDirection,
+                                        animationSpec = tabSlideExitSpec,
+                                        targetOffset = { it / 16 }
+                                    ) + fadeOut(
+                                        animationSpec = tween(durationMillis = 100, easing = fadeOutEasing)
+                                    )
                                 } else {
                                     slideOutOfContainer(
                                         towards = AnimatedContentTransitionScope.SlideDirection.Start,
@@ -434,19 +452,22 @@ class MainActivity : FragmentActivity() {
                                 }
                             },
                             popEnterTransition = {
-                                val isTabSwitch = initialState.destination.route in topLevelRoutes &&
-                                    targetState.destination.route in topLevelRoutes
-                                if (isTabSwitch) {
-                                    fadeIn(
-                                        animationSpec = tween(
-                                            durationMillis = 210,
-                                            delayMillis = 70,
-                                            easing = standardEasing
-                                        )
+                                val fromIndex = topLevelTabOrder[initialState.destination.route]
+                                val toIndex = topLevelTabOrder[targetState.destination.route]
+                                if (fromIndex != null && toIndex != null) {
+                                    val slideDirection = if (toIndex > fromIndex) {
+                                        AnimatedContentTransitionScope.SlideDirection.Start
+                                    } else {
+                                        AnimatedContentTransitionScope.SlideDirection.End
+                                    }
+                                    slideIntoContainer(
+                                        towards = slideDirection,
+                                        animationSpec = tabSlideEnterSpec,
+                                        initialOffset = { it / 12 }
                                     ) + scaleIn(
-                                        initialScale = 0.94f,
+                                        initialScale = 0.97f,
                                         animationSpec = tabEnterScaleSpec
-                                    )
+                                    ) + fadeIn(animationSpec = tabEnterEffectsSpec)
                                 } else {
                                     slideIntoContainer(
                                         towards = AnimatedContentTransitionScope.SlideDirection.End,
@@ -462,14 +483,21 @@ class MainActivity : FragmentActivity() {
                                 }
                             },
                             popExitTransition = {
-                                val isTabSwitch = initialState.destination.route in topLevelRoutes &&
-                                    targetState.destination.route in topLevelRoutes
-                                if (isTabSwitch) {
-                                    fadeOut(animationSpec = tween(durationMillis = 90, easing = fadeOutEasing)) +
-                                        scaleOut(
-                                            targetScale = 0.96f,
-                                            animationSpec = tween(durationMillis = 90, easing = fadeOutEasing)
-                                        )
+                                val fromIndex = topLevelTabOrder[initialState.destination.route]
+                                val toIndex = topLevelTabOrder[targetState.destination.route]
+                                if (fromIndex != null && toIndex != null) {
+                                    val slideDirection = if (toIndex > fromIndex) {
+                                        AnimatedContentTransitionScope.SlideDirection.Start
+                                    } else {
+                                        AnimatedContentTransitionScope.SlideDirection.End
+                                    }
+                                    slideOutOfContainer(
+                                        towards = slideDirection,
+                                        animationSpec = tabSlideExitSpec,
+                                        targetOffset = { it / 16 }
+                                    ) + fadeOut(
+                                        animationSpec = tween(durationMillis = 100, easing = fadeOutEasing)
+                                    )
                                 } else {
                                     scaleOut(
                                         targetScale = 0.92f,
