@@ -600,8 +600,15 @@ class MainActivity : FragmentActivity() {
                                                 ) {
                                                     SchedulesScreen(
                                                         viewModel = vm,
-                                                        onNavigateToAddEditSchedule = {
+                                                        onAddSchedule = {
                                                             navigateFromTab(Screen.Schedules) {
+                                                                vm.startAddSchedule()
+                                                                navController.navigate(SchedulesRoutes.AddEdit)
+                                                            }
+                                                        },
+                                                        onEditSchedule = { schedule ->
+                                                            navigateFromTab(Screen.Schedules) {
+                                                                vm.startEditSchedule(schedule)
                                                                 navController.navigate(SchedulesRoutes.AddEdit)
                                                             }
                                                         }
