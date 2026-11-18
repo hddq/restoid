@@ -32,7 +32,7 @@ Whether you want to back up photos to a home NAS, store encrypted snapshots in t
 
 * ⚡ **Blazing Fast & Deduplicated**: Content-defined deduplication uploads only unique changed blocks, making subsequent backups blazingly fast and drastically more efficient than traditional `tar.gz` archives.
 * 🔒 **Zero-Knowledge Encryption**: All snapshots are encrypted with `restic` using state-of-the-art cryptography. Your encryption keys remain under your control.
-* ☁️ **Flexible Storage Backends**: Store backups on local storage (internal memory, SD card, USB OTG) or over the network (SFTP/SSH, REST server, and Amazon S3-compatible object storage like Garage, MinIO, Wasabi, Cloudflare R2, or Backblaze B2).
+* ☁️ **Flexible Storage Backends**: Store backups on local storage (internal memory, SD card, USB OTG), natively over the network (SFTP/SSH, REST server, and Amazon S3-compatible object storage like Garage, MinIO, Wasabi, Cloudflare R2, or Backblaze B2), or across dozens of cloud providers and protocols (such as Google Drive, OneDrive, Dropbox, WebDAV, Nextcloud, pCloud, and more) via built-in [`rclone`](https://rclone.org/) support using your `rclone.conf`.
 * 📱 **Full App & Data Backup (Root Required)**: Selectively back up installed user applications with granular control: APKs, app user data, device-protected data, and external/OBB storage.
 * 📁 **Custom Files & Media**: Back up personal folders and files (DCIM, Documents, Downloads, or any directory) without requiring root.
 * ⏰ **Automated Schedules**: Set up recurring backups with customizable intervals and smart trigger constraints (charging only, unmetered Wi-Fi).
