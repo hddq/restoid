@@ -58,14 +58,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.hddq.restoid.R
@@ -616,50 +619,11 @@ private fun SnapshotItem(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = snapshot.id.take(8),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Monospace
-                )
-                snapshot.hostname?.takeIf { it.isNotBlank() }?.let { hostname ->
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Surface(
-                        modifier = Modifier.widthIn(max = 120.dp),
-                        shape = RoundedCornerShape(6.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerHighest
-                    ) {
-                        Text(
-                            text = hostname,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = timeText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.End,
-                    modifier = Modifier.weight(1f)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Icon(
-                    imageVector = Icons.Outlined.ChevronRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
+            SnapshotHeader(
+                snapshotId = snapshot.id,
+                hostname = snapshot.hostname,
+                timeText = timeText
+            )
 
             val appCount = snapshotWithMetadata.metadata?.apps?.size ?: 0
             val customDirCount = snapshotWithMetadata.metadata?.customDirectories?.size ?: 0
@@ -799,3 +763,187 @@ private fun SnapshotItem(
         }
     }
 }
+
+internal const val SNAPSHOT_HEADER_ID_ROW_TAG = "snapshot_header_id_row"
+internal const val SNAPSHOT_HEADER_CHEVRON_TAG = "snapshot_header_chevron"
+
+internal data class SnapshotHeaderPlacement(
+    val placeOnSingleLine: Boolean,
+    val layoutWidth: Int,
+    val layoutHeight: Int,
+    val idRowX: Int,
+    val idRowY: Int,
+    val timeX: Int,
+    val timeY: Int,
+    val chevronX: Int,
+    val chevronY: Int
+)
+
+internal fun computeSnapshotHeaderPlacement(
+    maxWidth: Int,
+    minHeight: Int,
+    hasBoundedWidth: Boolean,
+    idRowWidth: Int,
+    idRowHeight: Int,
+    singleLineTimeWidth: Int,
+    timeWidth: Int,
+    timeHeight: Int,
+    chevronWidth: Int,
+    chevronHeight: Int,
+    minHorizontalGapPx: Int,
+    chevronGapPx: Int,
+    lineGapPx: Int
+): SnapshotHeaderPlacement {
+    val contentMaxWidth = if (hasBoundedWidth) {
+        (maxWidth - chevronWidth - chevronGapPx).coerceAtLeast(0)
+    } else {
+        Int.MAX_VALUE
+    }
+    val placeOnSingleLine = !hasBoundedWidth || (
+        idRowWidth.toLong() + minHorizontalGapPx + singleLineTimeWidth <= contentMaxWidth &&
+            idRowWidth.toLong() + minHorizontalGapPx + timeWidth <= contentMaxWidth
+        )
+    val layoutWidth = if (hasBoundedWidth) {
+        maxWidth
+    } else {
+        idRowWidth + minHorizontalGapPx + timeWidth + chevronGapPx + chevronWidth
+    }
+    val resolvedContentMaxWidth = (layoutWidth - chevronWidth - chevronGapPx).coerceAtLeast(0)
+
+    return if (placeOnSingleLine) {
+        val layoutHeight = maxOf(minHeight, idRowHeight, timeHeight, chevronHeight)
+        SnapshotHeaderPlacement(
+            placeOnSingleLine = true,
+            layoutWidth = layoutWidth,
+            layoutHeight = layoutHeight,
+            idRowX = 0,
+            idRowY = (layoutHeight - idRowHeight) / 2,
+            timeX = (resolvedContentMaxWidth - timeWidth)
+                .coerceAtLeast(idRowWidth + minHorizontalGapPx),
+            timeY = (layoutHeight - timeHeight) / 2,
+            chevronX = (layoutWidth - chevronWidth).coerceAtLeast(0),
+            chevronY = (layoutHeight - chevronHeight) / 2
+        )
+    } else {
+        val contentHeight = idRowHeight + lineGapPx + timeHeight
+        val layoutHeight = maxOf(minHeight, contentHeight, chevronHeight)
+        val contentTop = (layoutHeight - contentHeight) / 2
+        SnapshotHeaderPlacement(
+            placeOnSingleLine = false,
+            layoutWidth = layoutWidth,
+            layoutHeight = layoutHeight,
+            idRowX = 0,
+            idRowY = contentTop,
+            timeX = 0,
+            timeY = contentTop + idRowHeight + lineGapPx,
+            chevronX = (layoutWidth - chevronWidth).coerceAtLeast(0),
+            chevronY = (layoutHeight - chevronHeight) / 2
+        )
+    }
+}
+
+@Composable
+internal fun SnapshotHeader(
+    snapshotId: String,
+    hostname: String?,
+    timeText: String,
+    modifier: Modifier = Modifier
+) {
+    val density = LocalDensity.current
+    val minHorizontalGapPx = with(density) { 8.dp.roundToPx() }
+    val chevronGapPx = with(density) { 4.dp.roundToPx() }
+    val lineGapPx = with(density) { 2.dp.roundToPx() }
+
+    Layout(
+        modifier = modifier.fillMaxWidth(),
+        content = {
+            Row(
+                modifier = Modifier.testTag(SNAPSHOT_HEADER_ID_ROW_TAG),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = snapshotId.take(8),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Monospace,
+                    maxLines = 1,
+                    softWrap = false
+                )
+                hostname?.takeIf { it.isNotBlank() }?.let { host ->
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .widthIn(max = 120.dp),
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHighest
+                    ) {
+                        Text(
+                            text = host,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+            Text(
+                text = timeText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Icon(
+                imageVector = Icons.Outlined.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .size(18.dp)
+                    .testTag(SNAPSHOT_HEADER_CHEVRON_TAG)
+            )
+        }
+    ) { measurables, constraints ->
+        val idRowMeasurable = measurables[0]
+        val timeMeasurable = measurables[1]
+        val chevronMeasurable = measurables[2]
+
+        val looseConstraints = constraints.copy(minWidth = 0, minHeight = 0)
+        val chevronPlaceable = chevronMeasurable.measure(looseConstraints)
+        val contentMaxWidth = if (constraints.hasBoundedWidth) {
+            (constraints.maxWidth - chevronPlaceable.width - chevronGapPx).coerceAtLeast(0)
+        } else {
+            Constraints.Infinity
+        }
+        val contentConstraints = looseConstraints.copy(maxWidth = contentMaxWidth)
+
+        val idRowPlaceable = idRowMeasurable.measure(contentConstraints)
+        val singleLineTimeWidth = timeMeasurable.maxIntrinsicWidth(Constraints.Infinity)
+        val timePlaceable = timeMeasurable.measure(contentConstraints)
+
+        val placement = computeSnapshotHeaderPlacement(
+            maxWidth = constraints.maxWidth,
+            minHeight = constraints.minHeight,
+            hasBoundedWidth = constraints.hasBoundedWidth,
+            idRowWidth = idRowPlaceable.width,
+            idRowHeight = idRowPlaceable.height,
+            singleLineTimeWidth = singleLineTimeWidth,
+            timeWidth = timePlaceable.width,
+            timeHeight = timePlaceable.height,
+            chevronWidth = chevronPlaceable.width,
+            chevronHeight = chevronPlaceable.height,
+            minHorizontalGapPx = minHorizontalGapPx,
+            chevronGapPx = chevronGapPx,
+            lineGapPx = lineGapPx
+        )
+
+        layout(placement.layoutWidth, placement.layoutHeight) {
+            idRowPlaceable.placeRelative(x = placement.idRowX, y = placement.idRowY)
+            timePlaceable.placeRelative(x = placement.timeX, y = placement.timeY)
+            chevronPlaceable.placeRelative(x = placement.chevronX, y = placement.chevronY)
+        }
+    }
+}
+
+
