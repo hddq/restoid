@@ -31,16 +31,18 @@ data class RestoreTypeSelection(
 @Serializable
 data class DeviceDataBackupSelection(
     val contacts: Boolean = false,
-    val includeReadOnlyContacts: Boolean = false
+    val includeReadOnlyContacts: Boolean = false,
+    val callLogs: Boolean = false
 ) {
-    fun anyEnabled(): Boolean = contacts
+    fun anyEnabled(): Boolean = contacts || callLogs
 }
 
 @Serializable
 data class DeviceDataRestoreSelection(
-    val contacts: Boolean = false
+    val contacts: Boolean = false,
+    val callLogs: Boolean = false
 ) {
-    fun anyEnabled(): Boolean = contacts
+    fun anyEnabled(): Boolean = contacts || callLogs
 }
 
 @Serializable

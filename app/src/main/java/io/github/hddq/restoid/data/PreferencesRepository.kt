@@ -146,6 +146,14 @@ class PreferencesRepository(private val context: Context) {
         return prefs.getBoolean("runtasks_device_data_include_readonly_contacts", false)
     }
 
+    fun saveDeviceDataCallLogsEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("runtasks_device_data_call_logs_enabled", enabled).apply()
+    }
+
+    fun loadDeviceDataCallLogsEnabled(): Boolean {
+        return prefs.getBoolean("runtasks_device_data_call_logs_enabled", false)
+    }
+
     fun saveCustomDirectories(allUris: Set<String>, selectedUris: Set<String>) {
         with(prefs.edit()) {
             putStringSet("runtasks_custom_directories_all", allUris)

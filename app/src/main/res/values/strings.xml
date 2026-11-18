@@ -84,12 +84,21 @@
     <string name="device_data_include_read_only_contacts">Include read-only contacts</string>
     <string name="device_data_contacts_permission_required">Contacts permission required</string>
     <string name="device_data_contacts_not_in_snapshot">Not included in this snapshot</string>
+    <string name="device_data_call_logs">Call Logs</string>
+    <string name="device_data_call_logs_permission_required">Call logs permission required</string>
+    <string name="device_data_permissions_required">Permissions required</string>
+    <string name="device_data_not_in_snapshot">Not included in this snapshot</string>
     <string name="device_data_none_selected">No items selected</string>
     <plurals name="device_data_contacts_count">
         <item quantity="one">%1$d contact</item>
         <item quantity="other">%1$d contacts</item>
     </plurals>
     <string name="device_data_contacts_count_size">%1$s - Size: %2$s</string>
+    <plurals name="device_data_call_logs_count">
+        <item quantity="one">%1$d call log</item>
+        <item quantity="other">%1$d call logs</item>
+    </plurals>
+    <string name="device_data_call_logs_count_size">%1$s - Size: %2$s</string>
     <string name="action_add_directory">Add File or Folder</string>
     <string name="action_add_excluded_directory">Exclude File or Folder</string>
     <string name="folder_browser_select_this_folder">Select this path</string>
@@ -131,6 +140,10 @@
     <string name="error_contacts_read_permission_required">Contacts permission is required to back up contacts.</string>
     <string name="summary_contacts_read_permission_required">Grant Contacts permission, then try again.</string>
     <string name="error_contacts_write_permission_required">Contacts permission is required to restore contacts.</string>
+    <string name="error_call_logs_read_permission_required">Call logs permission is required to back up call logs.</string>
+    <string name="summary_call_logs_read_permission_required">Grant Call logs permission, then try again.</string>
+    <string name="error_call_logs_read_permission_restore_required">READ_CALL_LOG permission is required to restore call logs.</string>
+    <string name="error_call_logs_write_permission_required">Call logs permission is required to restore call logs.</string>
     <string name="run_tasks_backup_subtitle">%1$d apps selected - %2$s</string>
     <string name="run_tasks_forget_snapshots">Forget Snapshots</string>
     <string name="run_tasks_forget_subtitle">Keep last %1$d, daily %2$d, weekly %3$d, monthly %4$d</string>
@@ -517,6 +530,8 @@
     <string name="restore_failure_contact_groups">Failed to restore %1$d contact groups.</string>
     <string name="restore_failure_contact_photos">Failed to restore %1$d contact photos.</string>
     <string name="restore_failure_contacts_missing">Contacts backup data not found in snapshot.</string>
+    <string name="restore_failure_call_logs">Failed to restore %1$d call logs.</string>
+    <string name="restore_failure_call_logs_missing">Call logs backup data not found in snapshot.</string>
     <string name="restore_summary_finished_in">Restore finished in %1$s. </string>
     <plurals name="restore_summary_processed_items">
         <item quantity="one">Successfully processed %1$d item.</item>

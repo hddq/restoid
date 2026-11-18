@@ -47,7 +47,7 @@ import io.github.hddq.restoid.ui.shared.buildCheckSubtitle
 import io.github.hddq.restoid.ui.shared.buildCustomDirectoriesSubtitle
 import io.github.hddq.restoid.ui.shared.buildDeviceDataSubtitle
 import io.github.hddq.restoid.ui.shared.buildForgetSubtitle
-import io.github.hddq.restoid.ui.shared.rememberPermissionsState
+import io.github.hddq.restoid.ui.shared.rememberPermissionsMap
 
 @Composable
 fun RunTasksScreen(
@@ -67,9 +67,12 @@ fun RunTasksScreen(
     val appBarActions = LocalAppBarActions.current
     var showGuideSheet by remember { mutableStateOf(false) }
 
-    val (hasReadContactsPermission, requestReadContactsPermission) = rememberPermissionsState(
-        Manifest.permission.READ_CONTACTS
+    val (deviceDataPermissions, requestDeviceDataPermissions) = rememberPermissionsMap(
+        Manifest.permission.READ_CONTACTS,
+        Manifest.permission.READ_CALL_LOG
     )
+    val hasReadContactsPermission = deviceDataPermissions[Manifest.permission.READ_CONTACTS] == true
+    val hasReadCallLogPermission = deviceDataPermissions[Manifest.permission.READ_CALL_LOG] == true
 
     DisposableEffect(Unit) {
         appBarActions.value = {
@@ -138,16 +141,28 @@ fun RunTasksScreen(
                             title = stringResource(R.string.run_tasks_device_data),
                             subtitle = buildDeviceDataSubtitle(
                                 contactsEnabled = uiState.contactsBackupEnabled,
+                                callLogsEnabled = uiState.callLogsBackupEnabled,
                                 deviceDataBackupEnabled = uiState.deviceDataBackupEnabled,
                                 hasReadContactsPermission = hasReadContactsPermission,
+                                hasReadCallLogPermission = hasReadCallLogPermission,
                                 context = context
                             ),
                             icon = Icons.Outlined.Smartphone,
                             checked = uiState.deviceDataBackupEnabled,
                             onCheckedChange = { enabled ->
                                 viewModel.setDeviceDataBackupEnabled(enabled)
-                                if (enabled && uiState.contactsBackupEnabled && !hasReadContactsPermission) {
-                                    requestReadContactsPermission()
+                                if (enabled) {
+                                    val missing = buildList {
+                                        if (uiState.contactsBackupEnabled && !hasReadContactsPermission) {
+                                            add(Manifest.permission.READ_CONTACTS)
+                                        }
+                                        if (uiState.callLogsBackupEnabled && !hasReadCallLogPermission) {
+                                            add(Manifest.permission.READ_CALL_LOG)
+                                        }
+                                    }
+                                    if (missing.isNotEmpty()) {
+                                        requestDeviceDataPermissions(missing.toTypedArray())
+                                    }
                                 }
                             },
                             onNavigate = onNavigateToDeviceDataConfig
@@ -302,8 +317,10 @@ fun DeviceDataConfigScreen(
     io.github.hddq.restoid.ui.shared.DeviceDataConfigScreen(
         contactsEnabled = uiState.contactsBackupEnabled,
         includeReadOnlyContacts = uiState.includeReadOnlyContacts,
+        callLogsEnabled = uiState.callLogsBackupEnabled,
         onContactsEnabledChange = viewModel::setContactsBackupEnabled,
         onIncludeReadOnlyContactsChange = viewModel::setIncludeReadOnlyContacts,
+        onCallLogsEnabledChange = viewModel::setCallLogsBackupEnabled,
         modifier = modifier
     )
 }

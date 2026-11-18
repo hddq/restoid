@@ -7,6 +7,7 @@ import com.topjohnwu.superuser.CallbackList
 import com.topjohnwu.superuser.Shell
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.AppInfoRepository
+import io.github.hddq.restoid.data.CallLogsBackupRepository
 import io.github.hddq.restoid.data.ContactsBackupRepository
 import io.github.hddq.restoid.data.OperationLockManager
 import io.github.hddq.restoid.data.PreferencesRepository
@@ -17,6 +18,7 @@ import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.data.SpecialPermissionsManager
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.AppMetadata
+import io.github.hddq.restoid.model.CallLogsBackupMetadata
 import io.github.hddq.restoid.model.ContactsBackupMetadata
 import io.github.hddq.restoid.model.RestoidMetadata
 import io.github.hddq.restoid.model.CustomDirectoryMetadata
@@ -41,7 +43,8 @@ class BackupOperationRunner(
     private val appInfoRepository: AppInfoRepository,
     private val operationLockManager: OperationLockManager,
     private val preferencesRepository: PreferencesRepository = PreferencesRepository(context),
-    private val contactsBackupRepository: ContactsBackupRepository = ContactsBackupRepository(context)
+    private val contactsBackupRepository: ContactsBackupRepository = ContactsBackupRepository(context),
+    private val callLogsBackupRepository: CallLogsBackupRepository = CallLogsBackupRepository(context)
 ) {
 
     suspend fun run(
@@ -70,6 +73,7 @@ class BackupOperationRunner(
         var restoidMetadataFile: File? = null
         var stagingRoot: File? = null
         var contactsStagingDir: File? = null
+        var callLogsStagingDir: File? = null
         var isSuccess = false
         var summary = ""
         var finalSummaryProgress: OperationProgress? = null
@@ -136,6 +140,9 @@ class BackupOperationRunner(
             if (request.deviceData.contacts) {
                 contactsStagingDir = File(context.cacheDir, ContactsBackupRepository.CONTACTS_RELATIVE_STAGING_PATH)
             }
+            if (request.deviceData.callLogs) {
+                callLogsStagingDir = File(context.cacheDir, CallLogsBackupRepository.CALL_LOGS_RELATIVE_STAGING_PATH)
+            }
             val (pathsToBackup, excludePatterns, metadata) = prepareBackupData(
                 selectedApps,
                 request.backupTypes,
@@ -150,10 +157,11 @@ class BackupOperationRunner(
             restoidMetadataFile.writeText(json.encodeToString(metadata))
             pathsToBackup.add(0, restoidMetadataFile.absolutePath)
 
+            val hasDeviceDataBackup = metadata.deviceData?.let { it.contacts != null || it.callLogs != null } ?: false
             if (pathsToBackup.size <= 1 &&
                 metadata.apps.values.none { it.types.any { type -> type in AppMetadata.METADATA_ONLY_BACKUP_TYPES } } &&
                 metadata.customDirectories.isEmpty() &&
-                metadata.deviceData?.contacts == null
+                !hasDeviceDataBackup
             ) {
                 throw IllegalStateException(context.getString(R.string.backup_error_no_files_selected_for_items))
             }
@@ -384,6 +392,7 @@ class BackupOperationRunner(
                 Shell.cmd("rm -rf ${shellQuote(root.absolutePath)}").exec()
             }
             contactsStagingDir?.deleteRecursively()
+            callLogsStagingDir?.deleteRecursively()
         }
 
         val finalProgress = progressState.copy(
@@ -522,7 +531,7 @@ class BackupOperationRunner(
             val shellPath = io.github.hddq.restoid.util.StorageUtils.resolvePathForShell(realPath)
             excludePatterns.add(escapeResticPattern(shellPath))
         }
-        val deviceDataMetadata = if (deviceData.contacts) {
+        val contactsMetadata = if (deviceData.contacts) {
             throwIfCancelled()
             val contactsDir = File(context.cacheDir, ContactsBackupRepository.CONTACTS_RELATIVE_STAGING_PATH)
             val exported = contactsBackupRepository.exportContacts(
@@ -531,12 +540,34 @@ class BackupOperationRunner(
                 shouldStop = shouldStop
             )
             pathsToBackup.add(exported.outputDir.absolutePath)
+            ContactsBackupMetadata(
+                count = exported.contactCount,
+                size = exported.totalSizeBytes,
+                path = exported.outputDir.absolutePath
+            )
+        } else {
+            null
+        }
+        val callLogsMetadata = if (deviceData.callLogs) {
+            throwIfCancelled()
+            val callLogsDir = File(context.cacheDir, CallLogsBackupRepository.CALL_LOGS_RELATIVE_STAGING_PATH)
+            val exported = callLogsBackupRepository.exportCallLogs(
+                outputDir = callLogsDir,
+                shouldStop = shouldStop
+            )
+            pathsToBackup.add(exported.outputDir.absolutePath)
+            CallLogsBackupMetadata(
+                count = exported.callLogCount,
+                size = exported.totalSizeBytes,
+                path = exported.outputDir.absolutePath
+            )
+        } else {
+            null
+        }
+        val deviceDataMetadata = if (contactsMetadata != null || callLogsMetadata != null) {
             DeviceDataMetadata(
-                contacts = ContactsBackupMetadata(
-                    count = exported.contactCount,
-                    size = exported.totalSizeBytes,
-                    path = exported.outputDir.absolutePath
-                )
+                contacts = contactsMetadata,
+                callLogs = callLogsMetadata
             )
         } else {
             null
@@ -574,6 +605,14 @@ class BackupOperationRunner(
                 isFinished = true,
                 error = context.getString(R.string.error_contacts_read_permission_required),
                 finalSummary = context.getString(R.string.summary_contacts_read_permission_required)
+            )
+        }
+
+        if (request.deviceData.callLogs && !callLogsBackupRepository.hasReadCallLogPermission()) {
+            return OperationProgress(
+                isFinished = true,
+                error = context.getString(R.string.error_call_logs_read_permission_required),
+                finalSummary = context.getString(R.string.summary_call_logs_read_permission_required)
             )
         }
 

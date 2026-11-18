@@ -51,6 +51,7 @@ data class RunTasksUiState(
     val deviceDataBackupEnabled: Boolean = false,
     val contactsBackupEnabled: Boolean = true,
     val includeReadOnlyContacts: Boolean = false,
+    val callLogsBackupEnabled: Boolean = false,
     val customDirectories: List<CustomDirectory> = emptyList(),
     val excludedCustomDirectories: List<CustomDirectory> = emptyList(),
     val exclusionConflicts: List<ExclusionConflict> = emptyList(),
@@ -86,6 +87,7 @@ class RunTasksViewModel(
             deviceDataBackupEnabled = preferencesRepository.loadDeviceDataBackupEnabled(),
             contactsBackupEnabled = preferencesRepository.loadDeviceDataContactsEnabled(),
             includeReadOnlyContacts = preferencesRepository.loadIncludeReadOnlyContacts(),
+            callLogsBackupEnabled = preferencesRepository.loadDeviceDataCallLogsEnabled(),
             customDirectories = preferencesRepository.loadCustomDirectoriesAll().map { uri ->
                 CustomDirectory(
                     uri = uri,
@@ -236,6 +238,7 @@ class RunTasksViewModel(
         preferencesRepository.saveDeviceDataBackupEnabled(_uiState.value.deviceDataBackupEnabled)
         preferencesRepository.saveDeviceDataContactsEnabled(_uiState.value.contactsBackupEnabled)
         preferencesRepository.saveIncludeReadOnlyContacts(_uiState.value.includeReadOnlyContacts)
+        preferencesRepository.saveDeviceDataCallLogsEnabled(_uiState.value.callLogsBackupEnabled)
         val allCustomDirs = _uiState.value.customDirectories.map { it.uri }.toSet()
         val selectedCustomDirs = _uiState.value.customDirectories.filter { it.isSelected }.map { it.uri }.toSet()
         preferencesRepository.saveCustomDirectories(allCustomDirs, selectedCustomDirs)
@@ -265,7 +268,9 @@ class RunTasksViewModel(
 
         val maintenance = _uiState.value.maintenance
         val hasCustomDirs = _uiState.value.customDirectoriesBackupEnabled && selectedCustomDirs.isNotEmpty()
-        val hasDeviceData = _uiState.value.deviceDataBackupEnabled && _uiState.value.contactsBackupEnabled
+        val hasContactsBackup = _uiState.value.deviceDataBackupEnabled && _uiState.value.contactsBackupEnabled
+        val hasCallLogsBackup = _uiState.value.deviceDataBackupEnabled && _uiState.value.callLogsBackupEnabled
+        val hasDeviceData = hasContactsBackup || hasCallLogsBackup
         val hasRoot = rootState.value == io.github.hddq.restoid.data.RootState.Granted
         val backupAppsEnabled = _uiState.value.backupEnabled && hasRoot
         
@@ -278,8 +283,9 @@ class RunTasksViewModel(
             customDirectories = if (hasCustomDirs) selectedCustomDirs.toList() else emptyList(),
             excludedCustomDirectories = if (_uiState.value.customDirectoriesBackupEnabled) selectedExcludedCustomDirs.toList() else emptyList(),
             deviceData = DeviceDataBackupSelection(
-                contacts = hasDeviceData,
-                includeReadOnlyContacts = _uiState.value.includeReadOnlyContacts
+                contacts = hasContactsBackup,
+                includeReadOnlyContacts = _uiState.value.includeReadOnlyContacts,
+                callLogs = hasCallLogsBackup
             ),
             unlockRepo = maintenance.unlockRepo,
             forgetSnapshots = maintenance.forgetSnapshots,
@@ -319,7 +325,9 @@ class RunTasksViewModel(
         val maintenance = state.maintenance
         val hasMaintenanceTask = maintenance.unlockRepo || maintenance.forgetSnapshots || maintenance.pruneRepo || maintenance.checkRepo
         val hasCustomDirs = state.customDirectoriesBackupEnabled && state.customDirectories.any { it.isSelected }
-        val hasDeviceData = state.deviceDataBackupEnabled && state.contactsBackupEnabled
+        val hasContactsBackup = state.deviceDataBackupEnabled && state.contactsBackupEnabled
+        val hasCallLogsBackup = state.deviceDataBackupEnabled && state.callLogsBackupEnabled
+        val hasDeviceData = hasContactsBackup || hasCallLogsBackup
         val hasRoot = rootState.value == io.github.hddq.restoid.data.RootState.Granted
         val backupAppsEnabled = state.backupEnabled && hasRoot
         
@@ -331,11 +339,19 @@ class RunTasksViewModel(
             )
         }
 
-        if (hasDeviceData && !io.github.hddq.restoid.data.ContactsBackupRepository(application).hasReadContactsPermission()) {
+        if (hasContactsBackup && !io.github.hddq.restoid.data.ContactsBackupRepository(application).hasReadContactsPermission()) {
             return OperationProgress(
                 isFinished = true,
                 error = application.getString(R.string.error_contacts_read_permission_required),
                 finalSummary = application.getString(R.string.summary_contacts_read_permission_required)
+            )
+        }
+
+        if (hasCallLogsBackup && !io.github.hddq.restoid.data.CallLogsBackupRepository(application).hasReadCallLogPermission()) {
+            return OperationProgress(
+                isFinished = true,
+                error = application.getString(R.string.error_call_logs_read_permission_required),
+                finalSummary = application.getString(R.string.summary_call_logs_read_permission_required)
             )
         }
 
@@ -454,6 +470,11 @@ class RunTasksViewModel(
     fun setIncludeReadOnlyContacts(enabled: Boolean) {
         _uiState.update { it.copy(includeReadOnlyContacts = enabled) }
         preferencesRepository.saveIncludeReadOnlyContacts(enabled)
+    }
+
+    fun setCallLogsBackupEnabled(enabled: Boolean) {
+        _uiState.update { it.copy(callLogsBackupEnabled = enabled) }
+        preferencesRepository.saveDeviceDataCallLogsEnabled(enabled)
     }
 
     fun addCustomDirectory(uriString: String) {

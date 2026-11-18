@@ -65,6 +65,7 @@ data class AddEditScheduleUiState(
     val deviceDataBackupEnabled: Boolean = false,
     val contactsBackupEnabled: Boolean = true,
     val includeReadOnlyContacts: Boolean = false,
+    val callLogsBackupEnabled: Boolean = false,
     val customDirectories: List<io.github.hddq.restoid.model.CustomDirectory> = emptyList(),
     val excludedCustomDirectories: List<io.github.hddq.restoid.model.CustomDirectory> = emptyList(),
     val exclusionConflicts: List<ExclusionConflict> = emptyList(),
@@ -241,9 +242,10 @@ class SchedulesViewModel(
             triggerConditions = schedule.triggerConditions,
             lastRunTimestamp = schedule.lastRunTimestamp,
             customDirectoriesBackupEnabled = schedule.config.customDirectories.isNotEmpty(),
-            deviceDataBackupEnabled = schedule.config.deviceData.contacts,
-            contactsBackupEnabled = true,
+            deviceDataBackupEnabled = schedule.config.deviceData.anyEnabled(),
+            contactsBackupEnabled = if (schedule.config.deviceData.anyEnabled()) schedule.config.deviceData.contacts else true,
             includeReadOnlyContacts = schedule.config.deviceData.includeReadOnlyContacts,
+            callLogsBackupEnabled = schedule.config.deviceData.callLogs,
             customDirectories = schedule.config.customDirectories.map { io.github.hddq.restoid.model.CustomDirectory(it, true) },
             excludedCustomDirectories = schedule.config.excludedCustomDirectories.map { io.github.hddq.restoid.model.CustomDirectory(it, true) }
         )
@@ -310,6 +312,7 @@ class SchedulesViewModel(
                 current.deviceDataBackupEnabled != initial.deviceDataBackupEnabled ||
                 current.contactsBackupEnabled != initial.contactsBackupEnabled ||
                 current.includeReadOnlyContacts != initial.includeReadOnlyContacts ||
+                current.callLogsBackupEnabled != initial.callLogsBackupEnabled ||
                 current.customDirectories != initial.customDirectories ||
                 current.excludedCustomDirectories != initial.excludedCustomDirectories
     }
@@ -349,7 +352,8 @@ class SchedulesViewModel(
                 excludedCustomDirectories = if (state.customDirectoriesBackupEnabled) state.excludedCustomDirectories.filter { it.isSelected }.map { it.uri } else emptyList(),
                 deviceData = DeviceDataBackupSelection(
                     contacts = state.deviceDataBackupEnabled && state.contactsBackupEnabled,
-                    includeReadOnlyContacts = state.includeReadOnlyContacts
+                    includeReadOnlyContacts = state.includeReadOnlyContacts,
+                    callLogs = state.deviceDataBackupEnabled && state.callLogsBackupEnabled
                 ),
                 unlockRepo = state.maintenance.unlockRepo,
                 forgetSnapshots = state.maintenance.forgetSnapshots,
@@ -475,6 +479,10 @@ class SchedulesViewModel(
 
     fun setIncludeReadOnlyContacts(enabled: Boolean) {
         _addEditState.update { it.copy(includeReadOnlyContacts = enabled) }
+    }
+
+    fun setCallLogsBackupEnabled(enabled: Boolean) {
+        _addEditState.update { it.copy(callLogsBackupEnabled = enabled) }
     }
 
     fun addCustomDirectory(uriString: String) {
