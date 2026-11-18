@@ -59,6 +59,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -744,8 +745,86 @@ private fun SnapshotItem(
     }
 }
 
+internal const val SNAPSHOT_HEADER_ID_ROW_TAG = "snapshot_header_id_row"
+internal const val SNAPSHOT_HEADER_CHEVRON_TAG = "snapshot_header_chevron"
+
+internal data class SnapshotHeaderPlacement(
+    val placeOnSingleLine: Boolean,
+    val layoutWidth: Int,
+    val layoutHeight: Int,
+    val idRowX: Int,
+    val idRowY: Int,
+    val timeX: Int,
+    val timeY: Int,
+    val chevronX: Int,
+    val chevronY: Int
+)
+
+internal fun computeSnapshotHeaderPlacement(
+    maxWidth: Int,
+    minHeight: Int,
+    hasBoundedWidth: Boolean,
+    idRowWidth: Int,
+    idRowHeight: Int,
+    singleLineTimeWidth: Int,
+    timeWidth: Int,
+    timeHeight: Int,
+    chevronWidth: Int,
+    chevronHeight: Int,
+    minHorizontalGapPx: Int,
+    chevronGapPx: Int,
+    lineGapPx: Int
+): SnapshotHeaderPlacement {
+    val contentMaxWidth = if (hasBoundedWidth) {
+        (maxWidth - chevronWidth - chevronGapPx).coerceAtLeast(0)
+    } else {
+        Int.MAX_VALUE
+    }
+    val placeOnSingleLine = !hasBoundedWidth || (
+        idRowWidth.toLong() + minHorizontalGapPx + singleLineTimeWidth <= contentMaxWidth &&
+            idRowWidth.toLong() + minHorizontalGapPx + timeWidth <= contentMaxWidth
+        )
+    val layoutWidth = if (hasBoundedWidth) {
+        maxWidth
+    } else {
+        idRowWidth + minHorizontalGapPx + timeWidth + chevronGapPx + chevronWidth
+    }
+    val resolvedContentMaxWidth = (layoutWidth - chevronWidth - chevronGapPx).coerceAtLeast(0)
+
+    return if (placeOnSingleLine) {
+        val layoutHeight = maxOf(minHeight, idRowHeight, timeHeight, chevronHeight)
+        SnapshotHeaderPlacement(
+            placeOnSingleLine = true,
+            layoutWidth = layoutWidth,
+            layoutHeight = layoutHeight,
+            idRowX = 0,
+            idRowY = (layoutHeight - idRowHeight) / 2,
+            timeX = (resolvedContentMaxWidth - timeWidth)
+                .coerceAtLeast(idRowWidth + minHorizontalGapPx),
+            timeY = (layoutHeight - timeHeight) / 2,
+            chevronX = (layoutWidth - chevronWidth).coerceAtLeast(0),
+            chevronY = (layoutHeight - chevronHeight) / 2
+        )
+    } else {
+        val contentHeight = idRowHeight + lineGapPx + timeHeight
+        val layoutHeight = maxOf(minHeight, contentHeight, chevronHeight)
+        val contentTop = (layoutHeight - contentHeight) / 2
+        SnapshotHeaderPlacement(
+            placeOnSingleLine = false,
+            layoutWidth = layoutWidth,
+            layoutHeight = layoutHeight,
+            idRowX = 0,
+            idRowY = contentTop,
+            timeX = 0,
+            timeY = contentTop + idRowHeight + lineGapPx,
+            chevronX = (layoutWidth - chevronWidth).coerceAtLeast(0),
+            chevronY = (layoutHeight - chevronHeight) / 2
+        )
+    }
+}
+
 @Composable
-private fun SnapshotHeader(
+internal fun SnapshotHeader(
     snapshotId: String,
     hostname: String?,
     timeText: String,
@@ -760,6 +839,7 @@ private fun SnapshotHeader(
         modifier = modifier.fillMaxWidth(),
         content = {
             Row(
+                modifier = Modifier.testTag(SNAPSHOT_HEADER_ID_ROW_TAG),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
@@ -800,7 +880,9 @@ private fun SnapshotHeader(
                 imageVector = Icons.Outlined.ChevronRight,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier
+                    .size(18.dp)
+                    .testTag(SNAPSHOT_HEADER_CHEVRON_TAG)
             )
         }
     ) { measurables, constraints ->
@@ -819,61 +901,30 @@ private fun SnapshotHeader(
 
         val idRowPlaceable = idRowMeasurable.measure(contentConstraints)
         val singleLineTimeWidth = timeMeasurable.maxIntrinsicWidth(Constraints.Infinity)
-        val fitsOnSingleLine = !constraints.hasBoundedWidth ||
-            idRowPlaceable.width + minHorizontalGapPx + singleLineTimeWidth <= contentMaxWidth
-
         val timePlaceable = timeMeasurable.measure(contentConstraints)
-        val placeOnSingleLine = fitsOnSingleLine &&
-            (!constraints.hasBoundedWidth || idRowPlaceable.width + minHorizontalGapPx + timePlaceable.width <= contentMaxWidth)
 
-        val layoutWidth = if (constraints.hasBoundedWidth) {
-            constraints.maxWidth
-        } else {
-            idRowPlaceable.width + minHorizontalGapPx + timePlaceable.width + chevronGapPx + chevronPlaceable.width
-        }
-        val resolvedContentMaxWidth = layoutWidth - chevronPlaceable.width - chevronGapPx
+        val placement = computeSnapshotHeaderPlacement(
+            maxWidth = constraints.maxWidth,
+            minHeight = constraints.minHeight,
+            hasBoundedWidth = constraints.hasBoundedWidth,
+            idRowWidth = idRowPlaceable.width,
+            idRowHeight = idRowPlaceable.height,
+            singleLineTimeWidth = singleLineTimeWidth,
+            timeWidth = timePlaceable.width,
+            timeHeight = timePlaceable.height,
+            chevronWidth = chevronPlaceable.width,
+            chevronHeight = chevronPlaceable.height,
+            minHorizontalGapPx = minHorizontalGapPx,
+            chevronGapPx = chevronGapPx,
+            lineGapPx = lineGapPx
+        )
 
-        if (placeOnSingleLine) {
-            val layoutHeight = maxOf(
-                constraints.minHeight,
-                idRowPlaceable.height,
-                timePlaceable.height,
-                chevronPlaceable.height
-            )
-            layout(layoutWidth, layoutHeight) {
-                idRowPlaceable.placeRelative(
-                    x = 0,
-                    y = (layoutHeight - idRowPlaceable.height) / 2
-                )
-                timePlaceable.placeRelative(
-                    x = (resolvedContentMaxWidth - timePlaceable.width)
-                        .coerceAtLeast(idRowPlaceable.width + minHorizontalGapPx),
-                    y = (layoutHeight - timePlaceable.height) / 2
-                )
-                chevronPlaceable.placeRelative(
-                    x = layoutWidth - chevronPlaceable.width,
-                    y = (layoutHeight - chevronPlaceable.height) / 2
-                )
-            }
-        } else {
-            val contentHeight = idRowPlaceable.height + lineGapPx + timePlaceable.height
-            val layoutHeight = maxOf(constraints.minHeight, contentHeight, chevronPlaceable.height)
-            val contentTop = (layoutHeight - contentHeight) / 2
-            layout(layoutWidth, layoutHeight) {
-                idRowPlaceable.placeRelative(
-                    x = 0,
-                    y = contentTop
-                )
-                timePlaceable.placeRelative(
-                    x = 0,
-                    y = contentTop + idRowPlaceable.height + lineGapPx
-                )
-                chevronPlaceable.placeRelative(
-                    x = layoutWidth - chevronPlaceable.width,
-                    y = (layoutHeight - chevronPlaceable.height) / 2
-                )
-            }
+        layout(placement.layoutWidth, placement.layoutHeight) {
+            idRowPlaceable.placeRelative(x = placement.idRowX, y = placement.idRowY)
+            timePlaceable.placeRelative(x = placement.timeX, y = placement.timeY)
+            chevronPlaceable.placeRelative(x = placement.chevronX, y = placement.chevronY)
         }
     }
 }
+
 
