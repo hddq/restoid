@@ -11,20 +11,29 @@ import androidx.activity.enableEdgeToEdge
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
@@ -38,6 +47,7 @@ import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
@@ -45,15 +55,18 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
@@ -281,7 +294,7 @@ class MainActivity : FragmentActivity() {
         biometricPrompt.authenticate(promptInfo)
     }
 
-    @OptIn(ExperimentalMaterial3Api::class)
+    @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
     private fun launchAppContent(app: RestoidApplication) {
         if (isContentInitialized) {
             return
@@ -310,6 +323,22 @@ class MainActivity : FragmentActivity() {
                     val topLevelRoutes = remember {
                         setOf(Screen.Home.route, SchedulesRoutes.Main, Screen.Settings.route)
                     }
+                    val navBackStackEntry by navController.currentBackStackEntryAsState()
+                    val currentRoute = navBackStackEntry?.destination?.route
+                    val currentTopLevelScreen = when (currentRoute) {
+                        null, Screen.Home.route -> Screen.Home
+                        SchedulesRoutes.Main -> Screen.Schedules
+                        Screen.Settings.route -> Screen.Settings
+                        else -> null
+                    }
+                    var lastSelectedScreen by remember { mutableStateOf<Screen>(Screen.Home) }
+                    LaunchedEffect(currentTopLevelScreen) {
+                        if (currentTopLevelScreen != null) {
+                            lastSelectedScreen = currentTopLevelScreen
+                        }
+                    }
+                    val showBottomBar = currentRoute == null || currentRoute in topLevelRoutes
+
                     val homeViewModel: HomeViewModel = viewModel(
                         factory = HomeViewModelFactory(app, app.repositoriesRepository, app.resticBinaryManager, app.resticRepository, app.appInfoRepository, app.metadataRepository, app.operationWorkRepository)
                     )
@@ -339,6 +368,12 @@ class MainActivity : FragmentActivity() {
                     val standardEasing = remember { CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f) }
                     val predictiveEasing = remember { CubicBezierEasing(0.4f, 0.0f, 0.2f, 1.0f) }
                     val fadeOutEasing = remember { CubicBezierEasing(0.4f, 0.0f, 1.0f, 1.0f) }
+                    val motionScheme = MaterialTheme.motionScheme
+                    val tabEnterScaleSpec = motionScheme.defaultSpatialSpec<Float>()
+                    val bottomBarEnterSpatialSpec = motionScheme.defaultSpatialSpec<IntOffset>()
+                    val bottomBarExitSpatialSpec = motionScheme.fastSpatialSpec<IntOffset>()
+                    val bottomBarEnterEffectsSpec = motionScheme.defaultEffectsSpec<Float>()
+                    val bottomBarExitEffectsSpec = motionScheme.fastEffectsSpec<Float>()
 
                     val navigateToTopLevel: (Screen) -> Unit = { screen ->
                         navController.navigate(screen.route) {
@@ -348,117 +383,144 @@ class MainActivity : FragmentActivity() {
                         }
                     }
 
-                    NavHost(
-                        navController = navController,
-                        startDestination = Screen.Home.route,
-                        modifier = Modifier.fillMaxSize(),
-                        enterTransition = {
-                            val isTabSwitch = initialState.destination.route in topLevelRoutes &&
-                                targetState.destination.route in topLevelRoutes
-                            if (isTabSwitch) {
-                                fadeIn(animationSpec = tween(200, easing = standardEasing))
-                            } else {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        NavHost(
+                            navController = navController,
+                            startDestination = Screen.Home.route,
+                            modifier = Modifier.fillMaxSize(),
+                            enterTransition = {
+                                val isTabSwitch = initialState.destination.route in topLevelRoutes &&
+                                    targetState.destination.route in topLevelRoutes
+                                if (isTabSwitch) {
+                                    fadeIn(
+                                        animationSpec = tween(
+                                            durationMillis = 210,
+                                            delayMillis = 70,
+                                            easing = standardEasing
+                                        )
+                                    ) + scaleIn(
+                                        initialScale = 0.94f,
+                                        animationSpec = tabEnterScaleSpec
+                                    )
+                                } else {
+                                    slideIntoContainer(
+                                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                                        animationSpec = tween(320, easing = standardEasing),
+                                        initialOffset = { it / 4 }
+                                    ) + scaleIn(
+                                        initialScale = 0.95f,
+                                        animationSpec = tween(320, easing = standardEasing)
+                                    ) + fadeIn(animationSpec = tween(200, easing = standardEasing))
+                                }
+                            },
+                            exitTransition = {
+                                val isTabSwitch = initialState.destination.route in topLevelRoutes &&
+                                    targetState.destination.route in topLevelRoutes
+                                if (isTabSwitch) {
+                                    fadeOut(animationSpec = tween(durationMillis = 90, easing = fadeOutEasing)) +
+                                        scaleOut(
+                                            targetScale = 0.96f,
+                                            animationSpec = tween(durationMillis = 90, easing = fadeOutEasing)
+                                        )
+                                } else {
+                                    slideOutOfContainer(
+                                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                                        animationSpec = tween(320, easing = standardEasing),
+                                        targetOffset = { it / 6 }
+                                    ) + scaleOut(
+                                        targetScale = 0.95f,
+                                        animationSpec = tween(320, easing = standardEasing)
+                                    ) + fadeOut(animationSpec = tween(1, delayMillis = 320))
+                                }
+                            },
+                            popEnterTransition = {
+                                val isTabSwitch = initialState.destination.route in topLevelRoutes &&
+                                    targetState.destination.route in topLevelRoutes
+                                if (isTabSwitch) {
+                                    fadeIn(
+                                        animationSpec = tween(
+                                            durationMillis = 210,
+                                            delayMillis = 70,
+                                            easing = standardEasing
+                                        )
+                                    ) + scaleIn(
+                                        initialScale = 0.94f,
+                                        animationSpec = tabEnterScaleSpec
+                                    )
+                                } else {
+                                    slideIntoContainer(
+                                        towards = AnimatedContentTransitionScope.SlideDirection.End,
+                                        animationSpec = tween(320, easing = predictiveEasing),
+                                        initialOffset = { it / 5 }
+                                    ) + scaleIn(
+                                        initialScale = 0.94f,
+                                        animationSpec = tween(320, easing = predictiveEasing)
+                                    ) + fadeIn(
+                                        initialAlpha = 0.6f,
+                                        animationSpec = tween(320, easing = predictiveEasing)
+                                    )
+                                }
+                            },
+                            popExitTransition = {
+                                val isTabSwitch = initialState.destination.route in topLevelRoutes &&
+                                    targetState.destination.route in topLevelRoutes
+                                if (isTabSwitch) {
+                                    fadeOut(animationSpec = tween(durationMillis = 90, easing = fadeOutEasing)) +
+                                        scaleOut(
+                                            targetScale = 0.96f,
+                                            animationSpec = tween(durationMillis = 90, easing = fadeOutEasing)
+                                        )
+                                } else {
+                                    scaleOut(
+                                        targetScale = 0.92f,
+                                        animationSpec = tween(320, easing = predictiveEasing)
+                                    ) + slideOutOfContainer(
+                                        towards = AnimatedContentTransitionScope.SlideDirection.End,
+                                        animationSpec = tween(320, easing = predictiveEasing),
+                                        targetOffset = { it / 4 }
+                                    ) + fadeOut(
+                                        animationSpec = tween(190, delayMillis = 130, easing = fadeOutEasing)
+                                    )
+                                }
+                            },
+                            predictivePopEnterTransition = { swipeEdge ->
+                                val slideDirection = if (swipeEdge == BackEventCompat.EDGE_RIGHT) {
+                                    AnimatedContentTransitionScope.SlideDirection.Left
+                                } else {
+                                    AnimatedContentTransitionScope.SlideDirection.Right
+                                }
                                 slideIntoContainer(
-                                    towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                                    animationSpec = tween(320, easing = standardEasing),
-                                    initialOffset = { it / 4 }
-                                ) + scaleIn(
-                                    initialScale = 0.95f,
-                                    animationSpec = tween(320, easing = standardEasing)
-                                ) + fadeIn(animationSpec = tween(200, easing = standardEasing))
-                            }
-                        },
-                        exitTransition = {
-                            val isTabSwitch = initialState.destination.route in topLevelRoutes &&
-                                targetState.destination.route in topLevelRoutes
-                            if (isTabSwitch) {
-                                fadeOut(animationSpec = tween(1, delayMillis = 200))
-                            } else {
-                                slideOutOfContainer(
-                                    towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                                    animationSpec = tween(320, easing = standardEasing),
-                                    targetOffset = { it / 6 }
-                                ) + scaleOut(
-                                    targetScale = 0.95f,
-                                    animationSpec = tween(320, easing = standardEasing)
-                                ) + fadeOut(animationSpec = tween(1, delayMillis = 320))
-                            }
-                        },
-                        popEnterTransition = {
-                            val isTabSwitch = initialState.destination.route in topLevelRoutes &&
-                                targetState.destination.route in topLevelRoutes
-                            if (isTabSwitch) {
-                                fadeIn(animationSpec = tween(200, easing = standardEasing))
-                            } else {
-                                slideIntoContainer(
-                                    towards = AnimatedContentTransitionScope.SlideDirection.End,
-                                    animationSpec = tween(320, easing = predictiveEasing),
+                                    towards = slideDirection,
+                                    animationSpec = tween(350, easing = predictiveEasing),
                                     initialOffset = { it / 5 }
                                 ) + scaleIn(
                                     initialScale = 0.94f,
-                                    animationSpec = tween(320, easing = predictiveEasing)
+                                    animationSpec = tween(350, easing = predictiveEasing)
                                 ) + fadeIn(
                                     initialAlpha = 0.6f,
-                                    animationSpec = tween(320, easing = predictiveEasing)
+                                    animationSpec = tween(350, easing = predictiveEasing)
                                 )
-                            }
-                        },
-                        popExitTransition = {
-                            val isTabSwitch = initialState.destination.route in topLevelRoutes &&
-                                targetState.destination.route in topLevelRoutes
-                            if (isTabSwitch) {
-                                fadeOut(animationSpec = tween(1, delayMillis = 200))
-                            } else {
+                            },
+                            predictivePopExitTransition = { swipeEdge ->
+                                val slideDirection = if (swipeEdge == BackEventCompat.EDGE_RIGHT) {
+                                    AnimatedContentTransitionScope.SlideDirection.Left
+                                } else {
+                                    AnimatedContentTransitionScope.SlideDirection.Right
+                                }
+                                val pivotX = if (swipeEdge == BackEventCompat.EDGE_RIGHT) 0.25f else 0.75f
                                 scaleOut(
                                     targetScale = 0.92f,
-                                    animationSpec = tween(320, easing = predictiveEasing)
+                                    transformOrigin = TransformOrigin(pivotX, 0.5f),
+                                    animationSpec = tween(350, easing = predictiveEasing)
                                 ) + slideOutOfContainer(
-                                    towards = AnimatedContentTransitionScope.SlideDirection.End,
-                                    animationSpec = tween(320, easing = predictiveEasing),
+                                    towards = slideDirection,
+                                    animationSpec = tween(350, easing = predictiveEasing),
                                     targetOffset = { it / 4 }
                                 ) + fadeOut(
-                                    animationSpec = tween(190, delayMillis = 130, easing = fadeOutEasing)
+                                    animationSpec = tween(210, delayMillis = 140, easing = fadeOutEasing)
                                 )
                             }
-                        },
-                        predictivePopEnterTransition = { swipeEdge ->
-                            val slideDirection = if (swipeEdge == BackEventCompat.EDGE_RIGHT) {
-                                AnimatedContentTransitionScope.SlideDirection.Left
-                            } else {
-                                AnimatedContentTransitionScope.SlideDirection.Right
-                            }
-                            slideIntoContainer(
-                                towards = slideDirection,
-                                animationSpec = tween(350, easing = predictiveEasing),
-                                initialOffset = { it / 5 }
-                            ) + scaleIn(
-                                initialScale = 0.94f,
-                                animationSpec = tween(350, easing = predictiveEasing)
-                            ) + fadeIn(
-                                initialAlpha = 0.6f,
-                                animationSpec = tween(350, easing = predictiveEasing)
-                            )
-                        },
-                        predictivePopExitTransition = { swipeEdge ->
-                            val slideDirection = if (swipeEdge == BackEventCompat.EDGE_RIGHT) {
-                                AnimatedContentTransitionScope.SlideDirection.Left
-                            } else {
-                                AnimatedContentTransitionScope.SlideDirection.Right
-                            }
-                            val pivotX = if (swipeEdge == BackEventCompat.EDGE_RIGHT) 0.25f else 0.75f
-                            scaleOut(
-                                targetScale = 0.92f,
-                                transformOrigin = TransformOrigin(pivotX, 0.5f),
-                                animationSpec = tween(350, easing = predictiveEasing)
-                            ) + slideOutOfContainer(
-                                towards = slideDirection,
-                                animationSpec = tween(350, easing = predictiveEasing),
-                                targetOffset = { it / 4 }
-                            ) + fadeOut(
-                                animationSpec = tween(210, delayMillis = 140, easing = fadeOutEasing)
-                            )
-                        }
-                    ) {
+                        ) {
                         composable(Screen.Home.route) {
                             val isRepoReady = homeUiState.isRepoReady
                             DestinationScaffold(
@@ -473,12 +535,6 @@ class MainActivity : FragmentActivity() {
                                             contentDescription = stringResource(R.string.screen_operation_logs)
                                         )
                                     }
-                                },
-                                bottomBar = {
-                                    RestoidBottomNavigationBar(
-                                        selectedScreen = Screen.Home,
-                                        onSelectScreen = navigateToTopLevel
-                                    )
                                 },
                                 floatingActionButton = {
                                     ExtendedFloatingActionButton(
@@ -540,13 +596,7 @@ class MainActivity : FragmentActivity() {
                             DestinationScaffold(
                                 titleRes = R.string.screen_settings,
                                 isTopLevel = true,
-                                onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() },
-                                bottomBar = {
-                                    RestoidBottomNavigationBar(
-                                        selectedScreen = Screen.Settings,
-                                        onSelectScreen = navigateToTopLevel
-                                    )
-                                }
+                                onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
                             ) {
                                 SettingsScreen(viewModel = vm, onNavigateToLicenses = { navController.navigate(Screen.Licenses.route) })
                             }
@@ -566,13 +616,7 @@ class MainActivity : FragmentActivity() {
                                 DestinationScaffold(
                                     titleRes = R.string.topbar_schedules,
                                     isTopLevel = true,
-                                    onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() },
-                                    bottomBar = {
-                                        RestoidBottomNavigationBar(
-                                            selectedScreen = Screen.Schedules,
-                                            onSelectScreen = navigateToTopLevel
-                                        )
-                                    }
+                                    onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
                                 ) {
                                     SchedulesScreen(
                                         viewModel = vm,
@@ -1079,12 +1123,31 @@ class MainActivity : FragmentActivity() {
                                 }
                             }
                         }
+                        AnimatedVisibility(
+                            visible = showBottomBar,
+                            modifier = Modifier.align(Alignment.BottomCenter),
+                            enter = slideInVertically(
+                                animationSpec = bottomBarEnterSpatialSpec,
+                                initialOffsetY = { it }
+                            ) + fadeIn(animationSpec = bottomBarEnterEffectsSpec),
+                            exit = slideOutVertically(
+                                animationSpec = bottomBarExitSpatialSpec,
+                                targetOffsetY = { it }
+                            ) + fadeOut(animationSpec = bottomBarExitEffectsSpec)
+                        ) {
+                            RestoidBottomNavigationBar(
+                                selectedScreen = lastSelectedScreen,
+                                onSelectScreen = navigateToTopLevel
+                            )
+                        }
                     }
                 }
             }
         }
+    }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun RestoidBottomNavigationBar(
     selectedScreen: Screen,
@@ -1095,17 +1158,36 @@ private fun RestoidBottomNavigationBar(
         Triple(Screen.Schedules, Icons.Filled.Schedule, Icons.Outlined.Schedule),
         Triple(Screen.Settings, Icons.Filled.Settings, Icons.Outlined.Settings)
     )
+    val motionScheme = MaterialTheme.motionScheme
+    val iconScaleSpec = motionScheme.fastSpatialSpec<Float>()
+    val iconCrossfadeSpec = motionScheme.fastEffectsSpec<Float>()
+
     NavigationBar(
         containerColor = MaterialTheme.colorScheme.surfaceContainer
     ) {
         items.forEach { (screen, selectedIcon, unselectedIcon) ->
             val selected = screen == selectedScreen
+            val iconScale by animateFloatAsState(
+                targetValue = if (selected) 1.08f else 1f,
+                animationSpec = iconScaleSpec,
+                label = "navIconScale_${screen.route}"
+            )
             NavigationBarItem(
                 icon = {
-                    Icon(
-                        imageVector = if (selected) selectedIcon else unselectedIcon,
-                        contentDescription = null
-                    )
+                    Crossfade(
+                        targetState = selected,
+                        animationSpec = iconCrossfadeSpec,
+                        modifier = Modifier.graphicsLayer {
+                            scaleX = iconScale
+                            scaleY = iconScale
+                        },
+                        label = "navIconCrossfade_${screen.route}"
+                    ) { isSelected ->
+                        Icon(
+                            imageVector = if (isSelected) selectedIcon else unselectedIcon,
+                            contentDescription = null
+                        )
+                    }
                 },
                 label = {
                     Text(
@@ -1132,7 +1214,6 @@ private fun DestinationScaffold(
     isHome: Boolean = false,
     onBack: () -> Unit,
     actions: @Composable RowScope.() -> Unit = {},
-    bottomBar: @Composable () -> Unit = {},
     floatingActionButton: @Composable () -> Unit = {},
     content: @Composable () -> Unit
 ) {
@@ -1186,7 +1267,16 @@ private fun DestinationScaffold(
                     }
                 )
             },
-            bottomBar = bottomBar,
+            bottomBar = {
+                if (isTopLevel) {
+                    Spacer(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .windowInsetsPadding(NavigationBarDefaults.windowInsets)
+                            .height(80.dp)
+                    )
+                }
+            },
             floatingActionButton = floatingActionButton
         ) { innerPadding ->
             Box(
