@@ -27,7 +27,7 @@ Custom Files & Media
 • Back up personal folders: DCIM, Documents, Downloads, or any directory on your device.
 
 Contacts & Call Logs
-• Back up and restore your contacts (including groups and photos) and call logs without requiring root, manually or on automated schedules.
+• Back up and restore your contacts (including groups and photos) and call logs without requiring root; backups can run manually or on automated schedules.
 
 Automated Background Schedules
 • Configure recurring schedules (daily, weekly, or custom intervals).
