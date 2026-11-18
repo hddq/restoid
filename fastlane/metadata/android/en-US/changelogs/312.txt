@@ -1,0 +1,6 @@
+* Built-in Rclone support with rclone.conf import for cloud backends
+* Back up and restore contacts (with groups & photos) and call logs
+* Back up and restore app special access and accessibility services
+* Select target hosts in Forget Snapshots policies and schedules
+* Adaptive snapshot header layout for narrow screens
+* Stability, schedule state isolation, and build improvements
