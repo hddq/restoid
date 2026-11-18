@@ -142,6 +142,7 @@
     <string name="error_contacts_write_permission_required">Contacts permission is required to restore contacts.</string>
     <string name="error_call_logs_read_permission_required">Call logs permission is required to back up call logs.</string>
     <string name="summary_call_logs_read_permission_required">Grant Call logs permission, then try again.</string>
+    <string name="error_call_logs_read_permission_restore_required">READ_CALL_LOG permission is required to restore call logs.</string>
     <string name="error_call_logs_write_permission_required">Call logs permission is required to restore call logs.</string>
     <string name="run_tasks_backup_subtitle">%1$d apps selected - %2$s</string>
     <string name="run_tasks_forget_snapshots">Forget Snapshots</string>

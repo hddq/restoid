@@ -109,6 +109,10 @@ class RestoreOperationRunner(
                 throw IllegalStateException(context.getString(R.string.error_contacts_write_permission_required))
             }
 
+            if (request.deviceData.callLogs && !callLogsBackupRepository.hasReadCallLogPermission()) {
+                throw IllegalStateException(context.getString(R.string.error_call_logs_read_permission_restore_required))
+            }
+
             if (request.deviceData.callLogs && !callLogsBackupRepository.hasWriteCallLogPermission()) {
                 throw IllegalStateException(context.getString(R.string.error_call_logs_write_permission_required))
             }

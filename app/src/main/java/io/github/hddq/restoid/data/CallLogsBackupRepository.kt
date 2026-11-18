@@ -53,63 +53,64 @@ class CallLogsBackupRepository(private val context: Context) {
         outputDir.mkdirs()
 
         val entries = mutableListOf<BackedUpCallLogEntry>()
-        context.contentResolver.query(
+        val cursor = context.contentResolver.query(
             CallLog.Calls.CONTENT_URI,
             null,
             null,
             null,
             "${CallLog.Calls.DATE} DESC"
-        )?.use { cursor ->
-            val numberIdx = cursor.getColumnIndex(CallLog.Calls.NUMBER)
-            val presentationIdx = cursor.getColumnIndex(CallLog.Calls.NUMBER_PRESENTATION)
-            val typeIdx = cursor.getColumnIndex(CallLog.Calls.TYPE)
-            val dateIdx = cursor.getColumnIndex(CallLog.Calls.DATE)
-            val durationIdx = cursor.getColumnIndex(CallLog.Calls.DURATION)
-            val newIdx = cursor.getColumnIndex(CallLog.Calls.NEW)
-            val cachedNameIdx = cursor.getColumnIndex(CallLog.Calls.CACHED_NAME)
-            val cachedNumTypeIdx = cursor.getColumnIndex(CallLog.Calls.CACHED_NUMBER_TYPE)
-            val cachedNumLabelIdx = cursor.getColumnIndex(CallLog.Calls.CACHED_NUMBER_LABEL)
-            val countryIsoIdx = cursor.getColumnIndex(CallLog.Calls.COUNTRY_ISO)
-            val geocodedLocationIdx = cursor.getColumnIndex(CallLog.Calls.GEOCODED_LOCATION)
-            val featuresIdx = cursor.getColumnIndex(CallLog.Calls.FEATURES)
-            val isReadIdx = cursor.getColumnIndex(CallLog.Calls.IS_READ)
-            val phoneAccountComponentIdx = cursor.getColumnIndex(CallLog.Calls.PHONE_ACCOUNT_COMPONENT_NAME)
-            val phoneAccountIdIdx = cursor.getColumnIndex(CallLog.Calls.PHONE_ACCOUNT_ID)
-            val voicemailUriIdx = cursor.getColumnIndex(CallLog.Calls.VOICEMAIL_URI)
-            val postDialDigitsIdx = cursor.getColumnIndex(CallLog.Calls.POST_DIAL_DIGITS)
-            val viaNumberIdx = cursor.getColumnIndex(CallLog.Calls.VIA_NUMBER)
-            val screeningAppIdx = cursor.getColumnIndex(CallLog.Calls.CALL_SCREENING_APP_NAME)
-            val screeningComponentIdx = cursor.getColumnIndex(CallLog.Calls.CALL_SCREENING_COMPONENT_NAME)
-            val blockReasonIdx = cursor.getColumnIndex(CallLog.Calls.BLOCK_REASON)
+        ) ?: throw IllegalStateException("Call log query returned null cursor")
+        cursor.use { c ->
+            val numberIdx = c.getColumnIndex(CallLog.Calls.NUMBER)
+            val presentationIdx = c.getColumnIndex(CallLog.Calls.NUMBER_PRESENTATION)
+            val typeIdx = c.getColumnIndex(CallLog.Calls.TYPE)
+            val dateIdx = c.getColumnIndex(CallLog.Calls.DATE)
+            val durationIdx = c.getColumnIndex(CallLog.Calls.DURATION)
+            val newIdx = c.getColumnIndex(CallLog.Calls.NEW)
+            val cachedNameIdx = c.getColumnIndex(CallLog.Calls.CACHED_NAME)
+            val cachedNumTypeIdx = c.getColumnIndex(CallLog.Calls.CACHED_NUMBER_TYPE)
+            val cachedNumLabelIdx = c.getColumnIndex(CallLog.Calls.CACHED_NUMBER_LABEL)
+            val countryIsoIdx = c.getColumnIndex(CallLog.Calls.COUNTRY_ISO)
+            val geocodedLocationIdx = c.getColumnIndex(CallLog.Calls.GEOCODED_LOCATION)
+            val featuresIdx = c.getColumnIndex(CallLog.Calls.FEATURES)
+            val isReadIdx = c.getColumnIndex(CallLog.Calls.IS_READ)
+            val phoneAccountComponentIdx = c.getColumnIndex(CallLog.Calls.PHONE_ACCOUNT_COMPONENT_NAME)
+            val phoneAccountIdIdx = c.getColumnIndex(CallLog.Calls.PHONE_ACCOUNT_ID)
+            val voicemailUriIdx = c.getColumnIndex(CallLog.Calls.VOICEMAIL_URI)
+            val postDialDigitsIdx = c.getColumnIndex(CallLog.Calls.POST_DIAL_DIGITS)
+            val viaNumberIdx = c.getColumnIndex(CallLog.Calls.VIA_NUMBER)
+            val screeningAppIdx = c.getColumnIndex(CallLog.Calls.CALL_SCREENING_APP_NAME)
+            val screeningComponentIdx = c.getColumnIndex(CallLog.Calls.CALL_SCREENING_COMPONENT_NAME)
+            val blockReasonIdx = c.getColumnIndex(CallLog.Calls.BLOCK_REASON)
 
-            while (cursor.moveToNext() && !shouldStop()) {
-                val type = cursor.getIntOrNull(typeIdx) ?: continue
-                val date = cursor.getLongOrNull(dateIdx) ?: continue
-                val duration = cursor.getLongOrNull(durationIdx) ?: 0L
+            while (c.moveToNext() && !shouldStop()) {
+                val type = c.getIntOrNull(typeIdx) ?: continue
+                val date = c.getLongOrNull(dateIdx) ?: continue
+                val duration = c.getLongOrNull(durationIdx) ?: 0L
 
                 entries.add(
                     BackedUpCallLogEntry(
-                        number = cursor.getStringOrNull(numberIdx),
-                        presentation = cursor.getIntOrNull(presentationIdx),
+                        number = c.getStringOrNull(numberIdx),
+                        presentation = c.getIntOrNull(presentationIdx),
                         type = type,
                         date = date,
                         duration = duration,
-                        isNew = cursor.getIntOrNull(newIdx),
-                        cachedName = cursor.getStringOrNull(cachedNameIdx),
-                        cachedNumberType = cursor.getIntOrNull(cachedNumTypeIdx),
-                        cachedNumberLabel = cursor.getStringOrNull(cachedNumLabelIdx),
-                        countryIso = cursor.getStringOrNull(countryIsoIdx),
-                        geocodedLocation = cursor.getStringOrNull(geocodedLocationIdx),
-                        features = cursor.getIntOrNull(featuresIdx),
-                        isRead = cursor.getIntOrNull(isReadIdx),
-                        phoneAccountComponentName = cursor.getStringOrNull(phoneAccountComponentIdx),
-                        phoneAccountId = cursor.getStringOrNull(phoneAccountIdIdx),
-                        voicemailUri = cursor.getStringOrNull(voicemailUriIdx),
-                        postDialDigits = cursor.getStringOrNull(postDialDigitsIdx),
-                        viaNumber = cursor.getStringOrNull(viaNumberIdx),
-                        callScreeningAppName = cursor.getStringOrNull(screeningAppIdx),
-                        callScreeningComponentName = cursor.getStringOrNull(screeningComponentIdx),
-                        blockReason = cursor.getIntOrNull(blockReasonIdx)
+                        isNew = c.getIntOrNull(newIdx),
+                        cachedName = c.getStringOrNull(cachedNameIdx),
+                        cachedNumberType = c.getIntOrNull(cachedNumTypeIdx),
+                        cachedNumberLabel = c.getStringOrNull(cachedNumLabelIdx),
+                        countryIso = c.getStringOrNull(countryIsoIdx),
+                        geocodedLocation = c.getStringOrNull(geocodedLocationIdx),
+                        features = c.getIntOrNull(featuresIdx),
+                        isRead = c.getIntOrNull(isReadIdx),
+                        phoneAccountComponentName = c.getStringOrNull(phoneAccountComponentIdx),
+                        phoneAccountId = c.getStringOrNull(phoneAccountIdIdx),
+                        voicemailUri = c.getStringOrNull(voicemailUriIdx),
+                        postDialDigits = c.getStringOrNull(postDialDigitsIdx),
+                        viaNumber = c.getStringOrNull(viaNumberIdx),
+                        callScreeningAppName = c.getStringOrNull(screeningAppIdx),
+                        callScreeningComponentName = c.getStringOrNull(screeningComponentIdx),
+                        blockReason = c.getIntOrNull(blockReasonIdx)
                     )
                 )
             }
@@ -145,11 +146,8 @@ class CallLogsBackupRepository(private val context: Context) {
             PhoneNumberUtils.formatNumberToE164(number, country)
         }
 
-        val existingKeys = if (hasReadCallLogPermission()) {
-            loadExistingDedupKeys(deviceCountryIso, e164Formatter).toMutableSet()
-        } else {
-            mutableSetOf()
-        }
+        check(hasReadCallLogPermission()) { "READ_CALL_LOG permission is required to deduplicate call logs during restore." }
+        val existingKeys = loadExistingDedupKeys(deviceCountryIso, e164Formatter).toMutableSet()
 
         var restoredCount = 0
         var skippedCount = 0
@@ -180,8 +178,14 @@ class CallLogsBackupRepository(private val context: Context) {
                 }
             } catch (batchEx: Exception) {
                 android.util.Log.w(TAG, "Call log batch insert failed, falling back to single inserts", batchEx)
+                val reloadedKeys = loadExistingDedupKeys(deviceCountryIso, e164Formatter)
+                existingKeys.addAll(reloadedKeys)
                 pendingEntries.forEach { (entry, key) ->
                     if (shouldStop()) return@forEach
+                    if (key in reloadedKeys) {
+                        restoredCount++
+                        return@forEach
+                    }
                     val inserted = runCatching {
                         resolver.applyBatch(
                             CallLog.AUTHORITY,
@@ -278,7 +282,7 @@ class CallLogsBackupRepository(private val context: Context) {
         e164Formatter: (String, String) -> String?
     ): Set<String> {
         val keys = HashSet<String>()
-        context.contentResolver.query(
+        val cursor = context.contentResolver.query(
             CallLog.Calls.CONTENT_URI,
             arrayOf(
                 CallLog.Calls.NUMBER,
@@ -291,14 +295,15 @@ class CallLogsBackupRepository(private val context: Context) {
             null,
             null,
             null
-        )?.use { cursor ->
-            while (cursor.moveToNext()) {
-                val number = cursor.getStringOrNull(0)
-                val presentation = cursor.getIntOrNull(1)
-                val type = cursor.getIntOrNull(2) ?: continue
-                val date = cursor.getLongOrNull(3) ?: continue
-                val duration = cursor.getLongOrNull(4) ?: 0L
-                val countryIso = cursor.getStringOrNull(5)
+        ) ?: throw IllegalStateException("Call log query returned null cursor")
+        cursor.use { c ->
+            while (c.moveToNext()) {
+                val number = c.getStringOrNull(0)
+                val presentation = c.getIntOrNull(1)
+                val type = c.getIntOrNull(2) ?: continue
+                val date = c.getLongOrNull(3) ?: continue
+                val duration = c.getLongOrNull(4) ?: 0L
+                val countryIso = c.getStringOrNull(5)
                 keys.add(
                     buildCallLogDedupKey(
                         number = number,

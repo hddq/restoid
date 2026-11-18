@@ -33,6 +33,11 @@ data class BackedUpCallLogEntry(
     val blockReason: Int? = null
 )
 
+private const val PRESENTATION_RESTRICTED = 2
+private const val PRESENTATION_UNKNOWN = 3
+private const val PRESENTATION_PAYPHONE = 4
+private const val PRESENTATION_UNAVAILABLE = 5
+
 internal fun buildCallLogDedupKey(
     number: String?,
     presentation: Int?,
@@ -43,8 +48,12 @@ internal fun buildCallLogDedupKey(
     e164Formatter: ((String, String) -> String?)? = null
 ): String {
     val trimmed = number?.trim().orEmpty()
+    val isHiddenPresentation = presentation == PRESENTATION_RESTRICTED ||
+        presentation == PRESENTATION_UNKNOWN ||
+        presentation == PRESENTATION_UNAVAILABLE ||
+        (presentation == PRESENTATION_PAYPHONE && !trimmed.any { it.isDigit() })
     val normalizedNumber = when {
-        trimmed.isEmpty() -> "p:${presentation ?: -1}"
+        trimmed.isEmpty() || isHiddenPresentation -> "p:${presentation ?: -1}"
         trimmed.any { it.isLetter() } -> trimmed.lowercase()
         else -> normalizePhoneForDedup(trimmed, defaultCountryIso, e164Formatter).ifEmpty { trimmed }
     }

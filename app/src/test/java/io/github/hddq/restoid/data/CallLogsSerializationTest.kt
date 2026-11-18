@@ -177,9 +177,25 @@ class CallLogsSerializationTest {
             duration = 0L
         )
         assertEquals("p:2|1700000000000|3|0", privateKey)
+        assertEquals(
+            privateKey,
+            buildCallLogDedupKey("Private", 2, 3, 1_700_000_000_000L, 0L)
+        )
+        assertEquals(
+            privateKey,
+            buildCallLogDedupKey("-2", 2, 3, 1_700_000_000_000L, 0L)
+        )
+        assertEquals(
+            "p:3|1700000000000|3|0",
+            buildCallLogDedupKey("Unknown", 3, 3, 1_700_000_000_000L, 0L)
+        )
+        assertEquals(
+            "p:5|1700000000000|3|0",
+            buildCallLogDedupKey("Unavailable", 5, 3, 1_700_000_000_000L, 0L)
+        )
         assertNotEquals(privateKey, payphoneKey)
 
-        // Alphanumeric caller IDs normalize case-insensitively
+        // Alphanumeric caller IDs with allowed presentation normalize case-insensitively
         assertEquals(
             buildCallLogDedupKey("Voicemail", 1, 4, 1000L, 12L),
             buildCallLogDedupKey("voicemail", 1, 4, 1000L, 12L)
