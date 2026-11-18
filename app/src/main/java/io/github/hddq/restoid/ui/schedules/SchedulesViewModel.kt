@@ -24,6 +24,7 @@ import io.github.hddq.restoid.ui.shared.normalizeForgetHosts
 import io.github.hddq.restoid.ui.shared.toUiModel
 import io.github.hddq.restoid.util.StorageUtils
 import io.github.hddq.restoid.work.BackupWorkRequest
+import io.github.hddq.restoid.work.DeviceDataBackupSelection
 import io.github.hddq.restoid.work.ExclusionConflict
 import io.github.hddq.restoid.work.RunTasksConfig
 import io.github.hddq.restoid.work.findConflictingExclusions
@@ -61,6 +62,9 @@ data class AddEditScheduleUiState(
     val showConfirmDeleteDialog: Boolean = false,
     val showDiscardChangesDialog: Boolean = false,
     val customDirectoriesBackupEnabled: Boolean = false,
+    val deviceDataBackupEnabled: Boolean = false,
+    val contactsBackupEnabled: Boolean = true,
+    val includeReadOnlyContacts: Boolean = false,
     val customDirectories: List<io.github.hddq.restoid.model.CustomDirectory> = emptyList(),
     val excludedCustomDirectories: List<io.github.hddq.restoid.model.CustomDirectory> = emptyList(),
     val exclusionConflicts: List<ExclusionConflict> = emptyList(),
@@ -237,6 +241,9 @@ class SchedulesViewModel(
             triggerConditions = schedule.triggerConditions,
             lastRunTimestamp = schedule.lastRunTimestamp,
             customDirectoriesBackupEnabled = schedule.config.customDirectories.isNotEmpty(),
+            deviceDataBackupEnabled = schedule.config.deviceData.contacts,
+            contactsBackupEnabled = true,
+            includeReadOnlyContacts = schedule.config.deviceData.includeReadOnlyContacts,
             customDirectories = schedule.config.customDirectories.map { io.github.hddq.restoid.model.CustomDirectory(it, true) },
             excludedCustomDirectories = schedule.config.excludedCustomDirectories.map { io.github.hddq.restoid.model.CustomDirectory(it, true) }
         )
@@ -300,6 +307,9 @@ class SchedulesViewModel(
                 current.maintenance != initial.maintenance ||
                 current.triggerConditions != initial.triggerConditions ||
                 current.customDirectoriesBackupEnabled != initial.customDirectoriesBackupEnabled ||
+                current.deviceDataBackupEnabled != initial.deviceDataBackupEnabled ||
+                current.contactsBackupEnabled != initial.contactsBackupEnabled ||
+                current.includeReadOnlyContacts != initial.includeReadOnlyContacts ||
                 current.customDirectories != initial.customDirectories ||
                 current.excludedCustomDirectories != initial.excludedCustomDirectories
     }
@@ -337,6 +347,10 @@ class SchedulesViewModel(
                 appBackupTypes = if (actualBackupEnabled) selectedAppBackupTypes(state).mapValues { it.value.toSelection() } else emptyMap(),
                 customDirectories = if (state.customDirectoriesBackupEnabled) state.customDirectories.filter { it.isSelected }.map { it.uri } else emptyList(),
                 excludedCustomDirectories = if (state.customDirectoriesBackupEnabled) state.excludedCustomDirectories.filter { it.isSelected }.map { it.uri } else emptyList(),
+                deviceData = DeviceDataBackupSelection(
+                    contacts = state.deviceDataBackupEnabled && state.contactsBackupEnabled,
+                    includeReadOnlyContacts = state.includeReadOnlyContacts
+                ),
                 unlockRepo = state.maintenance.unlockRepo,
                 forgetSnapshots = state.maintenance.forgetSnapshots,
                 pruneRepo = state.maintenance.pruneRepo,
@@ -449,6 +463,18 @@ class SchedulesViewModel(
 
     fun setCustomDirectoriesBackupEnabled(enabled: Boolean) {
         _addEditState.update { recomputeConflicts(it.copy(customDirectoriesBackupEnabled = enabled)) }
+    }
+
+    fun setDeviceDataBackupEnabled(enabled: Boolean) {
+        _addEditState.update { it.copy(deviceDataBackupEnabled = enabled) }
+    }
+
+    fun setContactsBackupEnabled(enabled: Boolean) {
+        _addEditState.update { it.copy(contactsBackupEnabled = enabled) }
+    }
+
+    fun setIncludeReadOnlyContacts(enabled: Boolean) {
+        _addEditState.update { it.copy(includeReadOnlyContacts = enabled) }
     }
 
     fun addCustomDirectory(uriString: String) {

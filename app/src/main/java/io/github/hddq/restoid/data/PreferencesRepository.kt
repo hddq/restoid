@@ -121,6 +121,31 @@ class PreferencesRepository(private val context: Context) {
         return prefs.getBoolean("runtasks_custom_directories_enabled", false)
     }
 
+    // Device Data Backup Preferences
+    fun saveDeviceDataBackupEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("runtasks_device_data_enabled", enabled).apply()
+    }
+
+    fun loadDeviceDataBackupEnabled(): Boolean {
+        return prefs.getBoolean("runtasks_device_data_enabled", false)
+    }
+
+    fun saveDeviceDataContactsEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("runtasks_device_data_contacts_enabled", enabled).apply()
+    }
+
+    fun loadDeviceDataContactsEnabled(): Boolean {
+        return prefs.getBoolean("runtasks_device_data_contacts_enabled", true)
+    }
+
+    fun saveIncludeReadOnlyContacts(enabled: Boolean) {
+        prefs.edit().putBoolean("runtasks_device_data_include_readonly_contacts", enabled).apply()
+    }
+
+    fun loadIncludeReadOnlyContacts(): Boolean {
+        return prefs.getBoolean("runtasks_device_data_include_readonly_contacts", false)
+    }
+
     fun saveCustomDirectories(allUris: Set<String>, selectedUris: Set<String>) {
         with(prefs.edit()) {
             putStringSet("runtasks_custom_directories_all", allUris)

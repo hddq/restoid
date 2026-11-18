@@ -9,6 +9,18 @@ data class CustomDirectoryMetadata(
     val isDirectory: Boolean? = null
 )
 
+@Serializable
+data class ContactsBackupMetadata(
+    val count: Int,
+    val size: Long,
+    val path: String
+)
+
+@Serializable
+data class DeviceDataMetadata(
+    val contacts: ContactsBackupMetadata? = null
+)
+
 /**
  * Represents the top-level structure of the `restoid.json` metadata file.
  * It contains a map of applications that were included in the snapshot.
@@ -19,7 +31,8 @@ data class CustomDirectoryMetadata(
 @Serializable
 data class RestoidMetadata(
     val apps: Map<String, AppMetadata>,
-    val customDirectories: Map<String, CustomDirectoryMetadata> = emptyMap()
+    val customDirectories: Map<String, CustomDirectoryMetadata> = emptyMap(),
+    val deviceData: DeviceDataMetadata? = null
 )
 
 @Serializable

@@ -1,5 +1,9 @@
 package io.github.hddq.restoid.ui.shared
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
@@ -42,12 +46,14 @@ import androidx.compose.material.icons.outlined.AdminPanelSettings
 import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Contacts
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.FolderOff
+import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Inventory2
@@ -96,6 +102,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
@@ -1921,6 +1928,137 @@ fun ExclusionConflictWarningCard(
                             modifier = Modifier.padding(top = 2.dp, bottom = 2.dp)
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun rememberPermissionsState(
+    vararg permissions: String,
+    onGranted: () -> Unit = {},
+    onDenied: () -> Unit = {}
+): Pair<Boolean, () -> Unit> {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    fun checkAll() = permissions.all {
+        ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+    }
+    var granted by remember { mutableStateOf(checkAll()) }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                granted = checkAll()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) {
+        granted = checkAll()
+        if (granted) onGranted() else onDenied()
+    }
+
+    return granted to { launcher.launch(arrayOf(*permissions)) }
+}
+
+fun buildDeviceDataSubtitle(
+    contactsEnabled: Boolean,
+    deviceDataBackupEnabled: Boolean,
+    hasReadContactsPermission: Boolean,
+    context: android.content.Context
+): String {
+    return when {
+        !contactsEnabled -> context.getString(R.string.device_data_none_selected)
+        deviceDataBackupEnabled && !hasReadContactsPermission -> context.getString(R.string.device_data_contacts_permission_required)
+        else -> context.getString(R.string.device_data_contacts)
+    }
+}
+
+@Composable
+fun DeviceDataConfigScreen(
+    contactsEnabled: Boolean,
+    includeReadOnlyContacts: Boolean,
+    onContactsEnabledChange: (Boolean) -> Unit,
+    onIncludeReadOnlyContactsChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val (hasReadPermission, requestReadPermission) = rememberPermissionsState(
+        Manifest.permission.READ_CONTACTS,
+        onGranted = { onContactsEnabledChange(true) }
+    )
+
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp, top = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item(key = "device_data_items") {
+            ExpressiveCardGroup {
+                ExpressiveSegmentedSurface(index = 0, count = 2) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                if (!hasReadPermission) requestReadPermission() else onContactsEnabledChange(!contactsEnabled)
+                            }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Contacts,
+                            contentDescription = null,
+                            tint = if (contactsEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(end = 16.dp)
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.device_data_contacts),
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            if (contactsEnabled && !hasReadPermission) {
+                                Text(
+                                    text = stringResource(R.string.device_data_contacts_permission_required),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                        Spacer(Modifier.width(16.dp))
+                        Switch(
+                            checked = contactsEnabled,
+                            onCheckedChange = { enabled ->
+                                if (enabled && !hasReadPermission) requestReadPermission() else onContactsEnabledChange(enabled)
+                            },
+                            thumbContent = if (contactsEnabled) {
+                                {
+                                    Icon(
+                                        imageVector = Icons.Filled.Check,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                                    )
+                                }
+                            } else {
+                                null
+                            }
+                        )
+                    }
+                }
+                ExpressiveSegmentedSurface(index = 1, count = 2) {
+                    TaskRow(
+                        title = stringResource(R.string.device_data_include_read_only_contacts),
+                        icon = Icons.Outlined.Group,
+                        checked = includeReadOnlyContacts,
+                        onCheckedChange = onIncludeReadOnlyContactsChange,
+                        enabled = contactsEnabled
+                    )
                 }
             }
         }

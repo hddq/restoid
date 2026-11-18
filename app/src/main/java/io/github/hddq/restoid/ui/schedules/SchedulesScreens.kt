@@ -1,5 +1,6 @@
 package io.github.hddq.restoid.ui.schedules
 
+import android.Manifest
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -41,6 +42,7 @@ import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Label
 import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material.icons.outlined.Update
 import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material3.AlertDialog
@@ -90,7 +92,9 @@ import io.github.hddq.restoid.ui.shared.TaskRow
 import io.github.hddq.restoid.ui.shared.buildBackupSubtitle
 import io.github.hddq.restoid.ui.shared.buildCheckSubtitle
 import io.github.hddq.restoid.ui.shared.buildCustomDirectoriesSubtitle
+import io.github.hddq.restoid.ui.shared.buildDeviceDataSubtitle
 import io.github.hddq.restoid.ui.shared.buildForgetSubtitle
+import io.github.hddq.restoid.ui.shared.rememberPermissionsState
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -210,6 +214,7 @@ fun AddEditScheduleScreen(
     onNavigateBack: () -> Unit,
     onNavigateToBackupConfig: () -> Unit,
     onNavigateToCustomDirectoriesConfig: () -> Unit,
+    onNavigateToDeviceDataConfig: () -> Unit,
     onNavigateToForgetConfig: () -> Unit,
     onNavigateToCheckConfig: () -> Unit,
     modifier: Modifier = Modifier
@@ -219,6 +224,10 @@ fun AddEditScheduleScreen(
     var intervalText by remember(state.intervalHours) { mutableStateOf(state.intervalHours.toString()) }
     val appBarActions = LocalAppBarActions.current
     var showGuideSheet by remember { mutableStateOf(false) }
+
+    val (hasReadContactsPermission, requestReadContactsPermission) = rememberPermissionsState(
+        Manifest.permission.READ_CONTACTS
+    )
 
     val hasUnsavedChanges = remember(state) { viewModel.hasChanges(state) }
 
@@ -409,7 +418,7 @@ fun AddEditScheduleScreen(
                 ExclusionConflictWarningCard(conflicts = state.exclusionConflicts)
                 ExpressiveSectionHeader(title = stringResource(R.string.operation_backup))
                 ExpressiveCardGroup {
-                    ExpressiveSegmentedSurface(index = 0, count = 2) {
+                    ExpressiveSegmentedSurface(index = 0, count = 3) {
                         TaskRow(
                             title = stringResource(R.string.run_tasks_applications),
                             subtitle = if (hasRoot) buildBackupSubtitle(state.apps, state.appBackupTypes, state.backupTypes, context) else stringResource(R.string.root_access_denied),
@@ -420,7 +429,7 @@ fun AddEditScheduleScreen(
                             enabled = hasRoot
                         )
                     }
-                    ExpressiveSegmentedSurface(index = 1, count = 2) {
+                    ExpressiveSegmentedSurface(index = 1, count = 3) {
                         TaskRow(
                             title = stringResource(R.string.run_tasks_custom_directories),
                             subtitle = buildCustomDirectoriesSubtitle(state.customDirectories, state.excludedCustomDirectories, context),
@@ -428,6 +437,26 @@ fun AddEditScheduleScreen(
                             checked = state.customDirectoriesBackupEnabled,
                             onCheckedChange = viewModel::setCustomDirectoriesBackupEnabled,
                             onNavigate = onNavigateToCustomDirectoriesConfig
+                        )
+                    }
+                    ExpressiveSegmentedSurface(index = 2, count = 3) {
+                        TaskRow(
+                            title = stringResource(R.string.run_tasks_device_data),
+                            subtitle = buildDeviceDataSubtitle(
+                                contactsEnabled = state.contactsBackupEnabled,
+                                deviceDataBackupEnabled = state.deviceDataBackupEnabled,
+                                hasReadContactsPermission = hasReadContactsPermission,
+                                context = context
+                            ),
+                            icon = Icons.Outlined.Smartphone,
+                            checked = state.deviceDataBackupEnabled,
+                            onCheckedChange = { enabled ->
+                                viewModel.setDeviceDataBackupEnabled(enabled)
+                                if (enabled && state.contactsBackupEnabled && !hasReadContactsPermission) {
+                                    requestReadContactsPermission()
+                                }
+                            },
+                            onNavigate = onNavigateToDeviceDataConfig
                         )
                     }
                 }
@@ -723,6 +752,21 @@ fun ScheduleCustomDirectoriesConfigScreen(
         onAddExcludedDirectory = viewModel::addExcludedCustomDirectory,
         onToggleExcludedDirectory = viewModel::toggleExcludedCustomDirectory,
         onRemoveExcludedDirectory = viewModel::removeExcludedCustomDirectory,
+        modifier = modifier
+    )
+}
+
+@Composable
+fun ScheduleDeviceDataConfigScreen(
+    viewModel: SchedulesViewModel,
+    modifier: Modifier = Modifier
+) {
+    val state by viewModel.addEditState.collectAsStateWithLifecycle()
+    io.github.hddq.restoid.ui.shared.DeviceDataConfigScreen(
+        contactsEnabled = state.contactsBackupEnabled,
+        includeReadOnlyContacts = state.includeReadOnlyContacts,
+        onContactsEnabledChange = viewModel::setContactsBackupEnabled,
+        onIncludeReadOnlyContactsChange = viewModel::setIncludeReadOnlyContacts,
         modifier = modifier
     )
 }

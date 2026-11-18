@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Contacts
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.ExpandLess
@@ -82,6 +83,7 @@ import io.github.hddq.restoid.R
 import io.github.hddq.restoid.RestoidApplication
 import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.model.BackupDetail
+import io.github.hddq.restoid.model.ContactsBackupMetadata
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
 import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
 import io.github.hddq.restoid.ui.components.SortableSectionHeader
@@ -175,6 +177,7 @@ fun SnapshotDetailsScreen(
             snapshot != null -> {
                 val customDirs = metadata?.customDirectories ?: emptyMap()
                 val dirsList = customDirs.toList()
+                val contactsMeta = metadata?.deviceData?.contacts
 
                 LazyColumn(
                     modifier = Modifier.weight(1f),
@@ -236,8 +239,26 @@ fun SnapshotDetailsScreen(
                             }
                         }
                     }
+                    if (contactsMeta != null) {
+                        item(key = "device_data_header", contentType = "device_data_header") {
+                            ExpressiveSectionHeader(
+                                title = stringResource(R.string.snapshot_backed_up_device_data),
+                                modifier = Modifier.padding(
+                                    top = if (backupDetails.isNotEmpty() || dirsList.isNotEmpty()) 14.dp else 0.dp
+                                )
+                            )
+                        }
+                        item(key = "device_data_contacts", contentType = "device_data_contacts") {
+                            ExpressiveSegmentedSurface(
+                                index = 0,
+                                count = 1
+                            ) {
+                                BackedUpContactsItem(metadata = contactsMeta)
+                            }
+                        }
+                    }
 
-                    if (backupDetails.isEmpty() && customDirs.isEmpty() && !isLoading) {
+                    if (backupDetails.isEmpty() && customDirs.isEmpty() && contactsMeta == null && !isLoading) {
                         item(key = "empty_metadata", contentType = "empty_metadata") {
                             if (metadata == null) {
                                 Text(
@@ -590,6 +611,41 @@ private fun BackedUpCustomDirItemContent(
                 contentDescription = if (isExpanded) stringResource(R.string.action_collapse) else stringResource(R.string.action_expand),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun BackedUpContactsItem(
+    metadata: ContactsBackupMetadata,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val countText = pluralStringResource(R.plurals.device_data_contacts_count, metadata.count, metadata.count)
+    val sizeText = Formatter.formatShortFileSize(context, metadata.size)
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            Icons.Outlined.Contacts,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                stringResource(R.string.device_data_contacts),
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                stringResource(R.string.device_data_contacts_count_size, countText, sizeText),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

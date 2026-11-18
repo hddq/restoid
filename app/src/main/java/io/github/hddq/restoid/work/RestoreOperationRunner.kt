@@ -8,6 +8,7 @@ import android.util.Log
 import com.topjohnwu.superuser.CallbackList
 import com.topjohnwu.superuser.Shell
 import io.github.hddq.restoid.R
+import io.github.hddq.restoid.data.ContactsBackupRepository
 import io.github.hddq.restoid.data.MetadataRepository
 import io.github.hddq.restoid.data.OperationLockManager
 import io.github.hddq.restoid.data.RepositoriesRepository
@@ -32,7 +33,8 @@ class RestoreOperationRunner(
     private val resticBinaryManager: ResticBinaryManager,
     private val resticRepository: ResticRepository,
     private val metadataRepository: MetadataRepository,
-    private val operationLockManager: OperationLockManager
+    private val operationLockManager: OperationLockManager,
+    private val contactsBackupRepository: ContactsBackupRepository = ContactsBackupRepository(context)
 ) {
 
     suspend fun run(
@@ -72,10 +74,13 @@ class RestoreOperationRunner(
         val metadataRestoreSelected = effectiveRestoreTypes.values.any {
             it.permissions || it.specialAccess || it.accessibility
         }
+        val deviceDataItemCount = if (request.deviceData.contacts) 1 else 0
+        val totalRestoreItems = selectedAppPackages.size + request.selectedCustomDirectories.size + deviceDataItemCount
 
         val stageList = mutableListOf(context.getString(R.string.restore_stage_restore_files))
         if (apkRestoreSelected || anyDataRestoreSelected || metadataRestoreSelected) stageList.add(context.getString(R.string.restore_stage_processing_apps))
         if (request.selectedCustomDirectories.isNotEmpty()) stageList.add(context.getString(R.string.restore_stage_processing_custom_directories))
+        if (request.deviceData.contacts) stageList.add(context.getString(R.string.restore_stage_processing_device_data))
         stageList.add(context.getString(R.string.restore_stage_cleanup))
         val totalStages = stageList.size
         var currentStageNum = 1
@@ -90,12 +95,16 @@ class RestoreOperationRunner(
                 throw IllegalStateException(context.getString(R.string.restore_error_preflight_failed))
             }
 
-            if (selectedAppPackages.isEmpty() && request.selectedCustomDirectories.isEmpty()) {
+            if (selectedAppPackages.isEmpty() && request.selectedCustomDirectories.isEmpty() && !request.deviceData.anyEnabled()) {
                 throw IllegalStateException(context.getString(R.string.restore_error_no_items_selected))
             }
 
             if (selectedAppPackages.isNotEmpty() && !Shell.getShell().isRoot) {
                 throw IllegalStateException(context.getString(R.string.root_access_denied))
+            }
+
+            if (request.deviceData.contacts && !contactsBackupRepository.hasWriteContactsPermission()) {
+                throw IllegalStateException(context.getString(R.string.error_contacts_write_permission_required))
             }
 
             val currentSnapshot = findSnapshot(request)
@@ -136,6 +145,19 @@ class RestoreOperationRunner(
             pathsToRestore.addAll(request.selectedCustomDirectories)
             val metadata = selectedRepository.id?.let { repoId ->
                 metadataRepository.getMetadataForSnapshot(repoId, currentSnapshot.id)
+            }
+            val contactsBackupPath = if (request.deviceData.contacts) {
+                metadata?.deviceData?.contacts?.path ?: resolveContactsPathFromSnapshot(
+                    repoPath = selectedRepoPath,
+                    password = password,
+                    snapshotId = currentSnapshot.id,
+                    repositoryKey = request.repositoryKey
+                )
+            } else {
+                null
+            }
+            if (contactsBackupPath != null) {
+                pathsToRestore.add(contactsBackupPath)
             }
 
             if (pathsToRestore.isEmpty() && !metadataRestoreSelected) {
@@ -445,6 +467,68 @@ class RestoreOperationRunner(
                 }
             }
 
+            val deviceDataStageIndex = stageList.indexOf(context.getString(R.string.restore_stage_processing_device_data))
+            if (deviceDataStageIndex != -1 && request.deviceData.contacts) {
+                currentStageNum = deviceDataStageIndex + 1
+                val processingStageTitle = context.getString(
+                    R.string.restore_stage_processing_template_device_data,
+                    currentStageNum,
+                    totalStages
+                )
+                throwIfCancelled()
+
+                if (Shell.getShell().isRoot) {
+                    Shell.cmd("chmod -R a+rX ${shellQuote(tempRestoreDir.absolutePath)}").exec()
+                }
+                val contactsSourceDir = contactsBackupPath
+                    ?.let { File(tempRestoreDir, it.trimStart('/')) }
+                    ?.takeIf { File(it, ContactsBackupRepository.CONTACTS_FILE_NAME).exists() }
+                    ?: tempRestoreDir.walkTopDown().firstOrNull {
+                        it.isFile && it.name == ContactsBackupRepository.CONTACTS_FILE_NAME
+                    }?.parentFile
+
+                if (contactsSourceDir != null && File(contactsSourceDir, ContactsBackupRepository.CONTACTS_FILE_NAME).exists()) {
+                    val importResult = contactsBackupRepository.importContacts(
+                        inputDir = contactsSourceDir,
+                        shouldStop = shouldStop,
+                        onContactProcessed = { processed, total, displayName ->
+                            val stageFraction = if (total > 0) processed.toFloat() / total.toFloat() else 1f
+                            progressState = progressState.copy(
+                                stageTitle = processingStageTitle,
+                                stagePercentage = stageFraction,
+                                overallPercentage = (deviceDataStageIndex + stageFraction) / totalStages.toFloat(),
+                                isStageIndeterminate = total == 0,
+                                isOverallIndeterminate = false,
+                                currentFile = displayName ?: context.getString(R.string.device_data_contacts),
+                                filesProcessed = successes + 1,
+                                totalFiles = totalRestoreItems,
+                                isFinished = false,
+                                elapsedTime = (SystemClock.elapsedRealtime() - startTime) / 1000
+                            )
+                            onProgress(progressState)
+                        }
+                    )
+                    throwIfCancelled()
+                    if (importResult.failedCount == 0 && importResult.failedGroupCount == 0 && importResult.failedPhotoCount == 0) {
+                        successes++
+                    } else {
+                        failures++
+                        if (importResult.failedCount > 0) {
+                            failureDetails.add(context.getString(R.string.restore_failure_contacts, importResult.failedCount))
+                        }
+                        if (importResult.failedGroupCount > 0) {
+                            failureDetails.add(context.getString(R.string.restore_failure_contact_groups, importResult.failedGroupCount))
+                        }
+                        if (importResult.failedPhotoCount > 0) {
+                            failureDetails.add(context.getString(R.string.restore_failure_contact_photos, importResult.failedPhotoCount))
+                        }
+                    }
+                } else {
+                    failures++
+                    failureDetails.add(context.getString(R.string.restore_failure_contacts_missing))
+                }
+            }
+
             currentStageNum = totalStages
             val cleanupStageTitle = "[${currentStageNum}/${totalStages}] ${context.getString(R.string.restore_stage_cleanup)}"
             progressState = progressState.copy(
@@ -491,7 +575,7 @@ class RestoreOperationRunner(
                 error = if (failures > 0) failureDetails.joinToString(", ") else null,
                 elapsedTime = finalElapsedTime,
                 filesProcessed = successes,
-                totalFiles = selectedAppPackages.size
+                totalFiles = totalRestoreItems
             )
 
             OperationRunResult(success = failures == 0, progress = finalProgress)
@@ -520,6 +604,24 @@ class RestoreOperationRunner(
         }
 
         return finalResult
+    }
+
+    private suspend fun resolveContactsPathFromSnapshot(
+        repoPath: String,
+        password: String,
+        snapshotId: String,
+        repositoryKey: String
+    ): String? {
+        val paths = resticRepository.ls(
+            repoPath = repoPath,
+            password = password,
+            snapshotId = snapshotId,
+            environmentVariables = repositoriesRepository.getExecutionEnvironmentVariables(repositoryKey),
+            resticOptions = repositoriesRepository.getExecutionResticOptions(repositoryKey)
+        ).getOrNull() ?: return null
+        val contactsJsonSuffix = "/${ContactsBackupRepository.CONTACTS_RELATIVE_STAGING_PATH}/${ContactsBackupRepository.CONTACTS_FILE_NAME}"
+        val contactsJsonPath = paths.find { it.endsWith(contactsJsonSuffix) } ?: return null
+        return contactsJsonPath.removeSuffix("/${ContactsBackupRepository.CONTACTS_FILE_NAME}")
     }
 
     private suspend fun findSnapshot(request: RestoreWorkRequest): SnapshotInfo? {
