@@ -22,7 +22,10 @@ ARG BUILD_TOOLS
 ARG NDK_VER
 
 RUN yes | sdkmanager --licenses >/dev/null && \
-    (sdkmanager "platforms;android-${COMPILE_SDK}.0" || sdkmanager "platforms;android-${COMPILE_SDK}") && \
+    case "${COMPILE_SDK}" in \
+        *.*) sdkmanager "platforms;android-${COMPILE_SDK}" ;; \
+        *) (sdkmanager "platforms;android-${COMPILE_SDK}.0" || sdkmanager "platforms;android-${COMPILE_SDK}") ;; \
+    esac && \
     sdkmanager "build-tools;${BUILD_TOOLS}" "ndk;${NDK_VER}" && \
     if [ -d "$ANDROID_HOME/platforms/android-${COMPILE_SDK}.0" ] && [ ! -d "$ANDROID_HOME/platforms/android-${COMPILE_SDK}" ]; then \
         ln -s "android-${COMPILE_SDK}.0" "$ANDROID_HOME/platforms/android-${COMPILE_SDK}"; \

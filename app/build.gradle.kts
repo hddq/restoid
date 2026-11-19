@@ -32,7 +32,11 @@ val baseAppVersionCode = 31
 
 android {
     namespace = "io.github.hddq.restoid"
-    compileSdk = 37
+    compileSdk {
+        version = release(37) {
+            minorApiLevel = 1
+        }
+    }
     buildToolsVersion = "37.0.0"
     ndkVersion = "30.0.16248370"
     defaultConfig {

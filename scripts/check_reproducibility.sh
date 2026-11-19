@@ -6,7 +6,49 @@ cd "$(dirname "$0")/.."
 
 echo "==> Extracting dependencies versions (Single source of truth)..."
 GO_VER=$(cat .go-version | tr -d '\r\n')
-COMPILE_SDK=$(grep "compileSdk =" app/build.gradle.kts | sed -E 's/.*= ([0-9]+).*/\1/' | tr -d ' ')
+COMPILE_SDK=$(awk '
+    /^[[:space:]]*compileSdk[[:space:]]*=/ {
+        val = $0
+        sub(/^.*=[[:space:]]*/, "", val)
+        sub(/[^0-9].*$/, "", val)
+        if (val != "") major = val
+    }
+    /^[[:space:]]*compileSdkMinor[[:space:]]*=/ {
+        val = $0
+        sub(/^.*=[[:space:]]*/, "", val)
+        sub(/[^0-9].*$/, "", val)
+        if (val != "") minor = val
+    }
+    /^[[:space:]]*compileSdk[[:space:]]*\{/ { in_block = 1; depth = 0 }
+    in_block {
+        if ($0 ~ /release\([0-9]+\)/) {
+            val = $0
+            sub(/^.*release\(/, "", val)
+            sub(/\).*$/, "", val)
+            if (val != "") major = val
+        }
+        if ($0 ~ /minorApiLevel[[:space:]]*=[[:space:]]*[0-9]+/) {
+            val = $0
+            sub(/^.*minorApiLevel[[:space:]]*=[[:space:]]*/, "", val)
+            sub(/[^0-9].*$/, "", val)
+            if (val != "") minor = val
+        }
+        line = $0
+        depth += gsub(/\{/, "{", line)
+        depth -= gsub(/\}/, "}", line)
+        if (depth <= 0) in_block = 0
+    }
+    END {
+        if (major != "") {
+            if (minor != "") printf "%s.%s", major, minor
+            else printf "%s", major
+        }
+    }
+' app/build.gradle.kts)
+if [ -z "$COMPILE_SDK" ]; then
+    echo "Error: Failed to extract compileSdk from app/build.gradle.kts" >&2
+    exit 1
+fi
 BUILD_TOOLS=$(grep "buildToolsVersion =" app/build.gradle.kts | sed -E 's/.*"(.*)".*/\1/' | tr -d ' ')
 NDK_VER=$(grep "ndkVersion =" app/build.gradle.kts | sed -E 's/.*"(.*)".*/\1/' | tr -d ' ')
 
