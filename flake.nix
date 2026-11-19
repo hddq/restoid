@@ -43,7 +43,7 @@
         '';
       };
       androidComposition = pkgs.androidenv.composeAndroidPackages {
-        platformVersions = [ "37" ];
+        platformVersions = [ "37.1" ];
         buildToolsVersions = [ "37.0.0" ];
         abiVersions = [ "arm64-v8a" "x86_64" ];
         includeEmulator = false;
