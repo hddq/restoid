@@ -52,8 +52,6 @@ import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
@@ -169,7 +167,6 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val app = applicationContext as RestoidApplication
@@ -309,7 +306,6 @@ class MainActivity : FragmentActivity() {
         biometricPrompt.authenticate(promptInfo)
     }
 
-    @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
     private fun launchAppContent(app: RestoidApplication) {
         if (isContentInitialized) {
             return
@@ -1198,7 +1194,6 @@ class MainActivity : FragmentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun RestoidBottomNavigationBar(
     selectedScreen: Screen,
@@ -1261,7 +1256,6 @@ private fun RestoidBottomNavigationBar(
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun TopLevelTabHost(
     selectedTab: Screen,
@@ -1363,7 +1357,6 @@ internal fun TopLevelTabHost(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun DestinationScaffold(
     titleRes: Int,

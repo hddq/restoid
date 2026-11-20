@@ -695,7 +695,6 @@ fun BackupConfigScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ForgetConfigScreen(
     maintenance: io.github.hddq.restoid.model.MaintenanceConfig,
