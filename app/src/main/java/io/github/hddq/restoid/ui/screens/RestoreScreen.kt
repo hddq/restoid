@@ -31,6 +31,7 @@ import androidx.compose.material.icons.outlined.AccessibilityNew
 import androidx.compose.material.icons.outlined.AdminPanelSettings
 import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.Apps
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Call
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Contacts
@@ -75,6 +76,7 @@ import coil.compose.rememberAsyncImagePainter
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.RestoidApplication
 import io.github.hddq.restoid.model.BackupDetail
+import io.github.hddq.restoid.model.CalendarBackupMetadata
 import io.github.hddq.restoid.model.CallLogsBackupMetadata
 import io.github.hddq.restoid.model.ContactsBackupMetadata
 import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
@@ -106,29 +108,35 @@ fun RestoreScreen(
     val customDirectories by viewModel.customDirectories.collectAsState()
     val contactsMetadata by viewModel.contactsMetadata.collectAsStateWithLifecycle()
     val callLogsMetadata by viewModel.callLogsMetadata.collectAsStateWithLifecycle()
+    val calendarMetadata by viewModel.calendarMetadata.collectAsStateWithLifecycle()
 
     val restoreAppsEnabled by viewModel.restoreAppsEnabled.collectAsState()
     val restoreCustomDirectoriesEnabled by viewModel.restoreCustomDirectoriesEnabled.collectAsState()
     val restoreDeviceDataEnabled by viewModel.restoreDeviceDataEnabled.collectAsStateWithLifecycle()
     val restoreContactsEnabled by viewModel.restoreContactsEnabled.collectAsStateWithLifecycle()
     val restoreCallLogsEnabled by viewModel.restoreCallLogsEnabled.collectAsStateWithLifecycle()
+    val restoreCalendarEnabled by viewModel.restoreCalendarEnabled.collectAsStateWithLifecycle()
     val restoreTypes by viewModel.restoreTypes.collectAsState()
     val appRestoreTypes by viewModel.appRestoreTypes.collectAsState()
 
     val context = LocalContext.current
     val contactsWritePermissionError = stringResource(R.string.error_contacts_write_permission_required)
     val callLogsWritePermissionError = stringResource(R.string.error_call_logs_write_permission_required)
+    val calendarWritePermissionError = stringResource(R.string.error_calendar_write_permission_required)
     var pendingStartRestore by remember { mutableStateOf(false) }
     val (deviceDataPermissions, requestDeviceDataPermissions) = rememberPermissionsMap(
         Manifest.permission.READ_CONTACTS,
         Manifest.permission.WRITE_CONTACTS,
         Manifest.permission.READ_CALL_LOG,
         Manifest.permission.WRITE_CALL_LOG,
+        Manifest.permission.READ_CALENDAR,
+        Manifest.permission.WRITE_CALENDAR,
         onResult = { statuses ->
             if (pendingStartRestore) {
                 pendingStartRestore = false
                 val needsContacts = restoreDeviceDataEnabled && contactsMetadata != null && restoreContactsEnabled
                 val needsCallLogs = restoreDeviceDataEnabled && callLogsMetadata != null && restoreCallLogsEnabled
+                val needsCalendar = restoreDeviceDataEnabled && calendarMetadata != null && restoreCalendarEnabled
                 val contactsOk = !needsContacts || (
                     statuses[Manifest.permission.READ_CONTACTS] == true &&
                         statuses[Manifest.permission.WRITE_CONTACTS] == true
@@ -137,10 +145,15 @@ fun RestoreScreen(
                     statuses[Manifest.permission.READ_CALL_LOG] == true &&
                         statuses[Manifest.permission.WRITE_CALL_LOG] == true
                     )
+                val calendarOk = !needsCalendar || (
+                    statuses[Manifest.permission.READ_CALENDAR] == true &&
+                        statuses[Manifest.permission.WRITE_CALENDAR] == true
+                    )
                 when {
-                    contactsOk && callLogsOk -> viewModel.startRestore()
+                    contactsOk && callLogsOk && calendarOk -> viewModel.startRestore()
                     !contactsOk -> Toast.makeText(context, contactsWritePermissionError, Toast.LENGTH_LONG).show()
-                    else -> Toast.makeText(context, callLogsWritePermissionError, Toast.LENGTH_LONG).show()
+                    !callLogsOk -> Toast.makeText(context, callLogsWritePermissionError, Toast.LENGTH_LONG).show()
+                    else -> Toast.makeText(context, calendarWritePermissionError, Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -151,6 +164,9 @@ fun RestoreScreen(
     val hasCallLogsPermissions =
         deviceDataPermissions[Manifest.permission.READ_CALL_LOG] == true &&
             deviceDataPermissions[Manifest.permission.WRITE_CALL_LOG] == true
+    val hasCalendarPermissions =
+        deviceDataPermissions[Manifest.permission.READ_CALENDAR] == true &&
+            deviceDataPermissions[Manifest.permission.WRITE_CALENDAR] == true
 
     LaunchedEffect(operationBlocked) {
         if (operationBlocked) {
@@ -186,20 +202,29 @@ fun RestoreScreen(
             val customDirsList = customDirectories.map { io.github.hddq.restoid.model.CustomDirectory(it.key, it.value) }
             val hasContactsInSnapshot = contactsMetadata != null
             val hasCallLogsInSnapshot = callLogsMetadata != null
-            val hasDeviceDataInSnapshot = hasContactsInSnapshot || hasCallLogsInSnapshot
+            val hasCalendarInSnapshot = calendarMetadata != null
+            val hasDeviceDataInSnapshot = hasContactsInSnapshot || hasCallLogsInSnapshot || hasCalendarInSnapshot
             val contactsActive = hasContactsInSnapshot && restoreContactsEnabled
             val callLogsActive = hasCallLogsInSnapshot && restoreCallLogsEnabled
+            val calendarActive = hasCalendarInSnapshot && restoreCalendarEnabled
             val missingContacts = contactsActive && !hasContactsPermissions
             val missingCallLogs = callLogsActive && !hasCallLogsPermissions
+            val missingCalendar = calendarActive && !hasCalendarPermissions
+            val missingPermissionsCount =
+                (if (missingContacts) 1 else 0) +
+                    (if (missingCallLogs) 1 else 0) +
+                    (if (missingCalendar) 1 else 0)
             val deviceDataSubtitle = when {
                 !hasDeviceDataInSnapshot -> stringResource(R.string.device_data_not_in_snapshot)
-                !contactsActive && !callLogsActive -> stringResource(R.string.device_data_none_selected)
-                restoreDeviceDataEnabled && missingContacts && missingCallLogs -> stringResource(R.string.device_data_permissions_required)
+                !contactsActive && !callLogsActive && !calendarActive -> stringResource(R.string.device_data_none_selected)
+                restoreDeviceDataEnabled && missingPermissionsCount > 1 -> stringResource(R.string.device_data_permissions_required)
                 restoreDeviceDataEnabled && missingContacts -> stringResource(R.string.device_data_contacts_permission_required)
                 restoreDeviceDataEnabled && missingCallLogs -> stringResource(R.string.device_data_call_logs_permission_required)
+                restoreDeviceDataEnabled && missingCalendar -> stringResource(R.string.device_data_calendar_permission_required)
                 else -> buildList {
                     if (contactsActive) add(formatContactsSummary(context, contactsMetadata!!))
                     if (callLogsActive) add(formatCallLogsSummary(context, callLogsMetadata!!))
+                    if (calendarActive) add(formatCalendarSummary(context, calendarMetadata!!))
                 }.joinToString(" • ")
             }
 
@@ -244,6 +269,10 @@ fun RestoreScreen(
                                         if (callLogsActive && !hasCallLogsPermissions) {
                                             add(Manifest.permission.READ_CALL_LOG)
                                             add(Manifest.permission.WRITE_CALL_LOG)
+                                        }
+                                        if (calendarActive && !hasCalendarPermissions) {
+                                            add(Manifest.permission.READ_CALENDAR)
+                                            add(Manifest.permission.WRITE_CALENDAR)
                                         }
                                     }
                                     if (missing.isNotEmpty()) {
@@ -443,8 +472,10 @@ fun RestoreDeviceDataConfigScreen(
     val context = LocalContext.current
     val contactsMetadata by viewModel.contactsMetadata.collectAsStateWithLifecycle()
     val callLogsMetadata by viewModel.callLogsMetadata.collectAsStateWithLifecycle()
+    val calendarMetadata by viewModel.calendarMetadata.collectAsStateWithLifecycle()
     val restoreContactsEnabled by viewModel.restoreContactsEnabled.collectAsStateWithLifecycle()
     val restoreCallLogsEnabled by viewModel.restoreCallLogsEnabled.collectAsStateWithLifecycle()
+    val restoreCalendarEnabled by viewModel.restoreCalendarEnabled.collectAsStateWithLifecycle()
 
     val (hasWriteContactsPermission, requestContactsPermissions) = rememberPermissionsState(
         Manifest.permission.READ_CONTACTS,
@@ -455,6 +486,11 @@ fun RestoreDeviceDataConfigScreen(
         Manifest.permission.READ_CALL_LOG,
         Manifest.permission.WRITE_CALL_LOG,
         onGranted = { viewModel.setRestoreCallLogsEnabled(true) }
+    )
+    val (hasWriteCalendarPermission, requestCalendarPermissions) = rememberPermissionsState(
+        Manifest.permission.READ_CALENDAR,
+        Manifest.permission.WRITE_CALENDAR,
+        onGranted = { viewModel.setRestoreCalendarEnabled(true) }
     )
 
     LazyColumn(
@@ -481,8 +517,17 @@ fun RestoreDeviceDataConfigScreen(
                 else -> formatCallLogsSummary(context, currentCallLogsMetadata)
             }
 
+            val currentCalendarMetadata = calendarMetadata
+            val calendarAvailable = currentCalendarMetadata != null
+            val calendarChecked = calendarAvailable && restoreCalendarEnabled
+            val calendarSubtitle = when {
+                currentCalendarMetadata == null -> stringResource(R.string.device_data_not_in_snapshot)
+                restoreCalendarEnabled && !hasWriteCalendarPermission -> stringResource(R.string.device_data_calendar_permission_required)
+                else -> formatCalendarSummary(context, currentCalendarMetadata)
+            }
+
             ExpressiveCardGroup {
-                ExpressiveSegmentedSurface(index = 0, count = 2) {
+                ExpressiveSegmentedSurface(index = 0, count = 3) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -541,7 +586,7 @@ fun RestoreDeviceDataConfigScreen(
                         )
                     }
                 }
-                ExpressiveSegmentedSurface(index = 1, count = 2) {
+                ExpressiveSegmentedSurface(index = 1, count = 3) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -600,6 +645,65 @@ fun RestoreDeviceDataConfigScreen(
                         )
                     }
                 }
+                ExpressiveSegmentedSurface(index = 2, count = 3) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = calendarAvailable) {
+                                if (!restoreCalendarEnabled && !hasWriteCalendarPermission) {
+                                    requestCalendarPermissions()
+                                } else {
+                                    viewModel.setRestoreCalendarEnabled(!restoreCalendarEnabled)
+                                }
+                            }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.CalendarMonth,
+                            contentDescription = null,
+                            tint = if (calendarChecked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(end = 16.dp)
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.device_data_calendar),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = if (calendarAvailable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                            )
+                            Text(
+                                text = calendarSubtitle,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (calendarAvailable) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        Spacer(Modifier.width(16.dp))
+                        Switch(
+                            checked = calendarChecked,
+                            enabled = calendarAvailable,
+                            onCheckedChange = { enabled ->
+                                if (enabled && !hasWriteCalendarPermission) {
+                                    requestCalendarPermissions()
+                                } else {
+                                    viewModel.setRestoreCalendarEnabled(enabled)
+                                }
+                            },
+                            thumbContent = if (calendarChecked) {
+                                {
+                                    Icon(
+                                        imageVector = Icons.Filled.Check,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                                    )
+                                }
+                            } else {
+                                null
+                            }
+                        )
+                    }
+                }
             }
         }
     }
@@ -623,6 +727,31 @@ private fun formatCallLogsSummary(context: Context, metadata: CallLogsBackupMeta
     )
     val sizeText = Formatter.formatShortFileSize(context, metadata.size)
     return context.getString(R.string.device_data_call_logs_count_size, countText, sizeText)
+}
+
+private fun formatCalendarSummary(context: Context, metadata: CalendarBackupMetadata): String {
+    val eventsText = context.resources.getQuantityString(
+        R.plurals.device_data_calendar_events_count,
+        metadata.count,
+        metadata.count
+    )
+    val sizeText = Formatter.formatShortFileSize(context, metadata.size)
+    val calCount = metadata.calendarCount ?: return context.getString(
+        R.string.device_data_calendar_count_size,
+        eventsText,
+        sizeText
+    )
+    val calendarsText = context.resources.getQuantityString(
+        R.plurals.device_data_calendar_calendars_count,
+        calCount,
+        calCount
+    )
+    return context.getString(
+        R.string.device_data_calendar_calendars_events_size,
+        calendarsText,
+        eventsText,
+        sizeText
+    )
 }
 
 @Composable

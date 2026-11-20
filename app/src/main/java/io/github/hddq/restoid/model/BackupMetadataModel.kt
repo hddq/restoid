@@ -24,9 +24,18 @@ data class CallLogsBackupMetadata(
 )
 
 @Serializable
+data class CalendarBackupMetadata(
+    val count: Int,
+    val size: Long,
+    val path: String,
+    val calendarCount: Int? = null
+)
+
+@Serializable
 data class DeviceDataMetadata(
     val contacts: ContactsBackupMetadata? = null,
-    val callLogs: CallLogsBackupMetadata? = null
+    val callLogs: CallLogsBackupMetadata? = null,
+    val calendar: CalendarBackupMetadata? = null
 )
 
 /**

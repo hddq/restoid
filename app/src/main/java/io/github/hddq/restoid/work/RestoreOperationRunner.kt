@@ -8,6 +8,7 @@ import android.util.Log
 import com.topjohnwu.superuser.CallbackList
 import com.topjohnwu.superuser.Shell
 import io.github.hddq.restoid.R
+import io.github.hddq.restoid.data.CalendarBackupRepository
 import io.github.hddq.restoid.data.CallLogsBackupRepository
 import io.github.hddq.restoid.data.ContactsBackupRepository
 import io.github.hddq.restoid.data.MetadataRepository
@@ -36,7 +37,8 @@ class RestoreOperationRunner(
     private val metadataRepository: MetadataRepository,
     private val operationLockManager: OperationLockManager,
     private val contactsBackupRepository: ContactsBackupRepository = ContactsBackupRepository(context),
-    private val callLogsBackupRepository: CallLogsBackupRepository = CallLogsBackupRepository(context)
+    private val callLogsBackupRepository: CallLogsBackupRepository = CallLogsBackupRepository(context),
+    private val calendarBackupRepository: CalendarBackupRepository = CalendarBackupRepository(context)
 ) {
 
     suspend fun run(
@@ -76,7 +78,9 @@ class RestoreOperationRunner(
         val metadataRestoreSelected = effectiveRestoreTypes.values.any {
             it.permissions || it.specialAccess || it.accessibility
         }
-        val deviceDataItemCount = (if (request.deviceData.contacts) 1 else 0) + (if (request.deviceData.callLogs) 1 else 0)
+        val deviceDataItemCount = (if (request.deviceData.contacts) 1 else 0) +
+            (if (request.deviceData.callLogs) 1 else 0) +
+            (if (request.deviceData.calendar) 1 else 0)
         val totalRestoreItems = selectedAppPackages.size + request.selectedCustomDirectories.size + deviceDataItemCount
 
         val stageList = mutableListOf(context.getString(R.string.restore_stage_restore_files))
@@ -115,6 +119,14 @@ class RestoreOperationRunner(
 
             if (request.deviceData.callLogs && !callLogsBackupRepository.hasWriteCallLogPermission()) {
                 throw IllegalStateException(context.getString(R.string.error_call_logs_write_permission_required))
+            }
+
+            if (request.deviceData.calendar && !calendarBackupRepository.hasReadCalendarPermission()) {
+                throw IllegalStateException(context.getString(R.string.error_calendar_read_permission_restore_required))
+            }
+
+            if (request.deviceData.calendar && !calendarBackupRepository.hasWriteCalendarPermission()) {
+                throw IllegalStateException(context.getString(R.string.error_calendar_write_permission_required))
             }
 
             val currentSnapshot = findSnapshot(request)
@@ -192,6 +204,18 @@ class RestoreOperationRunner(
             }
             if (callLogsBackupPath != null) {
                 pathsToRestore.add(callLogsBackupPath)
+            }
+            val calendarBackupPath = if (request.deviceData.calendar) {
+                metadata?.deviceData?.calendar?.path ?: resolveDeviceDataPathFromSnapshot(
+                    snapshotPaths = getSnapshotPaths(),
+                    relativeStagingPath = CalendarBackupRepository.CALENDAR_RELATIVE_STAGING_PATH,
+                    fileName = CalendarBackupRepository.CALENDAR_FILE_NAME
+                )
+            } else {
+                null
+            }
+            if (calendarBackupPath != null) {
+                pathsToRestore.add(calendarBackupPath)
             }
 
             if (pathsToRestore.isEmpty() && !metadataRestoreSelected) {
@@ -611,6 +635,51 @@ class RestoreOperationRunner(
                     } else {
                         failures++
                         failureDetails.add(context.getString(R.string.restore_failure_call_logs_missing))
+                    }
+                    completedDeviceDataItems++
+                }
+
+                if (request.deviceData.calendar) {
+                    throwIfCancelled()
+                    val calendarSourceDir = calendarBackupPath
+                        ?.let { File(tempRestoreDir, it.trimStart('/')) }
+                        ?.takeIf { File(it, CalendarBackupRepository.CALENDAR_FILE_NAME).exists() }
+                        ?: tempRestoreDir.walkTopDown().firstOrNull {
+                            it.isFile && it.name == CalendarBackupRepository.CALENDAR_FILE_NAME
+                        }?.parentFile
+
+                    if (calendarSourceDir != null && File(calendarSourceDir, CalendarBackupRepository.CALENDAR_FILE_NAME).exists()) {
+                        val importResult = calendarBackupRepository.importCalendars(
+                            inputDir = calendarSourceDir,
+                            shouldStop = shouldStop,
+                            onEventProcessed = { processed, total, label ->
+                                val itemFraction = if (total > 0) processed.toFloat() / total.toFloat() else 1f
+                                val stageFraction = (completedDeviceDataItems + itemFraction) / totalDeviceDataItems.toFloat()
+                                progressState = progressState.copy(
+                                    stageTitle = processingStageTitle,
+                                    stagePercentage = stageFraction,
+                                    overallPercentage = (deviceDataStageIndex + stageFraction) / totalStages.toFloat(),
+                                    isStageIndeterminate = total == 0,
+                                    isOverallIndeterminate = false,
+                                    currentFile = label ?: context.getString(R.string.device_data_calendar),
+                                    filesProcessed = successes + 1,
+                                    totalFiles = totalRestoreItems,
+                                    isFinished = false,
+                                    elapsedTime = (SystemClock.elapsedRealtime() - startTime) / 1000
+                                )
+                                onProgress(progressState)
+                            }
+                        )
+                        throwIfCancelled()
+                        if (importResult.failedCount == 0) {
+                            successes++
+                        } else {
+                            failures++
+                            failureDetails.add(context.getString(R.string.restore_failure_calendar, importResult.failedCount))
+                        }
+                    } else {
+                        failures++
+                        failureDetails.add(context.getString(R.string.restore_failure_calendar_missing))
                     }
                     completedDeviceDataItems++
                 }

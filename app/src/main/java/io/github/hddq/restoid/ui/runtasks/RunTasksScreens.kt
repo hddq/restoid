@@ -69,10 +69,12 @@ fun RunTasksScreen(
 
     val (deviceDataPermissions, requestDeviceDataPermissions) = rememberPermissionsMap(
         Manifest.permission.READ_CONTACTS,
-        Manifest.permission.READ_CALL_LOG
+        Manifest.permission.READ_CALL_LOG,
+        Manifest.permission.READ_CALENDAR
     )
     val hasReadContactsPermission = deviceDataPermissions[Manifest.permission.READ_CONTACTS] == true
     val hasReadCallLogPermission = deviceDataPermissions[Manifest.permission.READ_CALL_LOG] == true
+    val hasReadCalendarPermission = deviceDataPermissions[Manifest.permission.READ_CALENDAR] == true
 
     DisposableEffect(Unit) {
         appBarActions.value = {
@@ -142,9 +144,11 @@ fun RunTasksScreen(
                             subtitle = buildDeviceDataSubtitle(
                                 contactsEnabled = uiState.contactsBackupEnabled,
                                 callLogsEnabled = uiState.callLogsBackupEnabled,
+                                calendarEnabled = uiState.calendarBackupEnabled,
                                 deviceDataBackupEnabled = uiState.deviceDataBackupEnabled,
                                 hasReadContactsPermission = hasReadContactsPermission,
                                 hasReadCallLogPermission = hasReadCallLogPermission,
+                                hasReadCalendarPermission = hasReadCalendarPermission,
                                 context = context
                             ),
                             icon = Icons.Outlined.Smartphone,
@@ -158,6 +162,9 @@ fun RunTasksScreen(
                                         }
                                         if (uiState.callLogsBackupEnabled && !hasReadCallLogPermission) {
                                             add(Manifest.permission.READ_CALL_LOG)
+                                        }
+                                        if (uiState.calendarBackupEnabled && !hasReadCalendarPermission) {
+                                            add(Manifest.permission.READ_CALENDAR)
                                         }
                                     }
                                     if (missing.isNotEmpty()) {
@@ -318,9 +325,18 @@ fun DeviceDataConfigScreen(
         contactsEnabled = uiState.contactsBackupEnabled,
         includeReadOnlyContacts = uiState.includeReadOnlyContacts,
         callLogsEnabled = uiState.callLogsBackupEnabled,
+        calendarEnabled = uiState.calendarBackupEnabled,
+        selectAllCalendars = uiState.selectAllCalendars,
+        selectedCalendarKeys = uiState.selectedCalendarKeys,
+        availableCalendars = uiState.availableCalendars,
+        isLoadingCalendars = uiState.isLoadingCalendars,
         onContactsEnabledChange = viewModel::setContactsBackupEnabled,
         onIncludeReadOnlyContactsChange = viewModel::setIncludeReadOnlyContacts,
         onCallLogsEnabledChange = viewModel::setCallLogsBackupEnabled,
+        onCalendarEnabledChange = viewModel::setCalendarBackupEnabled,
+        onToggleAllCalendars = viewModel::toggleAllCalendars,
+        onToggleCalendar = viewModel::toggleCalendar,
+        onRefreshCalendars = viewModel::refreshCalendars,
         modifier = modifier
     )
 }

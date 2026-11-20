@@ -14,6 +14,7 @@ import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.BackupDetail
+import io.github.hddq.restoid.model.CalendarBackupMetadata
 import io.github.hddq.restoid.model.CallLogsBackupMetadata
 import io.github.hddq.restoid.model.ContactsBackupMetadata
 import io.github.hddq.restoid.model.CustomDirectoryMetadata
@@ -125,6 +126,9 @@ class RestoreViewModel(
     private val _callLogsMetadata = MutableStateFlow<CallLogsBackupMetadata?>(null)
     val callLogsMetadata = _callLogsMetadata.asStateFlow()
 
+    private val _calendarMetadata = MutableStateFlow<CalendarBackupMetadata?>(null)
+    val calendarMetadata = _calendarMetadata.asStateFlow()
+
     private val _isLoading = MutableStateFlow(true)
     val isLoading = _isLoading.asStateFlow()
 
@@ -154,6 +158,9 @@ class RestoreViewModel(
 
     private val _restoreCallLogsEnabled = MutableStateFlow(false)
     val restoreCallLogsEnabled = _restoreCallLogsEnabled.asStateFlow()
+
+    private val _restoreCalendarEnabled = MutableStateFlow(false)
+    val restoreCalendarEnabled = _restoreCalendarEnabled.asStateFlow()
 
     private val _isRestoring = MutableStateFlow(false)
     val isRestoring = _isRestoring.asStateFlow()
@@ -321,11 +328,14 @@ class RestoreViewModel(
 
         val contactsMeta = metadata?.deviceData?.contacts
         val callLogsMeta = metadata?.deviceData?.callLogs
+        val calendarMeta = metadata?.deviceData?.calendar
         _contactsMetadata.value = contactsMeta
         _callLogsMetadata.value = callLogsMeta
+        _calendarMetadata.value = calendarMeta
         _restoreContactsEnabled.value = contactsMeta != null
         _restoreCallLogsEnabled.value = callLogsMeta != null
-        _restoreDeviceDataEnabled.value = contactsMeta != null || callLogsMeta != null
+        _restoreCalendarEnabled.value = calendarMeta != null
+        _restoreDeviceDataEnabled.value = contactsMeta != null || callLogsMeta != null || calendarMeta != null
     }
 
     fun setSortOrder(order: AppSortOrder) {
@@ -353,6 +363,10 @@ class RestoreViewModel(
 
     fun setRestoreCallLogsEnabled(enabled: Boolean) {
         _restoreCallLogsEnabled.value = enabled
+    }
+
+    fun setRestoreCalendarEnabled(enabled: Boolean) {
+        _restoreCalendarEnabled.value = enabled
     }
 
     private fun findBackedUpItems(
@@ -410,6 +424,7 @@ class RestoreViewModel(
 
         val restoreContacts = _restoreDeviceDataEnabled.value && _contactsMetadata.value != null && _restoreContactsEnabled.value
         val restoreCallLogs = _restoreDeviceDataEnabled.value && _callLogsMetadata.value != null && _restoreCallLogsEnabled.value
+        val restoreCalendar = _restoreDeviceDataEnabled.value && _calendarMetadata.value != null && _restoreCalendarEnabled.value
 
         fun failPreflight(error: String, summary: String = error) {
             _restoreProgress.value = OperationProgress(
@@ -425,7 +440,7 @@ class RestoreViewModel(
             return
         }
 
-        if (selectedApps.isEmpty() && selectedCustomDirectories.isEmpty() && !restoreContacts && !restoreCallLogs) {
+        if (selectedApps.isEmpty() && selectedCustomDirectories.isEmpty() && !restoreContacts && !restoreCallLogs && !restoreCalendar) {
             failPreflight(application.getString(R.string.restore_error_no_items_selected))
             return
         }
@@ -440,6 +455,11 @@ class RestoreViewModel(
                 val callLogsRepo = io.github.hddq.restoid.data.CallLogsBackupRepository(application)
                 if (!callLogsRepo.hasReadCallLogPermission()) add(android.Manifest.permission.READ_CALL_LOG)
                 if (!callLogsRepo.hasWriteCallLogPermission()) add(android.Manifest.permission.WRITE_CALL_LOG)
+            }
+            if (restoreCalendar) {
+                val calendarRepo = io.github.hddq.restoid.data.CalendarBackupRepository(application)
+                if (!calendarRepo.hasReadCalendarPermission()) add(android.Manifest.permission.READ_CALENDAR)
+                if (!calendarRepo.hasWriteCalendarPermission()) add(android.Manifest.permission.WRITE_CALENDAR)
             }
         }
         if (missingPermissions.isNotEmpty()) {
@@ -508,7 +528,8 @@ class RestoreViewModel(
             selectedCustomDirectories = selectedCustomDirectories,
             deviceData = DeviceDataRestoreSelection(
                 contacts = restoreContacts,
-                callLogs = restoreCallLogs
+                callLogs = restoreCallLogs,
+                calendar = restoreCalendar
             )
         )
 

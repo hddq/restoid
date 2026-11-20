@@ -224,10 +224,12 @@ fun AddEditScheduleScreen(
 
     val (deviceDataPermissions, requestDeviceDataPermissions) = rememberPermissionsMap(
         Manifest.permission.READ_CONTACTS,
-        Manifest.permission.READ_CALL_LOG
+        Manifest.permission.READ_CALL_LOG,
+        Manifest.permission.READ_CALENDAR
     )
     val hasReadContactsPermission = deviceDataPermissions[Manifest.permission.READ_CONTACTS] == true
     val hasReadCallLogPermission = deviceDataPermissions[Manifest.permission.READ_CALL_LOG] == true
+    val hasReadCalendarPermission = deviceDataPermissions[Manifest.permission.READ_CALENDAR] == true
 
     val hasUnsavedChanges = remember(state) { viewModel.hasChanges(state) }
 
@@ -445,9 +447,11 @@ fun AddEditScheduleScreen(
                             subtitle = buildDeviceDataSubtitle(
                                 contactsEnabled = state.contactsBackupEnabled,
                                 callLogsEnabled = state.callLogsBackupEnabled,
+                                calendarEnabled = state.calendarBackupEnabled,
                                 deviceDataBackupEnabled = state.deviceDataBackupEnabled,
                                 hasReadContactsPermission = hasReadContactsPermission,
                                 hasReadCallLogPermission = hasReadCallLogPermission,
+                                hasReadCalendarPermission = hasReadCalendarPermission,
                                 context = context
                             ),
                             icon = Icons.Outlined.Smartphone,
@@ -461,6 +465,9 @@ fun AddEditScheduleScreen(
                                         }
                                         if (state.callLogsBackupEnabled && !hasReadCallLogPermission) {
                                             add(Manifest.permission.READ_CALL_LOG)
+                                        }
+                                        if (state.calendarBackupEnabled && !hasReadCalendarPermission) {
+                                            add(Manifest.permission.READ_CALENDAR)
                                         }
                                     }
                                     if (missing.isNotEmpty()) {
@@ -778,9 +785,18 @@ fun ScheduleDeviceDataConfigScreen(
         contactsEnabled = state.contactsBackupEnabled,
         includeReadOnlyContacts = state.includeReadOnlyContacts,
         callLogsEnabled = state.callLogsBackupEnabled,
+        calendarEnabled = state.calendarBackupEnabled,
+        selectAllCalendars = state.selectAllCalendars,
+        selectedCalendarKeys = state.selectedCalendarKeys,
+        availableCalendars = state.availableCalendars,
+        isLoadingCalendars = state.isLoadingCalendars,
         onContactsEnabledChange = viewModel::setContactsBackupEnabled,
         onIncludeReadOnlyContactsChange = viewModel::setIncludeReadOnlyContacts,
         onCallLogsEnabledChange = viewModel::setCallLogsBackupEnabled,
+        onCalendarEnabledChange = viewModel::setCalendarBackupEnabled,
+        onToggleAllCalendars = viewModel::toggleAllCalendars,
+        onToggleCalendar = viewModel::toggleCalendar,
+        onRefreshCalendars = viewModel::refreshCalendars,
         modifier = modifier
     )
 }

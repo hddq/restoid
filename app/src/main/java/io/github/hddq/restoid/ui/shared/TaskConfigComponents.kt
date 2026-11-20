@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -69,6 +70,7 @@ import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Today
 import androidx.compose.material.icons.outlined.WarningAmber
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -109,6 +111,7 @@ import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
@@ -125,6 +128,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.model.AppInfo
+import io.github.hddq.restoid.model.CalendarInfo
 import io.github.hddq.restoid.work.ExclusionConflict
 import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
@@ -2014,26 +2018,34 @@ fun rememberPermissionsMap(
 fun buildDeviceDataSubtitle(
     contactsEnabled: Boolean,
     callLogsEnabled: Boolean,
+    calendarEnabled: Boolean = false,
     deviceDataBackupEnabled: Boolean,
     hasReadContactsPermission: Boolean,
     hasReadCallLogPermission: Boolean,
+    hasReadCalendarPermission: Boolean = true,
     context: android.content.Context
 ): String {
-    if (!contactsEnabled && !callLogsEnabled) {
+    if (!contactsEnabled && !callLogsEnabled && !calendarEnabled) {
         return context.getString(R.string.device_data_none_selected)
     }
     if (deviceDataBackupEnabled) {
         val missingContacts = contactsEnabled && !hasReadContactsPermission
         val missingCallLogs = callLogsEnabled && !hasReadCallLogPermission
+        val missingCalendar = calendarEnabled && !hasReadCalendarPermission
+        val missingCount = (if (missingContacts) 1 else 0) +
+            (if (missingCallLogs) 1 else 0) +
+            (if (missingCalendar) 1 else 0)
         when {
-            missingContacts && missingCallLogs -> return context.getString(R.string.device_data_permissions_required)
+            missingCount > 1 -> return context.getString(R.string.device_data_permissions_required)
             missingContacts -> return context.getString(R.string.device_data_contacts_permission_required)
             missingCallLogs -> return context.getString(R.string.device_data_call_logs_permission_required)
+            missingCalendar -> return context.getString(R.string.device_data_calendar_permission_required)
         }
     }
     return buildList {
         if (contactsEnabled) add(context.getString(R.string.device_data_contacts))
         if (callLogsEnabled) add(context.getString(R.string.device_data_call_logs))
+        if (calendarEnabled) add(context.getString(R.string.device_data_calendar))
     }.joinToString(", ")
 }
 
@@ -2042,9 +2054,18 @@ fun DeviceDataConfigScreen(
     contactsEnabled: Boolean,
     includeReadOnlyContacts: Boolean,
     callLogsEnabled: Boolean,
+    calendarEnabled: Boolean = false,
+    selectAllCalendars: Boolean = true,
+    selectedCalendarKeys: Set<String> = emptySet(),
+    availableCalendars: List<CalendarInfo> = emptyList(),
+    isLoadingCalendars: Boolean = false,
     onContactsEnabledChange: (Boolean) -> Unit,
     onIncludeReadOnlyContactsChange: (Boolean) -> Unit,
     onCallLogsEnabledChange: (Boolean) -> Unit,
+    onCalendarEnabledChange: (Boolean) -> Unit = {},
+    onToggleAllCalendars: () -> Unit = {},
+    onToggleCalendar: (String) -> Unit = {},
+    onRefreshCalendars: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val (hasReadPermission, requestReadPermission) = rememberPermissionsState(
@@ -2055,12 +2076,43 @@ fun DeviceDataConfigScreen(
         Manifest.permission.READ_CALL_LOG,
         onGranted = { onCallLogsEnabledChange(true) }
     )
+    val (hasReadCalendarPermission, requestReadCalendarPermission) = rememberPermissionsState(
+        Manifest.permission.READ_CALENDAR,
+        onGranted = {
+            onCalendarEnabledChange(true)
+            onRefreshCalendars()
+        }
+    )
     var showContactsOptionsSheet by rememberSaveable { mutableStateOf(false) }
+    var showCalendarOptionsSheet by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(hasReadCalendarPermission) {
+        if (hasReadCalendarPermission) {
+            onRefreshCalendars()
+        }
+    }
 
     val contactsSubtitle = when {
         contactsEnabled && !hasReadPermission -> stringResource(R.string.device_data_contacts_permission_required)
         includeReadOnlyContacts -> stringResource(R.string.device_data_include_read_only_contacts)
         else -> null
+    }
+
+    val calendarSubtitle = when {
+        calendarEnabled && !hasReadCalendarPermission -> stringResource(R.string.device_data_calendar_permission_required)
+        selectAllCalendars -> stringResource(R.string.device_data_calendar_all)
+        else -> {
+            val selectedCount = if (availableCalendars.isNotEmpty()) {
+                availableCalendars.count { it.selectionKey in selectedCalendarKeys }
+            } else {
+                selectedCalendarKeys.size
+            }
+            if (selectedCount == 0) {
+                stringResource(R.string.device_data_calendar_none_selected)
+            } else {
+                pluralStringResource(R.plurals.device_data_calendars_selected_count, selectedCount, selectedCount)
+            }
+        }
     }
 
     LazyColumn(
@@ -2070,7 +2122,7 @@ fun DeviceDataConfigScreen(
     ) {
         item(key = "device_data_items") {
             ExpressiveCardGroup {
-                ExpressiveSegmentedSurface(index = 0, count = 2) {
+                ExpressiveSegmentedSurface(index = 0, count = 3) {
                     TaskRow(
                         title = stringResource(R.string.device_data_contacts),
                         subtitle = contactsSubtitle,
@@ -2082,7 +2134,7 @@ fun DeviceDataConfigScreen(
                         onNavigate = { showContactsOptionsSheet = true }
                     )
                 }
-                ExpressiveSegmentedSurface(index = 1, count = 2) {
+                ExpressiveSegmentedSurface(index = 1, count = 3) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -2133,6 +2185,27 @@ fun DeviceDataConfigScreen(
                         )
                     }
                 }
+                ExpressiveSegmentedSurface(index = 2, count = 3) {
+                    TaskRow(
+                        title = stringResource(R.string.device_data_calendar),
+                        subtitle = calendarSubtitle,
+                        icon = Icons.Outlined.CalendarMonth,
+                        checked = calendarEnabled,
+                        onCheckedChange = { enabled ->
+                            if (enabled && !hasReadCalendarPermission) {
+                                requestReadCalendarPermission()
+                            } else {
+                                onCalendarEnabledChange(enabled)
+                            }
+                        },
+                        onNavigate = {
+                            if (hasReadCalendarPermission) {
+                                onRefreshCalendars()
+                            }
+                            showCalendarOptionsSheet = true
+                        }
+                    )
+                }
             }
         }
     }
@@ -2144,9 +2217,25 @@ fun DeviceDataConfigScreen(
             onDismissRequest = { showContactsOptionsSheet = false }
         )
     }
+
+    if (showCalendarOptionsSheet) {
+        CalendarOptionsBottomSheet(
+            selectAllCalendars = selectAllCalendars,
+            selectedCalendarKeys = selectedCalendarKeys,
+            availableCalendars = availableCalendars,
+            isLoadingCalendars = isLoadingCalendars,
+            hasReadCalendarPermission = hasReadCalendarPermission,
+            onRequestPermission = requestReadCalendarPermission,
+            onToggleAllCalendars = onToggleAllCalendars,
+            onToggleCalendar = onToggleCalendar,
+            onDismissRequest = { showCalendarOptionsSheet = false }
+        )
+    }
 }
 
 internal const val INCLUDE_READ_ONLY_CONTACTS_ROW_TAG = "include_read_only_contacts_row"
+internal const val CALENDAR_OPTIONS_SELECT_ALL_TAG = "calendar_options_select_all"
+internal const val CALENDAR_OPTION_ROW_TAG_PREFIX = "calendar_option_row_"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -2177,6 +2266,162 @@ private fun ContactsOptionsBottomSheet(
                         onCheckedChange = onIncludeReadOnlyContactsChange,
                         modifier = Modifier.testTag(INCLUDE_READ_ONLY_CONTACTS_ROW_TAG)
                     )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun CalendarOptionsBottomSheet(
+    selectAllCalendars: Boolean,
+    selectedCalendarKeys: Set<String>,
+    availableCalendars: List<CalendarInfo>,
+    isLoadingCalendars: Boolean,
+    hasReadCalendarPermission: Boolean,
+    onRequestPermission: () -> Unit,
+    onToggleAllCalendars: () -> Unit,
+    onToggleCalendar: (String) -> Unit,
+    onDismissRequest: () -> Unit
+) {
+    val readOnlyLabel = stringResource(R.string.device_data_calendar_read_only)
+    val isAllSelected = selectAllCalendars ||
+        (availableCalendars.isNotEmpty() && availableCalendars.all { it.selectionKey in selectedCalendarKeys })
+
+    ModalBottomSheet(onDismissRequest = onDismissRequest) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(start = 16.dp, end = 16.dp, bottom = 32.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.device_data_calendar_options_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+
+            when {
+                isLoadingCalendars && availableCalendars.isEmpty() -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        LoadingIndicator()
+                    }
+                }
+                !hasReadCalendarPermission && availableCalendars.isEmpty() -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.device_data_calendar_permission_required),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        FilledTonalButton(
+                            onClick = onRequestPermission,
+                            shape = MaterialTheme.shapes.extraLarge
+                        ) {
+                            Text(stringResource(R.string.action_grant))
+                        }
+                    }
+                }
+                availableCalendars.isEmpty() -> {
+                    Text(
+                        text = stringResource(R.string.device_data_calendar_empty),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 12.dp)
+                    )
+                }
+                else -> {
+                    val totalRows = availableCalendars.size + 1
+                    ExpressiveCardGroup {
+                        ExpressiveSegmentedSurface(index = 0, count = totalRows) {
+                            Box(modifier = Modifier.testTag(CALENDAR_OPTIONS_SELECT_ALL_TAG)) {
+                                SelectAllListItem(
+                                    isChecked = isAllSelected,
+                                    subtitle = null,
+                                    onClick = null,
+                                    onToggle = onToggleAllCalendars,
+                                    iconSize = 24.dp,
+                                    iconPadding = 0.dp
+                                )
+                            }
+                        }
+                        availableCalendars.forEachIndexed { index, calendar ->
+                            val isChecked = selectAllCalendars || calendar.selectionKey in selectedCalendarKeys
+                            val subtitle = buildList {
+                                val account = calendar.accountName.trim()
+                                if (account.isNotEmpty() && account != calendar.displayName) {
+                                    add(account)
+                                }
+                                if (calendar.isReadOnly) {
+                                    add(readOnlyLabel)
+                                }
+                            }.joinToString(" • ").ifEmpty { null }
+
+                            ExpressiveSegmentedSurface(index = index + 1, count = totalRows) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .testTag("$CALENDAR_OPTION_ROW_TAG_PREFIX${calendar.selectionKey}")
+                                        .clickable { onToggleCalendar(calendar.selectionKey) }
+                                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(16.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(calendar.color))
+                                    )
+                                    Spacer(Modifier.width(16.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = calendar.displayName,
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        if (subtitle != null) {
+                                            Text(
+                                                text = subtitle,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+                                    Spacer(Modifier.width(16.dp))
+                                    Switch(
+                                        checked = isChecked,
+                                        onCheckedChange = { onToggleCalendar(calendar.selectionKey) },
+                                        thumbContent = if (isChecked) {
+                                            {
+                                                Icon(
+                                                    imageVector = Icons.Filled.Check,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                                )
+                                            }
+                                        } else {
+                                            null
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

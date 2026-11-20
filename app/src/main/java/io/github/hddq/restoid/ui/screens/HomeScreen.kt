@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Call
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Contacts
@@ -630,7 +631,11 @@ private fun SnapshotItem(
             val customDirCount = snapshotWithMetadata.metadata?.customDirectories?.size ?: 0
             val hasContacts = snapshotWithMetadata.metadata?.deviceData?.contacts != null
             val hasCallLogs = snapshotWithMetadata.metadata?.deviceData?.callLogs != null
-            val totalCount = appCount + customDirCount + (if (hasContacts) 1 else 0) + (if (hasCallLogs) 1 else 0)
+            val hasCalendar = snapshotWithMetadata.metadata?.deviceData?.calendar != null
+            val totalCount = appCount + customDirCount +
+                (if (hasContacts) 1 else 0) +
+                (if (hasCallLogs) 1 else 0) +
+                (if (hasCalendar) 1 else 0)
 
             if (totalCount > 0) {
                 Text(
@@ -642,7 +647,8 @@ private fun SnapshotItem(
                 val customDirSlot = if (customDirCount > 0) 1 else 0
                 val contactsSlot = if (hasContacts) 1 else 0
                 val callLogsSlot = if (hasCallLogs) 1 else 0
-                val availableSlotsForApps = (maxIconsPossible - customDirSlot - contactsSlot - callLogsSlot).coerceAtLeast(0)
+                val calendarSlot = if (hasCalendar) 1 else 0
+                val availableSlotsForApps = (maxIconsPossible - customDirSlot - contactsSlot - callLogsSlot - calendarSlot).coerceAtLeast(0)
                 val showCounter = appCount > availableSlotsForApps
                 val limit = if (showCounter) (availableSlotsForApps - 1).coerceAtLeast(0) else availableSlotsForApps
 
@@ -720,6 +726,22 @@ private fun SnapshotItem(
                             Icon(
                                 imageVector = Icons.Outlined.Call,
                                 contentDescription = stringResource(R.string.device_data_call_logs),
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+                    }
+                    if (hasCalendar) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(iconSize)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.secondaryContainer)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.CalendarMonth,
+                                contentDescription = stringResource(R.string.device_data_calendar),
                                 modifier = Modifier.size(18.dp),
                                 tint = MaterialTheme.colorScheme.onSecondaryContainer
                             )

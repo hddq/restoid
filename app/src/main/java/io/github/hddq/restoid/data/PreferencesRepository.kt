@@ -154,6 +154,30 @@ class PreferencesRepository(private val context: Context) {
         return prefs.getBoolean("runtasks_device_data_call_logs_enabled", false)
     }
 
+    fun saveDeviceDataCalendarEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("runtasks_device_data_calendar_enabled", enabled).apply()
+    }
+
+    fun loadDeviceDataCalendarEnabled(): Boolean {
+        return prefs.getBoolean("runtasks_device_data_calendar_enabled", false)
+    }
+
+    fun saveDeviceDataCalendarSelection(selectAll: Boolean, selectedKeys: Set<String>) {
+        with(prefs.edit()) {
+            putBoolean("runtasks_device_data_select_all_calendars", selectAll)
+            putStringSet("runtasks_device_data_selected_calendar_keys", selectedKeys.toSet())
+            apply()
+        }
+    }
+
+    fun loadDeviceDataSelectAllCalendars(): Boolean {
+        return prefs.getBoolean("runtasks_device_data_select_all_calendars", true)
+    }
+
+    fun loadDeviceDataSelectedCalendarKeys(): Set<String> {
+        return prefs.getStringSet("runtasks_device_data_selected_calendar_keys", emptySet())?.toSet() ?: emptySet()
+    }
+
     fun saveCustomDirectories(allUris: Set<String>, selectedUris: Set<String>) {
         with(prefs.edit()) {
             putStringSet("runtasks_custom_directories_all", allUris)

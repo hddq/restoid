@@ -7,6 +7,7 @@ import com.topjohnwu.superuser.CallbackList
 import com.topjohnwu.superuser.Shell
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.AppInfoRepository
+import io.github.hddq.restoid.data.CalendarBackupRepository
 import io.github.hddq.restoid.data.CallLogsBackupRepository
 import io.github.hddq.restoid.data.ContactsBackupRepository
 import io.github.hddq.restoid.data.OperationLockManager
@@ -18,6 +19,7 @@ import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.data.SpecialPermissionsManager
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.AppMetadata
+import io.github.hddq.restoid.model.CalendarBackupMetadata
 import io.github.hddq.restoid.model.CallLogsBackupMetadata
 import io.github.hddq.restoid.model.ContactsBackupMetadata
 import io.github.hddq.restoid.model.RestoidMetadata
@@ -44,7 +46,8 @@ class BackupOperationRunner(
     private val operationLockManager: OperationLockManager,
     private val preferencesRepository: PreferencesRepository = PreferencesRepository(context),
     private val contactsBackupRepository: ContactsBackupRepository = ContactsBackupRepository(context),
-    private val callLogsBackupRepository: CallLogsBackupRepository = CallLogsBackupRepository(context)
+    private val callLogsBackupRepository: CallLogsBackupRepository = CallLogsBackupRepository(context),
+    private val calendarBackupRepository: CalendarBackupRepository = CalendarBackupRepository(context)
 ) {
 
     suspend fun run(
@@ -74,6 +77,7 @@ class BackupOperationRunner(
         var stagingRoot: File? = null
         var contactsStagingDir: File? = null
         var callLogsStagingDir: File? = null
+        var calendarStagingDir: File? = null
         var isSuccess = false
         var summary = ""
         var finalSummaryProgress: OperationProgress? = null
@@ -143,6 +147,9 @@ class BackupOperationRunner(
             if (request.deviceData.callLogs) {
                 callLogsStagingDir = File(context.cacheDir, CallLogsBackupRepository.CALL_LOGS_RELATIVE_STAGING_PATH)
             }
+            if (request.deviceData.calendar) {
+                calendarStagingDir = File(context.cacheDir, CalendarBackupRepository.CALENDAR_RELATIVE_STAGING_PATH)
+            }
             val (pathsToBackup, excludePatterns, metadata) = prepareBackupData(
                 selectedApps,
                 request.backupTypes,
@@ -157,7 +164,9 @@ class BackupOperationRunner(
             restoidMetadataFile.writeText(json.encodeToString(metadata))
             pathsToBackup.add(0, restoidMetadataFile.absolutePath)
 
-            val hasDeviceDataBackup = metadata.deviceData?.let { it.contacts != null || it.callLogs != null } ?: false
+            val hasDeviceDataBackup = metadata.deviceData?.let {
+                it.contacts != null || it.callLogs != null || it.calendar != null
+            } ?: false
             if (pathsToBackup.size <= 1 &&
                 metadata.apps.values.none { it.types.any { type -> type in AppMetadata.METADATA_ONLY_BACKUP_TYPES } } &&
                 metadata.customDirectories.isEmpty() &&
@@ -393,6 +402,7 @@ class BackupOperationRunner(
             }
             contactsStagingDir?.deleteRecursively()
             callLogsStagingDir?.deleteRecursively()
+            calendarStagingDir?.deleteRecursively()
         }
 
         val finalProgress = progressState.copy(
@@ -564,10 +574,30 @@ class BackupOperationRunner(
         } else {
             null
         }
-        val deviceDataMetadata = if (contactsMetadata != null || callLogsMetadata != null) {
+        val calendarMetadata = if (deviceData.calendar) {
+            throwIfCancelled()
+            val calendarDir = File(context.cacheDir, CalendarBackupRepository.CALENDAR_RELATIVE_STAGING_PATH)
+            val exported = calendarBackupRepository.exportCalendars(
+                outputDir = calendarDir,
+                selectAllCalendars = deviceData.selectAllCalendars,
+                selectedCalendarKeys = deviceData.selectedCalendarKeys,
+                shouldStop = shouldStop
+            )
+            pathsToBackup.add(exported.outputDir.absolutePath)
+            CalendarBackupMetadata(
+                count = exported.eventCount,
+                size = exported.totalSizeBytes,
+                path = exported.outputDir.absolutePath,
+                calendarCount = exported.calendarCount
+            )
+        } else {
+            null
+        }
+        val deviceDataMetadata = if (contactsMetadata != null || callLogsMetadata != null || calendarMetadata != null) {
             DeviceDataMetadata(
                 contacts = contactsMetadata,
-                callLogs = callLogsMetadata
+                callLogs = callLogsMetadata,
+                calendar = calendarMetadata
             )
         } else {
             null
@@ -613,6 +643,25 @@ class BackupOperationRunner(
                 isFinished = true,
                 error = context.getString(R.string.error_call_logs_read_permission_required),
                 finalSummary = context.getString(R.string.summary_call_logs_read_permission_required)
+            )
+        }
+
+        if (request.deviceData.calendar && !calendarBackupRepository.hasReadCalendarPermission()) {
+            return OperationProgress(
+                isFinished = true,
+                error = context.getString(R.string.error_calendar_read_permission_required),
+                finalSummary = context.getString(R.string.summary_calendar_read_permission_required)
+            )
+        }
+
+        if (request.deviceData.calendar &&
+            !request.deviceData.selectAllCalendars &&
+            request.deviceData.selectedCalendarKeys.isEmpty()
+        ) {
+            return OperationProgress(
+                isFinished = true,
+                error = context.getString(R.string.error_calendar_none_selected),
+                finalSummary = context.getString(R.string.summary_calendar_none_selected)
             )
         }
 

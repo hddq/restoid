@@ -5,12 +5,14 @@ import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.hddq.restoid.R
+import io.github.hddq.restoid.data.CalendarBackupRepository
 import io.github.hddq.restoid.data.OperationType
 import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.RepositoryBackendType
 import io.github.hddq.restoid.data.ResticBinaryManager
 import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.model.AppInfo
+import io.github.hddq.restoid.model.CalendarInfo
 import io.github.hddq.restoid.ui.shared.BackupTypes
 import io.github.hddq.restoid.ui.shared.ForgetHostOption
 import io.github.hddq.restoid.ui.shared.ForgetHostsController
@@ -52,6 +54,11 @@ data class RunTasksUiState(
     val contactsBackupEnabled: Boolean = true,
     val includeReadOnlyContacts: Boolean = false,
     val callLogsBackupEnabled: Boolean = false,
+    val calendarBackupEnabled: Boolean = false,
+    val selectAllCalendars: Boolean = true,
+    val selectedCalendarKeys: Set<String> = emptySet(),
+    val availableCalendars: List<CalendarInfo> = emptyList(),
+    val isLoadingCalendars: Boolean = false,
     val customDirectories: List<CustomDirectory> = emptyList(),
     val excludedCustomDirectories: List<CustomDirectory> = emptyList(),
     val exclusionConflicts: List<ExclusionConflict> = emptyList(),
@@ -76,6 +83,8 @@ class RunTasksViewModel(
     private val operationWorkRepository: OperationWorkRepository
 ) : ViewModel() {
 
+    private val calendarBackupRepository = CalendarBackupRepository(application)
+
     val rootState = rootRepository.rootState
 
     private val _uiState = MutableStateFlow(
@@ -88,6 +97,9 @@ class RunTasksViewModel(
             contactsBackupEnabled = preferencesRepository.loadDeviceDataContactsEnabled(),
             includeReadOnlyContacts = preferencesRepository.loadIncludeReadOnlyContacts(),
             callLogsBackupEnabled = preferencesRepository.loadDeviceDataCallLogsEnabled(),
+            calendarBackupEnabled = preferencesRepository.loadDeviceDataCalendarEnabled(),
+            selectAllCalendars = preferencesRepository.loadDeviceDataSelectAllCalendars(),
+            selectedCalendarKeys = preferencesRepository.loadDeviceDataSelectedCalendarKeys(),
             customDirectories = preferencesRepository.loadCustomDirectoriesAll().map { uri ->
                 CustomDirectory(
                     uri = uri,
@@ -239,6 +251,11 @@ class RunTasksViewModel(
         preferencesRepository.saveDeviceDataContactsEnabled(_uiState.value.contactsBackupEnabled)
         preferencesRepository.saveIncludeReadOnlyContacts(_uiState.value.includeReadOnlyContacts)
         preferencesRepository.saveDeviceDataCallLogsEnabled(_uiState.value.callLogsBackupEnabled)
+        preferencesRepository.saveDeviceDataCalendarEnabled(_uiState.value.calendarBackupEnabled)
+        preferencesRepository.saveDeviceDataCalendarSelection(
+            _uiState.value.selectAllCalendars,
+            _uiState.value.selectedCalendarKeys
+        )
         val allCustomDirs = _uiState.value.customDirectories.map { it.uri }.toSet()
         val selectedCustomDirs = _uiState.value.customDirectories.filter { it.isSelected }.map { it.uri }.toSet()
         preferencesRepository.saveCustomDirectories(allCustomDirs, selectedCustomDirs)
@@ -270,7 +287,8 @@ class RunTasksViewModel(
         val hasCustomDirs = _uiState.value.customDirectoriesBackupEnabled && selectedCustomDirs.isNotEmpty()
         val hasContactsBackup = _uiState.value.deviceDataBackupEnabled && _uiState.value.contactsBackupEnabled
         val hasCallLogsBackup = _uiState.value.deviceDataBackupEnabled && _uiState.value.callLogsBackupEnabled
-        val hasDeviceData = hasContactsBackup || hasCallLogsBackup
+        val hasCalendarBackup = _uiState.value.deviceDataBackupEnabled && _uiState.value.calendarBackupEnabled
+        val hasDeviceData = hasContactsBackup || hasCallLogsBackup || hasCalendarBackup
         val hasRoot = rootState.value == io.github.hddq.restoid.data.RootState.Granted
         val backupAppsEnabled = _uiState.value.backupEnabled && hasRoot
         
@@ -285,7 +303,10 @@ class RunTasksViewModel(
             deviceData = DeviceDataBackupSelection(
                 contacts = hasContactsBackup,
                 includeReadOnlyContacts = _uiState.value.includeReadOnlyContacts,
-                callLogs = hasCallLogsBackup
+                callLogs = hasCallLogsBackup,
+                calendar = hasCalendarBackup,
+                selectAllCalendars = _uiState.value.selectAllCalendars,
+                selectedCalendarKeys = _uiState.value.selectedCalendarKeys
             ),
             unlockRepo = maintenance.unlockRepo,
             forgetSnapshots = maintenance.forgetSnapshots,
@@ -327,7 +348,8 @@ class RunTasksViewModel(
         val hasCustomDirs = state.customDirectoriesBackupEnabled && state.customDirectories.any { it.isSelected }
         val hasContactsBackup = state.deviceDataBackupEnabled && state.contactsBackupEnabled
         val hasCallLogsBackup = state.deviceDataBackupEnabled && state.callLogsBackupEnabled
-        val hasDeviceData = hasContactsBackup || hasCallLogsBackup
+        val hasCalendarBackup = state.deviceDataBackupEnabled && state.calendarBackupEnabled
+        val hasDeviceData = hasContactsBackup || hasCallLogsBackup || hasCalendarBackup
         val hasRoot = rootState.value == io.github.hddq.restoid.data.RootState.Granted
         val backupAppsEnabled = state.backupEnabled && hasRoot
         
@@ -352,6 +374,22 @@ class RunTasksViewModel(
                 isFinished = true,
                 error = application.getString(R.string.error_call_logs_read_permission_required),
                 finalSummary = application.getString(R.string.summary_call_logs_read_permission_required)
+            )
+        }
+
+        if (hasCalendarBackup && !calendarBackupRepository.hasReadCalendarPermission()) {
+            return OperationProgress(
+                isFinished = true,
+                error = application.getString(R.string.error_calendar_read_permission_required),
+                finalSummary = application.getString(R.string.summary_calendar_read_permission_required)
+            )
+        }
+
+        if (hasCalendarBackup && !state.selectAllCalendars && state.selectedCalendarKeys.isEmpty()) {
+            return OperationProgress(
+                isFinished = true,
+                error = application.getString(R.string.error_calendar_none_selected),
+                finalSummary = application.getString(R.string.summary_calendar_none_selected)
             )
         }
 
@@ -475,6 +513,49 @@ class RunTasksViewModel(
     fun setCallLogsBackupEnabled(enabled: Boolean) {
         _uiState.update { it.copy(callLogsBackupEnabled = enabled) }
         preferencesRepository.saveDeviceDataCallLogsEnabled(enabled)
+    }
+
+    fun setCalendarBackupEnabled(enabled: Boolean) {
+        _uiState.update { it.copy(calendarBackupEnabled = enabled) }
+        preferencesRepository.saveDeviceDataCalendarEnabled(enabled)
+        if (enabled) {
+            refreshCalendars()
+        }
+    }
+
+    fun refreshCalendars() {
+        if (!calendarBackupRepository.hasReadCalendarPermission()) {
+            _uiState.update { it.copy(availableCalendars = emptyList(), isLoadingCalendars = false) }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingCalendars = true) }
+            val calendars = calendarBackupRepository.queryDeviceCalendars()
+            _uiState.update { it.copy(availableCalendars = calendars, isLoadingCalendars = false) }
+        }
+    }
+
+    fun toggleAllCalendars() {
+        _uiState.update { state ->
+            val allSelected = state.selectAllCalendars ||
+                (state.availableCalendars.isNotEmpty() && state.availableCalendars.all { it.selectionKey in state.selectedCalendarKeys })
+            val newSelectAll = !allSelected
+            val newKeys = emptySet<String>()
+            preferencesRepository.saveDeviceDataCalendarSelection(newSelectAll, newKeys)
+            state.copy(selectAllCalendars = newSelectAll, selectedCalendarKeys = newKeys)
+        }
+    }
+
+    fun toggleCalendar(selectionKey: String) {
+        _uiState.update { state ->
+            val allKeys = state.availableCalendars.map { it.selectionKey }.toSet()
+            val currentKeys = if (state.selectAllCalendars) allKeys else state.selectedCalendarKeys
+            val updatedKeys = if (selectionKey in currentKeys) currentKeys - selectionKey else currentKeys + selectionKey
+            val newSelectAll = allKeys.isNotEmpty() && allKeys.all { it in updatedKeys }
+            val persistedKeys = if (newSelectAll) emptySet() else updatedKeys
+            preferencesRepository.saveDeviceDataCalendarSelection(newSelectAll, persistedKeys)
+            state.copy(selectAllCalendars = newSelectAll, selectedCalendarKeys = persistedKeys)
+        }
     }
 
     fun addCustomDirectory(uriString: String) {
