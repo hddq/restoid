@@ -287,7 +287,7 @@ class CalendarSerializationTest {
             uid2445 = " ABC-123@example.com "
         )
         val matchingKeys = buildCalendarEventDedupKeys(
-            uid2445 = "abc-123@example.com",
+            uid2445 = "ABC-123@example.com",
             title = "standup",
             dtStart = 1_700_000_000_000L,
             allDay = false,
@@ -297,6 +297,9 @@ class CalendarSerializationTest {
         )
         assertEquals(2, matchingKeys.size)
         assertEquals(event.toDedupKeys(), matchingKeys)
+
+        val differentCaseUidKeys = event.copy(uid2445 = "abc-123@example.com").toDedupKeys()
+        assertNotEquals(event.toDedupKeys(), differentCaseUidKeys)
 
         val noUidKeys = event.copy(uid2445 = "   ").toDedupKeys()
         assertEquals(1, noUidKeys.size)
@@ -317,7 +320,7 @@ class CalendarSerializationTest {
     }
 
     @Test
-    fun `CalendarEventDedupIndex does not deduplicate distinct UIDs with identical content`() {
+    fun `CalendarEventDedupIndex handles case-sensitive UIDs, UID-less promotion, recurring timezones, and exception parents`() {
         val index = CalendarEventDedupIndex()
         val firstEvent = BackedUpCalendarEvent(
             title = "1:1 Sync",
@@ -325,15 +328,19 @@ class CalendarSerializationTest {
             dtStart = 1_700_000_000_000L,
             dtEnd = 1_700_001_800_000L,
             allDay = false,
-            uid2445 = "uid-first@example.com"
+            uid2445 = "uid-First@example.com"
         )
         index.register(10L, firstEvent)
 
-        // Exact UID match (case-insensitive) resolves to 10L
+        // Exact UID match (trimmed) resolves to 10L
         assertEquals(
             10L,
-            index.findDuplicateEventId(firstEvent.copy(uid2445 = " UID-FIRST@EXAMPLE.COM "))
+            index.findDuplicateEventId(firstEvent.copy(uid2445 = " uid-First@example.com "))
         )
+
+        // Differently cased UID is distinct per RFC 5545 and must NOT match 10L
+        val differentCaseUidEvent = firstEvent.copy(uid2445 = "uid-first@example.com")
+        assertNull(index.findDuplicateEventId(differentCaseUidEvent))
 
         // Identical content + timing, but a different known UID -> must NOT match 10L
         val secondDistinctUidEvent = firstEvent.copy(uid2445 = "uid-second@example.com")
@@ -348,10 +355,47 @@ class CalendarSerializationTest {
         val noUidCopy = firstEvent.copy(uid2445 = null)
         assertEquals(10L, index.findDuplicateEventId(noUidCopy))
 
-        // An existing event stored without a UID matches an incoming event that has a UID and identical content
+        // An existing event stored without a UID matches the first incoming event by content,
+        // and registering its incoming UID prevents a later event with a different UID from also matching row 30L
         val indexWithUidlessExisting = CalendarEventDedupIndex()
         indexWithUidlessExisting.register(30L, noUidCopy)
         assertEquals(30L, indexWithUidlessExisting.findDuplicateEventId(firstEvent))
+        indexWithUidlessExisting.register(30L, firstEvent)
+        assertNull(indexWithUidlessExisting.findDuplicateEventId(secondDistinctUidEvent))
+
+        // Recurring UID-less events with identical start, duration, title, location, and rrule remain distinct when effective timezones differ
+        val recurringNy = BackedUpCalendarEvent(
+            title = "Daily Standup",
+            dtStart = 1_700_000_000_000L,
+            duration = "PT30M",
+            allDay = false,
+            eventTimezone = "America/New_York",
+            rrule = "FREQ=DAILY"
+        )
+        val recurringUtc = recurringNy.copy(eventTimezone = "UTC")
+        val recurringIndex = CalendarEventDedupIndex(defaultCalendarTimezone = "UTC")
+        recurringIndex.register(40L, recurringNy)
+        assertEquals(40L, recurringIndex.findDuplicateEventId(recurringNy))
+        assertNull(recurringIndex.findDuplicateEventId(recurringUtc))
+
+        // All-day recurring events normalize to UTC regardless of eventTimezone
+        val allDayRecurringNy = recurringNy.copy(allDay = true, duration = "P1D")
+        val allDayRecurringUtc = allDayRecurringNy.copy(eventTimezone = "UTC")
+        recurringIndex.register(41L, allDayRecurringNy)
+        assertEquals(41L, recurringIndex.findDuplicateEventId(allDayRecurringUtc))
+
+        // UID-less exceptions from different parent series stay distinct even with identical content and originalInstanceTime
+        val exceptionSeriesA = BackedUpCalendarEvent(
+            title = "Moved Occurrence",
+            dtStart = 1_700_100_000_000L,
+            dtEnd = 1_700_103_600_000L,
+            originalSourceEventId = 100L,
+            originalInstanceTime = 1_700_092_800_000L
+        )
+        val exceptionSeriesB = exceptionSeriesA.copy(originalSourceEventId = 200L)
+        recurringIndex.register(50L, exceptionSeriesA, resolvedOriginalId = 1000L)
+        assertEquals(50L, recurringIndex.findDuplicateEventId(exceptionSeriesA, resolvedOriginalId = 1000L))
+        assertNull(recurringIndex.findDuplicateEventId(exceptionSeriesB, resolvedOriginalId = 2000L))
     }
 
     @Test

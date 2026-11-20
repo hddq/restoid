@@ -116,6 +116,7 @@ class SchedulesViewModel(
     private var cachedResolvedExclusions: List<String> = emptyList()
     private var conflictResolutionJob: Job? = null
     private var addEditSessionId: Long = 0L
+    private var calendarRefreshRequestId: Long = 0L
 
     private val forgetHostsController = ForgetHostsController(
         context = application,
@@ -212,6 +213,7 @@ class SchedulesViewModel(
     // Add/Edit Screen methods
     fun startAddSchedule() {
         val sessionId = ++addEditSessionId
+        ++calendarRefreshRequestId
         val defaultHostname = preferencesRepository.getDeviceHostname()
         val newState = AddEditScheduleUiState(
             maintenance = MaintenanceConfig(
@@ -226,6 +228,7 @@ class SchedulesViewModel(
     }
     fun startEditSchedule(schedule: Schedule) {
         val sessionId = ++addEditSessionId
+        ++calendarRefreshRequestId
         val normalizedHosts = normalizeForgetHosts(schedule.config.forgetHosts)
         val newState = AddEditScheduleUiState(
             id = schedule.id,
@@ -511,6 +514,8 @@ class SchedulesViewModel(
     }
 
     fun refreshCalendars() {
+        val sessionId = addEditSessionId
+        val requestId = ++calendarRefreshRequestId
         if (!calendarBackupRepository.hasReadCalendarPermission()) {
             _addEditState.update { it.copy(availableCalendars = emptyList(), isLoadingCalendars = false) }
             return
@@ -519,14 +524,20 @@ class SchedulesViewModel(
             _addEditState.update { it.copy(isLoadingCalendars = true) }
             try {
                 val calendars = calendarBackupRepository.queryDeviceCalendars()
-                _addEditState.update { it.copy(availableCalendars = calendars) }
+                if (calendarRefreshRequestId == requestId && addEditSessionId == sessionId) {
+                    _addEditState.update { it.copy(availableCalendars = calendars) }
+                }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
                 android.util.Log.w("SchedulesViewModel", "Failed to load device calendars", e)
-                _addEditState.update { it.copy(availableCalendars = emptyList()) }
+                if (calendarRefreshRequestId == requestId && addEditSessionId == sessionId) {
+                    _addEditState.update { it.copy(availableCalendars = emptyList()) }
+                }
             } finally {
-                _addEditState.update { it.copy(isLoadingCalendars = false) }
+                if (calendarRefreshRequestId == requestId && addEditSessionId == sessionId) {
+                    _addEditState.update { it.copy(isLoadingCalendars = false) }
+                }
             }
         }
     }

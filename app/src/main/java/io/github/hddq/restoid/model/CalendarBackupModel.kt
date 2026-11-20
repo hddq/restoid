@@ -188,7 +188,7 @@ private fun computeDurationFromBounds(
 }
 
 internal fun normalizeCalendarEventUid(uid2445: String?): String? =
-    uid2445?.trim()?.takeIf { it.isNotEmpty() }?.lowercase()
+    uid2445?.trim()?.takeIf { it.isNotEmpty() }
 
 internal fun buildCalendarEventUidDedupKey(
     uid2445: String?,
@@ -205,32 +205,37 @@ internal fun buildCalendarEventContentDedupKey(
     dtEnd: Long? = null,
     duration: String? = null,
     allDay: Boolean,
+    eventTimezone: String? = null,
+    calendarTimezone: String? = null,
     rrule: String?,
     rdate: String? = null,
     exrule: String? = null,
     exdate: String? = null,
     eventLocation: String?,
-    originalInstanceTime: Long?
+    originalInstanceTime: Long?,
+    resolvedOriginalId: Long? = null
 ): String {
     val normalizedTiming = normalizeEventTiming(
         dtStart = dtStart,
         dtEnd = dtEnd,
         duration = duration,
         allDay = allDay,
-        eventTimezone = null,
-        calendarTimezone = null,
+        eventTimezone = eventTimezone,
+        calendarTimezone = calendarTimezone,
         rrule = rrule,
         rdate = rdate,
         exrule = exrule,
         exdate = exdate
     )
+    val recurring = isRecurringEvent(rrule, rdate, exrule, exdate)
+    val effectiveRecurringTimezone = if (recurring) normalizedTiming.eventTimezone else ""
     val normalizedTitle = title?.trim().orEmpty().lowercase()
     val normalizedRrule = rrule?.trim().orEmpty()
     val normalizedRdate = rdate?.trim().orEmpty()
     val normalizedExrule = exrule?.trim().orEmpty()
     val normalizedExdate = exdate?.trim().orEmpty()
     val normalizedLocation = eventLocation?.trim().orEmpty().lowercase()
-    return "content|$normalizedTitle|${normalizedTiming.dtStart}|${normalizedTiming.dtEnd ?: -1L}|${normalizedTiming.duration.orEmpty()}|${if (allDay) 1 else 0}|$normalizedRrule|$normalizedRdate|$normalizedExrule|$normalizedExdate|$normalizedLocation|${originalInstanceTime ?: -1L}"
+    return "content|$normalizedTitle|${normalizedTiming.dtStart}|${normalizedTiming.dtEnd ?: -1L}|${normalizedTiming.duration.orEmpty()}|${if (allDay) 1 else 0}|$effectiveRecurringTimezone|$normalizedRrule|$normalizedRdate|$normalizedExrule|$normalizedExdate|$normalizedLocation|${originalInstanceTime ?: -1L}|${resolvedOriginalId ?: -1L}"
 }
 
 internal fun buildCalendarEventDedupKeys(
@@ -240,12 +245,15 @@ internal fun buildCalendarEventDedupKeys(
     dtEnd: Long? = null,
     duration: String? = null,
     allDay: Boolean,
+    eventTimezone: String? = null,
+    calendarTimezone: String? = null,
     rrule: String?,
     rdate: String? = null,
     exrule: String? = null,
     exdate: String? = null,
     eventLocation: String?,
-    originalInstanceTime: Long?
+    originalInstanceTime: Long?,
+    resolvedOriginalId: Long? = null
 ): List<String> {
     val keys = ArrayList<String>(2)
     buildCalendarEventUidDedupKey(
@@ -260,33 +268,44 @@ internal fun buildCalendarEventDedupKeys(
             dtEnd = dtEnd,
             duration = duration,
             allDay = allDay,
+            eventTimezone = eventTimezone,
+            calendarTimezone = calendarTimezone,
             rrule = rrule,
             rdate = rdate,
             exrule = exrule,
             exdate = exdate,
             eventLocation = eventLocation,
-            originalInstanceTime = originalInstanceTime
+            originalInstanceTime = originalInstanceTime,
+            resolvedOriginalId = resolvedOriginalId
         )
     )
     return keys
 }
 
-internal fun BackedUpCalendarEvent.toDedupKeys(): List<String> = buildCalendarEventDedupKeys(
+internal fun BackedUpCalendarEvent.toDedupKeys(
+    calendarTimezone: String? = null,
+    resolvedOriginalId: Long? = null
+): List<String> = buildCalendarEventDedupKeys(
     uid2445 = uid2445,
     title = title,
     dtStart = dtStart,
     dtEnd = dtEnd,
     duration = duration,
     allDay = allDay,
+    eventTimezone = eventTimezone,
+    calendarTimezone = calendarTimezone,
     rrule = rrule,
     rdate = rdate,
     exrule = exrule,
     exdate = exdate,
     eventLocation = eventLocation,
-    originalInstanceTime = originalInstanceTime
+    originalInstanceTime = originalInstanceTime,
+    resolvedOriginalId = resolvedOriginalId
 )
 
-internal class CalendarEventDedupIndex {
+internal class CalendarEventDedupIndex(
+    private val defaultCalendarTimezone: String? = null
+) {
     private val uidKeyToEventId = HashMap<String, Long>()
     private val contentKeyToEventIds = HashMap<String, MutableList<Long>>()
     private val eventIdToNormalizedUid = HashMap<Long, String>()
@@ -299,12 +318,15 @@ internal class CalendarEventDedupIndex {
         dtEnd: Long? = null,
         duration: String? = null,
         allDay: Boolean,
+        eventTimezone: String? = null,
+        calendarTimezone: String? = defaultCalendarTimezone,
         rrule: String?,
         rdate: String? = null,
         exrule: String? = null,
         exdate: String? = null,
         eventLocation: String?,
-        originalInstanceTime: Long?
+        originalInstanceTime: Long?,
+        resolvedOriginalId: Long? = null
     ) {
         val normalizedUid = normalizeCalendarEventUid(uid2445)
         if (normalizedUid != null) {
@@ -323,12 +345,15 @@ internal class CalendarEventDedupIndex {
             dtEnd = dtEnd,
             duration = duration,
             allDay = allDay,
+            eventTimezone = eventTimezone,
+            calendarTimezone = calendarTimezone,
             rrule = rrule,
             rdate = rdate,
             exrule = exrule,
             exdate = exdate,
             eventLocation = eventLocation,
-            originalInstanceTime = originalInstanceTime
+            originalInstanceTime = originalInstanceTime,
+            resolvedOriginalId = resolvedOriginalId
         )
         val candidates = contentKeyToEventIds.getOrPut(contentKey) { mutableListOf() }
         if (eventId !in candidates) {
@@ -336,7 +361,12 @@ internal class CalendarEventDedupIndex {
         }
     }
 
-    fun register(eventId: Long, event: BackedUpCalendarEvent) {
+    fun register(
+        eventId: Long,
+        event: BackedUpCalendarEvent,
+        calendarTimezone: String? = defaultCalendarTimezone,
+        resolvedOriginalId: Long? = null
+    ) {
         register(
             eventId = eventId,
             uid2445 = event.uid2445,
@@ -345,16 +375,23 @@ internal class CalendarEventDedupIndex {
             dtEnd = event.dtEnd,
             duration = event.duration,
             allDay = event.allDay,
+            eventTimezone = event.eventTimezone,
+            calendarTimezone = calendarTimezone,
             rrule = event.rrule,
             rdate = event.rdate,
             exrule = event.exrule,
             exdate = event.exdate,
             eventLocation = event.eventLocation,
-            originalInstanceTime = event.originalInstanceTime
+            originalInstanceTime = event.originalInstanceTime,
+            resolvedOriginalId = resolvedOriginalId
         )
     }
 
-    fun findDuplicateEventId(event: BackedUpCalendarEvent): Long? {
+    fun findDuplicateEventId(
+        event: BackedUpCalendarEvent,
+        calendarTimezone: String? = defaultCalendarTimezone,
+        resolvedOriginalId: Long? = null
+    ): Long? {
         val normalizedUid = normalizeCalendarEventUid(event.uid2445)
         val uidKey = buildCalendarEventUidDedupKey(
             uid2445 = normalizedUid,
@@ -371,12 +408,15 @@ internal class CalendarEventDedupIndex {
             dtEnd = event.dtEnd,
             duration = event.duration,
             allDay = event.allDay,
+            eventTimezone = event.eventTimezone,
+            calendarTimezone = calendarTimezone,
             rrule = event.rrule,
             rdate = event.rdate,
             exrule = event.exrule,
             exdate = event.exdate,
             eventLocation = event.eventLocation,
-            originalInstanceTime = event.originalInstanceTime
+            originalInstanceTime = event.originalInstanceTime,
+            resolvedOriginalId = resolvedOriginalId
         )
         val candidates = contentKeyToEventIds[contentKey] ?: return null
         return candidates.firstOrNull { candidateId ->

@@ -261,7 +261,8 @@ class CalendarBackupRepository(private val context: Context) {
                 continue
             }
 
-            val dedupIndex = loadExistingEventDedupIndex(targetCalendarId)
+            val effectiveCalendarTimezone = calendar.timeZone?.takeIf { it.isNotBlank() } ?: TimeZone.getDefault().id
+            val dedupIndex = loadExistingEventDedupIndex(targetCalendarId, effectiveCalendarTimezone)
             val sourceIdToRestoredId = HashMap<Long, Long>()
 
             // Restore master/standalone events before recurrence exceptions so ORIGINAL_ID can be remapped.
@@ -283,9 +284,22 @@ class CalendarBackupRepository(private val context: Context) {
                 val label = event.title?.takeIf { it.isNotBlank() } ?: calendar.displayName
                 onEventProcessed(processedEvents, totalEvents, label)
 
-                val existingMatchId = dedupIndex.findDuplicateEventId(event)
+                val isException = event.originalSourceEventId != null || event.originalInstanceTime != null
+                val resolvedOriginalId = event.originalSourceEventId?.let { sourceIdToRestoredId[it] }
+
+                val existingMatchId = dedupIndex.findDuplicateEventId(
+                    event = event,
+                    calendarTimezone = effectiveCalendarTimezone,
+                    resolvedOriginalId = resolvedOriginalId
+                )
                 if (existingMatchId != null) {
                     event.sourceEventId?.let { sourceIdToRestoredId[it] = existingMatchId }
+                    dedupIndex.register(
+                        eventId = existingMatchId,
+                        event = event,
+                        calendarTimezone = effectiveCalendarTimezone,
+                        resolvedOriginalId = resolvedOriginalId
+                    )
                     val childrenComplete = ensureEventChildren(
                         eventId = existingMatchId,
                         reminders = event.reminders,
@@ -299,8 +313,6 @@ class CalendarBackupRepository(private val context: Context) {
                     continue
                 }
 
-                val isException = event.originalSourceEventId != null || event.originalInstanceTime != null
-                val resolvedOriginalId = event.originalSourceEventId?.let { sourceIdToRestoredId[it] }
                 if (isException && resolvedOriginalId == null) {
                     android.util.Log.w(
                         TAG,
@@ -319,7 +331,12 @@ class CalendarBackupRepository(private val context: Context) {
                 val insertedId = insertResult.eventId
                 if (insertedId != null && insertedId > 0L) {
                     event.sourceEventId?.let { sourceIdToRestoredId[it] = insertedId }
-                    dedupIndex.register(insertedId, event)
+                    dedupIndex.register(
+                        eventId = insertedId,
+                        event = event,
+                        calendarTimezone = effectiveCalendarTimezone,
+                        resolvedOriginalId = resolvedOriginalId
+                    )
                     if (insertResult.childrenComplete) {
                         restoredCount++
                     } else {
@@ -569,8 +586,11 @@ class CalendarBackupRepository(private val context: Context) {
         }
     }
 
-    private fun loadExistingEventDedupIndex(calendarId: Long): CalendarEventDedupIndex {
-        val index = CalendarEventDedupIndex()
+    private fun loadExistingEventDedupIndex(
+        calendarId: Long,
+        calendarTimezone: String?
+    ): CalendarEventDedupIndex {
+        val index = CalendarEventDedupIndex(defaultCalendarTimezone = calendarTimezone)
         val cursor = context.contentResolver.query(
             CalendarContract.Events.CONTENT_URI,
             arrayOf(
@@ -581,12 +601,14 @@ class CalendarBackupRepository(private val context: Context) {
                 CalendarContract.Events.DTEND,
                 CalendarContract.Events.DURATION,
                 CalendarContract.Events.ALL_DAY,
+                CalendarContract.Events.EVENT_TIMEZONE,
                 CalendarContract.Events.RRULE,
                 CalendarContract.Events.RDATE,
                 CalendarContract.Events.EXRULE,
                 CalendarContract.Events.EXDATE,
                 CalendarContract.Events.EVENT_LOCATION,
-                CalendarContract.Events.ORIGINAL_INSTANCE_TIME
+                CalendarContract.Events.ORIGINAL_INSTANCE_TIME,
+                CalendarContract.Events.ORIGINAL_ID
             ),
             "${CalendarContract.Events.CALENDAR_ID} = ? AND ${CalendarContract.Events.DELETED} = 0",
             arrayOf(calendarId.toString()),
@@ -602,12 +624,14 @@ class CalendarBackupRepository(private val context: Context) {
                 val dtEnd = c.getLongOrNull(4)
                 val duration = c.getStringOrNull(5)
                 val allDay = (c.getIntOrNull(6) ?: 0) == 1
-                val rrule = c.getStringOrNull(7)
-                val rdate = c.getStringOrNull(8)
-                val exrule = c.getStringOrNull(9)
-                val exdate = c.getStringOrNull(10)
-                val location = c.getStringOrNull(11)
-                val originalInstanceTime = c.getLongOrNull(12)
+                val eventTimezone = c.getStringOrNull(7)
+                val rrule = c.getStringOrNull(8)
+                val rdate = c.getStringOrNull(9)
+                val exrule = c.getStringOrNull(10)
+                val exdate = c.getStringOrNull(11)
+                val location = c.getStringOrNull(12)
+                val originalInstanceTime = c.getLongOrNull(13)
+                val originalId = c.getLongOrNull(14)
 
                 index.register(
                     eventId = eventId,
@@ -617,12 +641,15 @@ class CalendarBackupRepository(private val context: Context) {
                     dtEnd = dtEnd,
                     duration = duration,
                     allDay = allDay,
+                    eventTimezone = eventTimezone,
+                    calendarTimezone = calendarTimezone,
                     rrule = rrule,
                     rdate = rdate,
                     exrule = exrule,
                     exdate = exdate,
                     eventLocation = location,
-                    originalInstanceTime = originalInstanceTime
+                    originalInstanceTime = originalInstanceTime,
+                    resolvedOriginalId = originalId
                 )
             }
         }
@@ -841,11 +868,7 @@ class CalendarBackupRepository(private val context: Context) {
         val targetEmail = target.email?.trim().orEmpty().lowercase()
         val existingName = existing.name?.trim().orEmpty().lowercase()
         val targetName = target.name?.trim().orEmpty().lowercase()
-        if (existingEmail != targetEmail || existingName != targetName) return false
-        if (target.relationship != null && existing.relationship != null && existing.relationship != target.relationship) return false
-        if (target.type != null && existing.type != null && existing.type != target.type) return false
-        if (target.status != null && existing.status != null && existing.status != target.status) return false
-        return true
+        return existingEmail == targetEmail && existingName == targetName
     }
 
     private fun buildEventInsertBatch(

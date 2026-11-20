@@ -125,6 +125,7 @@ class RunTasksViewModel(
     private var cachedRawExclusions: List<String> = emptyList()
     private var cachedResolvedExclusions: List<String> = emptyList()
     private var conflictResolutionJob: Job? = null
+    private var calendarRefreshRequestId: Long = 0L
 
     private val forgetHostsController = ForgetHostsController(
         context = application,
@@ -524,6 +525,7 @@ class RunTasksViewModel(
     }
 
     fun refreshCalendars() {
+        val requestId = ++calendarRefreshRequestId
         if (!calendarBackupRepository.hasReadCalendarPermission()) {
             _uiState.update { it.copy(availableCalendars = emptyList(), isLoadingCalendars = false) }
             return
@@ -532,14 +534,20 @@ class RunTasksViewModel(
             _uiState.update { it.copy(isLoadingCalendars = true) }
             try {
                 val calendars = calendarBackupRepository.queryDeviceCalendars()
-                _uiState.update { it.copy(availableCalendars = calendars) }
+                if (calendarRefreshRequestId == requestId) {
+                    _uiState.update { it.copy(availableCalendars = calendars) }
+                }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
                 android.util.Log.w("RunTasksViewModel", "Failed to load device calendars", e)
-                _uiState.update { it.copy(availableCalendars = emptyList()) }
+                if (calendarRefreshRequestId == requestId) {
+                    _uiState.update { it.copy(availableCalendars = emptyList()) }
+                }
             } finally {
-                _uiState.update { it.copy(isLoadingCalendars = false) }
+                if (calendarRefreshRequestId == requestId) {
+                    _uiState.update { it.copy(isLoadingCalendars = false) }
+                }
             }
         }
     }
