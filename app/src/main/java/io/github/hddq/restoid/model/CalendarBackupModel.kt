@@ -187,25 +187,86 @@ private fun computeDurationFromBounds(
     return "PT${seconds}S"
 }
 
+internal fun normalizeCalendarEventUid(uid2445: String?): String? =
+    uid2445?.trim()?.takeIf { it.isNotEmpty() }?.lowercase()
+
+internal fun buildCalendarEventUidDedupKey(
+    uid2445: String?,
+    dtStart: Long,
+    originalInstanceTime: Long?
+): String? {
+    val normalizedUid = normalizeCalendarEventUid(uid2445) ?: return null
+    return "uid|$normalizedUid|$dtStart|${originalInstanceTime ?: -1L}"
+}
+
+internal fun buildCalendarEventContentDedupKey(
+    title: String?,
+    dtStart: Long,
+    dtEnd: Long? = null,
+    duration: String? = null,
+    allDay: Boolean,
+    rrule: String?,
+    rdate: String? = null,
+    exrule: String? = null,
+    exdate: String? = null,
+    eventLocation: String?,
+    originalInstanceTime: Long?
+): String {
+    val normalizedTiming = normalizeEventTiming(
+        dtStart = dtStart,
+        dtEnd = dtEnd,
+        duration = duration,
+        allDay = allDay,
+        eventTimezone = null,
+        calendarTimezone = null,
+        rrule = rrule,
+        rdate = rdate,
+        exrule = exrule,
+        exdate = exdate
+    )
+    val normalizedTitle = title?.trim().orEmpty().lowercase()
+    val normalizedRrule = rrule?.trim().orEmpty()
+    val normalizedRdate = rdate?.trim().orEmpty()
+    val normalizedExrule = exrule?.trim().orEmpty()
+    val normalizedExdate = exdate?.trim().orEmpty()
+    val normalizedLocation = eventLocation?.trim().orEmpty().lowercase()
+    return "content|$normalizedTitle|${normalizedTiming.dtStart}|${normalizedTiming.dtEnd ?: -1L}|${normalizedTiming.duration.orEmpty()}|${if (allDay) 1 else 0}|$normalizedRrule|$normalizedRdate|$normalizedExrule|$normalizedExdate|$normalizedLocation|${originalInstanceTime ?: -1L}"
+}
+
 internal fun buildCalendarEventDedupKeys(
     uid2445: String?,
     title: String?,
     dtStart: Long,
+    dtEnd: Long? = null,
+    duration: String? = null,
     allDay: Boolean,
     rrule: String?,
+    rdate: String? = null,
+    exrule: String? = null,
+    exdate: String? = null,
     eventLocation: String?,
     originalInstanceTime: Long?
 ): List<String> {
     val keys = ArrayList<String>(2)
-    val normalizedUid = uid2445?.trim()?.takeIf { it.isNotEmpty() }?.lowercase()
-    if (normalizedUid != null) {
-        keys.add("uid|$normalizedUid|$dtStart|${originalInstanceTime ?: -1L}")
-    }
-    val normalizedTitle = title?.trim().orEmpty().lowercase()
-    val normalizedRrule = rrule?.trim().orEmpty()
-    val normalizedLocation = eventLocation?.trim().orEmpty().lowercase()
+    buildCalendarEventUidDedupKey(
+        uid2445 = uid2445,
+        dtStart = dtStart,
+        originalInstanceTime = originalInstanceTime
+    )?.let { keys.add(it) }
     keys.add(
-        "content|$normalizedTitle|$dtStart|${if (allDay) 1 else 0}|$normalizedRrule|$normalizedLocation|${originalInstanceTime ?: -1L}"
+        buildCalendarEventContentDedupKey(
+            title = title,
+            dtStart = dtStart,
+            dtEnd = dtEnd,
+            duration = duration,
+            allDay = allDay,
+            rrule = rrule,
+            rdate = rdate,
+            exrule = exrule,
+            exdate = exdate,
+            eventLocation = eventLocation,
+            originalInstanceTime = originalInstanceTime
+        )
     )
     return keys
 }
@@ -214,8 +275,115 @@ internal fun BackedUpCalendarEvent.toDedupKeys(): List<String> = buildCalendarEv
     uid2445 = uid2445,
     title = title,
     dtStart = dtStart,
+    dtEnd = dtEnd,
+    duration = duration,
     allDay = allDay,
     rrule = rrule,
+    rdate = rdate,
+    exrule = exrule,
+    exdate = exdate,
     eventLocation = eventLocation,
     originalInstanceTime = originalInstanceTime
 )
+
+internal class CalendarEventDedupIndex {
+    private val uidKeyToEventId = HashMap<String, Long>()
+    private val contentKeyToEventIds = HashMap<String, MutableList<Long>>()
+    private val eventIdToNormalizedUid = HashMap<Long, String>()
+
+    fun register(
+        eventId: Long,
+        uid2445: String?,
+        title: String?,
+        dtStart: Long,
+        dtEnd: Long? = null,
+        duration: String? = null,
+        allDay: Boolean,
+        rrule: String?,
+        rdate: String? = null,
+        exrule: String? = null,
+        exdate: String? = null,
+        eventLocation: String?,
+        originalInstanceTime: Long?
+    ) {
+        val normalizedUid = normalizeCalendarEventUid(uid2445)
+        if (normalizedUid != null) {
+            eventIdToNormalizedUid.putIfAbsent(eventId, normalizedUid)
+            buildCalendarEventUidDedupKey(
+                uid2445 = normalizedUid,
+                dtStart = dtStart,
+                originalInstanceTime = originalInstanceTime
+            )?.let { uidKey ->
+                uidKeyToEventId.putIfAbsent(uidKey, eventId)
+            }
+        }
+        val contentKey = buildCalendarEventContentDedupKey(
+            title = title,
+            dtStart = dtStart,
+            dtEnd = dtEnd,
+            duration = duration,
+            allDay = allDay,
+            rrule = rrule,
+            rdate = rdate,
+            exrule = exrule,
+            exdate = exdate,
+            eventLocation = eventLocation,
+            originalInstanceTime = originalInstanceTime
+        )
+        val candidates = contentKeyToEventIds.getOrPut(contentKey) { mutableListOf() }
+        if (eventId !in candidates) {
+            candidates.add(eventId)
+        }
+    }
+
+    fun register(eventId: Long, event: BackedUpCalendarEvent) {
+        register(
+            eventId = eventId,
+            uid2445 = event.uid2445,
+            title = event.title,
+            dtStart = event.dtStart,
+            dtEnd = event.dtEnd,
+            duration = event.duration,
+            allDay = event.allDay,
+            rrule = event.rrule,
+            rdate = event.rdate,
+            exrule = event.exrule,
+            exdate = event.exdate,
+            eventLocation = event.eventLocation,
+            originalInstanceTime = event.originalInstanceTime
+        )
+    }
+
+    fun findDuplicateEventId(event: BackedUpCalendarEvent): Long? {
+        val normalizedUid = normalizeCalendarEventUid(event.uid2445)
+        val uidKey = buildCalendarEventUidDedupKey(
+            uid2445 = normalizedUid,
+            dtStart = event.dtStart,
+            originalInstanceTime = event.originalInstanceTime
+        )
+        if (uidKey != null) {
+            uidKeyToEventId[uidKey]?.let { return it }
+        }
+
+        val contentKey = buildCalendarEventContentDedupKey(
+            title = event.title,
+            dtStart = event.dtStart,
+            dtEnd = event.dtEnd,
+            duration = event.duration,
+            allDay = event.allDay,
+            rrule = event.rrule,
+            rdate = event.rdate,
+            exrule = event.exrule,
+            exdate = event.exdate,
+            eventLocation = event.eventLocation,
+            originalInstanceTime = event.originalInstanceTime
+        )
+        val candidates = contentKeyToEventIds[contentKey] ?: return null
+        return candidates.firstOrNull { candidateId ->
+            val existingUid = eventIdToNormalizedUid[candidateId]
+            // Do not match on content if both events carry known, different UIDs.
+            normalizedUid == null || existingUid == null || normalizedUid == existingUid
+        }
+    }
+}
+

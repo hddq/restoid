@@ -530,8 +530,17 @@ class RunTasksViewModel(
         }
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingCalendars = true) }
-            val calendars = calendarBackupRepository.queryDeviceCalendars()
-            _uiState.update { it.copy(availableCalendars = calendars, isLoadingCalendars = false) }
+            try {
+                val calendars = calendarBackupRepository.queryDeviceCalendars()
+                _uiState.update { it.copy(availableCalendars = calendars) }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                android.util.Log.w("RunTasksViewModel", "Failed to load device calendars", e)
+                _uiState.update { it.copy(availableCalendars = emptyList()) }
+            } finally {
+                _uiState.update { it.copy(isLoadingCalendars = false) }
+            }
         }
     }
 

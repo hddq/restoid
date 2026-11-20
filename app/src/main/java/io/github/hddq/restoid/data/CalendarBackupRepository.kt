@@ -9,16 +9,16 @@ import android.database.Cursor
 import android.net.Uri
 import android.provider.CalendarContract
 import androidx.core.content.ContextCompat
+import io.github.hddq.restoid.R
 import io.github.hddq.restoid.model.BackedUpCalendar
 import io.github.hddq.restoid.model.BackedUpCalendarAttendee
 import io.github.hddq.restoid.model.BackedUpCalendarEvent
 import io.github.hddq.restoid.model.BackedUpCalendarReminder
 import io.github.hddq.restoid.model.CalendarBackupArchive
+import io.github.hddq.restoid.model.CalendarEventDedupIndex
 import io.github.hddq.restoid.model.CalendarInfo
-import io.github.hddq.restoid.model.buildCalendarEventDedupKeys
 import io.github.hddq.restoid.model.buildCalendarSelectionKey
 import io.github.hddq.restoid.model.normalizeEventTiming
-import io.github.hddq.restoid.model.toDedupKeys
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
@@ -45,6 +45,11 @@ private data class DeviceCalendarRecord(
     val visible: Int?,
     val syncEvents: Int?,
     val accessLevel: Int
+)
+
+private data class EventInsertResult(
+    val eventId: Long?,
+    val childrenComplete: Boolean
 )
 
 class CalendarBackupRepository(private val context: Context) {
@@ -79,6 +84,9 @@ class CalendarBackupRepository(private val context: Context) {
             allCalendars
         } else {
             allCalendars.filter { it.info.selectionKey in selectedCalendarKeys }
+        }
+        if (!selectAllCalendars && calendarsToExport.isEmpty()) {
+            throw IllegalStateException(context.getString(R.string.error_calendar_none_selected))
         }
         val selectedIds = calendarsToExport.mapTo(HashSet()) { it.info.id }
 
@@ -253,7 +261,7 @@ class CalendarBackupRepository(private val context: Context) {
                 continue
             }
 
-            val existingKeyToEventId = loadExistingEventDedupMap(targetCalendarId).toMutableMap()
+            val dedupIndex = loadExistingEventDedupIndex(targetCalendarId)
             val sourceIdToRestoredId = HashMap<Long, Long>()
 
             // Restore master/standalone events before recurrence exceptions so ORIGINAL_ID can be remapped.
@@ -275,25 +283,48 @@ class CalendarBackupRepository(private val context: Context) {
                 val label = event.title?.takeIf { it.isNotBlank() } ?: calendar.displayName
                 onEventProcessed(processedEvents, totalEvents, label)
 
-                val dedupKeys = event.toDedupKeys()
-                val existingMatchId = dedupKeys.firstNotNullOfOrNull { existingKeyToEventId[it] }
+                val existingMatchId = dedupIndex.findDuplicateEventId(event)
                 if (existingMatchId != null) {
                     event.sourceEventId?.let { sourceIdToRestoredId[it] = existingMatchId }
-                    skippedCount++
+                    val childrenComplete = ensureEventChildren(
+                        eventId = existingMatchId,
+                        reminders = event.reminders,
+                        attendees = event.attendees
+                    )
+                    if (childrenComplete) {
+                        skippedCount++
+                    } else {
+                        failedCount++
+                    }
                     continue
                 }
 
+                val isException = event.originalSourceEventId != null || event.originalInstanceTime != null
                 val resolvedOriginalId = event.originalSourceEventId?.let { sourceIdToRestoredId[it] }
-                val insertedId = insertEventWithChildren(
+                if (isException && resolvedOriginalId == null) {
+                    android.util.Log.w(
+                        TAG,
+                        "Skipping recurrence exception '${event.title}' because its parent event could not be resolved"
+                    )
+                    failedCount++
+                    continue
+                }
+
+                val insertResult = insertEventWithChildren(
                     calendarId = targetCalendarId,
                     calendarTimezone = calendar.timeZone,
                     event = event,
                     resolvedOriginalId = resolvedOriginalId
                 )
+                val insertedId = insertResult.eventId
                 if (insertedId != null && insertedId > 0L) {
                     event.sourceEventId?.let { sourceIdToRestoredId[it] = insertedId }
-                    dedupKeys.forEach { key -> existingKeyToEventId[key] = insertedId }
-                    restoredCount++
+                    dedupIndex.register(insertedId, event)
+                    if (insertResult.childrenComplete) {
+                        restoredCount++
+                    } else {
+                        failedCount++
+                    }
                 } else {
                     failedCount++
                 }
@@ -378,7 +409,7 @@ class CalendarBackupRepository(private val context: Context) {
         shouldStop: () -> Boolean
     ): Map<Long, List<BackedUpCalendarReminder>> {
         val map = HashMap<Long, MutableList<BackedUpCalendarReminder>>()
-        context.contentResolver.query(
+        val cursor = context.contentResolver.query(
             CalendarContract.Reminders.CONTENT_URI,
             arrayOf(
                 CalendarContract.Reminders.EVENT_ID,
@@ -388,7 +419,9 @@ class CalendarBackupRepository(private val context: Context) {
             null,
             null,
             null
-        )?.use { c ->
+        ) ?: throw IllegalStateException("Calendar reminders query returned null cursor")
+
+        cursor.use { c ->
             while (c.moveToNext() && !shouldStop()) {
                 val eventId = c.getLongOrNull(0) ?: continue
                 if (eventId !in eventIds) continue
@@ -407,7 +440,7 @@ class CalendarBackupRepository(private val context: Context) {
         shouldStop: () -> Boolean
     ): Map<Long, List<BackedUpCalendarAttendee>> {
         val map = HashMap<Long, MutableList<BackedUpCalendarAttendee>>()
-        context.contentResolver.query(
+        val cursor = context.contentResolver.query(
             CalendarContract.Attendees.CONTENT_URI,
             arrayOf(
                 CalendarContract.Attendees.EVENT_ID,
@@ -420,7 +453,9 @@ class CalendarBackupRepository(private val context: Context) {
             null,
             null,
             null
-        )?.use { c ->
+        ) ?: throw IllegalStateException("Calendar attendees query returned null cursor")
+
+        cursor.use { c ->
             while (c.moveToNext() && !shouldStop()) {
                 val eventId = c.getLongOrNull(0) ?: continue
                 if (eventId !in eventIds) continue
@@ -449,7 +484,7 @@ class CalendarBackupRepository(private val context: Context) {
 
     private fun loadLocalCalendars(): MutableList<LocalCalendarEntry> {
         val list = mutableListOf<LocalCalendarEntry>()
-        context.contentResolver.query(
+        val cursor = context.contentResolver.query(
             CalendarContract.Calendars.CONTENT_URI,
             arrayOf(
                 CalendarContract.Calendars._ID,
@@ -459,7 +494,9 @@ class CalendarBackupRepository(private val context: Context) {
             "${CalendarContract.Calendars.DELETED} = 0 AND ${CalendarContract.Calendars.ACCOUNT_TYPE} = ?",
             arrayOf(CalendarContract.ACCOUNT_TYPE_LOCAL),
             "${CalendarContract.Calendars._ID} ASC"
-        )?.use { c ->
+        ) ?: throw IllegalStateException("Local calendars query returned null cursor")
+
+        cursor.use { c ->
             while (c.moveToNext()) {
                 val id = c.getLongOrNull(0) ?: continue
                 val name = c.getStringOrNull(1).orEmpty().trim()
@@ -532,47 +569,64 @@ class CalendarBackupRepository(private val context: Context) {
         }
     }
 
-    private fun loadExistingEventDedupMap(calendarId: Long): Map<String, Long> {
-        val map = HashMap<String, Long>()
-        context.contentResolver.query(
+    private fun loadExistingEventDedupIndex(calendarId: Long): CalendarEventDedupIndex {
+        val index = CalendarEventDedupIndex()
+        val cursor = context.contentResolver.query(
             CalendarContract.Events.CONTENT_URI,
             arrayOf(
                 CalendarContract.Events._ID,
                 CalendarContract.Events.UID_2445,
                 CalendarContract.Events.TITLE,
                 CalendarContract.Events.DTSTART,
+                CalendarContract.Events.DTEND,
+                CalendarContract.Events.DURATION,
                 CalendarContract.Events.ALL_DAY,
                 CalendarContract.Events.RRULE,
+                CalendarContract.Events.RDATE,
+                CalendarContract.Events.EXRULE,
+                CalendarContract.Events.EXDATE,
                 CalendarContract.Events.EVENT_LOCATION,
                 CalendarContract.Events.ORIGINAL_INSTANCE_TIME
             ),
             "${CalendarContract.Events.CALENDAR_ID} = ? AND ${CalendarContract.Events.DELETED} = 0",
             arrayOf(calendarId.toString()),
             null
-        )?.use { c ->
+        ) ?: throw IllegalStateException("Existing calendar events query returned null cursor")
+
+        cursor.use { c ->
             while (c.moveToNext()) {
                 val eventId = c.getLongOrNull(0) ?: continue
                 val uid2445 = c.getStringOrNull(1)
                 val title = c.getStringOrNull(2)
                 val dtStart = c.getLongOrNull(3) ?: continue
-                val allDay = (c.getIntOrNull(4) ?: 0) == 1
-                val rrule = c.getStringOrNull(5)
-                val location = c.getStringOrNull(6)
-                val originalInstanceTime = c.getLongOrNull(7)
+                val dtEnd = c.getLongOrNull(4)
+                val duration = c.getStringOrNull(5)
+                val allDay = (c.getIntOrNull(6) ?: 0) == 1
+                val rrule = c.getStringOrNull(7)
+                val rdate = c.getStringOrNull(8)
+                val exrule = c.getStringOrNull(9)
+                val exdate = c.getStringOrNull(10)
+                val location = c.getStringOrNull(11)
+                val originalInstanceTime = c.getLongOrNull(12)
 
-                val keys = buildCalendarEventDedupKeys(
+                index.register(
+                    eventId = eventId,
                     uid2445 = uid2445,
                     title = title,
                     dtStart = dtStart,
+                    dtEnd = dtEnd,
+                    duration = duration,
                     allDay = allDay,
                     rrule = rrule,
+                    rdate = rdate,
+                    exrule = exrule,
+                    exdate = exdate,
                     eventLocation = location,
                     originalInstanceTime = originalInstanceTime
                 )
-                keys.forEach { key -> map.putIfAbsent(key, eventId) }
             }
         }
-        return map
+        return index
     }
 
     private fun insertEventWithChildren(
@@ -580,7 +634,7 @@ class CalendarBackupRepository(private val context: Context) {
         calendarTimezone: String?,
         event: BackedUpCalendarEvent,
         resolvedOriginalId: Long?
-    ): Long? {
+    ): EventInsertResult {
         val timing = normalizeEventTiming(
             dtStart = event.dtStart,
             dtEnd = event.dtEnd,
@@ -606,12 +660,15 @@ class CalendarBackupRepository(private val context: Context) {
         try {
             val results = context.contentResolver.applyBatch(CalendarContract.AUTHORITY, fullOps)
             val eventId = results.firstOrNull()?.uri?.let { ContentUris.parseId(it) } ?: -1L
-            if (eventId > 0L) return eventId
+            val allResultsValid = results.size == fullOps.size && results.all { it.uri != null }
+            if (eventId > 0L) {
+                return EventInsertResult(eventId = eventId, childrenComplete = allResultsValid)
+            }
         } catch (batchEx: Exception) {
             android.util.Log.w(TAG, "Full event batch insert failed for '${event.title}', retrying minimal", batchEx)
         }
 
-        // Fallback: insert core event first, then attach reminders/attendees individually.
+        // Fallback: insert core event first, then attach missing reminders/attendees individually.
         val minimalOps = buildEventInsertBatch(
             calendarId = calendarId,
             event = event,
@@ -625,27 +682,170 @@ class CalendarBackupRepository(private val context: Context) {
             results.firstOrNull()?.uri?.let { ContentUris.parseId(it) } ?: -1L
         } catch (fallbackEx: Exception) {
             android.util.Log.w(TAG, "Minimal event insert failed for '${event.title}'", fallbackEx)
-            return null
+            return EventInsertResult(eventId = null, childrenComplete = false)
         }
-        if (insertedId <= 0L) return null
+        if (insertedId <= 0L) return EventInsertResult(eventId = null, childrenComplete = false)
 
-        event.reminders.forEach { reminder ->
-            runCatching {
-                context.contentResolver.applyBatch(
-                    CalendarContract.AUTHORITY,
-                    arrayListOf(buildReminderOperation(insertedId, reminder))
+        val childrenComplete = ensureEventChildren(
+            eventId = insertedId,
+            reminders = event.reminders,
+            attendees = event.attendees
+        )
+        return EventInsertResult(eventId = insertedId, childrenComplete = childrenComplete)
+    }
+
+    private fun ensureEventChildren(
+        eventId: Long,
+        reminders: List<BackedUpCalendarReminder>,
+        attendees: List<BackedUpCalendarAttendee>
+    ): Boolean {
+        if (reminders.isEmpty() && attendees.isEmpty()) return true
+        var allSucceeded = true
+
+        if (reminders.isNotEmpty()) {
+            val existingReminders = try {
+                loadExistingRemindersForEvent(eventId)
+            } catch (e: Exception) {
+                android.util.Log.w(TAG, "Failed to query existing reminders for event $eventId", e)
+                allSucceeded = false
+                null
+            }
+            if (existingReminders != null) {
+                val remainingExisting = existingReminders.toMutableList()
+                for (reminder in reminders) {
+                    val existingIdx = remainingExisting.indexOfFirst {
+                        it.minutes == reminder.minutes && it.method == reminder.method
+                    }
+                    if (existingIdx >= 0) {
+                        remainingExisting.removeAt(existingIdx)
+                        continue
+                    }
+                    val inserted = try {
+                        val results = context.contentResolver.applyBatch(
+                            CalendarContract.AUTHORITY,
+                            arrayListOf(buildReminderOperation(eventId, reminder))
+                        )
+                        results.firstOrNull()?.uri != null
+                    } catch (e: Exception) {
+                        android.util.Log.w(TAG, "Failed to insert reminder for event $eventId", e)
+                        false
+                    }
+                    if (!inserted) {
+                        allSucceeded = false
+                    }
+                }
+            }
+        }
+
+        if (attendees.isNotEmpty()) {
+            val existingAttendees = try {
+                loadExistingAttendeesForEvent(eventId)
+            } catch (e: Exception) {
+                android.util.Log.w(TAG, "Failed to query existing attendees for event $eventId", e)
+                allSucceeded = false
+                null
+            }
+            if (existingAttendees != null) {
+                val remainingExisting = existingAttendees.toMutableList()
+                for (attendee in attendees) {
+                    val existingIdx = remainingExisting.indexOfFirst { existing ->
+                        attendeesMatch(existing, attendee)
+                    }
+                    if (existingIdx >= 0) {
+                        remainingExisting.removeAt(existingIdx)
+                        continue
+                    }
+                    val inserted = try {
+                        val results = context.contentResolver.applyBatch(
+                            CalendarContract.AUTHORITY,
+                            arrayListOf(buildAttendeeOperation(eventId, attendee))
+                        )
+                        results.firstOrNull()?.uri != null
+                    } catch (e: Exception) {
+                        android.util.Log.w(TAG, "Failed to insert attendee for event $eventId", e)
+                        false
+                    }
+                    if (!inserted) {
+                        allSucceeded = false
+                    }
+                }
+            }
+        }
+
+        return allSucceeded
+    }
+
+    private fun loadExistingRemindersForEvent(eventId: Long): List<BackedUpCalendarReminder> {
+        val list = mutableListOf<BackedUpCalendarReminder>()
+        val cursor = context.contentResolver.query(
+            CalendarContract.Reminders.CONTENT_URI,
+            arrayOf(
+                CalendarContract.Reminders.MINUTES,
+                CalendarContract.Reminders.METHOD
+            ),
+            "${CalendarContract.Reminders.EVENT_ID} = ?",
+            arrayOf(eventId.toString()),
+            null
+        ) ?: throw IllegalStateException("Event reminders query returned null cursor")
+
+        cursor.use { c ->
+            while (c.moveToNext()) {
+                val minutes = c.getIntOrNull(0) ?: continue
+                val method = c.getIntOrNull(1) ?: CalendarContract.Reminders.METHOD_DEFAULT
+                list.add(BackedUpCalendarReminder(minutes = minutes, method = method))
+            }
+        }
+        return list
+    }
+
+    private fun loadExistingAttendeesForEvent(eventId: Long): List<BackedUpCalendarAttendee> {
+        val list = mutableListOf<BackedUpCalendarAttendee>()
+        val cursor = context.contentResolver.query(
+            CalendarContract.Attendees.CONTENT_URI,
+            arrayOf(
+                CalendarContract.Attendees.ATTENDEE_NAME,
+                CalendarContract.Attendees.ATTENDEE_EMAIL,
+                CalendarContract.Attendees.ATTENDEE_RELATIONSHIP,
+                CalendarContract.Attendees.ATTENDEE_TYPE,
+                CalendarContract.Attendees.ATTENDEE_STATUS
+            ),
+            "${CalendarContract.Attendees.EVENT_ID} = ?",
+            arrayOf(eventId.toString()),
+            null
+        ) ?: throw IllegalStateException("Event attendees query returned null cursor")
+
+        cursor.use { c ->
+            while (c.moveToNext()) {
+                val name = c.getStringOrNull(0)
+                val email = c.getStringOrNull(1)
+                if (name.isNullOrBlank() && email.isNullOrBlank()) continue
+                list.add(
+                    BackedUpCalendarAttendee(
+                        name = name,
+                        email = email,
+                        relationship = c.getIntOrNull(2),
+                        type = c.getIntOrNull(3),
+                        status = c.getIntOrNull(4)
+                    )
                 )
             }
         }
-        event.attendees.forEach { attendee ->
-            runCatching {
-                context.contentResolver.applyBatch(
-                    CalendarContract.AUTHORITY,
-                    arrayListOf(buildAttendeeOperation(insertedId, attendee))
-                )
-            }
-        }
-        return insertedId
+        return list
+    }
+
+    private fun attendeesMatch(
+        existing: BackedUpCalendarAttendee,
+        target: BackedUpCalendarAttendee
+    ): Boolean {
+        val existingEmail = existing.email?.trim().orEmpty().lowercase()
+        val targetEmail = target.email?.trim().orEmpty().lowercase()
+        val existingName = existing.name?.trim().orEmpty().lowercase()
+        val targetName = target.name?.trim().orEmpty().lowercase()
+        if (existingEmail != targetEmail || existingName != targetName) return false
+        if (target.relationship != null && existing.relationship != null && existing.relationship != target.relationship) return false
+        if (target.type != null && existing.type != null && existing.type != target.type) return false
+        if (target.status != null && existing.status != null && existing.status != target.status) return false
+        return true
     }
 
     private fun buildEventInsertBatch(

@@ -517,8 +517,17 @@ class SchedulesViewModel(
         }
         viewModelScope.launch {
             _addEditState.update { it.copy(isLoadingCalendars = true) }
-            val calendars = calendarBackupRepository.queryDeviceCalendars()
-            _addEditState.update { it.copy(availableCalendars = calendars, isLoadingCalendars = false) }
+            try {
+                val calendars = calendarBackupRepository.queryDeviceCalendars()
+                _addEditState.update { it.copy(availableCalendars = calendars) }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                android.util.Log.w("SchedulesViewModel", "Failed to load device calendars", e)
+                _addEditState.update { it.copy(availableCalendars = emptyList()) }
+            } finally {
+                _addEditState.update { it.copy(isLoadingCalendars = false) }
+            }
         }
     }
 

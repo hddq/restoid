@@ -7,6 +7,7 @@ import io.github.hddq.restoid.model.BackedUpCalendarEvent
 import io.github.hddq.restoid.model.BackedUpCalendarReminder
 import io.github.hddq.restoid.model.CalendarBackupArchive
 import io.github.hddq.restoid.model.CalendarBackupMetadata
+import io.github.hddq.restoid.model.CalendarEventDedupIndex
 import io.github.hddq.restoid.model.CallLogsBackupMetadata
 import io.github.hddq.restoid.model.ContactsBackupMetadata
 import io.github.hddq.restoid.model.DeviceDataMetadata
@@ -309,6 +310,48 @@ class CalendarSerializationTest {
             event.toDedupKeys(),
             event.copy(allDay = true).toDedupKeys()
         )
+        assertNotEquals(
+            event.copy(rrule = null, dtEnd = 1_700_003_600_000L).toDedupKeys(),
+            event.copy(rrule = null, dtEnd = 1_700_007_200_000L).toDedupKeys()
+        )
+    }
+
+    @Test
+    fun `CalendarEventDedupIndex does not deduplicate distinct UIDs with identical content`() {
+        val index = CalendarEventDedupIndex()
+        val firstEvent = BackedUpCalendarEvent(
+            title = "1:1 Sync",
+            eventLocation = "Zoom",
+            dtStart = 1_700_000_000_000L,
+            dtEnd = 1_700_001_800_000L,
+            allDay = false,
+            uid2445 = "uid-first@example.com"
+        )
+        index.register(10L, firstEvent)
+
+        // Exact UID match (case-insensitive) resolves to 10L
+        assertEquals(
+            10L,
+            index.findDuplicateEventId(firstEvent.copy(uid2445 = " UID-FIRST@EXAMPLE.COM "))
+        )
+
+        // Identical content + timing, but a different known UID -> must NOT match 10L
+        val secondDistinctUidEvent = firstEvent.copy(uid2445 = "uid-second@example.com")
+        assertNull(index.findDuplicateEventId(secondDistinctUidEvent))
+
+        // After registering the second event, both can be looked up by their respective UIDs
+        index.register(20L, secondDistinctUidEvent)
+        assertEquals(10L, index.findDuplicateEventId(firstEvent))
+        assertEquals(20L, index.findDuplicateEventId(secondDistinctUidEvent))
+
+        // An event without a UID still falls back to content deduplication (e.g. when provider stripped UID_2445)
+        val noUidCopy = firstEvent.copy(uid2445 = null)
+        assertEquals(10L, index.findDuplicateEventId(noUidCopy))
+
+        // An existing event stored without a UID matches an incoming event that has a UID and identical content
+        val indexWithUidlessExisting = CalendarEventDedupIndex()
+        indexWithUidlessExisting.register(30L, noUidCopy)
+        assertEquals(30L, indexWithUidlessExisting.findDuplicateEventId(firstEvent))
     }
 
     @Test
