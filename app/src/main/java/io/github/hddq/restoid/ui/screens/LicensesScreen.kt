@@ -60,7 +60,7 @@ fun LicensesScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
     }
 
     val libraries = remember(libs) { libs.libraries.sortedBy { it.name } }
-    val totalCount = libraries.size + 2
+    val totalCount = libraries.size + 3
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -89,6 +89,17 @@ fun LicensesScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
                 )
             }
         }
+        item(key = "rclone_license") {
+            ExpressiveSegmentedSurface(index = 2, count = totalCount) {
+                LicenseCard(
+                    name = stringResource(R.string.license_rclone_name),
+                    author = stringResource(R.string.license_rclone_author),
+                    licenseName = stringResource(R.string.license_rclone_license),
+                    licenseText = Licenses.RCLONE_LICENSE,
+                    url = stringResource(R.string.license_rclone_url)
+                )
+            }
+        }
 
         itemsIndexed(libraries, key = { index, library -> "${library.uniqueId}_$index" }) { index, library ->
             val firstLicense = library.licenses.firstOrNull()
@@ -96,7 +107,7 @@ fun LicensesScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
             val website = library.website ?: ""
             val primaryUrl = if (licenseUrl.isNotBlank()) licenseUrl else website
 
-            ExpressiveSegmentedSurface(index = index + 2, count = totalCount) {
+            ExpressiveSegmentedSurface(index = index + 3, count = totalCount) {
                 LicenseCard(
                     name = library.name,
                     author = library.developers.firstOrNull()?.name ?: library.organization?.name ?: stringResource(R.string.license_unknown_author),

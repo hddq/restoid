@@ -690,6 +690,10 @@
     <string name="license_restic_author" translatable="false">Alexander Neumann</string>
     <string name="license_restic_license" translatable="false">BSD-2-Clause</string>
     <string name="license_restic_url" translatable="false">https://github.com/restic/restic/blob/master/LICENSE</string>
+    <string name="license_rclone_name" translatable="false">Rclone</string>
+    <string name="license_rclone_author" translatable="false">Nick Craig-Wood</string>
+    <string name="license_rclone_license" translatable="false">MIT</string>
+    <string name="license_rclone_url" translatable="false">https://github.com/rclone/rclone/blob/master/COPYING</string>
     <string name="license_url_label">License URL: %1$s</string>
     <string name="license_project_website_label">Project Website: %1$s</string>
     <string name="license_no_link_available">No link available</string>
