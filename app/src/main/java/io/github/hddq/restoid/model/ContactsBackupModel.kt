@@ -9,7 +9,8 @@ data class ContactAccountInfo(
     val displayName: String,
     val accountTypeLabel: String?,
     val isLocal: Boolean,
-    val isReadOnly: Boolean
+    val isReadOnly: Boolean,
+    val itemCount: Int? = null
 )
 
 @Serializable
@@ -75,6 +76,113 @@ internal fun selectExportedContactGroups(
         }
         .distinctBy { it.title }
         .toList()
+}
+
+internal fun summarizeBackedUpContactAccounts(
+    contacts: Collection<BackedUpRawContact>,
+    localDisplayName: String,
+    authenticatorLabelByType: Map<String, String> = emptyMap(),
+    readOnlyAccountTypes: Set<String> = emptySet()
+): List<BackedUpContactAccountSummary> {
+    if (contacts.isEmpty()) return emptyList()
+    val grouped = linkedMapOf<String, MutableList<BackedUpRawContact>>()
+    contacts.forEach { contact ->
+        val accountType = contact.accountType.orEmpty()
+        val accountName = contact.accountName.orEmpty()
+        val key = buildContactAccountSelectionKey(accountType, accountName)
+        grouped.getOrPut(key) { mutableListOf() }.add(contact)
+    }
+    return grouped.entries.map { (selectionKey, rawContacts) ->
+        val first = rawContacts.first()
+        val accountType = first.accountType.orEmpty()
+        val accountName = first.accountName.orEmpty()
+        val isLocal = accountType.isEmpty() && accountName.isEmpty()
+        val isReadOnly = !isLocal && (
+            accountType in readOnlyAccountTypes ||
+                rawContacts.all { it.readOnly }
+            )
+        val accountTypeLabel = if (isLocal) {
+            null
+        } else {
+            authenticatorLabelByType[accountType] ?: accountType.trim().ifEmpty { null }
+        }
+        val trimmedAccountName = accountName.trim()
+        val displayName = when {
+            isLocal -> localDisplayName
+            trimmedAccountName.isNotEmpty() -> trimmedAccountName
+            else -> accountTypeLabel ?: accountType.trim().ifEmpty { accountName }
+        }
+        BackedUpContactAccountSummary(
+            selectionKey = selectionKey,
+            accountName = accountName,
+            accountType = accountType,
+            displayName = displayName,
+            accountTypeLabel = accountTypeLabel,
+            isLocal = isLocal,
+            isReadOnly = isReadOnly,
+            contactCount = rawContacts.size
+        )
+    }.sortedWith(
+        compareBy<BackedUpContactAccountSummary> { !it.isLocal }
+            .thenBy(String.CASE_INSENSITIVE_ORDER) { it.displayName }
+            .thenBy(String.CASE_INSENSITIVE_ORDER) { it.accountType }
+    )
+}
+
+internal fun BackedUpContactAccountSummary.toContactAccountInfo(
+    localDisplayName: String
+): ContactAccountInfo {
+    return ContactAccountInfo(
+        selectionKey = selectionKey,
+        accountName = accountName,
+        accountType = accountType,
+        displayName = if (isLocal) localDisplayName else displayName,
+        accountTypeLabel = accountTypeLabel,
+        isLocal = isLocal,
+        isReadOnly = isReadOnly,
+        itemCount = contactCount
+    )
+}
+
+internal fun filterContactsArchiveForRestore(
+    archive: ContactsBackupArchive,
+    selectAllContactAccounts: Boolean,
+    selectedContactAccountKeys: Set<String>
+): ContactsBackupArchive {
+    // Backwards compatibility: legacy restore requests default to selectAllContactAccounts = true,
+    // restoring all backed-up contacts and groups without filtering.
+    if (selectAllContactAccounts) return archive
+    if (selectedContactAccountKeys.isEmpty()) {
+        return archive.copy(groups = emptyList(), contacts = emptyList())
+    }
+
+    val filteredContacts = archive.contacts.filter { contact ->
+        buildContactAccountSelectionKey(contact.accountType, contact.accountName) in selectedContactAccountKeys
+    }
+    if (filteredContacts.isEmpty()) {
+        return archive.copy(groups = emptyList(), contacts = emptyList())
+    }
+
+    val referencedGroupTitles = filteredContacts.flatMapTo(linkedSetOf()) { it.groupTitles }
+    if (referencedGroupTitles.isEmpty()) {
+        return archive.copy(groups = emptyList(), contacts = filteredContacts)
+    }
+
+    val groupsByTitle = linkedMapOf<String, MutableList<BackedUpContactGroup>>()
+    archive.groups.forEach { group ->
+        if (group.title in referencedGroupTitles) {
+            groupsByTitle.getOrPut(group.title) { mutableListOf() }.add(group)
+        }
+    }
+    val filteredGroups = groupsByTitle.values.map { matchingGroups ->
+        matchingGroups.firstOrNull { group ->
+            buildContactAccountSelectionKey(group.accountType, group.accountName) in selectedContactAccountKeys
+        } ?: matchingGroups.first()
+    }
+    return archive.copy(
+        groups = filteredGroups,
+        contacts = filteredContacts
+    )
 }
 
 internal fun normalizePhoneForDedup(

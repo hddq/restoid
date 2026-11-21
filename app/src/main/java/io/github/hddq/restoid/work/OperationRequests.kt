@@ -44,8 +44,14 @@ data class DeviceDataBackupSelection(
 @Serializable
 data class DeviceDataRestoreSelection(
     val contacts: Boolean = false,
+    // Backwards compatibility: older serialized restore requests omit these fields and expect all accounts/calendars to be restored.
+    val selectAllContactAccounts: Boolean = true,
+    val selectedContactAccountKeys: Set<String> = emptySet(),
     val callLogs: Boolean = false,
-    val calendar: Boolean = false
+    val calendar: Boolean = false,
+    // Backwards compatibility: older serialized restore requests omit these fields and expect all calendars to be restored.
+    val selectAllCalendars: Boolean = true,
+    val selectedCalendarKeys: Set<String> = emptySet()
 ) {
     fun anyEnabled(): Boolean = contacts || callLogs || calendar
 }

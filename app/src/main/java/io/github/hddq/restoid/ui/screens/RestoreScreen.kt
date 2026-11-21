@@ -62,6 +62,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.Dispatchers
@@ -77,7 +78,9 @@ import io.github.hddq.restoid.R
 import io.github.hddq.restoid.RestoidApplication
 import io.github.hddq.restoid.model.BackupDetail
 import io.github.hddq.restoid.model.CalendarBackupMetadata
+import io.github.hddq.restoid.model.CalendarInfo
 import io.github.hddq.restoid.model.CallLogsBackupMetadata
+import io.github.hddq.restoid.model.ContactAccountInfo
 import io.github.hddq.restoid.model.ContactsBackupMetadata
 import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
@@ -85,6 +88,8 @@ import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
 import io.github.hddq.restoid.ui.restore.RestoreTypes
 import io.github.hddq.restoid.ui.restore.RestoreUiEvent
 import io.github.hddq.restoid.ui.restore.RestoreViewModel
+import io.github.hddq.restoid.ui.shared.CalendarOptionsBottomSheet
+import io.github.hddq.restoid.ui.shared.ContactsOptionsBottomSheet
 import io.github.hddq.restoid.ui.shared.TaskRow
 import io.github.hddq.restoid.ui.shared.rememberPermissionsMap
 import io.github.hddq.restoid.ui.shared.rememberPermissionsState
@@ -108,6 +113,12 @@ fun RestoreScreen(
     val contactsMetadata by viewModel.contactsMetadata.collectAsStateWithLifecycle()
     val callLogsMetadata by viewModel.callLogsMetadata.collectAsStateWithLifecycle()
     val calendarMetadata by viewModel.calendarMetadata.collectAsStateWithLifecycle()
+    val selectAllContactAccounts by viewModel.selectAllContactAccounts.collectAsStateWithLifecycle()
+    val selectedContactAccountKeys by viewModel.selectedContactAccountKeys.collectAsStateWithLifecycle()
+    val availableContactAccounts by viewModel.availableContactAccounts.collectAsStateWithLifecycle()
+    val selectAllCalendars by viewModel.selectAllCalendars.collectAsStateWithLifecycle()
+    val selectedCalendarKeys by viewModel.selectedCalendarKeys.collectAsStateWithLifecycle()
+    val availableCalendars by viewModel.availableCalendars.collectAsStateWithLifecycle()
 
     val restoreAppsEnabled by viewModel.restoreAppsEnabled.collectAsState()
     val restoreCustomDirectoriesEnabled by viewModel.restoreCustomDirectoriesEnabled.collectAsState()
@@ -221,9 +232,34 @@ fun RestoreScreen(
                 restoreDeviceDataEnabled && missingCallLogs -> stringResource(R.string.device_data_call_logs_permission_required)
                 restoreDeviceDataEnabled && missingCalendar -> stringResource(R.string.device_data_calendar_permission_required)
                 else -> buildList {
-                    if (contactsActive) add(formatContactsSummary(context, contactsMetadata!!))
+                    if (contactsActive) {
+                        val contactsSummary = formatRestoreContactsSubtitle(
+                            context = context,
+                            metadata = contactsMetadata!!,
+                            selectAllContactAccounts = selectAllContactAccounts,
+                            selectedContactAccountKeys = selectedContactAccountKeys,
+                            availableContactAccounts = availableContactAccounts
+                        )
+                        add(
+                            if (selectAllContactAccounts) {
+                                contactsSummary
+                            } else {
+                                "${context.getString(R.string.device_data_contacts)}: $contactsSummary"
+                            }
+                        )
+                    }
                     if (callLogsActive) add(formatCallLogsSummary(context, callLogsMetadata!!))
-                    if (calendarActive) add(formatCalendarSummary(context, calendarMetadata!!))
+                    if (calendarActive) {
+                        add(
+                            formatRestoreCalendarSubtitle(
+                                context = context,
+                                metadata = calendarMetadata!!,
+                                selectAllCalendars = selectAllCalendars,
+                                selectedCalendarKeys = selectedCalendarKeys,
+                                availableCalendars = availableCalendars
+                            )
+                        )
+                    }
                 }.joinToString(" • ")
             }
 
@@ -463,13 +499,22 @@ fun RestoreDeviceDataConfigScreen(
     viewModel: RestoreViewModel,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
     val contactsMetadata by viewModel.contactsMetadata.collectAsStateWithLifecycle()
     val callLogsMetadata by viewModel.callLogsMetadata.collectAsStateWithLifecycle()
     val calendarMetadata by viewModel.calendarMetadata.collectAsStateWithLifecycle()
     val restoreContactsEnabled by viewModel.restoreContactsEnabled.collectAsStateWithLifecycle()
     val restoreCallLogsEnabled by viewModel.restoreCallLogsEnabled.collectAsStateWithLifecycle()
     val restoreCalendarEnabled by viewModel.restoreCalendarEnabled.collectAsStateWithLifecycle()
+    val selectAllContactAccounts by viewModel.selectAllContactAccounts.collectAsStateWithLifecycle()
+    val selectedContactAccountKeys by viewModel.selectedContactAccountKeys.collectAsStateWithLifecycle()
+    val availableContactAccounts by viewModel.availableContactAccounts.collectAsStateWithLifecycle()
+    val isLoadingContactAccounts by viewModel.isLoadingContactAccounts.collectAsStateWithLifecycle()
+    val contactAccountsError by viewModel.contactAccountsError.collectAsStateWithLifecycle()
+    val selectAllCalendars by viewModel.selectAllCalendars.collectAsStateWithLifecycle()
+    val selectedCalendarKeys by viewModel.selectedCalendarKeys.collectAsStateWithLifecycle()
+    val availableCalendars by viewModel.availableCalendars.collectAsStateWithLifecycle()
+    val isLoadingCalendars by viewModel.isLoadingCalendars.collectAsStateWithLifecycle()
+    val calendarsError by viewModel.calendarsError.collectAsStateWithLifecycle()
 
     val (hasWriteContactsPermission, requestContactsPermissions) = rememberPermissionsState(
         Manifest.permission.READ_CONTACTS,
@@ -487,108 +532,162 @@ fun RestoreDeviceDataConfigScreen(
         onGranted = { viewModel.setRestoreCalendarEnabled(true) }
     )
 
+    RestoreDeviceDataConfigContent(
+        contactsMetadata = contactsMetadata,
+        callLogsMetadata = callLogsMetadata,
+        calendarMetadata = calendarMetadata,
+        restoreContactsEnabled = restoreContactsEnabled,
+        restoreCallLogsEnabled = restoreCallLogsEnabled,
+        restoreCalendarEnabled = restoreCalendarEnabled,
+        hasContactsPermission = hasWriteContactsPermission,
+        hasCallLogsPermission = hasWriteCallLogPermission,
+        hasCalendarPermission = hasWriteCalendarPermission,
+        selectAllContactAccounts = selectAllContactAccounts,
+        selectedContactAccountKeys = selectedContactAccountKeys,
+        availableContactAccounts = availableContactAccounts,
+        isLoadingContactAccounts = isLoadingContactAccounts,
+        contactAccountsError = contactAccountsError,
+        selectAllCalendars = selectAllCalendars,
+        selectedCalendarKeys = selectedCalendarKeys,
+        availableCalendars = availableCalendars,
+        isLoadingCalendars = isLoadingCalendars,
+        calendarsError = calendarsError,
+        onContactsEnabledChange = viewModel::setRestoreContactsEnabled,
+        onCallLogsEnabledChange = viewModel::setRestoreCallLogsEnabled,
+        onCalendarEnabledChange = viewModel::setRestoreCalendarEnabled,
+        onRequestContactsPermission = requestContactsPermissions,
+        onRequestCallLogsPermission = requestCallLogsPermissions,
+        onRequestCalendarPermission = requestCalendarPermissions,
+        onLoadSnapshotContactAccounts = { viewModel.loadSnapshotContactAccounts() },
+        onRetrySnapshotContactAccounts = { viewModel.loadSnapshotContactAccounts(force = true) },
+        onToggleAllContactAccounts = viewModel::toggleAllContactAccounts,
+        onToggleContactAccount = viewModel::toggleContactAccount,
+        onLoadSnapshotCalendars = { viewModel.loadSnapshotCalendars() },
+        onRetrySnapshotCalendars = { viewModel.loadSnapshotCalendars(force = true) },
+        onToggleAllCalendars = viewModel::toggleAllCalendars,
+        onToggleCalendar = viewModel::toggleCalendar,
+        modifier = modifier
+    )
+}
+
+@Composable
+internal fun RestoreDeviceDataConfigContent(
+    contactsMetadata: ContactsBackupMetadata?,
+    callLogsMetadata: CallLogsBackupMetadata?,
+    calendarMetadata: CalendarBackupMetadata?,
+    restoreContactsEnabled: Boolean,
+    restoreCallLogsEnabled: Boolean,
+    restoreCalendarEnabled: Boolean,
+    hasContactsPermission: Boolean = true,
+    hasCallLogsPermission: Boolean = true,
+    hasCalendarPermission: Boolean = true,
+    selectAllContactAccounts: Boolean = true,
+    selectedContactAccountKeys: Set<String> = emptySet(),
+    availableContactAccounts: List<ContactAccountInfo> = emptyList(),
+    isLoadingContactAccounts: Boolean = false,
+    contactAccountsError: String? = null,
+    selectAllCalendars: Boolean = true,
+    selectedCalendarKeys: Set<String> = emptySet(),
+    availableCalendars: List<CalendarInfo> = emptyList(),
+    isLoadingCalendars: Boolean = false,
+    calendarsError: String? = null,
+    onContactsEnabledChange: (Boolean) -> Unit = {},
+    onCallLogsEnabledChange: (Boolean) -> Unit = {},
+    onCalendarEnabledChange: (Boolean) -> Unit = {},
+    onRequestContactsPermission: () -> Unit = {},
+    onRequestCallLogsPermission: () -> Unit = {},
+    onRequestCalendarPermission: () -> Unit = {},
+    onLoadSnapshotContactAccounts: () -> Unit = {},
+    onRetrySnapshotContactAccounts: () -> Unit = {},
+    onToggleAllContactAccounts: () -> Unit = {},
+    onToggleContactAccount: (String) -> Unit = {},
+    onLoadSnapshotCalendars: () -> Unit = {},
+    onRetrySnapshotCalendars: () -> Unit = {},
+    onToggleAllCalendars: () -> Unit = {},
+    onToggleCalendar: (String) -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    var showContactsOptionsSheet by rememberSaveable { mutableStateOf(false) }
+    var showCalendarOptionsSheet by rememberSaveable { mutableStateOf(false) }
+
+    val contactsAvailable = contactsMetadata != null
+    val contactsChecked = contactsAvailable && restoreContactsEnabled
+    val contactsSubtitle = when {
+        contactsMetadata == null -> stringResource(R.string.device_data_contacts_not_in_snapshot)
+        restoreContactsEnabled && !hasContactsPermission -> stringResource(R.string.device_data_contacts_permission_required)
+        else -> formatRestoreContactsSubtitle(
+            context = context,
+            metadata = contactsMetadata,
+            selectAllContactAccounts = selectAllContactAccounts,
+            selectedContactAccountKeys = selectedContactAccountKeys,
+            availableContactAccounts = availableContactAccounts
+        )
+    }
+
+    val callLogsAvailable = callLogsMetadata != null
+    val callLogsChecked = callLogsAvailable && restoreCallLogsEnabled
+    val callLogsSubtitle = when {
+        callLogsMetadata == null -> stringResource(R.string.device_data_not_in_snapshot)
+        restoreCallLogsEnabled && !hasCallLogsPermission -> stringResource(R.string.device_data_call_logs_permission_required)
+        else -> formatCallLogsSummary(context, callLogsMetadata)
+    }
+
+    val calendarAvailable = calendarMetadata != null
+    val calendarChecked = calendarAvailable && restoreCalendarEnabled
+    val calendarSubtitle = when {
+        calendarMetadata == null -> stringResource(R.string.device_data_not_in_snapshot)
+        restoreCalendarEnabled && !hasCalendarPermission -> stringResource(R.string.device_data_calendar_permission_required)
+        else -> formatRestoreCalendarSubtitle(
+            context = context,
+            metadata = calendarMetadata,
+            selectAllCalendars = selectAllCalendars,
+            selectedCalendarKeys = selectedCalendarKeys,
+            availableCalendars = availableCalendars
+        )
+    }
+
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 88.dp, top = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item(key = "restore_device_data_items") {
-            val currentContactsMetadata = contactsMetadata
-            val contactsAvailable = currentContactsMetadata != null
-            val contactsChecked = contactsAvailable && restoreContactsEnabled
-            val contactsSubtitle = when {
-                currentContactsMetadata == null -> stringResource(R.string.device_data_contacts_not_in_snapshot)
-                restoreContactsEnabled && !hasWriteContactsPermission -> stringResource(R.string.device_data_contacts_permission_required)
-                else -> formatContactsSummary(context, currentContactsMetadata)
-            }
-
-            val currentCallLogsMetadata = callLogsMetadata
-            val callLogsAvailable = currentCallLogsMetadata != null
-            val callLogsChecked = callLogsAvailable && restoreCallLogsEnabled
-            val callLogsSubtitle = when {
-                currentCallLogsMetadata == null -> stringResource(R.string.device_data_not_in_snapshot)
-                restoreCallLogsEnabled && !hasWriteCallLogPermission -> stringResource(R.string.device_data_call_logs_permission_required)
-                else -> formatCallLogsSummary(context, currentCallLogsMetadata)
-            }
-
-            val currentCalendarMetadata = calendarMetadata
-            val calendarAvailable = currentCalendarMetadata != null
-            val calendarChecked = calendarAvailable && restoreCalendarEnabled
-            val calendarSubtitle = when {
-                currentCalendarMetadata == null -> stringResource(R.string.device_data_not_in_snapshot)
-                restoreCalendarEnabled && !hasWriteCalendarPermission -> stringResource(R.string.device_data_calendar_permission_required)
-                else -> formatCalendarSummary(context, currentCalendarMetadata)
-            }
-
             ExpressiveCardGroup {
                 ExpressiveSegmentedSurface(index = 0, count = 3) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(enabled = contactsAvailable) {
-                                if (!restoreContactsEnabled && !hasWriteContactsPermission) {
-                                    requestContactsPermissions()
-                                } else {
-                                    viewModel.setRestoreContactsEnabled(!restoreContactsEnabled)
-                                }
-                            }
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Contacts,
-                            contentDescription = null,
-                            tint = if (contactsChecked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(end = 16.dp)
-                        )
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.device_data_contacts),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = if (contactsAvailable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                            )
-                            Text(
-                                text = contactsSubtitle,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (contactsAvailable) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                        Spacer(Modifier.width(16.dp))
-                        Switch(
-                            checked = contactsChecked,
-                            enabled = contactsAvailable,
-                            onCheckedChange = { enabled ->
-                                if (enabled && !hasWriteContactsPermission) {
-                                    requestContactsPermissions()
-                                } else {
-                                    viewModel.setRestoreContactsEnabled(enabled)
-                                }
-                            },
-                            thumbContent = if (contactsChecked) {
-                                {
-                                    Icon(
-                                        imageVector = Icons.Filled.Check,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                                    )
-                                }
+                    TaskRow(
+                        title = stringResource(R.string.device_data_contacts),
+                        subtitle = contactsSubtitle,
+                        icon = Icons.Outlined.Contacts,
+                        checked = contactsChecked,
+                        onCheckedChange = { enabled ->
+                            if (enabled && !hasContactsPermission) {
+                                onRequestContactsPermission()
                             } else {
-                                null
+                                onContactsEnabledChange(enabled)
                             }
-                        )
-                    }
+                        },
+                        // Opening the snapshot account picker does not require device contacts permissions.
+                        onNavigate = if (contactsAvailable) {
+                            {
+                                onLoadSnapshotContactAccounts()
+                                showContactsOptionsSheet = true
+                            }
+                        } else {
+                            null
+                        },
+                        enabled = contactsAvailable
+                    )
                 }
                 ExpressiveSegmentedSurface(index = 1, count = 3) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable(enabled = callLogsAvailable) {
-                                if (!restoreCallLogsEnabled && !hasWriteCallLogPermission) {
-                                    requestCallLogsPermissions()
+                                if (!restoreCallLogsEnabled && !hasCallLogsPermission) {
+                                    onRequestCallLogsPermission()
                                 } else {
-                                    viewModel.setRestoreCallLogsEnabled(!restoreCallLogsEnabled)
+                                    onCallLogsEnabledChange(!restoreCallLogsEnabled)
                                 }
                             }
                             .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -619,10 +718,10 @@ fun RestoreDeviceDataConfigScreen(
                             checked = callLogsChecked,
                             enabled = callLogsAvailable,
                             onCheckedChange = { enabled ->
-                                if (enabled && !hasWriteCallLogPermission) {
-                                    requestCallLogsPermissions()
+                                if (enabled && !hasCallLogsPermission) {
+                                    onRequestCallLogsPermission()
                                 } else {
-                                    viewModel.setRestoreCallLogsEnabled(enabled)
+                                    onCallLogsEnabledChange(enabled)
                                 }
                             },
                             thumbContent = if (callLogsChecked) {
@@ -640,66 +739,118 @@ fun RestoreDeviceDataConfigScreen(
                     }
                 }
                 ExpressiveSegmentedSurface(index = 2, count = 3) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(enabled = calendarAvailable) {
-                                if (!restoreCalendarEnabled && !hasWriteCalendarPermission) {
-                                    requestCalendarPermissions()
-                                } else {
-                                    viewModel.setRestoreCalendarEnabled(!restoreCalendarEnabled)
-                                }
-                            }
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.CalendarMonth,
-                            contentDescription = null,
-                            tint = if (calendarChecked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(end = 16.dp)
-                        )
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.device_data_calendar),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = if (calendarAvailable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                            )
-                            Text(
-                                text = calendarSubtitle,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = if (calendarAvailable) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                        Spacer(Modifier.width(16.dp))
-                        Switch(
-                            checked = calendarChecked,
-                            enabled = calendarAvailable,
-                            onCheckedChange = { enabled ->
-                                if (enabled && !hasWriteCalendarPermission) {
-                                    requestCalendarPermissions()
-                                } else {
-                                    viewModel.setRestoreCalendarEnabled(enabled)
-                                }
-                            },
-                            thumbContent = if (calendarChecked) {
-                                {
-                                    Icon(
-                                        imageVector = Icons.Filled.Check,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                                    )
-                                }
+                    TaskRow(
+                        title = stringResource(R.string.device_data_calendar),
+                        subtitle = calendarSubtitle,
+                        icon = Icons.Outlined.CalendarMonth,
+                        checked = calendarChecked,
+                        onCheckedChange = { enabled ->
+                            if (enabled && !hasCalendarPermission) {
+                                onRequestCalendarPermission()
                             } else {
-                                null
+                                onCalendarEnabledChange(enabled)
                             }
-                        )
-                    }
+                        },
+                        // Opening the snapshot calendar picker does not require device calendar permissions.
+                        onNavigate = if (calendarAvailable) {
+                            {
+                                onLoadSnapshotCalendars()
+                                showCalendarOptionsSheet = true
+                            }
+                        } else {
+                            null
+                        },
+                        enabled = calendarAvailable
+                    )
                 }
             }
         }
+    }
+
+    if (showContactsOptionsSheet && contactsAvailable) {
+        ContactsOptionsBottomSheet(
+            selectAllContactAccounts = selectAllContactAccounts,
+            selectedContactAccountKeys = selectedContactAccountKeys,
+            availableContactAccounts = availableContactAccounts,
+            isLoadingContactAccounts = isLoadingContactAccounts,
+            hasReadContactsPermission = true,
+            onRequestPermission = {},
+            onToggleAllContactAccounts = onToggleAllContactAccounts,
+            onToggleContactAccount = onToggleContactAccount,
+            onDismissRequest = { showContactsOptionsSheet = false },
+            errorMessage = contactAccountsError,
+            onRetry = onRetrySnapshotContactAccounts,
+            emptyMessage = stringResource(R.string.device_data_contacts_accounts_snapshot_empty)
+        )
+    }
+
+    if (showCalendarOptionsSheet && calendarAvailable) {
+        CalendarOptionsBottomSheet(
+            selectAllCalendars = selectAllCalendars,
+            selectedCalendarKeys = selectedCalendarKeys,
+            availableCalendars = availableCalendars,
+            isLoadingCalendars = isLoadingCalendars,
+            hasReadCalendarPermission = true,
+            onRequestPermission = {},
+            onToggleAllCalendars = onToggleAllCalendars,
+            onToggleCalendar = onToggleCalendar,
+            onDismissRequest = { showCalendarOptionsSheet = false },
+            errorMessage = calendarsError,
+            onRetry = onRetrySnapshotCalendars,
+            emptyMessage = stringResource(R.string.device_data_calendar_snapshot_empty)
+        )
+    }
+}
+
+private fun formatRestoreContactsSubtitle(
+    context: Context,
+    metadata: ContactsBackupMetadata,
+    selectAllContactAccounts: Boolean,
+    selectedContactAccountKeys: Set<String>,
+    availableContactAccounts: List<ContactAccountInfo>
+): String {
+    if (selectAllContactAccounts) {
+        return formatContactsSummary(context, metadata)
+    }
+    val selectedCount = if (availableContactAccounts.isNotEmpty()) {
+        availableContactAccounts.count { it.selectionKey in selectedContactAccountKeys }
+    } else {
+        selectedContactAccountKeys.size
+    }
+    return if (selectedCount == 0) {
+        context.getString(R.string.device_data_contacts_none_selected)
+    } else {
+        context.resources.getQuantityString(
+            R.plurals.device_data_contacts_accounts_selected_count,
+            selectedCount,
+            selectedCount
+        )
+    }
+}
+
+private fun formatRestoreCalendarSubtitle(
+    context: Context,
+    metadata: CalendarBackupMetadata,
+    selectAllCalendars: Boolean,
+    selectedCalendarKeys: Set<String>,
+    availableCalendars: List<CalendarInfo>
+): String {
+    if (selectAllCalendars) {
+        return formatCalendarSummary(context, metadata)
+    }
+    val selectedCount = if (availableCalendars.isNotEmpty()) {
+        availableCalendars.count { it.selectionKey in selectedCalendarKeys }
+    } else {
+        selectedCalendarKeys.size
+    }
+    return if (selectedCount == 0) {
+        context.getString(R.string.device_data_calendar_none_selected)
+    } else {
+        context.resources.getQuantityString(
+            R.plurals.device_data_calendars_selected_count,
+            selectedCount,
+            selectedCount
+        )
     }
 }
 
