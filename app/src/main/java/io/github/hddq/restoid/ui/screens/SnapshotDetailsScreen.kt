@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Call
 import androidx.compose.material.icons.outlined.Contacts
 import androidx.compose.material.icons.outlined.Delete
@@ -84,6 +85,7 @@ import io.github.hddq.restoid.R
 import io.github.hddq.restoid.RestoidApplication
 import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.model.BackupDetail
+import io.github.hddq.restoid.model.CalendarBackupMetadata
 import io.github.hddq.restoid.model.CallLogsBackupMetadata
 import io.github.hddq.restoid.model.ContactsBackupMetadata
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
@@ -181,7 +183,11 @@ fun SnapshotDetailsScreen(
                 val dirsList = customDirs.toList()
                 val contactsMeta = metadata?.deviceData?.contacts
                 val callLogsMeta = metadata?.deviceData?.callLogs
-                val deviceDataItemsCount = (if (contactsMeta != null) 1 else 0) + (if (callLogsMeta != null) 1 else 0)
+                val calendarMeta = metadata?.deviceData?.calendar
+                val deviceDataItemsCount =
+                    (if (contactsMeta != null) 1 else 0) +
+                        (if (callLogsMeta != null) 1 else 0) +
+                        (if (calendarMeta != null) 1 else 0)
 
                 LazyColumn(
                     modifier = Modifier.weight(1f),
@@ -275,9 +281,20 @@ fun SnapshotDetailsScreen(
                                 }
                             }
                         }
+                        if (calendarMeta != null) {
+                            val currentIndex = deviceDataIndex++
+                            item(key = "device_data_calendar", contentType = "device_data_calendar") {
+                                ExpressiveSegmentedSurface(
+                                    index = currentIndex,
+                                    count = deviceDataItemsCount
+                                ) {
+                                    BackedUpCalendarItem(metadata = calendarMeta)
+                                }
+                            }
+                        }
                     }
 
-                    if (backupDetails.isEmpty() && customDirs.isEmpty() && contactsMeta == null && callLogsMeta == null && !isLoading) {
+                    if (backupDetails.isEmpty() && customDirs.isEmpty() && contactsMeta == null && callLogsMeta == null && calendarMeta == null && !isLoading) {
                         item(key = "empty_metadata", contentType = "empty_metadata") {
                             if (metadata == null) {
                                 Text(
@@ -698,6 +715,45 @@ fun BackedUpCallLogsItem(
             )
             Text(
                 stringResource(R.string.device_data_call_logs_count_size, countText, sizeText),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+fun BackedUpCalendarItem(
+    metadata: CalendarBackupMetadata,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val eventsText = pluralStringResource(R.plurals.device_data_calendar_events_count, metadata.count, metadata.count)
+    val sizeText = Formatter.formatShortFileSize(context, metadata.size)
+    val summaryText = metadata.calendarCount?.let { calCount ->
+        val calendarsText = pluralStringResource(R.plurals.device_data_calendar_calendars_count, calCount, calCount)
+        stringResource(R.string.device_data_calendar_calendars_events_size, calendarsText, eventsText, sizeText)
+    } ?: stringResource(R.string.device_data_calendar_count_size, eventsText, sizeText)
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            Icons.Outlined.CalendarMonth,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                stringResource(R.string.device_data_calendar),
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                summaryText,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

@@ -99,6 +99,27 @@
         <item quantity="other">%1$d call logs</item>
     </plurals>
     <string name="device_data_call_logs_count_size">%1$s - Size: %2$s</string>
+    <string name="device_data_calendar">Calendar</string>
+    <string name="device_data_calendar_permission_required">Calendar permission required</string>
+    <string name="device_data_calendar_all">All calendars</string>
+    <string name="device_data_calendar_none_selected">No calendars selected</string>
+    <plurals name="device_data_calendars_selected_count">
+        <item quantity="one">%1$d calendar selected</item>
+        <item quantity="other">%1$d calendars selected</item>
+    </plurals>
+    <string name="device_data_calendar_options_title">Calendars</string>
+    <string name="device_data_calendar_empty">No calendars found on this device</string>
+    <string name="device_data_calendar_read_only">Read-only</string>
+    <plurals name="device_data_calendar_events_count">
+        <item quantity="one">%1$d event</item>
+        <item quantity="other">%1$d events</item>
+    </plurals>
+    <plurals name="device_data_calendar_calendars_count">
+        <item quantity="one">%1$d calendar</item>
+        <item quantity="other">%1$d calendars</item>
+    </plurals>
+    <string name="device_data_calendar_count_size">%1$s - Size: %2$s</string>
+    <string name="device_data_calendar_calendars_events_size">%1$s, %2$s - Size: %3$s</string>
     <string name="action_add_directory">Add File or Folder</string>
     <string name="action_add_excluded_directory">Exclude File or Folder</string>
     <string name="folder_browser_select_this_folder">Select this path</string>
@@ -144,6 +165,12 @@
     <string name="summary_call_logs_read_permission_required">Grant Call logs permission, then try again.</string>
     <string name="error_call_logs_read_permission_restore_required">READ_CALL_LOG permission is required to restore call logs.</string>
     <string name="error_call_logs_write_permission_required">Call logs permission is required to restore call logs.</string>
+    <string name="error_calendar_read_permission_required">Calendar permission is required to back up calendars.</string>
+    <string name="summary_calendar_read_permission_required">Grant Calendar permission, then try again.</string>
+    <string name="error_calendar_none_selected">No calendars selected to back up.</string>
+    <string name="summary_calendar_none_selected">Select at least one calendar in Device Data settings.</string>
+    <string name="error_calendar_read_permission_restore_required">READ_CALENDAR permission is required to restore calendars.</string>
+    <string name="error_calendar_write_permission_required">Calendar permission is required to restore calendars.</string>
     <string name="run_tasks_backup_subtitle">%1$d apps selected - %2$s</string>
     <string name="run_tasks_forget_snapshots">Forget Snapshots</string>
     <string name="run_tasks_forget_subtitle">Keep last %1$d, daily %2$d, weekly %3$d, monthly %4$d</string>
@@ -532,6 +559,8 @@
     <string name="restore_failure_contacts_missing">Contacts backup data not found in snapshot.</string>
     <string name="restore_failure_call_logs">Failed to restore %1$d call logs.</string>
     <string name="restore_failure_call_logs_missing">Call logs backup data not found in snapshot.</string>
+    <string name="restore_failure_calendar">Failed to restore %1$d calendar events.</string>
+    <string name="restore_failure_calendar_missing">Calendar backup data not found in snapshot.</string>
     <string name="restore_summary_finished_in">Restore finished in %1$s. </string>
     <plurals name="restore_summary_processed_items">
         <item quantity="one">Successfully processed %1$d item.</item>

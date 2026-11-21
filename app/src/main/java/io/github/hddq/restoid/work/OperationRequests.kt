@@ -32,17 +32,21 @@ data class RestoreTypeSelection(
 data class DeviceDataBackupSelection(
     val contacts: Boolean = false,
     val includeReadOnlyContacts: Boolean = false,
-    val callLogs: Boolean = false
+    val callLogs: Boolean = false,
+    val calendar: Boolean = false,
+    val selectAllCalendars: Boolean = true,
+    val selectedCalendarKeys: Set<String> = emptySet()
 ) {
-    fun anyEnabled(): Boolean = contacts || callLogs
+    fun anyEnabled(): Boolean = contacts || callLogs || calendar
 }
 
 @Serializable
 data class DeviceDataRestoreSelection(
     val contacts: Boolean = false,
-    val callLogs: Boolean = false
+    val callLogs: Boolean = false,
+    val calendar: Boolean = false
 ) {
-    fun anyEnabled(): Boolean = contacts || callLogs
+    fun anyEnabled(): Boolean = contacts || callLogs || calendar
 }
 
 @Serializable

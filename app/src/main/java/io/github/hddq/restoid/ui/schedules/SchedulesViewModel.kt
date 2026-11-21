@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.AppInfoRepository
+import io.github.hddq.restoid.data.CalendarBackupRepository
 import io.github.hddq.restoid.data.PreferencesRepository
 import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.RepositoryBackendType
@@ -13,6 +14,7 @@ import io.github.hddq.restoid.data.ResticBinaryManager
 import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.data.ScheduleRepository
 import io.github.hddq.restoid.model.AppInfo
+import io.github.hddq.restoid.model.CalendarInfo
 import io.github.hddq.restoid.model.Schedule
 import io.github.hddq.restoid.model.TriggerConditions
 import io.github.hddq.restoid.model.MaintenanceConfig
@@ -66,6 +68,11 @@ data class AddEditScheduleUiState(
     val contactsBackupEnabled: Boolean = true,
     val includeReadOnlyContacts: Boolean = false,
     val callLogsBackupEnabled: Boolean = false,
+    val calendarBackupEnabled: Boolean = false,
+    val selectAllCalendars: Boolean = true,
+    val selectedCalendarKeys: Set<String> = emptySet(),
+    val availableCalendars: List<CalendarInfo> = emptyList(),
+    val isLoadingCalendars: Boolean = false,
     val customDirectories: List<io.github.hddq.restoid.model.CustomDirectory> = emptyList(),
     val excludedCustomDirectories: List<io.github.hddq.restoid.model.CustomDirectory> = emptyList(),
     val exclusionConflicts: List<ExclusionConflict> = emptyList(),
@@ -90,6 +97,8 @@ class SchedulesViewModel(
     private val preferencesRepository: PreferencesRepository
 ) : ViewModel() {
 
+    private val calendarBackupRepository = CalendarBackupRepository(application)
+
     val rootState = rootRepository.rootState
 
     private val _uiState = MutableStateFlow(SchedulesUiState())
@@ -107,6 +116,7 @@ class SchedulesViewModel(
     private var cachedResolvedExclusions: List<String> = emptyList()
     private var conflictResolutionJob: Job? = null
     private var addEditSessionId: Long = 0L
+    private var calendarRefreshRequestId: Long = 0L
 
     private val forgetHostsController = ForgetHostsController(
         context = application,
@@ -203,6 +213,7 @@ class SchedulesViewModel(
     // Add/Edit Screen methods
     fun startAddSchedule() {
         val sessionId = ++addEditSessionId
+        ++calendarRefreshRequestId
         val defaultHostname = preferencesRepository.getDeviceHostname()
         val newState = AddEditScheduleUiState(
             maintenance = MaintenanceConfig(
@@ -217,6 +228,7 @@ class SchedulesViewModel(
     }
     fun startEditSchedule(schedule: Schedule) {
         val sessionId = ++addEditSessionId
+        ++calendarRefreshRequestId
         val normalizedHosts = normalizeForgetHosts(schedule.config.forgetHosts)
         val newState = AddEditScheduleUiState(
             id = schedule.id,
@@ -246,6 +258,9 @@ class SchedulesViewModel(
             contactsBackupEnabled = if (schedule.config.deviceData.anyEnabled()) schedule.config.deviceData.contacts else true,
             includeReadOnlyContacts = schedule.config.deviceData.includeReadOnlyContacts,
             callLogsBackupEnabled = schedule.config.deviceData.callLogs,
+            calendarBackupEnabled = schedule.config.deviceData.calendar,
+            selectAllCalendars = schedule.config.deviceData.selectAllCalendars,
+            selectedCalendarKeys = schedule.config.deviceData.selectedCalendarKeys,
             customDirectories = schedule.config.customDirectories.map { io.github.hddq.restoid.model.CustomDirectory(it, true) },
             excludedCustomDirectories = schedule.config.excludedCustomDirectories.map { io.github.hddq.restoid.model.CustomDirectory(it, true) }
         )
@@ -313,6 +328,9 @@ class SchedulesViewModel(
                 current.contactsBackupEnabled != initial.contactsBackupEnabled ||
                 current.includeReadOnlyContacts != initial.includeReadOnlyContacts ||
                 current.callLogsBackupEnabled != initial.callLogsBackupEnabled ||
+                current.calendarBackupEnabled != initial.calendarBackupEnabled ||
+                current.selectAllCalendars != initial.selectAllCalendars ||
+                current.selectedCalendarKeys != initial.selectedCalendarKeys ||
                 current.customDirectories != initial.customDirectories ||
                 current.excludedCustomDirectories != initial.excludedCustomDirectories
     }
@@ -353,7 +371,10 @@ class SchedulesViewModel(
                 deviceData = DeviceDataBackupSelection(
                     contacts = state.deviceDataBackupEnabled && state.contactsBackupEnabled,
                     includeReadOnlyContacts = state.includeReadOnlyContacts,
-                    callLogs = state.deviceDataBackupEnabled && state.callLogsBackupEnabled
+                    callLogs = state.deviceDataBackupEnabled && state.callLogsBackupEnabled,
+                    calendar = state.deviceDataBackupEnabled && state.calendarBackupEnabled,
+                    selectAllCalendars = state.selectAllCalendars,
+                    selectedCalendarKeys = state.selectedCalendarKeys
                 ),
                 unlockRepo = state.maintenance.unlockRepo,
                 forgetSnapshots = state.maintenance.forgetSnapshots,
@@ -483,6 +504,66 @@ class SchedulesViewModel(
 
     fun setCallLogsBackupEnabled(enabled: Boolean) {
         _addEditState.update { it.copy(callLogsBackupEnabled = enabled) }
+    }
+
+    fun setCalendarBackupEnabled(enabled: Boolean) {
+        _addEditState.update { it.copy(calendarBackupEnabled = enabled) }
+        if (enabled) {
+            refreshCalendars()
+        }
+    }
+
+    fun refreshCalendars() {
+        val sessionId = addEditSessionId
+        val requestId = ++calendarRefreshRequestId
+        if (!calendarBackupRepository.hasReadCalendarPermission()) {
+            _addEditState.update { it.copy(availableCalendars = emptyList(), isLoadingCalendars = false) }
+            return
+        }
+        viewModelScope.launch {
+            _addEditState.update { it.copy(isLoadingCalendars = true) }
+            try {
+                val calendars = calendarBackupRepository.queryDeviceCalendars()
+                if (calendarRefreshRequestId == requestId && addEditSessionId == sessionId) {
+                    _addEditState.update { it.copy(availableCalendars = calendars) }
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                android.util.Log.w("SchedulesViewModel", "Failed to load device calendars", e)
+                if (calendarRefreshRequestId == requestId && addEditSessionId == sessionId) {
+                    _addEditState.update { it.copy(availableCalendars = emptyList()) }
+                }
+            } finally {
+                if (calendarRefreshRequestId == requestId && addEditSessionId == sessionId) {
+                    _addEditState.update { it.copy(isLoadingCalendars = false) }
+                }
+            }
+        }
+    }
+
+    fun toggleAllCalendars() {
+        _addEditState.update { state ->
+            val allSelected = state.selectAllCalendars ||
+                (state.availableCalendars.isNotEmpty() && state.availableCalendars.all { it.selectionKey in state.selectedCalendarKeys })
+            state.copy(
+                selectAllCalendars = !allSelected,
+                selectedCalendarKeys = emptySet()
+            )
+        }
+    }
+
+    fun toggleCalendar(selectionKey: String) {
+        _addEditState.update { state ->
+            val allKeys = state.availableCalendars.map { it.selectionKey }.toSet()
+            val currentKeys = if (state.selectAllCalendars) allKeys else state.selectedCalendarKeys
+            val updatedKeys = if (selectionKey in currentKeys) currentKeys - selectionKey else currentKeys + selectionKey
+            val newSelectAll = allKeys.isNotEmpty() && allKeys.all { it in updatedKeys }
+            state.copy(
+                selectAllCalendars = newSelectAll,
+                selectedCalendarKeys = if (newSelectAll) emptySet() else updatedKeys
+            )
+        }
     }
 
     fun addCustomDirectory(uriString: String) {
