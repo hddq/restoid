@@ -26,12 +26,48 @@ object MaintenanceOutputParser {
     }
 
     /**
-     * Extracts a summary from the 'prune' command output.
-     * It typically just returns the last few lines which contain the result.
+     * Extracts a summary from the 'prune' command output using structured stats parsing.
      */
     private fun parsePrune(output: String, context: Context): String {
-        val summary = output.lines().filter { it.isNotBlank() }.takeLast(3).joinToString("\n")
-        return summary.ifBlank { context.getString(R.string.maintenance_summary_prune_completed) }
+        val stats = PruneOutputParser.parseSummaryStats(output)
+            ?: return context.getString(R.string.maintenance_summary_prune_completed)
+
+        fun formatBlobs(count: Int): String = context.resources.getQuantityString(
+            R.plurals.maintenance_summary_blobs,
+            count,
+            count
+        )
+
+        return when {
+            stats.hasFreedData && stats.hasRepackedData -> context.getString(
+                R.string.maintenance_summary_prune_freed_and_repacked,
+                stats.removedSize,
+                formatBlobs(stats.removedBlobs),
+                stats.repackSize,
+                formatBlobs(stats.repackBlobs),
+                stats.remainingSize,
+                formatBlobs(stats.remainingBlobs)
+            )
+            stats.hasFreedData -> context.getString(
+                R.string.maintenance_summary_prune_freed,
+                stats.removedSize,
+                formatBlobs(stats.removedBlobs),
+                stats.remainingSize,
+                formatBlobs(stats.remainingBlobs)
+            )
+            stats.hasRepackedData -> context.getString(
+                R.string.maintenance_summary_prune_repacked,
+                stats.repackSize,
+                formatBlobs(stats.repackBlobs),
+                stats.remainingSize,
+                formatBlobs(stats.remainingBlobs)
+            )
+            else -> context.getString(
+                R.string.maintenance_summary_prune_nothing_removed,
+                stats.remainingSize,
+                formatBlobs(stats.remainingBlobs)
+            )
+        }
     }
 
     /**

@@ -157,12 +157,13 @@ class ResticRepository(
                 }
             }
         }
+        val effectiveEnvironment = mapOf("RESTIC_PROGRESS_FPS" to "1") + environmentVariables
         return executor.execute(
             repoPath,
             password,
             "prune",
             context.getString(R.string.restic_failure_prune_repository),
-            environmentVariables = environmentVariables,
+            environmentVariables = effectiveEnvironment,
             resticOptions = resticOptions,
             stdoutCallback = stdoutCallback
         )

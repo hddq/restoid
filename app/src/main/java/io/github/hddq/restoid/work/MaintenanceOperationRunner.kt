@@ -11,6 +11,8 @@ import io.github.hddq.restoid.data.ResticBinaryManager
 import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.ui.shared.OperationProgress
 import io.github.hddq.restoid.util.MaintenanceOutputParser
+import io.github.hddq.restoid.util.PrunePhase
+import io.github.hddq.restoid.util.PruneProgressTracker
 
 class MaintenanceOperationRunner(
     private val context: Context,
@@ -70,10 +72,11 @@ class MaintenanceOperationRunner(
             val password = repositoriesRepository.getRepositoryPassword(request.repositoryKey)
                 ?: throw IllegalStateException(context.getString(R.string.error_password_not_found_for_repository))
 
-            val tasksToRun = mutableListOf<Pair<String, suspend () -> Result<String>>>()
+            val isSingleTask = stageContext.totalStages == 1
+            val tasksToRun = mutableListOf<Pair<String, suspend (taskIndex: Int, totalTasks: Int) -> Result<String>>>()
             if (request.unlockRepo) {
                 tasksToRun.add(
-                    context.getString(R.string.maintenance_task_unlock) to {
+                    context.getString(R.string.maintenance_task_unlock) to { _, _ ->
                         resticRepository.unlock(selectedRepoPath, password, repositoryEnvironment, repositoryResticOptions)
                     }
                 )
@@ -81,7 +84,7 @@ class MaintenanceOperationRunner(
             val forgetTaskName = context.getString(R.string.maintenance_task_forget)
             if (request.forgetSnapshots) {
                 tasksToRun.add(
-                    forgetTaskName to {
+                    forgetTaskName to { _, _ ->
                         resticRepository.forget(
                             repoPath = selectedRepoPath,
                             password = password,
@@ -99,17 +102,27 @@ class MaintenanceOperationRunner(
             }
             if (request.pruneRepo) {
                 tasksToRun.add(
-                    context.getString(R.string.maintenance_task_prune) to {
+                    context.getString(R.string.maintenance_task_prune) to { taskIndex, totalTasks ->
+                        val pruneTracker = PruneProgressTracker()
                         resticRepository.prune(
                             selectedRepoPath,
                             password,
                             repositoryEnvironment,
                             repositoryResticOptions,
                             onOutputLine = { line ->
-                                val trimmed = line.trim()
-                                if (trimmed.isNotBlank()) {
+                                val update = pruneTracker.processLine(line)
+                                if (update != null) {
+                                    val activity = update.rawActivity ?: update.phase?.let { phase ->
+                                        context.getString(prunePhaseLabelRes(phase))
+                                    }.orEmpty()
                                     progressState = progressState.copy(
-                                        currentActivity = trimmed,
+                                        stagePercentage = update.stagePercentage,
+                                        isStageIndeterminate = update.isStageIndeterminate,
+                                        filesProcessed = update.itemsProcessed,
+                                        totalFiles = update.totalItems,
+                                        overallPercentage = (taskIndex + update.overallFraction) / totalTasks.toFloat(),
+                                        isOverallIndeterminate = isSingleTask && !update.hasDeterminateOverall,
+                                        currentActivity = activity,
                                         elapsedTime = (SystemClock.elapsedRealtime() - startTime) / 1000
                                     )
                                     onProgress(progressState)
@@ -121,7 +134,7 @@ class MaintenanceOperationRunner(
             }
             if (request.checkRepo) {
                 tasksToRun.add(
-                    context.getString(R.string.maintenance_task_check) to {
+                    context.getString(R.string.maintenance_task_check) to { _, _ ->
                         resticRepository.check(
                             selectedRepoPath,
                             password,
@@ -145,7 +158,6 @@ class MaintenanceOperationRunner(
 
             if (tasksToRun.isEmpty()) throw IllegalStateException(context.getString(R.string.maintenance_error_no_tasks_selected))
 
-            val isSingleTask = stageContext.totalStages == 1
             tasksToRun.forEachIndexed { index, (taskName, taskAction) ->
                 throwIfCancelled()
                 val stageTitle = context.getString(
@@ -160,13 +172,17 @@ class MaintenanceOperationRunner(
                     stagePercentage = 0f,
                     isStageIndeterminate = true,
                     isOverallIndeterminate = isSingleTask,
+                    filesProcessed = 0,
+                    totalFiles = 0,
+                    bytesProcessed = 0L,
+                    totalBytes = 0L,
                     currentActivity = "",
                     isFinished = false,
                     elapsedTime = (SystemClock.elapsedRealtime() - startTime) / 1000
                 )
                 onProgress(progressState)
 
-                val result = taskAction()
+                val result = taskAction(index, tasksToRun.size)
                 throwIfCancelled()
 
                 progressState = progressState.copy(
@@ -174,6 +190,10 @@ class MaintenanceOperationRunner(
                     stagePercentage = 1f,
                     isStageIndeterminate = false,
                     isOverallIndeterminate = false,
+                    filesProcessed = 0,
+                    totalFiles = 0,
+                    bytesProcessed = 0L,
+                    totalBytes = 0L,
                     currentActivity = "",
                     elapsedTime = (SystemClock.elapsedRealtime() - startTime) / 1000
                 )
@@ -322,6 +342,21 @@ class MaintenanceOperationRunner(
                 request.pruneRepo,
                 request.checkRepo
             ).count { it }
+        }
+
+        fun prunePhaseLabelRes(phase: PrunePhase): Int {
+            return when (phase) {
+                PrunePhase.LOADING_INDEXES -> R.string.prune_phase_loading_indexes
+                PrunePhase.LOADING_SNAPSHOTS -> R.string.prune_phase_loading_snapshots
+                PrunePhase.FINDING_USED_DATA -> R.string.prune_phase_finding_used_data
+                PrunePhase.SEARCHING_USED_PACKS -> R.string.prune_phase_searching_used_packs
+                PrunePhase.COLLECTING_PACKS -> R.string.prune_phase_collecting_packs
+                PrunePhase.DELETING_UNREFERENCED -> R.string.prune_phase_deleting_unreferenced
+                PrunePhase.REPACKING_PACKS -> R.string.prune_phase_repacking_packs
+                PrunePhase.REBUILDING_INDEX -> R.string.prune_phase_rebuilding_index
+                PrunePhase.REMOVING_OLD_PACKS -> R.string.prune_phase_removing_old_packs
+                PrunePhase.DONE -> R.string.prune_phase_done
+            }
         }
     }
 }

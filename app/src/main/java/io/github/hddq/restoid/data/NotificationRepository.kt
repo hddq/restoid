@@ -53,6 +53,66 @@ class NotificationRepository(private val context: Context) {
 
         fun finishedNotificationId(success: Boolean): Int =
             if (success) SUCCESS_NOTIFICATION_ID else ERROR_NOTIFICATION_ID
+
+        internal fun formatProgressContentText(
+            context: Context,
+            progress: OperationProgress
+        ): String {
+            return formatProgressContentText(
+                progress = progress,
+                formatFileSize = { bytes -> Formatter.formatFileSize(context, bytes) },
+                formatFilesProgress = { processed, total ->
+                    context.resources.getQuantityString(
+                        R.plurals.notification_files_progress,
+                        total,
+                        processed,
+                        total
+                    )
+                },
+                formatActivityItemsProgress = { activity, processed, total ->
+                    context.getString(
+                        R.string.notification_activity_items_progress,
+                        activity,
+                        processed,
+                        total
+                    )
+                },
+                inProgressText = context.getString(R.string.progress_in_progress),
+                scanningFilesText = context.getString(R.string.notification_scanning_files)
+            )
+        }
+
+        internal fun formatProgressContentText(
+            progress: OperationProgress,
+            formatFileSize: (Long) -> String,
+            formatFilesProgress: (processed: Int, total: Int) -> String,
+            formatActivityItemsProgress: (activity: String, processed: Int, total: Int) -> String,
+            inProgressText: String,
+            scanningFilesText: String
+        ): String {
+            return when {
+                progress.totalFiles > 0 && progress.totalBytes > 0 -> {
+                    val filesText = formatFilesProgress(progress.filesProcessed, progress.totalFiles)
+                    val processedSize = formatFileSize(progress.bytesProcessed)
+                    val totalSize = formatFileSize(progress.totalBytes)
+                    "$filesText | $processedSize / $totalSize"
+                }
+                progress.totalFiles > 0 && progress.currentActivity.isNotBlank() -> {
+                    formatActivityItemsProgress(
+                        progress.currentActivity,
+                        progress.filesProcessed,
+                        progress.totalFiles
+                    )
+                }
+                progress.totalFiles > 0 -> {
+                    formatFilesProgress(progress.filesProcessed, progress.totalFiles)
+                }
+                progress.currentActivity.isNotBlank() -> progress.currentActivity
+                progress.currentFile.isNotBlank() -> progress.currentFile
+                progress.isStageIndeterminate || progress.isOverallIndeterminate -> inProgressText
+                else -> scanningFilesText
+            }
+        }
     }
 
     fun createNotificationChannels() {
@@ -110,23 +170,8 @@ class NotificationRepository(private val context: Context) {
         val isOverallIndeterminate = progress.isOverallIndeterminate
         val overallPercent = (progress.overallPercentage.coerceIn(0f, 1f) * 100).toInt()
         val stagePercent = (progress.stagePercentage.coerceIn(0f, 1f) * 100).toInt()
-        
-        val processedSize = Formatter.formatFileSize(context, progress.bytesProcessed)
-        val totalSize = Formatter.formatFileSize(context, progress.totalBytes)
-        val filesText = context.resources.getQuantityString(
-            R.plurals.notification_files_progress,
-            progress.totalFiles,
-            progress.filesProcessed,
-            progress.totalFiles
-        )
 
-        val contentText = when {
-            progress.totalFiles > 0 -> "$filesText | $processedSize / $totalSize"
-            progress.currentActivity.isNotBlank() -> progress.currentActivity
-            progress.currentFile.isNotBlank() -> progress.currentFile
-            progress.isStageIndeterminate || progress.isOverallIndeterminate -> context.getString(R.string.progress_in_progress)
-            else -> context.getString(R.string.notification_scanning_files)
-        }
+        val contentText = formatProgressContentText(context, progress)
 
         val title = if (progress.isStageIndeterminate) {
             progress.stageTitle

@@ -1,10 +1,81 @@
 package io.github.hddq.restoid.data
 
+import io.github.hddq.restoid.ui.shared.OperationProgress
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Test
 
 class NotificationRepositoryTest {
+
+    private fun formatContent(progress: OperationProgress): String {
+        return NotificationRepository.formatProgressContentText(
+            progress = progress,
+            formatFileSize = { bytes -> "$bytes B" },
+            formatFilesProgress = { processed, total ->
+                if (total == 1) "$processed/$total file" else "$processed/$total files"
+            },
+            formatActivityItemsProgress = { activity, processed, total ->
+                "$activity ($processed / $total)"
+            },
+            inProgressText = "Running…",
+            scanningFilesText = "Scanning files…"
+        )
+    }
+
+    @Test
+    fun formatProgressContentText_backupWithBytes_formatsFilesAndBytes() {
+        val text = formatContent(
+            OperationProgress(
+                filesProcessed = 4,
+                totalFiles = 10,
+                bytesProcessed = 512L,
+                totalBytes = 1024L,
+                currentActivity = "Backing up"
+            )
+        )
+        assertEquals("4/10 files | 512 B / 1024 B", text)
+    }
+
+    @Test
+    fun formatProgressContentText_pruneWithoutBytesWithActivity_formatsActivityAndItems() {
+        val text = formatContent(
+            OperationProgress(
+                filesProcessed = 4,
+                totalFiles = 12,
+                bytesProcessed = 0L,
+                totalBytes = 0L,
+                currentActivity = "Repacking packs"
+            )
+        )
+        assertEquals("Repacking packs (4 / 12)", text)
+    }
+
+    @Test
+    fun formatProgressContentText_restoreWithoutBytesOrActivity_omitsZeroBytes() {
+        val text = formatContent(
+            OperationProgress(
+                filesProcessed = 150,
+                totalFiles = 500,
+                bytesProcessed = 0L,
+                totalBytes = 0L,
+                currentActivity = ""
+            )
+        )
+        assertEquals("150/500 files", text)
+    }
+
+    @Test
+    fun formatProgressContentText_indeterminateActivityOnly_returnsActivity() {
+        val text = formatContent(
+            OperationProgress(
+                filesProcessed = 0,
+                totalFiles = 0,
+                isStageIndeterminate = true,
+                currentActivity = "Loading indexes…"
+            )
+        )
+        assertEquals("Loading indexes…", text)
+    }
 
     @Test
     fun finishedNotificationChannelId_usesSuccessChannelForSuccess() {
