@@ -28,7 +28,7 @@ val hasReleaseSigning = listOf(
 // Bump by 1 for every release tag, stable or pre-release (e.g. v0.9.0-beta.1 -> 29, v0.9.0 -> 30).
 // Per-ABI APK version code: 10 * base + abiCode. Keep the defaultConfig version code below equal to
 // this value as a literal: F-Droid's checkupdates regex-parses it and cannot resolve variables.
-val baseAppVersionCode = 31
+val baseAppVersionCode = 32
 
 android {
     namespace = "io.github.hddq.restoid"
@@ -43,8 +43,8 @@ android {
         applicationId = "io.github.hddq.restoid"
         minSdk = 29
         targetSdk = 37
-        versionCode = 31
-        versionName = "0.9.0"
+        versionCode = 32
+        versionName = "0.9.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

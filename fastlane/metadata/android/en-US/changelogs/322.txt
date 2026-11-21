@@ -1,0 +1,6 @@
+* Back up and restore calendars under device data
+* Select specific accounts for contacts and calendar backups
+* Reversible app sorting by name, size, or installation date
+* Show live prune progress and space reclaimed summary
+* Update bundled restic to v0.20.0
+* Updated translations and third-party license notices
