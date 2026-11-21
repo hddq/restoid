@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.AppInfoRepository
 import io.github.hddq.restoid.data.CalendarBackupRepository
+import io.github.hddq.restoid.data.ContactsBackupRepository
 import io.github.hddq.restoid.data.PreferencesRepository
 import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.RepositoryBackendType
@@ -15,6 +16,7 @@ import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.data.ScheduleRepository
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.CalendarInfo
+import io.github.hddq.restoid.model.ContactAccountInfo
 import io.github.hddq.restoid.model.Schedule
 import io.github.hddq.restoid.model.TriggerConditions
 import io.github.hddq.restoid.model.MaintenanceConfig
@@ -66,7 +68,10 @@ data class AddEditScheduleUiState(
     val customDirectoriesBackupEnabled: Boolean = false,
     val deviceDataBackupEnabled: Boolean = false,
     val contactsBackupEnabled: Boolean = true,
-    val includeReadOnlyContacts: Boolean = false,
+    val selectAllContactAccounts: Boolean = true,
+    val selectedContactAccountKeys: Set<String> = emptySet(),
+    val availableContactAccounts: List<ContactAccountInfo> = emptyList(),
+    val isLoadingContactAccounts: Boolean = false,
     val callLogsBackupEnabled: Boolean = false,
     val calendarBackupEnabled: Boolean = false,
     val selectAllCalendars: Boolean = true,
@@ -97,6 +102,7 @@ class SchedulesViewModel(
     private val preferencesRepository: PreferencesRepository
 ) : ViewModel() {
 
+    private val contactsBackupRepository = ContactsBackupRepository(application)
     private val calendarBackupRepository = CalendarBackupRepository(application)
 
     val rootState = rootRepository.rootState
@@ -116,6 +122,7 @@ class SchedulesViewModel(
     private var cachedResolvedExclusions: List<String> = emptyList()
     private var conflictResolutionJob: Job? = null
     private var addEditSessionId: Long = 0L
+    private var contactAccountsRefreshRequestId: Long = 0L
     private var calendarRefreshRequestId: Long = 0L
 
     private val forgetHostsController = ForgetHostsController(
@@ -213,6 +220,7 @@ class SchedulesViewModel(
     // Add/Edit Screen methods
     fun startAddSchedule() {
         val sessionId = ++addEditSessionId
+        ++contactAccountsRefreshRequestId
         ++calendarRefreshRequestId
         val defaultHostname = preferencesRepository.getDeviceHostname()
         val newState = AddEditScheduleUiState(
@@ -228,6 +236,7 @@ class SchedulesViewModel(
     }
     fun startEditSchedule(schedule: Schedule) {
         val sessionId = ++addEditSessionId
+        ++contactAccountsRefreshRequestId
         ++calendarRefreshRequestId
         val normalizedHosts = normalizeForgetHosts(schedule.config.forgetHosts)
         val newState = AddEditScheduleUiState(
@@ -256,7 +265,8 @@ class SchedulesViewModel(
             customDirectoriesBackupEnabled = schedule.config.customDirectories.isNotEmpty(),
             deviceDataBackupEnabled = schedule.config.deviceData.anyEnabled(),
             contactsBackupEnabled = if (schedule.config.deviceData.anyEnabled()) schedule.config.deviceData.contacts else true,
-            includeReadOnlyContacts = schedule.config.deviceData.includeReadOnlyContacts,
+            selectAllContactAccounts = schedule.config.deviceData.selectAllContactAccounts,
+            selectedContactAccountKeys = schedule.config.deviceData.selectedContactAccountKeys,
             callLogsBackupEnabled = schedule.config.deviceData.callLogs,
             calendarBackupEnabled = schedule.config.deviceData.calendar,
             selectAllCalendars = schedule.config.deviceData.selectAllCalendars,
@@ -326,7 +336,8 @@ class SchedulesViewModel(
                 current.customDirectoriesBackupEnabled != initial.customDirectoriesBackupEnabled ||
                 current.deviceDataBackupEnabled != initial.deviceDataBackupEnabled ||
                 current.contactsBackupEnabled != initial.contactsBackupEnabled ||
-                current.includeReadOnlyContacts != initial.includeReadOnlyContacts ||
+                current.selectAllContactAccounts != initial.selectAllContactAccounts ||
+                current.selectedContactAccountKeys != initial.selectedContactAccountKeys ||
                 current.callLogsBackupEnabled != initial.callLogsBackupEnabled ||
                 current.calendarBackupEnabled != initial.calendarBackupEnabled ||
                 current.selectAllCalendars != initial.selectAllCalendars ||
@@ -370,7 +381,8 @@ class SchedulesViewModel(
                 excludedCustomDirectories = if (state.customDirectoriesBackupEnabled) state.excludedCustomDirectories.filter { it.isSelected }.map { it.uri } else emptyList(),
                 deviceData = DeviceDataBackupSelection(
                     contacts = state.deviceDataBackupEnabled && state.contactsBackupEnabled,
-                    includeReadOnlyContacts = state.includeReadOnlyContacts,
+                    selectAllContactAccounts = state.selectAllContactAccounts,
+                    selectedContactAccountKeys = state.selectedContactAccountKeys,
                     callLogs = state.deviceDataBackupEnabled && state.callLogsBackupEnabled,
                     calendar = state.deviceDataBackupEnabled && state.calendarBackupEnabled,
                     selectAllCalendars = state.selectAllCalendars,
@@ -496,10 +508,62 @@ class SchedulesViewModel(
 
     fun setContactsBackupEnabled(enabled: Boolean) {
         _addEditState.update { it.copy(contactsBackupEnabled = enabled) }
+        if (enabled) {
+            refreshContactAccounts()
+        }
     }
 
-    fun setIncludeReadOnlyContacts(enabled: Boolean) {
-        _addEditState.update { it.copy(includeReadOnlyContacts = enabled) }
+    fun refreshContactAccounts() {
+        val sessionId = addEditSessionId
+        val requestId = ++contactAccountsRefreshRequestId
+        if (!contactsBackupRepository.hasReadContactsPermission()) {
+            _addEditState.update { it.copy(availableContactAccounts = emptyList(), isLoadingContactAccounts = false) }
+            return
+        }
+        viewModelScope.launch {
+            _addEditState.update { it.copy(isLoadingContactAccounts = true) }
+            try {
+                val accounts = contactsBackupRepository.queryDeviceContactAccounts()
+                if (contactAccountsRefreshRequestId == requestId && addEditSessionId == sessionId) {
+                    _addEditState.update { it.copy(availableContactAccounts = accounts) }
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                android.util.Log.w("SchedulesViewModel", "Failed to load device contact accounts", e)
+                if (contactAccountsRefreshRequestId == requestId && addEditSessionId == sessionId) {
+                    _addEditState.update { it.copy(availableContactAccounts = emptyList()) }
+                }
+            } finally {
+                if (contactAccountsRefreshRequestId == requestId && addEditSessionId == sessionId) {
+                    _addEditState.update { it.copy(isLoadingContactAccounts = false) }
+                }
+            }
+        }
+    }
+
+    fun toggleAllContactAccounts() {
+        _addEditState.update { state ->
+            val allSelected = state.selectAllContactAccounts ||
+                (state.availableContactAccounts.isNotEmpty() && state.availableContactAccounts.all { it.selectionKey in state.selectedContactAccountKeys })
+            state.copy(
+                selectAllContactAccounts = !allSelected,
+                selectedContactAccountKeys = emptySet()
+            )
+        }
+    }
+
+    fun toggleContactAccount(selectionKey: String) {
+        _addEditState.update { state ->
+            val allKeys = state.availableContactAccounts.map { it.selectionKey }.toSet()
+            val currentKeys = if (state.selectAllContactAccounts) allKeys else state.selectedContactAccountKeys
+            val updatedKeys = if (selectionKey in currentKeys) currentKeys - selectionKey else currentKeys + selectionKey
+            val newSelectAll = allKeys.isNotEmpty() && allKeys.all { it in updatedKeys }
+            state.copy(
+                selectAllContactAccounts = newSelectAll,
+                selectedContactAccountKeys = if (newSelectAll) emptySet() else updatedKeys
+            )
+        }
     }
 
     fun setCallLogsBackupEnabled(enabled: Boolean) {

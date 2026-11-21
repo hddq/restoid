@@ -42,6 +42,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.AccessibilityNew
+import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AdminPanelSettings
 import androidx.compose.material.icons.outlined.Android
@@ -55,7 +56,6 @@ import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.FolderOff
-import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Inventory2
@@ -129,6 +129,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.CalendarInfo
+import io.github.hddq.restoid.model.ContactAccountInfo
 import io.github.hddq.restoid.work.ExclusionConflict
 import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
@@ -2051,7 +2052,10 @@ fun buildDeviceDataSubtitle(
 @Composable
 fun DeviceDataConfigScreen(
     contactsEnabled: Boolean,
-    includeReadOnlyContacts: Boolean,
+    selectAllContactAccounts: Boolean = true,
+    selectedContactAccountKeys: Set<String> = emptySet(),
+    availableContactAccounts: List<ContactAccountInfo> = emptyList(),
+    isLoadingContactAccounts: Boolean = false,
     callLogsEnabled: Boolean,
     calendarEnabled: Boolean = false,
     selectAllCalendars: Boolean = true,
@@ -2059,7 +2063,9 @@ fun DeviceDataConfigScreen(
     availableCalendars: List<CalendarInfo> = emptyList(),
     isLoadingCalendars: Boolean = false,
     onContactsEnabledChange: (Boolean) -> Unit,
-    onIncludeReadOnlyContactsChange: (Boolean) -> Unit,
+    onToggleAllContactAccounts: () -> Unit = {},
+    onToggleContactAccount: (String) -> Unit = {},
+    onRefreshContactAccounts: () -> Unit = {},
     onCallLogsEnabledChange: (Boolean) -> Unit,
     onCalendarEnabledChange: (Boolean) -> Unit = {},
     onToggleAllCalendars: () -> Unit = {},
@@ -2069,7 +2075,10 @@ fun DeviceDataConfigScreen(
 ) {
     val (hasReadPermission, requestReadPermission) = rememberPermissionsState(
         Manifest.permission.READ_CONTACTS,
-        onGranted = { onContactsEnabledChange(true) }
+        onGranted = {
+            onContactsEnabledChange(true)
+            onRefreshContactAccounts()
+        }
     )
     val (hasReadCallLogPermission, requestReadCallLogPermission) = rememberPermissionsState(
         Manifest.permission.READ_CALL_LOG,
@@ -2085,6 +2094,12 @@ fun DeviceDataConfigScreen(
     var showContactsOptionsSheet by rememberSaveable { mutableStateOf(false) }
     var showCalendarOptionsSheet by rememberSaveable { mutableStateOf(false) }
 
+    LaunchedEffect(hasReadPermission) {
+        if (hasReadPermission) {
+            onRefreshContactAccounts()
+        }
+    }
+
     LaunchedEffect(hasReadCalendarPermission) {
         if (hasReadCalendarPermission) {
             onRefreshCalendars()
@@ -2093,8 +2108,19 @@ fun DeviceDataConfigScreen(
 
     val contactsSubtitle = when {
         contactsEnabled && !hasReadPermission -> stringResource(R.string.device_data_contacts_permission_required)
-        includeReadOnlyContacts -> stringResource(R.string.device_data_include_read_only_contacts)
-        else -> null
+        selectAllContactAccounts -> stringResource(R.string.device_data_contacts_all_accounts)
+        else -> {
+            val selectedCount = if (availableContactAccounts.isNotEmpty()) {
+                availableContactAccounts.count { it.selectionKey in selectedContactAccountKeys }
+            } else {
+                selectedContactAccountKeys.size
+            }
+            if (selectedCount == 0) {
+                stringResource(R.string.device_data_contacts_none_selected)
+            } else {
+                pluralStringResource(R.plurals.device_data_contacts_accounts_selected_count, selectedCount, selectedCount)
+            }
+        }
     }
 
     val calendarSubtitle = when {
@@ -2130,7 +2156,12 @@ fun DeviceDataConfigScreen(
                         onCheckedChange = { enabled ->
                             if (enabled && !hasReadPermission) requestReadPermission() else onContactsEnabledChange(enabled)
                         },
-                        onNavigate = { showContactsOptionsSheet = true }
+                        onNavigate = {
+                            if (hasReadPermission) {
+                                onRefreshContactAccounts()
+                            }
+                            showContactsOptionsSheet = true
+                        }
                     )
                 }
                 ExpressiveSegmentedSurface(index = 1, count = 3) {
@@ -2211,8 +2242,14 @@ fun DeviceDataConfigScreen(
 
     if (showContactsOptionsSheet) {
         ContactsOptionsBottomSheet(
-            includeReadOnlyContacts = includeReadOnlyContacts,
-            onIncludeReadOnlyContactsChange = onIncludeReadOnlyContactsChange,
+            selectAllContactAccounts = selectAllContactAccounts,
+            selectedContactAccountKeys = selectedContactAccountKeys,
+            availableContactAccounts = availableContactAccounts,
+            isLoadingContactAccounts = isLoadingContactAccounts,
+            hasReadContactsPermission = hasReadPermission,
+            onRequestPermission = requestReadPermission,
+            onToggleAllContactAccounts = onToggleAllContactAccounts,
+            onToggleContactAccount = onToggleContactAccount,
             onDismissRequest = { showContactsOptionsSheet = false }
         )
     }
@@ -2232,17 +2269,28 @@ fun DeviceDataConfigScreen(
     }
 }
 
-internal const val INCLUDE_READ_ONLY_CONTACTS_ROW_TAG = "include_read_only_contacts_row"
+internal const val CONTACTS_OPTIONS_SELECT_ALL_TAG = "contacts_options_select_all"
+internal const val CONTACTS_OPTION_ROW_TAG_PREFIX = "contacts_option_row_"
 internal const val CALENDAR_OPTIONS_SELECT_ALL_TAG = "calendar_options_select_all"
 internal const val CALENDAR_OPTION_ROW_TAG_PREFIX = "calendar_option_row_"
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ContactsOptionsBottomSheet(
-    includeReadOnlyContacts: Boolean,
-    onIncludeReadOnlyContactsChange: (Boolean) -> Unit,
+    selectAllContactAccounts: Boolean,
+    selectedContactAccountKeys: Set<String>,
+    availableContactAccounts: List<ContactAccountInfo>,
+    isLoadingContactAccounts: Boolean,
+    hasReadContactsPermission: Boolean,
+    onRequestPermission: () -> Unit,
+    onToggleAllContactAccounts: () -> Unit,
+    onToggleContactAccount: (String) -> Unit,
     onDismissRequest: () -> Unit
 ) {
+    val readOnlyLabel = stringResource(R.string.device_data_contacts_read_only)
+    val isAllSelected = selectAllContactAccounts ||
+        (availableContactAccounts.isNotEmpty() && availableContactAccounts.all { it.selectionKey in selectedContactAccountKeys })
+
     ModalBottomSheet(onDismissRequest = onDismissRequest) {
         Column(
             modifier = Modifier
@@ -2251,20 +2299,130 @@ private fun ContactsOptionsBottomSheet(
                 .padding(start = 16.dp, end = 16.dp, bottom = 32.dp)
         ) {
             Text(
-                text = stringResource(R.string.device_data_contacts),
+                text = stringResource(R.string.device_data_contacts_options_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(bottom = 12.dp)
             )
-            ExpressiveCardGroup {
-                ExpressiveSegmentedSurface(index = 0, count = 1) {
-                    TaskRow(
-                        title = stringResource(R.string.device_data_include_read_only_contacts),
-                        icon = Icons.Outlined.Group,
-                        checked = includeReadOnlyContacts,
-                        onCheckedChange = onIncludeReadOnlyContactsChange,
-                        modifier = Modifier.testTag(INCLUDE_READ_ONLY_CONTACTS_ROW_TAG)
+
+            when {
+                isLoadingContactAccounts && availableContactAccounts.isEmpty() -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        LoadingIndicator()
+                    }
+                }
+                !hasReadContactsPermission && availableContactAccounts.isEmpty() -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.device_data_contacts_permission_required),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        FilledTonalButton(
+                            onClick = onRequestPermission,
+                            shape = MaterialTheme.shapes.extraLarge
+                        ) {
+                            Text(stringResource(R.string.action_grant))
+                        }
+                    }
+                }
+                availableContactAccounts.isEmpty() -> {
+                    Text(
+                        text = stringResource(R.string.device_data_contacts_accounts_empty),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 12.dp)
                     )
+                }
+                else -> {
+                    val totalRows = availableContactAccounts.size + 1
+                    ExpressiveCardGroup {
+                        ExpressiveSegmentedSurface(index = 0, count = totalRows) {
+                            Box(modifier = Modifier.testTag(CONTACTS_OPTIONS_SELECT_ALL_TAG)) {
+                                SelectAllListItem(
+                                    isChecked = isAllSelected,
+                                    subtitle = null,
+                                    onClick = null,
+                                    onToggle = onToggleAllContactAccounts,
+                                    iconSize = 24.dp,
+                                    iconPadding = 0.dp
+                                )
+                            }
+                        }
+                        availableContactAccounts.forEachIndexed { index, account ->
+                            val isChecked = selectAllContactAccounts || account.selectionKey in selectedContactAccountKeys
+                            val subtitle = buildList {
+                                val typeLabel = account.accountTypeLabel?.trim().orEmpty()
+                                if (typeLabel.isNotEmpty() && typeLabel != account.displayName) {
+                                    add(typeLabel)
+                                }
+                                if (account.isReadOnly) {
+                                    add(readOnlyLabel)
+                                }
+                            }.joinToString(" • ").ifEmpty { null }
+
+                            ExpressiveSegmentedSurface(index = index + 1, count = totalRows) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .testTag("$CONTACTS_OPTION_ROW_TAG_PREFIX${account.selectionKey}")
+                                        .clickable { onToggleContactAccount(account.selectionKey) }
+                                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = if (account.isLocal) Icons.Outlined.Smartphone else Icons.Outlined.AccountCircle,
+                                        contentDescription = null,
+                                        tint = if (isChecked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(end = 16.dp)
+                                    )
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = account.displayName,
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        if (subtitle != null) {
+                                            Text(
+                                                text = subtitle,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+                                    Spacer(Modifier.width(16.dp))
+                                    Switch(
+                                        checked = isChecked,
+                                        onCheckedChange = { onToggleContactAccount(account.selectionKey) },
+                                        thumbContent = if (isChecked) {
+                                            {
+                                                Icon(
+                                                    imageVector = Icons.Filled.Check,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                                                )
+                                            }
+                                        } else {
+                                            null
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

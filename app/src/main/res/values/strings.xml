@@ -81,8 +81,17 @@
     <string name="run_tasks_device_data">Device Data</string>
     <string name="title_device_data">Device Data</string>
     <string name="device_data_contacts">Contacts</string>
-    <string name="device_data_include_read_only_contacts">Include read-only contacts</string>
     <string name="device_data_contacts_permission_required">Contacts permission required</string>
+    <string name="device_data_contacts_all_accounts">All accounts</string>
+    <string name="device_data_contacts_none_selected">No accounts selected</string>
+    <plurals name="device_data_contacts_accounts_selected_count">
+        <item quantity="one">%1$d account selected</item>
+        <item quantity="other">%1$d accounts selected</item>
+    </plurals>
+    <string name="device_data_contacts_options_title">Contact accounts</string>
+    <string name="device_data_contacts_accounts_empty">No contact accounts found on this device</string>
+    <string name="device_data_contacts_local_account">Device</string>
+    <string name="device_data_contacts_read_only">Read-only</string>
     <string name="device_data_contacts_not_in_snapshot">Not included in this snapshot</string>
     <string name="device_data_call_logs">Call Logs</string>
     <string name="device_data_call_logs_permission_required">Call logs permission required</string>
@@ -160,6 +169,8 @@
     <string name="summary_all_files_access_required">Grant All files access, then try again.</string>
     <string name="error_contacts_read_permission_required">Contacts permission is required to back up contacts.</string>
     <string name="summary_contacts_read_permission_required">Grant Contacts permission, then try again.</string>
+    <string name="error_contacts_none_selected">No contact accounts selected to back up.</string>
+    <string name="summary_contacts_none_selected">Select at least one contact account in Device Data settings.</string>
     <string name="error_contacts_write_permission_required">Contacts permission is required to restore contacts.</string>
     <string name="error_call_logs_read_permission_required">Call logs permission is required to back up call logs.</string>
     <string name="summary_call_logs_read_permission_required">Grant Call logs permission, then try again.</string>

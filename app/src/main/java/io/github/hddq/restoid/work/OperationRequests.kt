@@ -31,7 +31,8 @@ data class RestoreTypeSelection(
 @Serializable
 data class DeviceDataBackupSelection(
     val contacts: Boolean = false,
-    val includeReadOnlyContacts: Boolean = false,
+    val selectAllContactAccounts: Boolean = true,
+    val selectedContactAccountKeys: Set<String> = emptySet(),
     val callLogs: Boolean = false,
     val calendar: Boolean = false,
     val selectAllCalendars: Boolean = true,

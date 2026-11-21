@@ -138,12 +138,20 @@ class PreferencesRepository(private val context: Context) {
         return prefs.getBoolean("runtasks_device_data_contacts_enabled", true)
     }
 
-    fun saveIncludeReadOnlyContacts(enabled: Boolean) {
-        prefs.edit().putBoolean("runtasks_device_data_include_readonly_contacts", enabled).apply()
+    fun saveDeviceDataContactAccountSelection(selectAll: Boolean, selectedKeys: Set<String>) {
+        with(prefs.edit()) {
+            putBoolean("runtasks_device_data_select_all_contact_accounts", selectAll)
+            putStringSet("runtasks_device_data_selected_contact_account_keys", selectedKeys.toSet())
+            apply()
+        }
     }
 
-    fun loadIncludeReadOnlyContacts(): Boolean {
-        return prefs.getBoolean("runtasks_device_data_include_readonly_contacts", false)
+    fun loadDeviceDataSelectAllContactAccounts(): Boolean {
+        return prefs.getBoolean("runtasks_device_data_select_all_contact_accounts", true)
+    }
+
+    fun loadDeviceDataSelectedContactAccountKeys(): Set<String> {
+        return prefs.getStringSet("runtasks_device_data_selected_contact_account_keys", emptySet())?.toSet() ?: emptySet()
     }
 
     fun saveDeviceDataCallLogsEnabled(enabled: Boolean) {
