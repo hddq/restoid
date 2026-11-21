@@ -1,8 +1,8 @@
-Restoid ist eine moderne, datenschutzfreundliche Backup-Lösung für Android, angetrieben von der robusten Open-Source-Engine restic. Schütze deine Apps, Daten, Fotos und Dokumente mit Verschlüsselung auf Unternehmensniveau und blitzschneller, speichersparender Deduplizierung.
+Restoid ist eine moderne, datenschutzfreundliche Backup-Lösung für Android, angetrieben von der robusten Open-Source-Engine restic. Schützen Sie Ihre Apps, Daten, Kontakte, Anruflisten, Fotos und Dokumente mit Verschlüsselung auf Unternehmensniveau und blitzschneller, speichersparender Deduplizierung.
 
 Egal, ob du Fotos auf einem Heim-NAS sichern, verschlüsselte Snapshots in der Cloud speichern oder vollständige App-Daten auf einem gerooteten Gerät bewahren möchtest: Restoid gibt dir die volle Kontrolle – ganz ohne Tracker, Werbung oder proprietäre Bindung.
 
-Root-Zugriff ist völlig optional: Sichere benutzerdefinierte Ordner, Fotos und Dokumente ohne Root; Root-Zugriff wird nur zum Sichern privater App-Daten benötigt.
+Root-Zugriff ist völlig optional: Sichern Sie benutzerdefinierte Ordner, Fotos, Dokumente, Kontakte und Anruflisten ohne Root; ein Root-Zugriff ist nur erforderlich, um private App-Daten zu sichern.
 
 Hauptfunktionen:
 
@@ -16,7 +16,8 @@ Zero-Knowledge-Verschlüsselung
 
 Flexible Speicher-Backends
 • Lokaler Speicher: Speichere auf internem Speicher, SD-Karte oder USB-OTG-Laufwerken.
-• Netzwerk & Cloud: Native Unterstützung für SFTP (SSH-Key & Passwort), REST-Server und Amazon S3-kompatiblen Objektspeicher (Garage, MinIO, Wasabi, Cloudflare R2, Backblaze B2).
+• Native Network Backends: Direkte Unterstützung für SFTP (SSH-Key & Passwort), REST-Server und Amazon S3-kompatiblen Objektspeicher (Garage, MinIO, Wasabi, Cloudflare R2, Backblaze B2).
+• Cloud- & Zusatz-Backends über Rclone: Verbindung zu Dutzenden Speicheranbietern und Protokollen (wie Google Drive, OneDrive, Dropbox, WebDAV, Nextcloud, pCloud u.v.m.) durch integrierte Rclone-Unterstützung per Import oder Einfügen einer rclone.conf.
 
 Vollständiges App- & Daten-Backup (Root erforderlich)
 • Sichere installierte Benutzeranwendungen selektiv.
@@ -25,12 +26,15 @@ Vollständiges App- & Daten-Backup (Root erforderlich)
 Benutzerdefinierte Dateien & Medien
 • Sichere persönliche Ordner: DCIM, Dokumente, Downloads oder ein beliebiges Verzeichnis auf deinem Gerät.
 
+Kontakte & Anruflisten
+• Sichern und wiederherstellen Sie Ihre Kontakte (einschließlich Gruppen und Fotos) sowie Anruflisten ohne Root-Anforderung; Backups können manuell oder nach automatisierten Zeitplänen ausgeführt werden.
+
 Automatisierte Zeitpläne im Hintergrund
 • Konfiguriere wiederkehrende Zeitpläne (täglich, wöchentlich oder benutzerdefinierte Intervalle).
 • Intelligente Auslöser: Führe Backups nur beim Laden, in unlimitierten WLAN-Netzwerken oder bei erfüllten Akkubedingungen aus.
 
 Gezielte & sichere Wiederherstellung
-• Stelle ganze Apps oder bestimmte Teile wieder her (z. B. Daten wiederherstellen, ohne die installierte APK zu überschreiben).
+• Stelle ganze Apps oder bestimmte Teile wieder her (z. B. Daten wiederherstellen, ohne die installierte APK zu überschreiben), benutzerdefinierte Verzeichnisse, Kontakte und Anruflisten.
 • Der Downgrade-Schutz verhindert das versehentliche Wiederherstellen älterer Versionen über neuere.
 
 Keine Anbieterbindung

@@ -1,8 +1,8 @@
-Restoid je moderno rješenje za sigurnosno kopiranje na Androidu usmjereno na privatnost koje pokreće snažan, open-source restic mehanizam. Čuvajte svoje aplikacije, podatke, fotografije i dokumente sigurnima uz enkripciju poslovne klase i munjevito brzu deduplikaciju koja štedi prostor.
+Restoid je moderno rješenje za sigurnosno kopiranje na Androidu usmjereno na privatnost koje pokreće snažan, open-source restic mehanizam. Čuvajte svoje aplikacije, podatke, kontakte, zapise poziva, fotografije i dokumente sigurnima uz šifriranje razine poduzeća i iznimno brzu deduplikaciju koja štedi prostor.
 
 Bilo da želite sigurnosno kopirati fotografije na kućni NAS, pohraniti šifrirane snimke u oblak ili sačuvati potpune podatke aplikacija na rootanom uređaju, Restoid vam daje potpunu kontrolu bez pratitelja, oglasa ili vlasničkog zaključavanja.
 
-Root pristup je u potpunosti opcionalan: sigurnosno kopirajte prilagođene mape, fotografije i dokumente bez roota; root pristup potreban je samo za sigurnosno kopiranje privatnih podataka aplikacija.
+Root pristup je potpuno neobavezan: sigurnosno kopirajte prilagođene mape, fotografije, dokumente, kontakte i zapise poziva bez root-a; root pristup potreban je samo za sigurnosno kopiranje privatnih podataka aplikacija.
 
 Ključne značajke:
 
@@ -16,7 +16,8 @@ Enkripcija bez znanja
 
 Fleksibilne pozadinske pohrane
 • Lokalna pohrana: Spremite na unutarnju memoriju, SD karticu ili USB OTG pogone.
-• Mreža i oblak: Izvorna podrška za SFTP (SSH ključ i lozinka), REST poslužitelj i objektno skladištenje kompatibilno s Amazon S3 (Garage, MinIO, Wasabi, Cloudflare R2, Backblaze B2).
+• Izvorne mrežne pozadine: izravna podrška za SFTP (SSH ključ i lozinka), REST poslužitelj i pohranu objekata kompatibilnu s Amazon S3 (Garage, MinIO, Wasabi, Cloudflare R2, Backblaze B2).
+• Oblak i dodatne pozadine putem Rclone-a: Povežite se s desecima pružatelja usluga pohrane i protokola (kao što su Google Drive, OneDrive, Dropbox, WebDAV, Nextcloud, pCloud i drugi) uz ugrađenu podršku za rclone uvozom ili lijepljenjem datoteke rclone.conf.
 
 Potpuna sigurnosna kopija aplikacija i podataka (potreban root)
 • Selektivno sigurnosno kopirajte instalirane korisničke aplikacije.
@@ -25,12 +26,15 @@ Potpuna sigurnosna kopija aplikacija i podataka (potreban root)
 Prilagođene datoteke i mediji
 • Sigurnosno kopirajte osobne mape: DCIM, Dokumente, Preuzimanja ili bilo koji direktorij na vašem uređaju.
 
+Kontakti i zapisi poziva
+• Sigurnosno kopirajte i vratite svoje kontakte (uključujući grupe i fotografije) i zapise poziva bez potrebe za root-om; sigurnosne kopije mogu se pokretati ručno ili po automatskom rasporedu.
+
 Automatski rasporedi u pozadini
 • Konfigurirajte ponavljajuće rasporede (dnevno, tjedno ili prilagođeni intervali).
 • Pametna ograničenja okidača: Pokrećite samo tijekom punjenja, na Wi-Fi mreži bez ograničenja prometa ili kada su ispunjeni uvjeti baterije.
 
 Precizno i sigurno vraćanje
-• Vratite cijele aplikacije ili određene dijelove (npr. vratite podatke bez prepisivanja instaliranog APK-a).
+• Vratite cijele aplikacije ili određene dijelove (npr. vraćanje podataka bez prepisivanja instaliranog APK-a), prilagođenih direktorija, kontakata i zapisa poziva.
 • Zaštita od vraćanja na stariju verziju sprječava slučajno vraćanje starijih verzija preko novijih.
 
 Bez vezivanja uz dobavljača

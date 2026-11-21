@@ -1,8 +1,8 @@
-Restoid, güçlü ve açık kaynaklı restic motoruyla güçlendirilmiş, Android için modern ve gizlilik odaklı bir yedekleme çözümüdür. Kurumsal düzeyde şifreleme ve ışık hızında, alandan tasarruf sağlayan veriyin yinelemesizleştirme (deduplication) özelliğiyle uygulamalarınızı, verilerinizi, fotoğraflarınızı ve belgelerinizi güvende tutun.
+Restoid, güçlü ve açık kaynaklı restic motoruyla güçlendirilmiş, Android için modern ve gizlilik odaklı bir yedekleme çözümüdür. Kurumsal düzeyde şifreleme ve ultra hızlı, yerden tasarruf sağlayan veri tekilleştirme ile uygulamalarınızı, verilerinizi, rehberinizi, arama geçmişinizi, fotoğraflarınızı ve belgelerinizi güvende tutun.
 
 İster fotoğraflarınızı evdeki bir NAS'a yedeklemek, ister bulutta şifrelenmiş anlık görüntüler saklamak veya root'lu bir cihazda tam uygulama verilerini korumak isteyin; Restoid, izleyiciler, reklamlar veya mülkî kısıtlamalar olmadan size tam kontrol sağlar.
 
-Root erişimi tamamen isteğe bağlıdır: Özel klasörleri, fotoğrafları ve belgeleri root olmadan yedekleyin; root erişimi yalnızca özel uygulama verilerini yedeklemek için gereklidir.
+Root erişimi tamamen isteğe bağlıdır: Özel klasörleri, fotoğrafları, belgeleri, rehberi ve arama geçmişini root olmadan yedekleyin; root erişimi yalnızca özel uygulama verilerini yedeklemek için gereklidir.
 
 Önemli Özellikler:
 
@@ -16,7 +16,8 @@ Sıfır Bilgi Şifreleme
 
 Esnek Depolama Altyapıları
 • Yerel Depolama: Dahili belleğe, SD karta veya USB OTG sürücülerine kaydedin.
-• Ağ ve Bulut: SFTP (SSH anahtarı ve parolası), REST sunucusu ve Amazon S3 uyumlu nesne depolama (Garage, MinIO, Wasabi, Cloudflare R2, Backblaze B2) için yerel destek.
+• Yerel Ağ Altyapıları: SFTP (SSH anahtarı ve parola), REST sunucusu ve Amazon S3 uyumlu nesne depolama (Garage, MinIO, Wasabi, Cloudflare R2, Backblaze B2) için doğrudan destek.
+• Rclone ile Bulut ve Ek Altyapılar: Yerleşik rclone desteği sayesinde, bir rclone.conf dosyası içe aktararak veya yapıştırarak onlarca depolama sağlayıcısına ve protokole (Google Drive, OneDrive, Dropbox, WebDAV, Nextcloud, pCloud ve dahası) bağlanın.
 
 Tam Uygulama ve Veri Yedekleme (Root Gerekir)
 • Yüklenen kullanıcı uygulamalarını seçici olarak yedekleyin.
@@ -25,12 +26,15 @@ Tam Uygulama ve Veri Yedekleme (Root Gerekir)
 Özel Dosyalar ve Medya
 • Kişisel klasörlerinizi yedekleyin: DCIM, Belgeler, İndirilenler veya cihazınızdaki herhangi bir dizin.
 
+Rehber ve Arama Geçmişi
+• Root gerektirmeden rehberinizi (gruplar ve fotoğraflar dahil) ve arama geçmişinizi yedekleyin ve geri yükleyin; yedeklemeler manuel olarak veya otomatik zamanlamalarla çalıştırılabilir.
+
 Otomatik Arka Plan Zamanlamaları
 • Yinelenen zamanlamaları yapılandırın (günlük, haftalık veya özel aralıklar).
 • Akıllı tetikleyici kısıtlamaları: Yalnızca şarj olurken, tarifesiz Wi-Fi ağındayken veya pil koşulları karşılandığında çalıştırın.
 
 Hassas ve Güvenli Geri Yükleme
-• Tüm uygulamaları veya belirli parçaları geri yükleyin (örn. yüklü APK'nın üzerine yazmadan verileri geri yükleyin).
+• Tüm uygulamaları veya belirli parçaları geri yükleyin (örn. yüklü APK'nın üzerine yazmadan verileri geri yükleyin), özel dizinler, rehber ve arama geçmişi.
 • Sürüm düşürme koruması, daha eski sürümlerin daha yeni sürümlerin üzerine yanlışlıkla geri yüklenmesini engeller.
 
 Sıfır Satıcı Bağımlılığı

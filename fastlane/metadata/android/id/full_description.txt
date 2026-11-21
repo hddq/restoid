@@ -1,8 +1,8 @@
-Restoid adalah solusi pencadangan modern yang berfokus pada privasi untuk Android yang didukung oleh mesin restic sumber terbuka yang tangguh. Jaga keamanan aplikasi, data, foto, dan dokumen Anda dengan enkripsi kelas enterprise dan deduplikasi yang sangat cepat serta hemat ruang.
+Restoid adalah solusi pencadangan modern yang berfokus pada privasi untuk Android yang didukung oleh mesin restic sumber terbuka yang tangguh. Jaga keamanan aplikasi, data, kontak, riwayat panggilan, foto, dan dokumen Anda dengan enkripsi kelas enterprise dan deduplikasi yang sangat cepat serta menghemat ruang.
 
 Baik Anda ingin mencadangkan foto ke NAS rumah, menyimpan snapshot terenkripsi di cloud, atau melestarikan data aplikasi lengkap di perangkat yang telah di-root, Restoid memberi Anda kendali penuh tanpa pelacak, iklan, atau penguncian kepemilikan.
 
-Akses root sepenuhnya opsional: cadangkan folder kustom, foto, dan dokumen tanpa root; akses root hanya diperlukan untuk mencadangkan data aplikasi privat.
+Akses root bersifat opsional: cadangkan folder kustom, foto, dokumen, kontak, dan riwayat panggilan tanpa root; akses root hanya diperlukan untuk mencadangkan data aplikasi pribadi.
 
 Fitur Utama:
 
@@ -16,7 +16,8 @@ Enkripsi Pengetahuan-Nol
 
 Backend Penyimpanan yang Fleksibel
 • Penyimpanan Lokal: Simpan ke memori internal, kartu SD, atau drive USB OTG.
-• Jaringan & Cloud: Dukungan bawaan untuk SFTP (kunci & sandi SSH), server REST, dan penyimpanan objek yang kompatibel dengan Amazon S3 (Garage, MinIO, Wasabi, Cloudflare R2, Backblaze B2).
+• Backend Jaringan Asli: Dukungan langsung untuk SFTP (kunci & kata sandi SSH), server REST, and penyimpanan objek yang kompatibel dengan Amazon S3 (Garage, MinIO, Wasabi, Cloudflare R2, Backblaze B2).
+• Cloud & Backend Ekstra melalui Rclone: Sambungkan ke puluhan penyedia penyimpanan dan protokol (seperti Google Drive, OneDrive, Dropbox, WebDAV, Nextcloud, pCloud, dan lainnya) dengan dukungan rclone bawaan dengan mengimpor atau menempelkan rclone.conf.
 
 Pencadangan Aplikasi & Data Penuh (Membutuhkan Root)
 • Pilih secara selektif aplikasi pengguna yang diinstal.
@@ -25,12 +26,15 @@ Pencadangan Aplikasi & Data Penuh (Membutuhkan Root)
 File & Media Kustom
 • Cadangkan folder pribadi: DCIM, Dokumen, Unduhan, atau direktori apa pun di perangkat Anda.
 
+Kontak & Riwayat Panggilan
+• Cadangkan dan pulihkan kontak Anda (termasuk grup dan foto) serta riwayat panggilan tanpa memerlukan root; cadangan dapat berjalan secara manual atau sesuai jadwal otomatis.
+
 Jadwal Latar Belakang Otomatis
 • Konfigurasikan jadwal berulang (harian, mingguan, atau interval kustom).
 • Batasan pemicu cerdas: Jalankan hanya saat mengisi daya, menggunakan Wi-Fi nirbatas, atau saat ketentuan baterai terpenuhi.
 
 Pemulihan Bedah & Aman
-• Pulihkan seluruh aplikasi atau bagian tertentu (mis. pulihkan data tanpa menimpa APK yang terinstal).
+• Pulihkan seluruh aplikasi atau bagian tertentu (mis. pulihkan data tanpa menimpa APK yang terinstal), direktori kustom, kontak, dan riwayat panggilan.
 • Perlindungan penurunan versi mencegah pemulihan versi lama yang tidak disengaja di atas versi yang lebih baru.
 
 Tanpa Penguncian Vendor

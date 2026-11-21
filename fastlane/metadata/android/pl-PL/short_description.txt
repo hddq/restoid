@@ -1,1 +1,1 @@
-Bezpieczna, deduplikowana kopia zapasowa dla aplikacji i plików, obsługiwana przez silnik restic.
+Bezpieczny, deduplikowany backup aplikacji i plików przy użyciu silnika restic.

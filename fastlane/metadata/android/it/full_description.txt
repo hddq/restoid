@@ -1,8 +1,8 @@
-Restoid è una soluzione di backup moderna e incentrata sulla privacy per Android, basata sul robusto motore open-source restic. Mantieni le tue app, i tuoi dati, le tue foto e i tuoi documenti al sicuro con una crittografia di livello aziendale e una deduplica fulminea e a risparmio di spazio.
+Restoid è una soluzione di backup moderna e incentrata sulla privacy per Android, basata sul robusto motore open-source restic. Tieni al sicuro app, dati, contatti, registri chiamate, foto e documenti con la crittografia di livello aziendale e una deduplica fulminea e a risparmio di spazio.
 
 Che tu voglia eseguire il backup delle foto su un NAS domestico, archiviare snapshot crittografati nel cloud o preservare i dati completi delle app su un dispositivo con root, Restoid ti offre il controllo completo senza tracker, annunci o vincoli proprietari.
 
-L'accesso di tipo root è completamente facoltativo: esegui il backup di cartelle personalizzate, foto e documenti senza permessi di root; l'accesso di tipo root è necessario solo per eseguire il backup dei dati privati delle app.
+I permessi di root sono completamente facoltativi: esegui il backup di cartelle personalizzate, foto, documenti, contatti e registri chiamate senza root; l'accesso root è necessario solo per eseguire il backup dei dati privati delle app.
 
 Funzionalità principali:
 
@@ -16,7 +16,8 @@ Crittografia zero-knowledge
 
 Backend di archiviazione flessibili
 • Memoria locale: salva su memoria interna, scheda SD o unità USB OTG.
-• Rete e cloud: supporto nativo per SFTP (chiave SSH e password), server REST e archiviazione a oggetti compatibile con Amazon S3 (Garage, MinIO, Wasabi, Cloudflare R2, Backblaze B2).
+• Backend di rete nativi: supporto diretto per SFTP (chiave SSH e password), server REST e storage a oggetti compatibile con Amazon S3 (Garage, MinIO, Wasabi, Cloudflare R2, Backblaze B2).
+• Backend cloud e aggiuntivi tramite Rclone: collegati a decine di provider di storage e protocolli (come Google Drive, OneDrive, Dropbox, WebDAV, Nextcloud, pCloud e altri) grazie al supporto integrato di rclone importando o incollando un file rclone.conf.
 
 Backup completo di app e dati (richiesti permessi di root)
 • Esegui selettivamente il backup delle applicazioni utente installate.
@@ -25,12 +26,15 @@ Backup completo di app e dati (richiesti permessi di root)
 File e file multimediali personalizzati
 • Esegui il backup delle cartelle personali: DCIM, Documenti, Download o qualsiasi directory sul tuo dispositivo.
 
+Contatti e registri chiamate
+• Esegui il backup e il ripristino di contatti (inclusi gruppi e foto) e registri chiamate senza richiedere i permessi di root; i backup possono essere eseguiti manualmente o secondo pianificazioni automatiche.
+
 Pianificazioni automatiche in background
 • Configura pianificazioni ricorrenti (giornaliere, settimanali o a intervalli personalizzati).
 • Vincoli di attivazione intelligenti: esegui solo durante la ricarica, su Wi-Fi non a consumo o quando vengono soddisfatte le condizioni della batteria.
 
 Ripristino chirurgico e sicuro
-• Ripristina intere app o parti specifiche (ad es. ripristina i dati senza sovrascrivere l'APK installato).
+• Ripristina intere app o parti specifiche (ad es. ripristina i dati senza sovrascrivere l'APK installato), directory personalizzate, contatti e registri chiamate.
 • La protezione dai downgrade impedisce il ripristino accidentale di versioni meno recenti su quelle più recenti.
 
 Zero vincoli con il produttore
