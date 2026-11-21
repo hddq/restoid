@@ -54,9 +54,27 @@ internal fun buildContactAccountSelectionKey(
     accountName: String?
 ): String {
     return listOf(
-        accountType?.trim().orEmpty(),
-        accountName?.trim().orEmpty()
+        accountType.orEmpty(),
+        accountName.orEmpty()
     ).joinToString("\u001F")
+}
+
+internal fun selectExportedContactGroups(
+    groups: Collection<BackedUpContactGroup>,
+    referencedGroupTitles: Set<String>,
+    selectAllContactAccounts: Boolean,
+    selectedContactAccountKeys: Set<String>
+): List<BackedUpContactGroup> {
+    if (referencedGroupTitles.isEmpty()) return emptyList()
+    return groups
+        .asSequence()
+        .filter { it.title in referencedGroupTitles }
+        .filter { group ->
+            selectAllContactAccounts ||
+                buildContactAccountSelectionKey(group.accountType, group.accountName) in selectedContactAccountKeys
+        }
+        .distinctBy { it.title }
+        .toList()
 }
 
 internal fun normalizePhoneForDedup(

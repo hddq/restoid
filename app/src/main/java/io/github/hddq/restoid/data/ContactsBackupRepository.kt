@@ -23,6 +23,7 @@ import io.github.hddq.restoid.model.buildContactAccountSelectionKey
 import io.github.hddq.restoid.model.buildContactDedupKeys
 import io.github.hddq.restoid.model.coalesceContactsForImport
 import io.github.hddq.restoid.model.extractDedupKeys
+import io.github.hddq.restoid.model.selectExportedContactGroups
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
@@ -109,8 +110,8 @@ class ContactsBackupRepository(private val context: Context) {
             null
         )?.use { cursor ->
             while (cursor.moveToNext()) {
-                val accountType = cursor.getString(0)?.trim().orEmpty()
-                val accountName = cursor.getString(1)?.trim().orEmpty()
+                val accountType = cursor.getString(0).orEmpty()
+                val accountName = cursor.getString(1).orEmpty()
                 val selectionKey = buildContactAccountSelectionKey(accountType, accountName)
                 if (selectionKey in accountsByKey) continue
 
@@ -119,12 +120,13 @@ class ContactsBackupRepository(private val context: Context) {
                 val accountTypeLabel = if (isLocal) {
                     null
                 } else {
-                    authenticatorLabelByType[accountType] ?: accountType.ifEmpty { null }
+                    authenticatorLabelByType[accountType] ?: accountType.trim().ifEmpty { null }
                 }
+                val trimmedAccountName = accountName.trim()
                 val displayName = when {
                     isLocal -> localDisplayName
-                    accountName.isNotEmpty() -> accountName
-                    else -> accountTypeLabel ?: accountType
+                    trimmedAccountName.isNotEmpty() -> trimmedAccountName
+                    else -> accountTypeLabel ?: accountType.trim().ifEmpty { accountName }
                 }
 
                 accountsByKey[selectionKey] = ContactAccountInfo(
@@ -203,11 +205,15 @@ class ContactsBackupRepository(private val context: Context) {
             while (cursor.moveToNext() && !shouldStop()) {
                 val title = cursor.getString(1)?.trim().orEmpty()
                 if (title.isEmpty()) continue
+                val accountName = cursor.getString(3)
+                val accountType = cursor.getString(4)
+                val groupSelectionKey = buildContactAccountSelectionKey(accountType, accountName)
+                if (!selectAllContactAccounts && groupSelectionKey !in selectedContactAccountKeys) continue
                 groupById[cursor.getLong(0)] = BackedUpContactGroup(
                     title = title,
                     notes = cursor.getString(2),
-                    accountName = cursor.getString(3),
-                    accountType = cursor.getString(4)
+                    accountName = accountName,
+                    accountType = accountType
                 )
             }
         }
@@ -247,7 +253,7 @@ class ContactsBackupRepository(private val context: Context) {
         }
 
         val dataRowsByRawId = mutableMapOf<Long, MutableList<BackedUpContactDataRow>>()
-        val groupTitlesByRawId = mutableMapOf<Long, MutableSet<String>>()
+        val groupIdsByRawId = mutableMapOf<Long, MutableSet<Long>>()
         val thumbnailsByRawId = mutableMapOf<Long, ByteArray>()
 
         if (rawHeaders.isNotEmpty() && !shouldStop()) {
@@ -283,8 +289,9 @@ class ContactsBackupRepository(private val context: Context) {
                         ContactsContract.CommonDataKinds.GroupMembership.CONTENT_ITEM_TYPE -> {
                             val groupCol = 4 // data1 = GroupMembership.GROUP_ROW_ID
                             if (!cursor.isNull(groupCol)) {
-                                groupById[cursor.getLong(groupCol)]?.title?.let { title ->
-                                    groupTitlesByRawId.getOrPut(rawId) { linkedSetOf() }.add(title)
+                                val groupId = cursor.getLong(groupCol)
+                                if (groupId in groupById) {
+                                    groupIdsByRawId.getOrPut(rawId) { linkedSetOf() }.add(groupId)
                                 }
                             }
                         }
@@ -318,6 +325,7 @@ class ContactsBackupRepository(private val context: Context) {
         }
 
         val photosDir = File(outputDir, PHOTOS_DIR_NAME)
+        val referencedGroupIds = linkedSetOf<Long>()
         val exportedContacts = rawHeaders.entries.mapNotNull { (rawId, header) ->
             if (shouldStop()) return@mapNotNull null
             val rows = dataRowsByRawId[rawId].orEmpty()
@@ -337,18 +345,30 @@ class ContactsBackupRepository(private val context: Context) {
                 ?: rows.firstOrNull { it.mimeType == ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE }
                     ?.data?.get(ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME)
 
+            val contactGroupIds = groupIdsByRawId[rawId].orEmpty()
+            referencedGroupIds.addAll(contactGroupIds)
+            val groupTitles = contactGroupIds.mapNotNull { groupById[it]?.title }.toSortedSet().toList()
+
             header.copy(
                 displayName = resolvedName,
                 photoFileName = photoFileName,
-                groupTitles = groupTitlesByRawId[rawId].orEmpty().sorted(),
+                groupTitles = groupTitles,
                 dataRows = rows
             )
         }
 
         val referencedGroupTitles = exportedContacts.flatMapTo(linkedSetOf()) { it.groupTitles }
+        val referencedGroups = groupById.entries
+            .filter { it.key in referencedGroupIds }
+            .map { it.value }
         val archive = ContactsBackupArchive(
             version = 1,
-            groups = groupById.values.filter { it.title in referencedGroupTitles }.distinctBy { it.title },
+            groups = selectExportedContactGroups(
+                groups = referencedGroups,
+                referencedGroupTitles = referencedGroupTitles,
+                selectAllContactAccounts = selectAllContactAccounts,
+                selectedContactAccountKeys = selectedContactAccountKeys
+            ),
             contacts = exportedContacts
         )
         File(outputDir, CONTACTS_FILE_NAME).writeText(json.encodeToString(archive))
