@@ -623,6 +623,7 @@
         <item quantity="one">%1$d/%2$d file</item>
         <item quantity="other">%1$d/%2$d files</item>
     </plurals>
+    <string name="notification_activity_items_progress">%1$s (%2$d / %3$d)</string>
     <string name="notification_scanning_files">Scanning files…</string>
     <string name="notification_operation_finished_success">%1$s finished successfully</string>
     <string name="notification_operation_finished_failure">%1$s failed</string>
@@ -688,6 +689,25 @@
     <string name="restic_executor_failure_invalid_env_name">One or more environment variable names are invalid.</string>
     <string name="restic_executor_failure_invalid_option_name">One or more restic option names are invalid.</string>
 
+    <string name="prune_phase_loading_indexes">Loading indexes…</string>
+    <string name="prune_phase_loading_snapshots">Loading snapshots…</string>
+    <string name="prune_phase_finding_used_data">Finding data in use</string>
+    <string name="prune_phase_searching_used_packs">Searching used packs…</string>
+    <string name="prune_phase_collecting_packs">Analyzing packs</string>
+    <string name="prune_phase_deleting_unreferenced">Deleting unreferenced packs</string>
+    <string name="prune_phase_repacking_packs">Repacking packs</string>
+    <string name="prune_phase_rebuilding_index">Rebuilding index</string>
+    <string name="prune_phase_removing_old_packs">Removing old packs</string>
+    <string name="prune_phase_done">Finishing prune…</string>
+
+    <plurals name="maintenance_summary_blobs">
+        <item quantity="one">%d blob</item>
+        <item quantity="other">%d blobs</item>
+    </plurals>
+    <string name="maintenance_summary_prune_freed_and_repacked">Freed %1$s (%2$s), repacked %3$s (%4$s). Remaining: %5$s (%6$s).</string>
+    <string name="maintenance_summary_prune_freed">Freed %1$s (%2$s). Remaining: %3$s (%4$s).</string>
+    <string name="maintenance_summary_prune_repacked">Repacked %1$s (%2$s). Remaining: %3$s (%4$s).</string>
+    <string name="maintenance_summary_prune_nothing_removed">No unused data to remove. Remaining: %1$s (%2$s).</string>
     <string name="maintenance_summary_prune_completed">Prune operation completed.</string>
     <plurals name="maintenance_summary_removed_snapshots">
         <item quantity="one">Removed %1$d snapshot.</item>
