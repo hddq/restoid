@@ -55,6 +55,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.Dispatchers
@@ -88,9 +89,9 @@ import io.github.hddq.restoid.model.BackupDetail
 import io.github.hddq.restoid.model.CalendarBackupMetadata
 import io.github.hddq.restoid.model.CallLogsBackupMetadata
 import io.github.hddq.restoid.model.ContactsBackupMetadata
+import io.github.hddq.restoid.ui.components.AppSortMenuButton
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
 import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
-import io.github.hddq.restoid.ui.components.SortableSectionHeader
 import coil.compose.AsyncImage
 import io.github.hddq.restoid.ui.snapshot.ForgetResult
 import io.github.hddq.restoid.ui.snapshot.SnapshotDetailsViewModel
@@ -125,8 +126,16 @@ fun SnapshotDetailsScreen(
     val forgetResult by viewModel.forgetResult.collectAsStateWithLifecycle()
 
     val appBarActions = LocalAppBarActions.current
-    DisposableEffect(snapshotId, isForgetting) {
+    val hasBackedUpApps = backupDetails.isNotEmpty()
+    val currentSortOrder by rememberUpdatedState(sortOrder)
+    DisposableEffect(snapshotId, isForgetting, hasBackedUpApps, viewModel) {
         appBarActions.value = {
+            if (hasBackedUpApps) {
+                AppSortMenuButton(
+                    sortOrder = currentSortOrder,
+                    onSortOrderChange = viewModel::setSortOrder
+                )
+            }
             IconButton(
                 onClick = { viewModel.onForgetSnapshot() },
                 enabled = !isForgetting
@@ -202,14 +211,12 @@ fun SnapshotDetailsScreen(
                     }
                     if (backupDetails.isNotEmpty()) {
                         item(key = "apps_header", contentType = "apps_header") {
-                            SortableSectionHeader(
+                            ExpressiveSectionHeader(
                                 title = pluralStringResource(
                                     R.plurals.snapshot_backed_up_apps_count,
                                     backupDetails.size,
                                     backupDetails.size
-                                ),
-                                sortOrder = sortOrder,
-                                onSortOrderChange = viewModel::setSortOrder
+                                )
                             )
                         }
                         itemsIndexed(

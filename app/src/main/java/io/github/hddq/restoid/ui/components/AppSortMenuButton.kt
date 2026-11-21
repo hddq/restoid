@@ -1,8 +1,6 @@
 package io.github.hddq.restoid.ui.components
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.outlined.ArrowDownward
@@ -17,7 +15,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -27,66 +24,56 @@ import io.github.hddq.restoid.R
 import io.github.hddq.restoid.ui.shared.AppSortOrder
 
 @Composable
-fun SortableSectionHeader(
-    title: String,
+fun AppSortMenuButton(
     sortOrder: AppSortOrder,
     onSortOrderChange: (AppSortOrder) -> Unit,
-    showSizeSort: Boolean = true,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    showSizeSort: Boolean = true
 ) {
     var sortMenuExpanded by remember { mutableStateOf(false) }
 
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        ExpressiveSectionHeader(
-            title = title,
-            modifier = Modifier.weight(1f)
-        )
-        Box {
-            IconButton(onClick = { sortMenuExpanded = true }) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.Sort,
-                    contentDescription = stringResource(R.string.cd_sort_apps)
-                )
-            }
-            DropdownMenu(
-                expanded = sortMenuExpanded,
-                onDismissRequest = { sortMenuExpanded = false }
-            ) {
-                SortOrderMenuItem(
-                    text = stringResource(R.string.sort_by_name),
-                    ascending = AppSortOrder.NAME_ASCENDING,
-                    descending = AppSortOrder.NAME_DESCENDING,
-                    defaultDirection = AppSortOrder.NAME_ASCENDING,
-                    sortOrder = sortOrder,
-                    onSelect = onSortOrderChange,
-                    onDismiss = { sortMenuExpanded = false }
-                )
+    Box(modifier = modifier) {
+        IconButton(onClick = { sortMenuExpanded = true }) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.Sort,
+                contentDescription = stringResource(R.string.cd_sort_apps)
+            )
+        }
+        DropdownMenu(
+            expanded = sortMenuExpanded,
+            onDismissRequest = { sortMenuExpanded = false }
+        ) {
+            SortOrderMenuItem(
+                text = stringResource(R.string.sort_by_name),
+                ascending = AppSortOrder.NAME_ASCENDING,
+                descending = AppSortOrder.NAME_DESCENDING,
+                defaultDirection = AppSortOrder.NAME_ASCENDING,
+                sortOrder = sortOrder,
+                onSelect = onSortOrderChange,
+                onDismiss = { sortMenuExpanded = false }
+            )
 
-                if (showSizeSort) {
-                    SortOrderMenuItem(
-                        text = stringResource(R.string.sort_by_size),
-                        ascending = AppSortOrder.SIZE_ASCENDING,
-                        descending = AppSortOrder.SIZE_DESCENDING,
-                        defaultDirection = AppSortOrder.SIZE_DESCENDING,
-                        sortOrder = sortOrder,
-                        onSelect = onSortOrderChange,
-                        onDismiss = { sortMenuExpanded = false }
-                    )
-                }
-
+            if (showSizeSort) {
                 SortOrderMenuItem(
-                    text = stringResource(R.string.sort_by_installation_date),
-                    ascending = AppSortOrder.FIRST_INSTALL_TIME_ASCENDING,
-                    descending = AppSortOrder.FIRST_INSTALL_TIME_DESCENDING,
-                    defaultDirection = AppSortOrder.FIRST_INSTALL_TIME_DESCENDING,
+                    text = stringResource(R.string.sort_by_size),
+                    ascending = AppSortOrder.SIZE_ASCENDING,
+                    descending = AppSortOrder.SIZE_DESCENDING,
+                    defaultDirection = AppSortOrder.SIZE_DESCENDING,
                     sortOrder = sortOrder,
                     onSelect = onSortOrderChange,
                     onDismiss = { sortMenuExpanded = false }
                 )
             }
+
+            SortOrderMenuItem(
+                text = stringResource(R.string.sort_by_installation_date),
+                ascending = AppSortOrder.FIRST_INSTALL_TIME_ASCENDING,
+                descending = AppSortOrder.FIRST_INSTALL_TIME_DESCENDING,
+                defaultDirection = AppSortOrder.FIRST_INSTALL_TIME_DESCENDING,
+                sortOrder = sortOrder,
+                onSelect = onSortOrderChange,
+                onDismiss = { sortMenuExpanded = false }
+            )
         }
     }
 }

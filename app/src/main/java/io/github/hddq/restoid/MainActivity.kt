@@ -102,6 +102,8 @@ import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import io.github.hddq.restoid.data.NotificationRepository
+import io.github.hddq.restoid.data.RootState
+import io.github.hddq.restoid.ui.components.AppSortMenuButton
 import io.github.hddq.restoid.ui.home.HomeViewModel
 import io.github.hddq.restoid.ui.home.HomeViewModelFactory
 import io.github.hddq.restoid.ui.restore.RestoreViewModel
@@ -694,11 +696,21 @@ class MainActivity : FragmentActivity() {
                                         viewModelStoreOwner = parentEntry,
                                         factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository, app.resticBinaryManager, app.resticRepository, app.preferencesRepository)
                                     )
+                                    val state by vm.addEditState.collectAsStateWithLifecycle()
                                     DestinationScaffold(
                                         titleRes = R.string.topbar_backup_config,
                                         isTopLevel = false,
                                         isExiting = transition.targetState == EnterExitState.PostExit,
-                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
+                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() },
+                                        actions = {
+                                            if (!state.isLoadingApps && state.apps.isNotEmpty()) {
+                                                AppSortMenuButton(
+                                                    sortOrder = state.appSortOrder,
+                                                    onSortOrderChange = vm::setAppSortOrder,
+                                                    showSizeSort = false
+                                                )
+                                            }
+                                        }
                                     ) {
                                         ScheduleBackupConfigScreen(viewModel = vm)
                                     }
@@ -840,11 +852,22 @@ class MainActivity : FragmentActivity() {
                                             app.operationWorkRepository
                                         )
                                     )
+                                    val uiState by vm.uiState.collectAsStateWithLifecycle()
+                                    val rootState by vm.rootState.collectAsStateWithLifecycle()
                                     DestinationScaffold(
                                         titleRes = R.string.topbar_backup_config,
                                         isTopLevel = false,
                                         isExiting = transition.targetState == EnterExitState.PostExit,
-                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
+                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() },
+                                        actions = {
+                                            if (rootState == RootState.Granted && !uiState.isLoadingApps && uiState.apps.isNotEmpty()) {
+                                                AppSortMenuButton(
+                                                    sortOrder = uiState.appSortOrder,
+                                                    onSortOrderChange = vm::setAppSortOrder,
+                                                    showSizeSort = false
+                                                )
+                                            }
+                                        }
                                     ) {
                                         BackupConfigScreen(viewModel = vm)
                                     }
@@ -1053,11 +1076,23 @@ class MainActivity : FragmentActivity() {
                                             snapshotId
                                         )
                                     )
+                                    val rootState by vm.rootState.collectAsStateWithLifecycle()
+                                    val isLoading by vm.isLoading.collectAsStateWithLifecycle()
+                                    val backupDetails by vm.backupDetails.collectAsStateWithLifecycle()
+                                    val sortOrder by vm.sortOrder.collectAsStateWithLifecycle()
                                     DestinationScaffold(
                                         titleRes = R.string.apps_to_restore_title,
                                         isTopLevel = false,
                                         isExiting = transition.targetState == EnterExitState.PostExit,
-                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
+                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() },
+                                        actions = {
+                                            if (rootState == RootState.Granted && !isLoading && backupDetails.isNotEmpty()) {
+                                                AppSortMenuButton(
+                                                    sortOrder = sortOrder,
+                                                    onSortOrderChange = vm::setSortOrder
+                                                )
+                                            }
+                                        }
                                     ) {
                                         io.github.hddq.restoid.ui.screens.RestoreAppsConfigScreen(viewModel = vm)
                                     }

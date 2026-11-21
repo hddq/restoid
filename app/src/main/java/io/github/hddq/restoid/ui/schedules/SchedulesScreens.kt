@@ -582,8 +582,6 @@ fun ScheduleBackupConfigScreen(
         apps = state.apps,
         appBackupTypes = state.appBackupTypes,
         backupTypes = state.backupTypes,
-        sortOrder = state.appSortOrder,
-        onSortOrderChange = viewModel::setAppSortOrder,
         onRefreshApps = viewModel::refreshAppsList,
         onToggleAllApps = viewModel::toggleAllApps,
         onToggleAppSelection = viewModel::toggleAppSelection,
