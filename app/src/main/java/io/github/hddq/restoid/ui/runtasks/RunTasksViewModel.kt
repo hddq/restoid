@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.CalendarBackupRepository
+import io.github.hddq.restoid.data.ContactsBackupRepository
 import io.github.hddq.restoid.data.OperationType
 import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.RepositoryBackendType
@@ -13,6 +14,7 @@ import io.github.hddq.restoid.data.ResticBinaryManager
 import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.CalendarInfo
+import io.github.hddq.restoid.model.ContactAccountInfo
 import io.github.hddq.restoid.ui.shared.BackupTypes
 import io.github.hddq.restoid.ui.shared.ForgetHostOption
 import io.github.hddq.restoid.ui.shared.ForgetHostsController
@@ -52,7 +54,10 @@ data class RunTasksUiState(
     val customDirectoriesBackupEnabled: Boolean = false,
     val deviceDataBackupEnabled: Boolean = false,
     val contactsBackupEnabled: Boolean = true,
-    val includeReadOnlyContacts: Boolean = false,
+    val selectAllContactAccounts: Boolean = true,
+    val selectedContactAccountKeys: Set<String> = emptySet(),
+    val availableContactAccounts: List<ContactAccountInfo> = emptyList(),
+    val isLoadingContactAccounts: Boolean = false,
     val callLogsBackupEnabled: Boolean = false,
     val calendarBackupEnabled: Boolean = false,
     val selectAllCalendars: Boolean = true,
@@ -83,6 +88,7 @@ class RunTasksViewModel(
     private val operationWorkRepository: OperationWorkRepository
 ) : ViewModel() {
 
+    private val contactsBackupRepository = ContactsBackupRepository(application)
     private val calendarBackupRepository = CalendarBackupRepository(application)
 
     val rootState = rootRepository.rootState
@@ -95,7 +101,8 @@ class RunTasksViewModel(
             customDirectoriesBackupEnabled = preferencesRepository.loadCustomDirectoriesBackupEnabled(),
             deviceDataBackupEnabled = preferencesRepository.loadDeviceDataBackupEnabled(),
             contactsBackupEnabled = preferencesRepository.loadDeviceDataContactsEnabled(),
-            includeReadOnlyContacts = preferencesRepository.loadIncludeReadOnlyContacts(),
+            selectAllContactAccounts = preferencesRepository.loadDeviceDataSelectAllContactAccounts(),
+            selectedContactAccountKeys = preferencesRepository.loadDeviceDataSelectedContactAccountKeys(),
             callLogsBackupEnabled = preferencesRepository.loadDeviceDataCallLogsEnabled(),
             calendarBackupEnabled = preferencesRepository.loadDeviceDataCalendarEnabled(),
             selectAllCalendars = preferencesRepository.loadDeviceDataSelectAllCalendars(),
@@ -125,6 +132,7 @@ class RunTasksViewModel(
     private var cachedRawExclusions: List<String> = emptyList()
     private var cachedResolvedExclusions: List<String> = emptyList()
     private var conflictResolutionJob: Job? = null
+    private var contactAccountsRefreshRequestId: Long = 0L
     private var calendarRefreshRequestId: Long = 0L
 
     private val forgetHostsController = ForgetHostsController(
@@ -250,7 +258,10 @@ class RunTasksViewModel(
         preferencesRepository.saveCustomDirectoriesBackupEnabled(_uiState.value.customDirectoriesBackupEnabled)
         preferencesRepository.saveDeviceDataBackupEnabled(_uiState.value.deviceDataBackupEnabled)
         preferencesRepository.saveDeviceDataContactsEnabled(_uiState.value.contactsBackupEnabled)
-        preferencesRepository.saveIncludeReadOnlyContacts(_uiState.value.includeReadOnlyContacts)
+        preferencesRepository.saveDeviceDataContactAccountSelection(
+            _uiState.value.selectAllContactAccounts,
+            _uiState.value.selectedContactAccountKeys
+        )
         preferencesRepository.saveDeviceDataCallLogsEnabled(_uiState.value.callLogsBackupEnabled)
         preferencesRepository.saveDeviceDataCalendarEnabled(_uiState.value.calendarBackupEnabled)
         preferencesRepository.saveDeviceDataCalendarSelection(
@@ -303,7 +314,8 @@ class RunTasksViewModel(
             excludedCustomDirectories = if (_uiState.value.customDirectoriesBackupEnabled) selectedExcludedCustomDirs.toList() else emptyList(),
             deviceData = DeviceDataBackupSelection(
                 contacts = hasContactsBackup,
-                includeReadOnlyContacts = _uiState.value.includeReadOnlyContacts,
+                selectAllContactAccounts = _uiState.value.selectAllContactAccounts,
+                selectedContactAccountKeys = _uiState.value.selectedContactAccountKeys,
                 callLogs = hasCallLogsBackup,
                 calendar = hasCalendarBackup,
                 selectAllCalendars = _uiState.value.selectAllCalendars,
@@ -362,11 +374,19 @@ class RunTasksViewModel(
             )
         }
 
-        if (hasContactsBackup && !io.github.hddq.restoid.data.ContactsBackupRepository(application).hasReadContactsPermission()) {
+        if (hasContactsBackup && !contactsBackupRepository.hasReadContactsPermission()) {
             return OperationProgress(
                 isFinished = true,
                 error = application.getString(R.string.error_contacts_read_permission_required),
                 finalSummary = application.getString(R.string.summary_contacts_read_permission_required)
+            )
+        }
+
+        if (hasContactsBackup && !state.selectAllContactAccounts && state.selectedContactAccountKeys.isEmpty()) {
+            return OperationProgress(
+                isFinished = true,
+                error = application.getString(R.string.error_contacts_none_selected),
+                finalSummary = application.getString(R.string.summary_contacts_none_selected)
             )
         }
 
@@ -504,11 +524,60 @@ class RunTasksViewModel(
     fun setContactsBackupEnabled(enabled: Boolean) {
         _uiState.update { it.copy(contactsBackupEnabled = enabled) }
         preferencesRepository.saveDeviceDataContactsEnabled(enabled)
+        if (enabled) {
+            refreshContactAccounts()
+        }
     }
 
-    fun setIncludeReadOnlyContacts(enabled: Boolean) {
-        _uiState.update { it.copy(includeReadOnlyContacts = enabled) }
-        preferencesRepository.saveIncludeReadOnlyContacts(enabled)
+    fun refreshContactAccounts() {
+        val requestId = ++contactAccountsRefreshRequestId
+        if (!contactsBackupRepository.hasReadContactsPermission()) {
+            _uiState.update { it.copy(availableContactAccounts = emptyList(), isLoadingContactAccounts = false) }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingContactAccounts = true) }
+            try {
+                val accounts = contactsBackupRepository.queryDeviceContactAccounts()
+                if (contactAccountsRefreshRequestId == requestId) {
+                    _uiState.update { it.copy(availableContactAccounts = accounts) }
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                android.util.Log.w("RunTasksViewModel", "Failed to load device contact accounts", e)
+                if (contactAccountsRefreshRequestId == requestId) {
+                    _uiState.update { it.copy(availableContactAccounts = emptyList()) }
+                }
+            } finally {
+                if (contactAccountsRefreshRequestId == requestId) {
+                    _uiState.update { it.copy(isLoadingContactAccounts = false) }
+                }
+            }
+        }
+    }
+
+    fun toggleAllContactAccounts() {
+        _uiState.update { state ->
+            val allSelected = state.selectAllContactAccounts ||
+                (state.availableContactAccounts.isNotEmpty() && state.availableContactAccounts.all { it.selectionKey in state.selectedContactAccountKeys })
+            val newSelectAll = !allSelected
+            val newKeys = emptySet<String>()
+            preferencesRepository.saveDeviceDataContactAccountSelection(newSelectAll, newKeys)
+            state.copy(selectAllContactAccounts = newSelectAll, selectedContactAccountKeys = newKeys)
+        }
+    }
+
+    fun toggleContactAccount(selectionKey: String) {
+        _uiState.update { state ->
+            val allKeys = state.availableContactAccounts.map { it.selectionKey }.toSet()
+            val currentKeys = if (state.selectAllContactAccounts) allKeys else state.selectedContactAccountKeys
+            val updatedKeys = if (selectionKey in currentKeys) currentKeys - selectionKey else currentKeys + selectionKey
+            val newSelectAll = allKeys.isNotEmpty() && allKeys.all { it in updatedKeys }
+            val persistedKeys = if (newSelectAll) emptySet() else updatedKeys
+            preferencesRepository.saveDeviceDataContactAccountSelection(newSelectAll, persistedKeys)
+            state.copy(selectAllContactAccounts = newSelectAll, selectedContactAccountKeys = persistedKeys)
+        }
     }
 
     fun setCallLogsBackupEnabled(enabled: Boolean) {

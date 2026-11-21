@@ -2,6 +2,16 @@ package io.github.hddq.restoid.model
 
 import kotlinx.serialization.Serializable
 
+data class ContactAccountInfo(
+    val selectionKey: String,
+    val accountName: String,
+    val accountType: String,
+    val displayName: String,
+    val accountTypeLabel: String?,
+    val isLocal: Boolean,
+    val isReadOnly: Boolean
+)
+
 @Serializable
 data class ContactsBackupArchive(
     val version: Int = 1,
@@ -38,6 +48,34 @@ data class BackedUpContactDataRow(
     val isSuperPrimary: Boolean = false,
     val data: Map<String, String> = emptyMap()
 )
+
+internal fun buildContactAccountSelectionKey(
+    accountType: String?,
+    accountName: String?
+): String {
+    return listOf(
+        accountType.orEmpty(),
+        accountName.orEmpty()
+    ).joinToString("\u001F")
+}
+
+internal fun selectExportedContactGroups(
+    groups: Collection<BackedUpContactGroup>,
+    referencedGroupTitles: Set<String>,
+    selectAllContactAccounts: Boolean,
+    selectedContactAccountKeys: Set<String>
+): List<BackedUpContactGroup> {
+    if (referencedGroupTitles.isEmpty()) return emptyList()
+    return groups
+        .asSequence()
+        .filter { it.title in referencedGroupTitles }
+        .filter { group ->
+            selectAllContactAccounts ||
+                buildContactAccountSelectionKey(group.accountType, group.accountName) in selectedContactAccountKeys
+        }
+        .distinctBy { it.title }
+        .toList()
+}
 
 internal fun normalizePhoneForDedup(
     raw: String,

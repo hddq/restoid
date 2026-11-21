@@ -8,9 +8,12 @@ import io.github.hddq.restoid.model.ContactsBackupArchive
 import io.github.hddq.restoid.model.ContactsBackupMetadata
 import io.github.hddq.restoid.model.DeviceDataMetadata
 import io.github.hddq.restoid.model.RestoidMetadata
+import io.github.hddq.restoid.model.buildContactAccountSelectionKey
 import io.github.hddq.restoid.model.buildContactDedupKeys
 import io.github.hddq.restoid.model.coalesceContactsForImport
 import io.github.hddq.restoid.model.normalizePhoneForDedup
+import io.github.hddq.restoid.model.selectExportedContactGroups
+import io.github.hddq.restoid.work.DeviceDataBackupSelection
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -272,5 +275,94 @@ class ContactsSerializationTest {
         val linkedContactsDir = File(root, "linked_contacts")
         Files.createSymbolicLink(linkedContactsDir.toPath(), realTargetContactsDir.toPath())
         assertNull(resolveSafePhotoFile(File(linkedContactsDir, "photos"), "secret.jpg"))
+    }
+
+    @Test
+    fun `buildContactAccountSelectionKey preserves raw account fields and groups null and empty local accounts`() {
+        val googleKey = buildContactAccountSelectionKey(
+            accountType = "com.google",
+            accountName = "user@example.com"
+        )
+        assertEquals("com.google\u001Fuser@example.com", googleKey)
+
+        val paddedNameKey = buildContactAccountSelectionKey(
+            accountType = "com.google",
+            accountName = " team "
+        )
+        assertEquals("com.google\u001F team ", paddedNameKey)
+        assertNotEquals(
+            paddedNameKey,
+            buildContactAccountSelectionKey(accountType = "com.google", accountName = "team")
+        )
+
+        val localNullKey = buildContactAccountSelectionKey(accountType = null, accountName = null)
+        val localEmptyKey = buildContactAccountSelectionKey(accountType = "", accountName = "")
+        val whitespaceOnlyKey = buildContactAccountSelectionKey(accountType = "  ", accountName = "")
+        assertEquals("\u001F", localNullKey)
+        assertEquals(localNullKey, localEmptyKey)
+        assertNotEquals(localNullKey, whitespaceOnlyKey)
+    }
+
+    @Test
+    fun `selectExportedContactGroups filters excluded accounts before title deduplication`() {
+        val excludedGroup = BackedUpContactGroup(
+            title = "Work",
+            notes = "Excluded account notes",
+            accountName = "excluded@example.com",
+            accountType = "com.work"
+        )
+        val selectedGroup = BackedUpContactGroup(
+            title = "Work",
+            notes = "Selected account notes",
+            accountName = "selected@example.com",
+            accountType = "com.google"
+        )
+        val unusedGroup = BackedUpContactGroup(
+            title = "Unused",
+            notes = "Not referenced",
+            accountName = "selected@example.com",
+            accountType = "com.google"
+        )
+        val selectedKey = buildContactAccountSelectionKey("com.google", "selected@example.com")
+
+        val restrictedGroups = selectExportedContactGroups(
+            groups = listOf(excludedGroup, selectedGroup, unusedGroup),
+            referencedGroupTitles = setOf("Work"),
+            selectAllContactAccounts = false,
+            selectedContactAccountKeys = setOf(selectedKey)
+        )
+        assertEquals(listOf(selectedGroup), restrictedGroups)
+
+        val allAccountGroups = selectExportedContactGroups(
+            groups = listOf(excludedGroup, selectedGroup, unusedGroup),
+            referencedGroupTitles = setOf("Work"),
+            selectAllContactAccounts = true,
+            selectedContactAccountKeys = emptySet()
+        )
+        assertEquals(listOf(excludedGroup), allAccountGroups)
+    }
+
+    @Test
+    fun `DeviceDataBackupSelection round-trips contact account selection and ignores legacy includeReadOnlyContacts`() {
+        val defaultSelection = DeviceDataBackupSelection()
+        assertTrue(defaultSelection.selectAllContactAccounts)
+        assertTrue(defaultSelection.selectedContactAccountKeys.isEmpty())
+
+        val selectedKey = buildContactAccountSelectionKey("com.google", "user@example.com")
+        val customSelection = DeviceDataBackupSelection(
+            contacts = true,
+            selectAllContactAccounts = false,
+            selectedContactAccountKeys = setOf(selectedKey, "\u001F")
+        )
+        val encoded = json.encodeToString(customSelection)
+        val decoded = json.decodeFromString<DeviceDataBackupSelection>(encoded)
+        assertEquals(customSelection, decoded)
+
+        val legacySelection = json.decodeFromString<DeviceDataBackupSelection>(
+            """{"contacts":true,"includeReadOnlyContacts":true}"""
+        )
+        assertTrue(legacySelection.contacts)
+        assertTrue(legacySelection.selectAllContactAccounts)
+        assertTrue(legacySelection.selectedContactAccountKeys.isEmpty())
     }
 }

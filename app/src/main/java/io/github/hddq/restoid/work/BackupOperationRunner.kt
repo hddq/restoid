@@ -546,7 +546,8 @@ class BackupOperationRunner(
             val contactsDir = File(context.cacheDir, ContactsBackupRepository.CONTACTS_RELATIVE_STAGING_PATH)
             val exported = contactsBackupRepository.exportContacts(
                 outputDir = contactsDir,
-                includeReadOnly = deviceData.includeReadOnlyContacts,
+                selectAllContactAccounts = deviceData.selectAllContactAccounts,
+                selectedContactAccountKeys = deviceData.selectedContactAccountKeys,
                 shouldStop = shouldStop
             )
             pathsToBackup.add(exported.outputDir.absolutePath)
@@ -635,6 +636,17 @@ class BackupOperationRunner(
                 isFinished = true,
                 error = context.getString(R.string.error_contacts_read_permission_required),
                 finalSummary = context.getString(R.string.summary_contacts_read_permission_required)
+            )
+        }
+
+        if (request.deviceData.contacts &&
+            !request.deviceData.selectAllContactAccounts &&
+            request.deviceData.selectedContactAccountKeys.isEmpty()
+        ) {
+            return OperationProgress(
+                isFinished = true,
+                error = context.getString(R.string.error_contacts_none_selected),
+                finalSummary = context.getString(R.string.summary_contacts_none_selected)
             )
         }
 

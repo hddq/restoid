@@ -402,6 +402,8 @@ class CalendarSerializationTest {
     fun `DeviceData selection defaults leave calendar disabled and deserialize legacy payloads`() {
         val defaultBackup = DeviceDataBackupSelection()
         assertFalse(defaultBackup.contacts)
+        assertTrue(defaultBackup.selectAllContactAccounts)
+        assertTrue(defaultBackup.selectedContactAccountKeys.isEmpty())
         assertFalse(defaultBackup.callLogs)
         assertFalse(defaultBackup.calendar)
         assertTrue(defaultBackup.selectAllCalendars)
@@ -418,6 +420,8 @@ class CalendarSerializationTest {
 
         val legacyBackupSelection = json.decodeFromString<DeviceDataBackupSelection>("""{"contacts":true}""")
         assertTrue(legacyBackupSelection.contacts)
+        assertTrue(legacyBackupSelection.selectAllContactAccounts)
+        assertTrue(legacyBackupSelection.selectedContactAccountKeys.isEmpty())
         assertFalse(legacyBackupSelection.callLogs)
         assertFalse(legacyBackupSelection.calendar)
         assertTrue(legacyBackupSelection.selectAllCalendars)

@@ -783,7 +783,10 @@ fun ScheduleDeviceDataConfigScreen(
     val state by viewModel.addEditState.collectAsStateWithLifecycle()
     io.github.hddq.restoid.ui.shared.DeviceDataConfigScreen(
         contactsEnabled = state.contactsBackupEnabled,
-        includeReadOnlyContacts = state.includeReadOnlyContacts,
+        selectAllContactAccounts = state.selectAllContactAccounts,
+        selectedContactAccountKeys = state.selectedContactAccountKeys,
+        availableContactAccounts = state.availableContactAccounts,
+        isLoadingContactAccounts = state.isLoadingContactAccounts,
         callLogsEnabled = state.callLogsBackupEnabled,
         calendarEnabled = state.calendarBackupEnabled,
         selectAllCalendars = state.selectAllCalendars,
@@ -791,7 +794,9 @@ fun ScheduleDeviceDataConfigScreen(
         availableCalendars = state.availableCalendars,
         isLoadingCalendars = state.isLoadingCalendars,
         onContactsEnabledChange = viewModel::setContactsBackupEnabled,
-        onIncludeReadOnlyContactsChange = viewModel::setIncludeReadOnlyContacts,
+        onToggleAllContactAccounts = viewModel::toggleAllContactAccounts,
+        onToggleContactAccount = viewModel::toggleContactAccount,
+        onRefreshContactAccounts = viewModel::refreshContactAccounts,
         onCallLogsEnabledChange = viewModel::setCallLogsBackupEnabled,
         onCalendarEnabledChange = viewModel::setCalendarBackupEnabled,
         onToggleAllCalendars = viewModel::toggleAllCalendars,

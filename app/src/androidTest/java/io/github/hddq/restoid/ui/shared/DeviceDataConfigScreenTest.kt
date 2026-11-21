@@ -12,7 +12,9 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.model.CalendarInfo
+import io.github.hddq.restoid.model.ContactAccountInfo
 import io.github.hddq.restoid.model.buildCalendarSelectionKey
+import io.github.hddq.restoid.model.buildContactAccountSelectionKey
 import io.github.hddq.restoid.ui.theme.RestoidTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -28,22 +30,99 @@ class DeviceDataConfigScreenTest {
     val composeTestRule = createComposeRule()
 
     @Test
-    fun tappingContactsOpensBottomSheetWithReadOnlyContactsToggle() {
+    fun tappingContactsOpensBottomSheetAndTogglesContactAccountSelections() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val contactsTitle = context.getString(R.string.device_data_contacts)
         val callLogsTitle = context.getString(R.string.device_data_call_logs)
-        val includeReadOnlyTitle = context.getString(R.string.device_data_include_read_only_contacts)
+        val allAccountsSubtitle = context.getString(R.string.device_data_contacts_all_accounts)
+        val noneSelectedSubtitle = context.getString(R.string.device_data_contacts_none_selected)
+        val readOnlyLabel = context.getString(R.string.device_data_contacts_read_only)
+        val twoSelectedSubtitle = context.resources.getQuantityString(
+            R.plurals.device_data_contacts_accounts_selected_count,
+            2,
+            2
+        )
 
-        var includeReadOnly by mutableStateOf(false)
+        val localKey = buildContactAccountSelectionKey(accountType = null, accountName = null)
+        val googleKey = buildContactAccountSelectionKey(
+            accountType = "com.google",
+            accountName = "alice@example.com"
+        )
+        val whatsappKey = buildContactAccountSelectionKey(
+            accountType = "com.whatsapp",
+            accountName = "WhatsApp"
+        )
+        val sampleAccounts = listOf(
+            ContactAccountInfo(
+                selectionKey = localKey,
+                accountName = "",
+                accountType = "",
+                displayName = context.getString(R.string.device_data_contacts_local_account),
+                accountTypeLabel = null,
+                isLocal = true,
+                isReadOnly = false
+            ),
+            ContactAccountInfo(
+                selectionKey = googleKey,
+                accountName = "alice@example.com",
+                accountType = "com.google",
+                displayName = "alice@example.com",
+                accountTypeLabel = "Google",
+                isLocal = false,
+                isReadOnly = false
+            ),
+            ContactAccountInfo(
+                selectionKey = whatsappKey,
+                accountName = "WhatsApp",
+                accountType = "com.whatsapp",
+                displayName = "WhatsApp",
+                accountTypeLabel = "WhatsApp",
+                isLocal = false,
+                isReadOnly = true
+            )
+        )
+
+        var selectAllContactAccounts by mutableStateOf(true)
+        var selectedContactAccountKeys by mutableStateOf(emptySet<String>())
 
         composeTestRule.setContent {
             RestoidTheme(dynamicColor = false) {
                 DeviceDataConfigScreen(
                     contactsEnabled = false,
-                    includeReadOnlyContacts = includeReadOnly,
+                    selectAllContactAccounts = selectAllContactAccounts,
+                    selectedContactAccountKeys = selectedContactAccountKeys,
+                    availableContactAccounts = sampleAccounts,
                     callLogsEnabled = false,
                     onContactsEnabledChange = {},
-                    onIncludeReadOnlyContactsChange = { includeReadOnly = it },
+                    onToggleAllContactAccounts = {
+                        if (selectAllContactAccounts) {
+                            selectAllContactAccounts = false
+                            selectedContactAccountKeys = emptySet()
+                        } else {
+                            selectAllContactAccounts = true
+                            selectedContactAccountKeys = emptySet()
+                        }
+                    },
+                    onToggleContactAccount = { key ->
+                        val baseSelection = if (selectAllContactAccounts) {
+                            sampleAccounts.map { it.selectionKey }.toSet()
+                        } else {
+                            selectedContactAccountKeys
+                        }
+                        val nextSelection = if (key in baseSelection) {
+                            baseSelection - key
+                        } else {
+                            baseSelection + key
+                        }
+                        val allKeys = sampleAccounts.map { it.selectionKey }.toSet()
+                        if (nextSelection.containsAll(allKeys)) {
+                            selectAllContactAccounts = true
+                            selectedContactAccountKeys = emptySet()
+                        } else {
+                            selectAllContactAccounts = false
+                            selectedContactAccountKeys = nextSelection
+                        }
+                    },
                     onCallLogsEnabledChange = {}
                 )
             }
@@ -51,22 +130,37 @@ class DeviceDataConfigScreenTest {
 
         composeTestRule.onNodeWithText(contactsTitle).assertIsDisplayed()
         composeTestRule.onNodeWithText(callLogsTitle).assertIsDisplayed()
-        composeTestRule.onNodeWithText(includeReadOnlyTitle).assertDoesNotExist()
-        composeTestRule.onNodeWithTag(INCLUDE_READ_ONLY_CONTACTS_ROW_TAG).assertDoesNotExist()
+        composeTestRule.onNodeWithText(allAccountsSubtitle).assertIsDisplayed()
+        composeTestRule.onNodeWithTag(CONTACTS_OPTIONS_SELECT_ALL_TAG).assertDoesNotExist()
 
         composeTestRule.onNodeWithText(contactsTitle).performClick()
         composeTestRule.waitForIdle()
 
-        composeTestRule.onNodeWithTag(INCLUDE_READ_ONLY_CONTACTS_ROW_TAG).assertIsDisplayed()
-        composeTestRule.onNodeWithTag(INCLUDE_READ_ONLY_CONTACTS_ROW_TAG).performClick()
+        composeTestRule.onNodeWithTag(CONTACTS_OPTIONS_SELECT_ALL_TAG).assertIsDisplayed()
+        composeTestRule.onNodeWithTag("$CONTACTS_OPTION_ROW_TAG_PREFIX$localKey").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("$CONTACTS_OPTION_ROW_TAG_PREFIX$googleKey").assertIsDisplayed()
+        composeTestRule.onNodeWithTag("$CONTACTS_OPTION_ROW_TAG_PREFIX$whatsappKey").assertIsDisplayed()
+        composeTestRule.onNodeWithText(readOnlyLabel).assertIsDisplayed()
+
+        composeTestRule.onNodeWithTag("$CONTACTS_OPTION_ROW_TAG_PREFIX$whatsappKey").performClick()
         composeTestRule.waitForIdle()
 
-        assertTrue(includeReadOnly)
+        assertFalse(selectAllContactAccounts)
+        assertEquals(setOf(localKey, googleKey), selectedContactAccountKeys)
+        composeTestRule.onNodeWithText(twoSelectedSubtitle).assertIsDisplayed()
 
-        composeTestRule.onNodeWithTag(INCLUDE_READ_ONLY_CONTACTS_ROW_TAG).performClick()
+        composeTestRule.onNodeWithTag(CONTACTS_OPTIONS_SELECT_ALL_TAG).performClick()
         composeTestRule.waitForIdle()
 
-        assertFalse(includeReadOnly)
+        assertTrue(selectAllContactAccounts)
+        assertTrue(selectedContactAccountKeys.isEmpty())
+
+        composeTestRule.onNodeWithTag(CONTACTS_OPTIONS_SELECT_ALL_TAG).performClick()
+        composeTestRule.waitForIdle()
+
+        assertFalse(selectAllContactAccounts)
+        assertTrue(selectedContactAccountKeys.isEmpty())
+        composeTestRule.onNodeWithText(noneSelectedSubtitle).assertIsDisplayed()
     }
 
     @Test
@@ -125,14 +219,12 @@ class DeviceDataConfigScreenTest {
             RestoidTheme(dynamicColor = false) {
                 DeviceDataConfigScreen(
                     contactsEnabled = false,
-                    includeReadOnlyContacts = false,
                     callLogsEnabled = false,
                     calendarEnabled = false,
                     selectAllCalendars = selectAllCalendars,
                     selectedCalendarKeys = selectedCalendarKeys,
                     availableCalendars = sampleCalendars,
                     onContactsEnabledChange = {},
-                    onIncludeReadOnlyContactsChange = {},
                     onCallLogsEnabledChange = {},
                     onCalendarEnabledChange = {},
                     onToggleAllCalendars = {

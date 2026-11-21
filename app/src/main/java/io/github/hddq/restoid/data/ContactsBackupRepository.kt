@@ -1,6 +1,7 @@
 package io.github.hddq.restoid.data
 
 import android.Manifest
+import android.accounts.AccountManager
 import android.content.ContentProviderOperation
 import android.content.ContentResolver
 import android.content.ContentUris
@@ -12,13 +13,17 @@ import android.provider.ContactsContract
 import android.telephony.PhoneNumberUtils
 import android.telephony.TelephonyManager
 import androidx.core.content.ContextCompat
+import io.github.hddq.restoid.R
 import io.github.hddq.restoid.model.BackedUpContactDataRow
 import io.github.hddq.restoid.model.BackedUpContactGroup
 import io.github.hddq.restoid.model.BackedUpRawContact
+import io.github.hddq.restoid.model.ContactAccountInfo
 import io.github.hddq.restoid.model.ContactsBackupArchive
+import io.github.hddq.restoid.model.buildContactAccountSelectionKey
 import io.github.hddq.restoid.model.buildContactDedupKeys
 import io.github.hddq.restoid.model.coalesceContactsForImport
 import io.github.hddq.restoid.model.extractDedupKeys
+import io.github.hddq.restoid.model.selectExportedContactGroups
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
@@ -82,11 +87,99 @@ class ContactsBackupRepository(private val context: Context) {
     fun hasWriteContactsPermission(): Boolean =
         ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_CONTACTS) == PackageManager.PERMISSION_GRANTED
 
+    suspend fun queryDeviceContactAccounts(): List<ContactAccountInfo> = withContext(Dispatchers.IO) {
+        if (!hasReadContactsPermission()) return@withContext emptyList()
+
+        val resolver = context.contentResolver
+        val readOnlyAccountTypes = ContentResolver.getSyncAdapterTypes()
+            .filter { it.authority == ContactsContract.AUTHORITY && !it.supportsUploading() }
+            .mapTo(hashSetOf()) { it.accountType }
+
+        val authenticatorLabelByType = resolveAuthenticatorLabels()
+        val localDisplayName = context.getString(R.string.device_data_contacts_local_account)
+        val accountsByKey = linkedMapOf<String, ContactAccountInfo>()
+
+        resolver.query(
+            ContactsContract.RawContacts.CONTENT_URI,
+            arrayOf(
+                ContactsContract.RawContacts.ACCOUNT_TYPE,
+                ContactsContract.RawContacts.ACCOUNT_NAME
+            ),
+            "${ContactsContract.RawContacts.DELETED} = 0",
+            null,
+            null
+        )?.use { cursor ->
+            while (cursor.moveToNext()) {
+                val accountType = cursor.getString(0).orEmpty()
+                val accountName = cursor.getString(1).orEmpty()
+                val selectionKey = buildContactAccountSelectionKey(accountType, accountName)
+                if (selectionKey in accountsByKey) continue
+
+                val isLocal = accountType.isEmpty() && accountName.isEmpty()
+                val isReadOnly = !isLocal && accountType in readOnlyAccountTypes
+                val accountTypeLabel = if (isLocal) {
+                    null
+                } else {
+                    authenticatorLabelByType[accountType] ?: accountType.trim().ifEmpty { null }
+                }
+                val trimmedAccountName = accountName.trim()
+                val displayName = when {
+                    isLocal -> localDisplayName
+                    trimmedAccountName.isNotEmpty() -> trimmedAccountName
+                    else -> accountTypeLabel ?: accountType.trim().ifEmpty { accountName }
+                }
+
+                accountsByKey[selectionKey] = ContactAccountInfo(
+                    selectionKey = selectionKey,
+                    accountName = accountName,
+                    accountType = accountType,
+                    displayName = displayName,
+                    accountTypeLabel = accountTypeLabel,
+                    isLocal = isLocal,
+                    isReadOnly = isReadOnly
+                )
+            }
+        }
+
+        accountsByKey.values.sortedWith(
+            compareBy<ContactAccountInfo> { !it.isLocal }
+                .thenBy(String.CASE_INSENSITIVE_ORDER) { it.displayName }
+                .thenBy(String.CASE_INSENSITIVE_ORDER) { it.accountType }
+        )
+    }
+
+    private fun resolveAuthenticatorLabels(): Map<String, String> {
+        val packageManager = context.packageManager
+        val authenticators = runCatching {
+            AccountManager.get(context).authenticatorTypes
+        }.getOrDefault(emptyArray())
+
+        val labels = HashMap<String, String>(authenticators.size)
+        for (auth in authenticators) {
+            if (auth.type.isNullOrBlank() || auth.labelId == 0) continue
+            val label = runCatching {
+                packageManager.getText(auth.packageName, auth.labelId, null)
+                    ?.toString()
+                    ?.trim()
+                    ?.takeIf { it.isNotEmpty() }
+            }.getOrNull()
+            if (label != null) {
+                labels.putIfAbsent(auth.type, label)
+            }
+        }
+        return labels
+    }
+
     suspend fun exportContacts(
         outputDir: File,
-        includeReadOnly: Boolean,
+        selectAllContactAccounts: Boolean,
+        selectedContactAccountKeys: Set<String>,
         shouldStop: () -> Boolean = { false }
     ): ExportedContactsResult = withContext(Dispatchers.IO) {
+        if (!selectAllContactAccounts && selectedContactAccountKeys.isEmpty()) {
+            throw IllegalStateException(context.getString(R.string.error_contacts_none_selected))
+        }
+
         outputDir.deleteRecursively()
         outputDir.mkdirs()
 
@@ -112,11 +205,15 @@ class ContactsBackupRepository(private val context: Context) {
             while (cursor.moveToNext() && !shouldStop()) {
                 val title = cursor.getString(1)?.trim().orEmpty()
                 if (title.isEmpty()) continue
+                val accountName = cursor.getString(3)
+                val accountType = cursor.getString(4)
+                val groupSelectionKey = buildContactAccountSelectionKey(accountType, accountName)
+                if (!selectAllContactAccounts && groupSelectionKey !in selectedContactAccountKeys) continue
                 groupById[cursor.getLong(0)] = BackedUpContactGroup(
                     title = title,
                     notes = cursor.getString(2),
-                    accountName = cursor.getString(3),
-                    accountType = cursor.getString(4)
+                    accountName = accountName,
+                    accountType = accountType
                 )
             }
         }
@@ -138,11 +235,13 @@ class ContactsBackupRepository(private val context: Context) {
             "${ContactsContract.RawContacts._ID} ASC"
         )?.use { cursor ->
             while (cursor.moveToNext() && !shouldStop()) {
+                val accountName = cursor.getString(1)
                 val accountType = cursor.getString(2)
                 val isReadOnly = accountType != null && accountType in readOnlyAccountTypes
-                if (!includeReadOnly && isReadOnly) continue
+                val selectionKey = buildContactAccountSelectionKey(accountType, accountName)
+                if (!selectAllContactAccounts && selectionKey !in selectedContactAccountKeys) continue
                 rawHeaders[cursor.getLong(0)] = BackedUpRawContact(
-                    accountName = cursor.getString(1),
+                    accountName = accountName,
                     accountType = accountType,
                     readOnly = isReadOnly,
                     starred = cursor.getInt(3) == 1,
@@ -154,7 +253,7 @@ class ContactsBackupRepository(private val context: Context) {
         }
 
         val dataRowsByRawId = mutableMapOf<Long, MutableList<BackedUpContactDataRow>>()
-        val groupTitlesByRawId = mutableMapOf<Long, MutableSet<String>>()
+        val groupIdsByRawId = mutableMapOf<Long, MutableSet<Long>>()
         val thumbnailsByRawId = mutableMapOf<Long, ByteArray>()
 
         if (rawHeaders.isNotEmpty() && !shouldStop()) {
@@ -190,8 +289,9 @@ class ContactsBackupRepository(private val context: Context) {
                         ContactsContract.CommonDataKinds.GroupMembership.CONTENT_ITEM_TYPE -> {
                             val groupCol = 4 // data1 = GroupMembership.GROUP_ROW_ID
                             if (!cursor.isNull(groupCol)) {
-                                groupById[cursor.getLong(groupCol)]?.title?.let { title ->
-                                    groupTitlesByRawId.getOrPut(rawId) { linkedSetOf() }.add(title)
+                                val groupId = cursor.getLong(groupCol)
+                                if (groupId in groupById) {
+                                    groupIdsByRawId.getOrPut(rawId) { linkedSetOf() }.add(groupId)
                                 }
                             }
                         }
@@ -225,6 +325,7 @@ class ContactsBackupRepository(private val context: Context) {
         }
 
         val photosDir = File(outputDir, PHOTOS_DIR_NAME)
+        val referencedGroupIds = linkedSetOf<Long>()
         val exportedContacts = rawHeaders.entries.mapNotNull { (rawId, header) ->
             if (shouldStop()) return@mapNotNull null
             val rows = dataRowsByRawId[rawId].orEmpty()
@@ -244,18 +345,30 @@ class ContactsBackupRepository(private val context: Context) {
                 ?: rows.firstOrNull { it.mimeType == ContactsContract.CommonDataKinds.StructuredName.CONTENT_ITEM_TYPE }
                     ?.data?.get(ContactsContract.CommonDataKinds.StructuredName.DISPLAY_NAME)
 
+            val contactGroupIds = groupIdsByRawId[rawId].orEmpty()
+            referencedGroupIds.addAll(contactGroupIds)
+            val groupTitles = contactGroupIds.mapNotNull { groupById[it]?.title }.toSortedSet().toList()
+
             header.copy(
                 displayName = resolvedName,
                 photoFileName = photoFileName,
-                groupTitles = groupTitlesByRawId[rawId].orEmpty().sorted(),
+                groupTitles = groupTitles,
                 dataRows = rows
             )
         }
 
         val referencedGroupTitles = exportedContacts.flatMapTo(linkedSetOf()) { it.groupTitles }
+        val referencedGroups = groupById.entries
+            .filter { it.key in referencedGroupIds }
+            .map { it.value }
         val archive = ContactsBackupArchive(
             version = 1,
-            groups = groupById.values.filter { it.title in referencedGroupTitles }.distinctBy { it.title },
+            groups = selectExportedContactGroups(
+                groups = referencedGroups,
+                referencedGroupTitles = referencedGroupTitles,
+                selectAllContactAccounts = selectAllContactAccounts,
+                selectedContactAccountKeys = selectedContactAccountKeys
+            ),
             contacts = exportedContacts
         )
         File(outputDir, CONTACTS_FILE_NAME).writeText(json.encodeToString(archive))
