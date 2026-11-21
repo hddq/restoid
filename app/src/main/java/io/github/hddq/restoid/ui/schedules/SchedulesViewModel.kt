@@ -327,27 +327,7 @@ class SchedulesViewModel(
 
     fun hasChanges(current: AddEditScheduleUiState = _addEditState.value): Boolean {
         val initial = initialState ?: return false
-
-        return current.name != initial.name ||
-                current.intervalHours != initial.intervalHours ||
-                current.isEnabled != initial.isEnabled ||
-                current.backupEnabled != initial.backupEnabled ||
-                current.backupTypes != initial.backupTypes ||
-                current.appBackupTypes != initial.appBackupTypes ||
-                current.apps.map { it.packageName to it.isSelected } != initial.apps.map { it.packageName to it.isSelected } ||
-                current.maintenance != initial.maintenance ||
-                current.triggerConditions != initial.triggerConditions ||
-                current.customDirectoriesBackupEnabled != initial.customDirectoriesBackupEnabled ||
-                current.deviceDataBackupEnabled != initial.deviceDataBackupEnabled ||
-                current.contactsBackupEnabled != initial.contactsBackupEnabled ||
-                current.selectAllContactAccounts != initial.selectAllContactAccounts ||
-                current.selectedContactAccountKeys != initial.selectedContactAccountKeys ||
-                current.callLogsBackupEnabled != initial.callLogsBackupEnabled ||
-                current.calendarBackupEnabled != initial.calendarBackupEnabled ||
-                current.selectAllCalendars != initial.selectAllCalendars ||
-                current.selectedCalendarKeys != initial.selectedCalendarKeys ||
-                current.customDirectories != initial.customDirectories ||
-                current.excludedCustomDirectories != initial.excludedCustomDirectories
+        return hasScheduleChanges(current, initial)
     }
 
     fun onBackPress() {
@@ -879,4 +859,30 @@ class SchedulesViewModel(
             _addEditState.update { recomputeConflicts(it) }
         }
     }
+}
+
+internal fun hasScheduleChanges(
+    current: AddEditScheduleUiState,
+    initial: AddEditScheduleUiState
+): Boolean {
+    return current.name != initial.name ||
+            current.intervalHours != initial.intervalHours ||
+            current.isEnabled != initial.isEnabled ||
+            current.backupEnabled != initial.backupEnabled ||
+            current.backupTypes != initial.backupTypes ||
+            current.appBackupTypes != initial.appBackupTypes ||
+            current.apps.associate { it.packageName to it.isSelected } != initial.apps.associate { it.packageName to it.isSelected } ||
+            current.maintenance != initial.maintenance ||
+            current.triggerConditions != initial.triggerConditions ||
+            current.customDirectoriesBackupEnabled != initial.customDirectoriesBackupEnabled ||
+            current.deviceDataBackupEnabled != initial.deviceDataBackupEnabled ||
+            current.contactsBackupEnabled != initial.contactsBackupEnabled ||
+            current.selectAllContactAccounts != initial.selectAllContactAccounts ||
+            current.selectedContactAccountKeys != initial.selectedContactAccountKeys ||
+            current.callLogsBackupEnabled != initial.callLogsBackupEnabled ||
+            current.calendarBackupEnabled != initial.calendarBackupEnabled ||
+            current.selectAllCalendars != initial.selectAllCalendars ||
+            current.selectedCalendarKeys != initial.selectedCalendarKeys ||
+            current.customDirectories != initial.customDirectories ||
+            current.excludedCustomDirectories != initial.excludedCustomDirectories
 }
