@@ -15,12 +15,14 @@ import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.CalendarInfo
 import io.github.hddq.restoid.model.ContactAccountInfo
+import io.github.hddq.restoid.ui.shared.AppSortOrder
 import io.github.hddq.restoid.ui.shared.BackupTypes
 import io.github.hddq.restoid.ui.shared.ForgetHostOption
 import io.github.hddq.restoid.ui.shared.ForgetHostsController
 import io.github.hddq.restoid.ui.shared.ForgetHostsSlice
 import io.github.hddq.restoid.ui.shared.OperationProgress
 import io.github.hddq.restoid.ui.shared.normalizeForgetHosts
+import io.github.hddq.restoid.ui.shared.sortApps
 import io.github.hddq.restoid.util.StorageUtils
 import io.github.hddq.restoid.work.BackupWorkRequest
 import io.github.hddq.restoid.work.DeviceDataBackupSelection
@@ -45,6 +47,7 @@ import io.github.hddq.restoid.model.CustomDirectory
 data class RunTasksUiState(
     val apps: List<AppInfo> = emptyList(),
     val isLoadingApps: Boolean = true,
+    val appSortOrder: AppSortOrder = AppSortOrder.NAME_ASCENDING,
     val backupEnabled: Boolean = true,
     val backupTypes: BackupTypes = BackupTypes(),
     val appBackupTypes: Map<String, BackupTypes> = emptyMap(),
@@ -220,14 +223,15 @@ class RunTasksViewModel(
                 }
                 app.copy(isSelected = selected)
             }
-            val appBackupTypes = apps.associate { app ->
+            val sortedApps = sortApps(apps, _uiState.value.appSortOrder)
+            val appBackupTypes = sortedApps.associate { app ->
                 app.packageName to (
                         currentBackupTypes[app.packageName]
                             ?: savedAppBackupTypes[app.packageName]
                             ?: defaultBackupTypes
                         )
             }
-            _uiState.update { recomputeConflicts(it.copy(apps = apps, appBackupTypes = appBackupTypes, isLoadingApps = false)) }
+            _uiState.update { recomputeConflicts(it.copy(apps = sortedApps, appBackupTypes = appBackupTypes, isLoadingApps = false)) }
         }
     }
 
@@ -760,6 +764,15 @@ class RunTasksViewModel(
     fun addCustomForgetHost(hostname: String) = forgetHostsController.addCustomHost(hostname)
     fun removeCustomForgetHost(hostname: String) = forgetHostsController.removeCustomHost(hostname)
     fun refreshForgetHosts(userInitiated: Boolean = true) = forgetHostsController.refreshHosts(userInitiated = userInitiated)
+    fun setAppSortOrder(order: AppSortOrder) {
+        if (_uiState.value.appSortOrder == order) return
+        _uiState.update { state ->
+            state.copy(
+                appSortOrder = order,
+                apps = sortApps(state.apps, order)
+            )
+        }
+    }
 
     fun toggleAppSelection(packageName: String) {
         _uiState.update { state ->

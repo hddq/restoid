@@ -53,7 +53,7 @@ class SnapshotDetailsViewModel(
     private val _backupDetails = MutableStateFlow<List<BackupDetail>>(emptyList())
     val backupDetails = _backupDetails.asStateFlow()
 
-    private val _sortOrder = MutableStateFlow(AppSortOrder.SIZE)
+    private val _sortOrder = MutableStateFlow(AppSortOrder.SIZE_DESCENDING)
     val sortOrder = _sortOrder.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
@@ -190,7 +190,8 @@ class SnapshotDetailsViewModel(
                 versionCode = appMeta.versionCode,
                 icon = application.packageManager.defaultActivityIcon,
                 apkPaths = emptyList(),
-                isSelected = true
+                isSelected = true,
+                firstInstallTime = 0L
             )
 
             BackupDetail(finalAppInfo, items, appMeta.versionName, appMeta.versionCode, appMeta.size, isDowngrade, isInstalled, appMeta.detailedSizes)

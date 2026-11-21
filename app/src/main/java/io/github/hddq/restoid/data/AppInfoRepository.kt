@@ -101,7 +101,7 @@ class AppInfoRepository(private val context: Context) {
      * 1. Checks hot (in-memory) cache.
      * 2. Checks warm (disk-backed) cache.
      * 3. Fetches from the system if not found in any cache.
-     * It now includes a version check to invalidate stale cache entries.
+     * It now includes version and first install time checks to invalidate stale cache entries.
      */
     private suspend fun getAppInfo(
         packageName: String,
@@ -125,11 +125,17 @@ class AppInfoRepository(private val context: Context) {
             currentPackageInfo.longVersionCode
 
         val currentSourceDir = currentPackageInfo.applicationInfo?.sourceDir
+        val currentFirstInstallTime = currentPackageInfo.firstInstallTime
 
         // 1. Check hot in-memory cache.
         if (currentSourceDir != null) {
             val hotCached = cacheMutex.withLock { appInfoCache[packageName] }
-            if (hotCached != null && hotCached.versionCode == currentVersionCode && hotCached.apkPaths.contains(currentSourceDir)) {
+            if (
+                hotCached != null &&
+                hotCached.versionCode == currentVersionCode &&
+                hotCached.firstInstallTime == currentFirstInstallTime &&
+                hotCached.apkPaths.contains(currentSourceDir)
+            ) {
                 return hotCached
             }
         }
@@ -137,7 +143,12 @@ class AppInfoRepository(private val context: Context) {
         // 2. Check warm disk-backed cache.
         if (currentSourceDir != null) {
             val warmCached = cacheMutex.withLock { diskCache[packageName] }
-            if (warmCached != null && warmCached.versionCode == currentVersionCode && warmCached.apkPaths.contains(currentSourceDir)) {
+            if (
+                warmCached != null &&
+                warmCached.versionCode == currentVersionCode &&
+                warmCached.firstInstallTime == currentFirstInstallTime &&
+                warmCached.apkPaths.contains(currentSourceDir)
+            ) {
                 val appInfo = warmCached.toAppInfo(context)
                 return cacheMutex.withLock {
                     val finalInfo = appInfoCache[packageName]?.isSelected?.let { isSelected ->
@@ -166,7 +177,8 @@ class AppInfoRepository(private val context: Context) {
                     icon = app.loadIcon(pm),
                     apkPaths = apkPaths.distinct(),
                     // Preserve selection state if it was in the hot cache before being found stale
-                    isSelected = preservedSelection
+                    isSelected = preservedSelection,
+                    firstInstallTime = currentFirstInstallTime
                 )
 
                 // Update caches and mark disk cache as dirty for batch save.
