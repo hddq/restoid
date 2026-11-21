@@ -5,6 +5,7 @@ import io.github.hddq.restoid.model.BackedUpCalendar
 import io.github.hddq.restoid.model.BackedUpCalendarAttendee
 import io.github.hddq.restoid.model.BackedUpCalendarEvent
 import io.github.hddq.restoid.model.BackedUpCalendarReminder
+import io.github.hddq.restoid.model.BackedUpCalendarSummary
 import io.github.hddq.restoid.model.CalendarBackupArchive
 import io.github.hddq.restoid.model.CalendarBackupMetadata
 import io.github.hddq.restoid.model.CalendarEventDedupIndex
@@ -14,8 +15,12 @@ import io.github.hddq.restoid.model.DeviceDataMetadata
 import io.github.hddq.restoid.model.RestoidMetadata
 import io.github.hddq.restoid.model.buildCalendarEventDedupKeys
 import io.github.hddq.restoid.model.buildCalendarSelectionKey
+import io.github.hddq.restoid.model.filterCalendarsForRestore
 import io.github.hddq.restoid.model.isRecurringEvent
 import io.github.hddq.restoid.model.normalizeEventTiming
+import io.github.hddq.restoid.model.resolveCalendarSelectionKey
+import io.github.hddq.restoid.model.summarizeBackedUpCalendars
+import io.github.hddq.restoid.model.toCalendarInfo
 import io.github.hddq.restoid.model.toDedupKeys
 import io.github.hddq.restoid.work.DeviceDataBackupSelection
 import io.github.hddq.restoid.work.DeviceDataRestoreSelection
@@ -413,8 +418,12 @@ class CalendarSerializationTest {
 
         val defaultRestore = DeviceDataRestoreSelection()
         assertFalse(defaultRestore.contacts)
+        assertTrue(defaultRestore.selectAllContactAccounts)
+        assertTrue(defaultRestore.selectedContactAccountKeys.isEmpty())
         assertFalse(defaultRestore.callLogs)
         assertFalse(defaultRestore.calendar)
+        assertTrue(defaultRestore.selectAllCalendars)
+        assertTrue(defaultRestore.selectedCalendarKeys.isEmpty())
         assertFalse(defaultRestore.anyEnabled())
         assertTrue(DeviceDataRestoreSelection(calendar = true).anyEnabled())
 
@@ -429,7 +438,140 @@ class CalendarSerializationTest {
 
         val legacyRestoreSelection = json.decodeFromString<DeviceDataRestoreSelection>("""{"contacts":true}""")
         assertTrue(legacyRestoreSelection.contacts)
+        assertTrue(legacyRestoreSelection.selectAllContactAccounts)
+        assertTrue(legacyRestoreSelection.selectedContactAccountKeys.isEmpty())
         assertFalse(legacyRestoreSelection.callLogs)
         assertFalse(legacyRestoreSelection.calendar)
+        assertTrue(legacyRestoreSelection.selectAllCalendars)
+        assertTrue(legacyRestoreSelection.selectedCalendarKeys.isEmpty())
+
+        val calendarRestoreSelection = DeviceDataRestoreSelection(
+            calendar = true,
+            selectAllCalendars = false,
+            selectedCalendarKeys = setOf("com.google\u001Falice@example.com\u001Fpersonal\u001FPersonal")
+        )
+        assertEquals(
+            calendarRestoreSelection,
+            json.decodeFromString<DeviceDataRestoreSelection>(json.encodeToString(calendarRestoreSelection))
+        )
+    }
+
+    @Test
+    fun `CalendarBackupMetadata round-trips calendars and deserializes legacy snapshots without calendars`() {
+        val personalKey = buildCalendarSelectionKey("com.google", "alice@example.com", "personal", "Personal")
+        val metadata = CalendarBackupMetadata(
+            count = 12,
+            size = 4096L,
+            path = "/staging/calendar",
+            calendarCount = 1,
+            calendars = listOf(
+                BackedUpCalendarSummary(
+                    selectionKey = personalKey,
+                    name = "personal",
+                    displayName = "Personal",
+                    accountName = "alice@example.com",
+                    accountType = "com.google",
+                    color = -16738680,
+                    timeZone = "UTC",
+                    isReadOnly = false,
+                    eventCount = 12
+                )
+            )
+        )
+        assertEquals(
+            metadata,
+            json.decodeFromString<CalendarBackupMetadata>(json.encodeToString(metadata))
+        )
+
+        val legacyMetadata = json.decodeFromString<CalendarBackupMetadata>(
+            """{"count":12,"size":4096,"path":"/staging/calendar","calendarCount":1}"""
+        )
+        assertNull(legacyMetadata.calendars)
+    }
+
+    @Test
+    fun `resolveCalendarSelectionKey summarizeBackedUpCalendars and filterCalendarsForRestore handle legacy and filtered calendars`() {
+        val legacyCalendarBlankKey = BackedUpCalendar(
+            selectionKey = "",
+            name = "holidays",
+            displayName = "Holidays",
+            accountName = "user@example.com",
+            accountType = "com.google",
+            accessLevel = 200,
+            color = null,
+            events = listOf(
+                BackedUpCalendarEvent(title = "New Year", dtStart = 1_700_000_000_000L)
+            )
+        )
+        val expectedLegacyKey = buildCalendarSelectionKey("com.google", "user@example.com", "holidays", "Holidays")
+        assertEquals(expectedLegacyKey, resolveCalendarSelectionKey(legacyCalendarBlankKey))
+
+        val workKey = buildCalendarSelectionKey("LOCAL", "Restoid", "work", "Work")
+        val workCalendar = BackedUpCalendar(
+            selectionKey = workKey,
+            name = "work",
+            displayName = "Work",
+            accountName = "Restoid",
+            accountType = "LOCAL",
+            accessLevel = 700,
+            color = 0xFF1E88E5.toInt(),
+            timeZone = "UTC",
+            events = emptyList()
+        )
+        val personalKey = buildCalendarSelectionKey("com.google", "alice@example.com", "personal", "Personal")
+        val personalCalendar = BackedUpCalendar(
+            selectionKey = personalKey,
+            name = "personal",
+            displayName = "Personal",
+            accountName = "alice@example.com",
+            accountType = "com.google",
+            accessLevel = 500,
+            events = listOf(
+                BackedUpCalendarEvent(title = "Meeting", dtStart = 1_700_000_000_000L),
+                BackedUpCalendarEvent(title = "Lunch", dtStart = 1_700_010_000_000L)
+            )
+        )
+
+        val summaries = summarizeBackedUpCalendars(
+            listOf(legacyCalendarBlankKey, workCalendar, personalCalendar)
+        )
+        assertEquals(3, summaries.size)
+        // Writable calendars sorted alphabetically before read-only calendars
+        assertEquals(personalKey, summaries[0].selectionKey)
+        assertFalse(summaries[0].isReadOnly)
+        assertEquals(2, summaries[0].eventCount)
+
+        assertEquals(workKey, summaries[1].selectionKey)
+        assertFalse(summaries[1].isReadOnly)
+        assertEquals(0, summaries[1].eventCount)
+
+        assertEquals(expectedLegacyKey, summaries[2].selectionKey)
+        assertTrue(summaries[2].isReadOnly)
+        assertEquals(1, summaries[2].eventCount)
+
+        val legacyInfo = summaries[2].toCalendarInfo(defaultColor = 0xFF42A5F5.toInt())
+        assertEquals(0xFF42A5F5.toInt(), legacyInfo.color)
+        assertEquals(1, legacyInfo.itemCount)
+
+        val allCalendars = listOf(legacyCalendarBlankKey, workCalendar, personalCalendar)
+        assertEquals(
+            allCalendars,
+            filterCalendarsForRestore(allCalendars, selectAllCalendars = true, selectedCalendarKeys = emptySet())
+        )
+        assertEquals(
+            listOf(legacyCalendarBlankKey, personalCalendar),
+            filterCalendarsForRestore(
+                allCalendars,
+                selectAllCalendars = false,
+                selectedCalendarKeys = setOf(expectedLegacyKey, personalKey)
+            )
+        )
+        assertTrue(
+            filterCalendarsForRestore(
+                allCalendars,
+                selectAllCalendars = false,
+                selectedCalendarKeys = emptySet()
+            ).isEmpty()
+        )
     }
 }

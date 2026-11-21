@@ -11,7 +11,8 @@ data class CalendarInfo(
     val accountType: String,
     val color: Int,
     val timeZone: String?,
-    val isReadOnly: Boolean
+    val isReadOnly: Boolean,
+    val itemCount: Int? = null
 )
 
 @Serializable
@@ -108,6 +109,80 @@ internal fun buildCalendarSelectionKey(
         name?.trim().orEmpty(),
         displayName?.trim().orEmpty()
     ).joinToString("\u001F")
+}
+
+internal fun resolveCalendarSelectionKey(calendar: BackedUpCalendar): String {
+    // Backwards compatibility: older calendar archives or fixtures may have a blank selectionKey,
+    // so fall back to deriving the key from the calendar metadata fields.
+    return calendar.selectionKey.ifBlank {
+        buildCalendarSelectionKey(
+            accountType = calendar.accountType,
+            accountName = calendar.accountName,
+            name = calendar.name,
+            displayName = calendar.displayName
+        )
+    }
+}
+
+internal fun summarizeBackedUpCalendars(
+    calendars: Collection<BackedUpCalendar>,
+    readOnlyThreshold: Int = 500
+): List<BackedUpCalendarSummary> {
+    if (calendars.isEmpty()) return emptyList()
+    return calendars.map { calendar ->
+        val selectionKey = resolveCalendarSelectionKey(calendar)
+        val name = calendar.name.orEmpty()
+        val accountName = calendar.accountName.orEmpty()
+        val accountType = calendar.accountType.orEmpty()
+        val displayName = calendar.displayName.ifBlank {
+            name.ifBlank { accountName.ifBlank { selectionKey } }
+        }
+        val isReadOnly = calendar.accessLevel?.let { it < readOnlyThreshold } ?: false
+        BackedUpCalendarSummary(
+            selectionKey = selectionKey,
+            name = name,
+            displayName = displayName,
+            accountName = accountName,
+            accountType = accountType,
+            color = calendar.color,
+            timeZone = calendar.timeZone,
+            isReadOnly = isReadOnly,
+            eventCount = calendar.events.size
+        )
+    }.sortedWith(
+        compareBy<BackedUpCalendarSummary> { it.isReadOnly }
+            .thenBy(String.CASE_INSENSITIVE_ORDER) { it.displayName }
+            .thenBy(String.CASE_INSENSITIVE_ORDER) { it.accountName }
+    )
+}
+
+internal fun BackedUpCalendarSummary.toCalendarInfo(defaultColor: Int): CalendarInfo {
+    return CalendarInfo(
+        id = -1L,
+        selectionKey = selectionKey,
+        name = name,
+        displayName = displayName,
+        accountName = accountName,
+        accountType = accountType,
+        color = color ?: defaultColor,
+        timeZone = timeZone,
+        isReadOnly = isReadOnly,
+        itemCount = eventCount
+    )
+}
+
+internal fun filterCalendarsForRestore(
+    calendars: List<BackedUpCalendar>,
+    selectAllCalendars: Boolean,
+    selectedCalendarKeys: Set<String>
+): List<BackedUpCalendar> {
+    // Backwards compatibility: legacy restore requests default to selectAllCalendars = true,
+    // restoring all backed-up calendars without filtering.
+    if (selectAllCalendars) return calendars
+    if (selectedCalendarKeys.isEmpty()) return emptyList()
+    return calendars.filter { calendar ->
+        resolveCalendarSelectionKey(calendar) in selectedCalendarKeys
+    }
 }
 
 internal fun isRecurringEvent(

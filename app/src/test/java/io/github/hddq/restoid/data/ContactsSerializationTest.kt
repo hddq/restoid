@@ -1,6 +1,7 @@
 package io.github.hddq.restoid.data
 
 import io.github.hddq.restoid.model.AppMetadata
+import io.github.hddq.restoid.model.BackedUpContactAccountSummary
 import io.github.hddq.restoid.model.BackedUpContactDataRow
 import io.github.hddq.restoid.model.BackedUpContactGroup
 import io.github.hddq.restoid.model.BackedUpRawContact
@@ -11,9 +12,13 @@ import io.github.hddq.restoid.model.RestoidMetadata
 import io.github.hddq.restoid.model.buildContactAccountSelectionKey
 import io.github.hddq.restoid.model.buildContactDedupKeys
 import io.github.hddq.restoid.model.coalesceContactsForImport
+import io.github.hddq.restoid.model.filterContactsArchiveForRestore
 import io.github.hddq.restoid.model.normalizePhoneForDedup
 import io.github.hddq.restoid.model.selectExportedContactGroups
+import io.github.hddq.restoid.model.summarizeBackedUpContactAccounts
+import io.github.hddq.restoid.model.toContactAccountInfo
 import io.github.hddq.restoid.work.DeviceDataBackupSelection
+import io.github.hddq.restoid.work.DeviceDataRestoreSelection
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -364,5 +369,229 @@ class ContactsSerializationTest {
         assertTrue(legacySelection.contacts)
         assertTrue(legacySelection.selectAllContactAccounts)
         assertTrue(legacySelection.selectedContactAccountKeys.isEmpty())
+    }
+
+    @Test
+    fun `ContactsBackupMetadata and DeviceDataRestoreSelection round-trip contact account fields and deserialize legacy payloads`() {
+        val localKey = buildContactAccountSelectionKey(accountType = null, accountName = null)
+        val googleKey = buildContactAccountSelectionKey(accountType = "com.google", accountName = "alice@example.com")
+        val metadata = ContactsBackupMetadata(
+            count = 5,
+            size = 2048L,
+            path = "/staging/contacts",
+            accounts = listOf(
+                BackedUpContactAccountSummary(
+                    selectionKey = localKey,
+                    displayName = "Device",
+                    isLocal = true,
+                    contactCount = 2
+                ),
+                BackedUpContactAccountSummary(
+                    selectionKey = googleKey,
+                    accountName = "alice@example.com",
+                    accountType = "com.google",
+                    displayName = "alice@example.com",
+                    accountTypeLabel = "Google",
+                    isLocal = false,
+                    isReadOnly = false,
+                    contactCount = 3
+                )
+            )
+        )
+        val decodedMetadata = json.decodeFromString<ContactsBackupMetadata>(json.encodeToString(metadata))
+        assertEquals(metadata, decodedMetadata)
+
+        val legacyMetadata = json.decodeFromString<ContactsBackupMetadata>(
+            """{"count":5,"size":2048,"path":"/staging/contacts"}"""
+        )
+        assertNull(legacyMetadata.accounts)
+
+        val restoreSelection = DeviceDataRestoreSelection(
+            contacts = true,
+            selectAllContactAccounts = false,
+            selectedContactAccountKeys = setOf(googleKey)
+        )
+        val decodedRestore = json.decodeFromString<DeviceDataRestoreSelection>(json.encodeToString(restoreSelection))
+        assertEquals(restoreSelection, decodedRestore)
+
+        val legacyRestore = json.decodeFromString<DeviceDataRestoreSelection>("""{"contacts":true}""")
+        assertTrue(legacyRestore.contacts)
+        assertTrue(legacyRestore.selectAllContactAccounts)
+        assertTrue(legacyRestore.selectedContactAccountKeys.isEmpty())
+    }
+
+    @Test
+    fun `summarizeBackedUpContactAccounts groups counts sets readOnly sorts local first and localizes local displayName`() {
+        val localKey = buildContactAccountSelectionKey(accountType = null, accountName = null)
+        val googleKey = buildContactAccountSelectionKey(accountType = "com.google", accountName = "bob@example.com")
+        val whatsappKey = buildContactAccountSelectionKey(accountType = "com.whatsapp", accountName = "WhatsApp")
+
+        val rawContacts = listOf(
+            BackedUpRawContact(
+                accountName = "WhatsApp",
+                accountType = "com.whatsapp",
+                readOnly = false,
+                displayName = "WA Friend"
+            ),
+            BackedUpRawContact(
+                accountName = "bob@example.com",
+                accountType = "com.google",
+                readOnly = true,
+                displayName = "Bob 1"
+            ),
+            BackedUpRawContact(
+                accountName = "bob@example.com",
+                accountType = "com.google",
+                readOnly = false,
+                displayName = "Bob 2"
+            ),
+            BackedUpRawContact(
+                accountName = null,
+                accountType = null,
+                readOnly = true,
+                displayName = "Local 1"
+            ),
+            BackedUpRawContact(
+                accountName = "",
+                accountType = "",
+                readOnly = false,
+                displayName = "Local 2"
+            )
+        )
+
+        val summaries = summarizeBackedUpContactAccounts(
+            contacts = rawContacts,
+            localDisplayName = "Device",
+            authenticatorLabelByType = mapOf("com.google" to "Google"),
+            readOnlyAccountTypes = setOf("com.whatsapp")
+        )
+
+        assertEquals(3, summaries.size)
+        assertEquals(localKey, summaries[0].selectionKey)
+        assertTrue(summaries[0].isLocal)
+        assertFalse(summaries[0].isReadOnly)
+        assertEquals(2, summaries[0].contactCount)
+
+        assertEquals(googleKey, summaries[1].selectionKey)
+        assertEquals("Google", summaries[1].accountTypeLabel)
+        assertFalse(summaries[1].isReadOnly)
+        assertEquals(2, summaries[1].contactCount)
+
+        assertEquals(whatsappKey, summaries[2].selectionKey)
+        assertTrue(summaries[2].isReadOnly)
+        assertEquals(1, summaries[2].contactCount)
+
+        val localizedLocal = summaries[0].toContactAccountInfo(localDisplayName = "Gerät")
+        assertEquals("Gerät", localizedLocal.displayName)
+        assertEquals(2, localizedLocal.itemCount)
+    }
+
+    @Test
+    fun `filterContactsArchiveForRestore excludes unselected accounts before coalescing and preserves referenced deduplicated groups`() {
+        val selectedKey = buildContactAccountSelectionKey("com.google", "alice@example.com")
+        val excludedKey = buildContactAccountSelectionKey("com.work", "alice@work.com")
+
+        val selectedContact = BackedUpRawContact(
+            accountName = "alice@example.com",
+            accountType = "com.google",
+            displayName = "Alice Example",
+            photoFileName = null,
+            groupTitles = listOf("SharedGroup", "SelectedOnly"),
+            dataRows = listOf(
+                BackedUpContactDataRow(
+                    mimeType = "vnd.android.cursor.item/phone_v2",
+                    data = mapOf("data1" to "+1 (555) 123-4567")
+                )
+            )
+        )
+        val excludedLinkedContact = BackedUpRawContact(
+            accountName = "alice@work.com",
+            accountType = "com.work",
+            displayName = "Alice Example",
+            photoFileName = "excluded_photo.jpg",
+            groupTitles = listOf("ExcludedOnly"),
+            dataRows = listOf(
+                BackedUpContactDataRow(
+                    mimeType = "vnd.android.cursor.item/phone_v2",
+                    data = mapOf("data1" to "555-123-4567")
+                ),
+                BackedUpContactDataRow(
+                    mimeType = "vnd.android.cursor.item/email_v2",
+                    data = mapOf("data1" to "alice@work.com")
+                )
+            )
+        )
+
+        // Simulate backup-time group deduplication where SharedGroup kept the excluded account's entry
+        val sharedGroupFromExcluded = BackedUpContactGroup(
+            title = "SharedGroup",
+            notes = "Shared notes",
+            accountName = "alice@work.com",
+            accountType = "com.work"
+        )
+        val duplicateTitleFromSelected = BackedUpContactGroup(
+            title = "SelectedOnly",
+            notes = "Selected account notes",
+            accountName = "alice@example.com",
+            accountType = "com.google"
+        )
+        val duplicateTitleFromExcluded = BackedUpContactGroup(
+            title = "SelectedOnly",
+            notes = "Excluded duplicate notes",
+            accountName = "alice@work.com",
+            accountType = "com.work"
+        )
+        val unreferencedGroup = BackedUpContactGroup(
+            title = "ExcludedOnly",
+            notes = "Should be dropped",
+            accountName = "alice@work.com",
+            accountType = "com.work"
+        )
+
+        val archive = ContactsBackupArchive(
+            version = 1,
+            groups = listOf(
+                sharedGroupFromExcluded,
+                duplicateTitleFromExcluded,
+                duplicateTitleFromSelected,
+                unreferencedGroup
+            ),
+            contacts = listOf(selectedContact, excludedLinkedContact)
+        )
+
+        // All accounts returns archive verbatim
+        assertEquals(
+            archive,
+            filterContactsArchiveForRestore(
+                archive = archive,
+                selectAllContactAccounts = true,
+                selectedContactAccountKeys = emptySet()
+            )
+        )
+
+        // Filtering excludes excludedLinkedContact before coalescing so its email/photo/groups never leak into selectedContact
+        val filtered = filterContactsArchiveForRestore(
+            archive = archive,
+            selectAllContactAccounts = false,
+            selectedContactAccountKeys = setOf(selectedKey)
+        )
+        assertEquals(listOf(selectedContact), filtered.contacts)
+        assertEquals(listOf(sharedGroupFromExcluded, duplicateTitleFromSelected), filtered.groups)
+
+        val coalesced = coalesceContactsForImport(filtered.contacts, defaultCountryIso = "US")
+        assertEquals(1, coalesced.size)
+        assertNull(coalesced[0].photoFileName)
+        assertFalse(coalesced[0].dataRows.any { it.mimeType == "vnd.android.cursor.item/email_v2" })
+        assertFalse("ExcludedOnly" in coalesced[0].groupTitles)
+
+        // Empty selection when selectAllContactAccounts == false yields empty contacts and groups
+        val emptyFiltered = filterContactsArchiveForRestore(
+            archive = archive,
+            selectAllContactAccounts = false,
+            selectedContactAccountKeys = emptySet()
+        )
+        assertTrue(emptyFiltered.contacts.isEmpty())
+        assertTrue(emptyFiltered.groups.isEmpty())
+        assertNotEquals(selectedKey, excludedKey)
     }
 }

@@ -14,11 +14,14 @@ import io.github.hddq.restoid.model.BackedUpCalendar
 import io.github.hddq.restoid.model.BackedUpCalendarAttendee
 import io.github.hddq.restoid.model.BackedUpCalendarEvent
 import io.github.hddq.restoid.model.BackedUpCalendarReminder
+import io.github.hddq.restoid.model.BackedUpCalendarSummary
 import io.github.hddq.restoid.model.CalendarBackupArchive
 import io.github.hddq.restoid.model.CalendarEventDedupIndex
 import io.github.hddq.restoid.model.CalendarInfo
 import io.github.hddq.restoid.model.buildCalendarSelectionKey
+import io.github.hddq.restoid.model.filterCalendarsForRestore
 import io.github.hddq.restoid.model.normalizeEventTiming
+import io.github.hddq.restoid.model.summarizeBackedUpCalendars
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
@@ -30,7 +33,8 @@ data class ExportedCalendarResult(
     val calendarCount: Int,
     val eventCount: Int,
     val totalSizeBytes: Long,
-    val outputDir: File
+    val outputDir: File,
+    val calendars: List<BackedUpCalendarSummary> = emptyList()
 )
 
 data class ImportedCalendarResult(
@@ -222,34 +226,59 @@ class CalendarBackupRepository(private val context: Context) {
         archiveFile.writeText(json.encodeToString(archive))
 
         val totalSizeBytes = outputDir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+        val calendarSummaries = summarizeBackedUpCalendars(
+            calendars = backedUpCalendars,
+            readOnlyThreshold = CalendarContract.Calendars.CAL_ACCESS_CONTRIBUTOR
+        )
         ExportedCalendarResult(
             calendarCount = backedUpCalendars.size,
             eventCount = totalEventCount,
             totalSizeBytes = totalSizeBytes,
-            outputDir = outputDir
+            outputDir = outputDir,
+            calendars = calendarSummaries
+        )
+    }
+
+    fun parseCalendarsFromArchiveJson(content: String): List<BackedUpCalendarSummary> {
+        val archive = json.decodeFromString<CalendarBackupArchive>(content)
+        // Backwards compatibility: compute calendar summaries on demand for legacy snapshots
+        // whose restoid.json does not store CalendarBackupMetadata.calendars.
+        return summarizeBackedUpCalendars(
+            calendars = archive.calendars,
+            readOnlyThreshold = CalendarContract.Calendars.CAL_ACCESS_CONTRIBUTOR
         )
     }
 
     suspend fun importCalendars(
         inputDir: File,
+        selectAllCalendars: Boolean = true,
+        selectedCalendarKeys: Set<String> = emptySet(),
         shouldStop: () -> Boolean = { false },
         onEventProcessed: (processed: Int, total: Int, title: String?) -> Unit = { _, _, _ -> }
     ): ImportedCalendarResult = withContext(Dispatchers.IO) {
+        if (!selectAllCalendars && selectedCalendarKeys.isEmpty()) {
+            throw IllegalStateException(context.getString(R.string.restore_error_calendar_none_selected))
+        }
         val archiveFile = File(inputDir, CALENDAR_FILE_NAME)
         require(archiveFile.exists()) { "Calendar backup file not found: ${archiveFile.absolutePath}" }
         check(hasReadCalendarPermission()) { "READ_CALENDAR permission is required to restore calendars." }
         check(hasWriteCalendarPermission()) { "WRITE_CALENDAR permission is required to restore calendars." }
 
         val archive = json.decodeFromString<CalendarBackupArchive>(archiveFile.readText())
+        val calendarsToRestore = filterCalendarsForRestore(
+            calendars = archive.calendars,
+            selectAllCalendars = selectAllCalendars,
+            selectedCalendarKeys = selectedCalendarKeys
+        )
         val existingLocalCalendars = loadLocalCalendars()
 
         var restoredCount = 0
         var skippedCount = 0
         var failedCount = 0
         var processedEvents = 0
-        val totalEvents = archive.calendars.sumOf { it.events.size }
+        val totalEvents = calendarsToRestore.sumOf { it.events.size }
 
-        for (calendar in archive.calendars) {
+        for (calendar in calendarsToRestore) {
             if (shouldStop()) break
 
             val targetCalendarId = ensureLocalCalendar(calendar, existingLocalCalendars)
@@ -1009,7 +1038,7 @@ class CalendarBackupRepository(private val context: Context) {
         const val CALENDAR_FILE_NAME = "calendar.json"
         const val CALENDAR_RELATIVE_STAGING_PATH = "device-data/calendar"
         private const val LOCAL_ACCOUNT_NAME = "Restoid"
-        private const val DEFAULT_CALENDAR_COLOR = 0xFF1E88E5.toInt()
+        internal const val DEFAULT_CALENDAR_COLOR = 0xFF1E88E5.toInt()
         private const val TAG = "CalendarBackupRepo"
 
         private val CALENDAR_PROJECTION = arrayOf(

@@ -554,7 +554,8 @@ class BackupOperationRunner(
             ContactsBackupMetadata(
                 count = exported.contactCount,
                 size = exported.totalSizeBytes,
-                path = exported.outputDir.absolutePath
+                path = exported.outputDir.absolutePath,
+                accounts = exported.accounts
             )
         } else {
             null
@@ -589,7 +590,8 @@ class BackupOperationRunner(
                 count = exported.eventCount,
                 size = exported.totalSizeBytes,
                 path = exported.outputDir.absolutePath,
-                calendarCount = exported.calendarCount
+                calendarCount = exported.calendarCount,
+                calendars = exported.calendars
             )
         } else {
             null

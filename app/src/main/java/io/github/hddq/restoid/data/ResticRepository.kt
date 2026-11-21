@@ -174,13 +174,15 @@ class ResticRepository(
         password: String,
         snapshotId: String,
         environmentVariables: Map<String, String> = emptyMap(),
-        resticOptions: Map<String, String> = emptyMap()
+        resticOptions: Map<String, String> = emptyMap(),
+        noLock: Boolean = false
     ): Result<List<String>> {
         return withContext(Dispatchers.IO) {
+            val noLockFlag = if (noLock) " --no-lock" else ""
             val result = executor.execute(
                 repoPath = repoPath,
                 password = password,
-                command = "ls --json $snapshotId",
+                command = "ls --json$noLockFlag $snapshotId",
                 failureMessage = context.getString(R.string.restic_failure_load_snapshots),
                 environmentVariables = environmentVariables,
                 resticOptions = resticOptions
@@ -470,12 +472,14 @@ class ResticRepository(
         snapshotId: String,
         filePath: String,
         environmentVariables: Map<String, String> = emptyMap(),
-        resticOptions: Map<String, String> = emptyMap()
+        resticOptions: Map<String, String> = emptyMap(),
+        noLock: Boolean = false
     ): Result<String> {
+        val noLockFlag = if (noLock) " --no-lock" else ""
         return executor.execute(
             repoPath = repoPath,
             password = password,
-            command = "dump $snapshotId ${shellQuote(filePath)}",
+            command = "dump$noLockFlag $snapshotId ${shellQuote(filePath)}",
             failureMessage = context.getString(R.string.restic_executor_failure_command),
             environmentVariables = environmentVariables,
             resticOptions = resticOptions
