@@ -704,10 +704,10 @@
         <item quantity="one">%d blob</item>
         <item quantity="other">%d blobs</item>
     </plurals>
-    <string name="maintenance_summary_prune_freed_and_repacked">Freed %1$s (%2$s), repacked %3$s (%4$s). Remaining: %5$s (%6$s).</string>
-    <string name="maintenance_summary_prune_freed">Freed %1$s (%2$s). Remaining: %3$s (%4$s).</string>
+    <string name="maintenance_summary_prune_freed_and_repacked">Pruned %1$s (%2$s), repacked %3$s (%4$s). Remaining: %5$s (%6$s).</string>
+    <string name="maintenance_summary_prune_freed">Pruned %1$s (%2$s). Remaining: %3$s (%4$s).</string>
     <string name="maintenance_summary_prune_repacked">Repacked %1$s (%2$s). Remaining: %3$s (%4$s).</string>
-    <string name="maintenance_summary_prune_nothing_removed">No unused data to remove. Remaining: %1$s (%2$s).</string>
+    <string name="maintenance_summary_prune_nothing_removed">No data removed. Remaining: %1$s (%2$s).</string>
     <string name="maintenance_summary_prune_completed">Prune operation completed.</string>
     <plurals name="maintenance_summary_removed_snapshots">
         <item quantity="one">Removed %1$d snapshot.</item>
