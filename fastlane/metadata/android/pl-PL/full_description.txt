@@ -1,8 +1,8 @@
-Restoid to nowoczesne, skupione na prywatności rozwiązanie do tworzenia kopii zapasowych dla systemu Android, napędzane przez solidny, otwartoźródłowy silnik restic. Zabezpiecz swoje aplikacje, dane, zdjęcia i dokumenty za pomocą szyfrowania klasy korporacyjnej oraz błyskawicznej, oszczędzającej miejsce deduplikacji.
+Restoid to nowoczesne, skupione na prywatności rozwiązanie do tworzenia kopii zapasowych dla systemu Android, napędzane przez solidny, otwartoźródłowy silnik restic. Chroń swoje aplikacje, dane, kontakty, rejestry połączeń, zdjęcia i dokumenty za pomocą szyfrowania klasy korporacyjnej oraz błyskawicznej, oszczędzającej miejsce deduplikacji.
 
 Niezależnie od tego, czy chcesz tworzyć kopie zapasowe zdjęć na domowym NASie, przechowywać zaszyfrowane migawki w chmurze, czy zachować pełne dane aplikacji na urządzeniu z rootem, Restoid daje Ci pełną kontrolę bez trackerów, reklam i blokady dostawcy.
 
-Dostęp root jest całkowicie opcjonalny: twórz kopie zapasowe własnych folderów, zdjęć i dokumentów bez roota; dostęp root jest wymagany tylko do tworzenia kopii zapasowych prywatnych danych aplikacji.
+Dostęp root jest całkowicie opcjonalny: twórz kopie zapasowe niestandardowych folderów, zdjęć, dokumentów, kontaktów i rejestrów połączeń bez konta root; dostęp root jest wymagany tylko do tworzenia kopii zapasowych prywatnych danych aplikacji.
 
 Kluczowe funkcje:
 
@@ -16,7 +16,8 @@ Szyfrowanie Zero-Knowledge
 
 Elastyczne zaplecze pamięci masowej
 • Pamięć lokalna: zapisuj w pamięci wewnętrznej, na karcie SD lub dyskach USB OTG.
-• Sieć i chmura: natywna obsługa SFTP (klucz SSH i hasło), serwera REST oraz pamięci obiektowej kompatybilnej z Amazon S3 (Garage, MinIO, Wasabi, Cloudflare R2, Backblaze B2).
+• Wbudowane backendy sieciowe: bezpośrednia obsługa SFTP (klucz SSH i hasło), serwera REST oraz pamięci obiektowej zgodnej z Amazon S3 (Garage, MinIO, Wasabi, Cloudflare R2, Backblaze B2).
+• Chmura i dodatkowe backendy przez Rclone: łączenie się z dziesiątkami dostawców i protokołów pamięci masowej (takimi jak Google Drive, OneDrive, Dropbox, WebDAV, Nextcloud, pCloud i innymi) dzięki wbudowanej obsłudze rclone poprzez import lub wklejenie pliku rclone.conf.
 
 Pełna kopia zapasowa aplikacji i danych (wymagany root)
 • Wybiórcze tworzenie kopii zapasowych zainstalowanych aplikacji użytkownika.
@@ -25,12 +26,15 @@ Pełna kopia zapasowa aplikacji i danych (wymagany root)
 Własne pliki i media
 • Twórz kopie zapasowe folderów osobistych: DCIM, Dokumenty, Pobrane lub dowolny katalog na urządzeniu.
 
+Kontakty i rejestry połączeń
+• Twórz kopie zapasowe i przywracaj kontakty (w tym grupy i zdjęcia) oraz rejestry połączeń bez wymagania dostępu root; kopie zapasowe mogą być wykonywane ręcznie lub zgodnie z zautomatyzowanym harmonogramem.
+
 Zautomatyzowane harmonogramy w tle
 • Skonfiguruj harmonogramy cykliczne (codzienne, tygodniowe lub niestandardowe interwały).
 • Inteligentne ograniczenia wyzwalaczy: uruchamiaj tylko podczas ładowania, w nielimitowanej sieci Wi-Fi lub po spełnieniu warunków baterii.
 
 Precyzyjne i bezpieczne przywracanie
-• Przywracaj całe aplikacje lub ich konkretne części (np. przywracanie danych bez nadpisywania zainstalowanego pliku APK).
+• Przywracaj całe aplikacje lub ich konkretne części (np. przywracaj dane bez zastępowania zainstalowanego pakietu APK), niestandardowe katalogi, kontakty i rejestry połączeń.
 • Ochrona przed starszą wersją zapobiega przypadkowemu przywróceniu starszych wersji zamiast nowszych.
 
 Brak uzależnienia od dostawcy

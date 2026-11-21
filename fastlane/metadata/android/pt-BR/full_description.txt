@@ -1,8 +1,8 @@
-O Restoid é uma solução de backup moderna e com foco em privacidade para Android, alimentada pelo robusto motor de código aberto restic. Mantenha seus aplicativos, dados, fotos e documentos seguros com criptografia de nível empresarial e desduplicação ultrarrápida e econômica em espaço.
+O Restoid é uma solução de backup moderna e com foco em privacidade para Android, alimentada pelo robusto motor de código aberto restic. Mantenha seus aplicativos, dados, contatos, registros de chamadas, fotos e documentos seguros com criptografia de nível empresarial e desduplicação ultrarrápida e econômica em espaço.
 
 Quer você queira fazer backup de fotos para um NAS doméstico, armazenar snapshots criptografados na nuvem ou preservar dados completos de aplicativos em um dispositivo com root, o Restoid oferece controle total sem rastreadores, anúncios ou bloqueio de proprietário.
 
-O acesso root é totalmente opcional: faça backup de pastas personalizadas, fotos e documentos sem root; o acesso root é necessário apenas para fazer backup de dados privados de aplicativos.
+O acesso root é totalmente opcional: faça backup de pastas personalizadas, fotos, documentos, contatos e registros de chamadas sem root; o acesso root é necessário apenas para fazer backup de dados privados de aplicativos.
 
 Principais Recursos:
 
@@ -16,7 +16,8 @@ Criptografia Zero-Knowledge
 
 Backends de Armazenamento Flexíveis
 • Armazenamento Local: Salve na memória interna, cartão SD ou unidades USB OTG.
-• Rede e Nuvem: Suporte nativo para SFTP (chave SSH e senha), servidor REST e armazenamento de objetos compatível com Amazon S3 (Garage, MinIO, Wasabi, Cloudflare R2, Backblaze B2).
+• Backends de rede nativos: suporte direto a SFTP (chave SSH e senha), servidor REST e armazenamento de objetos compatível com Amazon S3 (Garage, MinIO, Wasabi, Cloudflare R2, Backblaze B2).
+• Backends de nuvem e extras via Rclone: conecte-se a dezenas de provedores de armazenamento e protocolos (como Google Drive, OneDrive, Dropbox, WebDAV, Nextcloud, pCloud e muito mais) com o suporte integrado ao rclone importando ou colando um rclone.conf.
 
 Backup Completo de Apps e Dados (Root Necessário)
 • Faça backup seletivo de aplicativos de usuário instalados.
@@ -25,12 +26,15 @@ Backup Completo de Apps e Dados (Root Necessário)
 Arquivos e Mídia Personalizados
 • Faça backup de pastas pessoais: DCIM, Documentos, Downloads ou qualquer diretório no seu dispositivo.
 
+Contatos e registros de chamadas
+• Faça backup e restaure seus contatos (incluindo grupos e fotos) e registros de chamadas sem precisar de root; os backups podem ser executados manualmente ou em horários automatizados.
+
 Agendamentos Automatizados em Segundo Plano
 • Configure agendamentos recorrentes (diários, semanais ou intervalos personalizados).
 • Restrições de gatilho inteligente: Execute apenas durante o carregamento, em Wi-Fi não metrificado ou quando as condições da bateria forem atendidas.
 
 Restauração Cirúrgica e Segura
-• Restaure aplicativos inteiros ou partes específicas (ex.: restaurar dados sem substituir o APK instalado).
+• Restaure aplicativos inteiros ou partes específicas (ex.: restaurar dados sem substituir o APK instalado), diretórios personalizados, contatos e registros de chamadas.
 • A proteção contra downgrade evita a restauração acidental de versões mais antigas sobre as mais novas.
 
 Zero Restrição de Fornecedor (Vendor Lock-in)

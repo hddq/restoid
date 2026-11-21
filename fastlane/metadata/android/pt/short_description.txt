@@ -1,1 +1,1 @@
-Backup seguro e desduplicado para aplicativos e arquivos com a tecnologia do motor restic.
+Backup seguro e desduplicado para aplicativos e arquivos com o motor do restic.

@@ -1,8 +1,8 @@
-Restoid es una solución de copia de seguridad moderna y centrada en la privacidad para Android, impulsada por el robusto motor de código abierto restic. Mantén tus aplicaciones, datos, fotos y documentos seguros con cifrado de nivel empresarial y una desduplicación ultrarrápida que ahorra espacio.
+Restoid es una solución de copia de seguridad moderna y centrada en la privacidad para Android, impulsada por el robusto motor de código abierto restic. Mantenga sus aplicaciones, datos, contactos, registros de llamadas, fotos y documentos seguros con cifrado de nivel empresarial y deduplicación ultrarrápida que ahorra espacio.
 
 Ya sea que quieras hacer una copia de seguridad de tus fotos en un NAS doméstico, almacenar instantáneas cifradas en la nube o conservar los datos completos de las aplicaciones en un dispositivo con root, Restoid te ofrece un control total sin rastreadores, anuncios ni ataduras comerciales.
 
-El acceso root es completamente opcional: haz copias de seguridad de carpetas personalizadas, fotos y documentos sin root; solo se necesita acceso root para respaldar los datos privados de las aplicaciones.
+El acceso root es completamente opcional: haga una copia de seguridad de carpetas personalizadas, fotos, documentos, contactos y registros de llamadas sin root; el acceso root solo es necesario para respaldar datos privados de aplicaciones.
 
 Características clave:
 
@@ -16,7 +16,8 @@ Cifrado de conocimiento cero
 
 Backend de almacenamiento flexible
 • Almacenamiento local: guarda en la memoria interna, tarjeta SD o unidades USB OTG.
-• Red y nube: compatibilidad nativa con SFTP (clave SSH y contraseña), servidor REST y almacenamiento de objetos compatible con Amazon S3 (Garage, MinIO, Wasabi, Cloudflare R2, Backblaze B2).
+• Backends de red nativos: compatibilidad directa con SFTP (clave SSH y contraseña), servidor REST y almacenamiento de objetos compatible con Amazon S3 (Garage, MinIO, Wasabi, Cloudflare R2, Backblaze B2).
+• Backends en la nube y adicionales mediante Rclone: conéctese a decenas de proveedores de almacenamiento y protocolos (como Google Drive, OneDrive, Dropbox, WebDAV, Nextcloud, pCloud y más) con compatibilidad integrada con rclone al importar o pegar un rclone.conf.
 
 Copia de seguridad completa de aplicaciones y datos (se requiere root)
 • Realiza copias de seguridad selectivas de las aplicaciones de usuario instaladas.
@@ -25,12 +26,15 @@ Copia de seguridad completa de aplicaciones y datos (se requiere root)
 Archivos y multimedia personalizados
 • Haz una copia de seguridad de carpetas personales: DCIM, Documentos, Descargas o cualquier directorio de tu dispositivo.
 
+Contactos y registros de llamadas
+• Haga una copia de seguridad y restaure sus contactos (incluidos grupos y fotos) y registros de llamadas sin necesidad de root; las copias de seguridad se pueden ejecutar manualmente o según programaciones automáticas.
+
 Programaciones automáticas en segundo plano
 • Configura programaciones recurrentes (diarias, semanales o intervalos personalizados).
 • Restricciones de activación inteligente: se ejecuta solo mientras se carga, con Wi-Fi no medida o cuando se cumplen las condiciones de batería.
 
 Restauración quirúrgica y segura
-• Restaura aplicaciones completas o partes específicas (p. ej., restaurar datos sin sobrescribir el APK instalado).
+• Restaura aplicaciones completas o partes específicas (p. ej., restaurar datos sin sobrescribir el APK instalado), directorios personalizados, contactos y registros de llamadas.
 • La protección contra descensos de versión evita la restauración accidental de versiones anteriores sobre las más nuevas.
 
 Sin ataduras a proveedores

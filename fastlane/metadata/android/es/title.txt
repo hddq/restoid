@@ -1,1 +1,1 @@
-Restoid - Herramienta de backup
+Restoid - Copia de seguridad

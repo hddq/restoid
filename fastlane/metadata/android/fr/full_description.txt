@@ -1,8 +1,8 @@
-Restoid est une solution de sauvegarde moderne axée sur la confidentialité pour Android, propulsée par le moteur robuste et open-source restic. Protégez vos applications, données, photos et documents grâce au chiffrement de niveau professionnel et à une déduplication ultra-rapide et économe en espace.
+Restoid est une solution de sauvegarde moderne axée sur la confidentialité pour Android, propulsée par le moteur robuste et open-source restic. Protégez vos applications, données, contacts, journaux d'appels, photos et documents grâce à un chiffrement de niveau entreprise et à une déduplication ultra-rapide et économe en espace.
 
 Que vous souhaitiez sauvegarder des photos sur un NAS domestique, stocker des instantanés chiffrés dans le cloud ou préserver toutes les données d'applications sur un appareil rooté, Restoid vous offre un contrôle total, sans traceurs, sans publicités et sans verrouillage propriétaire.
 
-L'accès root est entièrement optionnel : sauvegardez des dossiers personnalisés, des photos et des documents sans root ; l'accès root n'est nécessaire que pour sauvegarder les données privées des applications.
+L'accès root est totalement optionnel : sauvegardez des dossiers personnalisés, photos, documents, contacts et journaux d'appels sans root ; l'accès root n'est nécessaire que pour sauvegarder les données privées des applications.
 
 Fonctionnalités principales :
 
@@ -16,7 +16,8 @@ Chiffrement Zero-Knowledge
 
 Backends de stockage flexibles
 • Stockage local : Enregistrez sur la mémoire interne, une carte SD ou des clés USB OTG.
-• Réseau et cloud : Prise en charge native de SFTP (clé SSH et mot de passe), serveur REST et stockage d'objets compatible Amazon S3 (Garage, MinIO, Wasabi, Cloudflare R2, Backblaze B2).
+• Backends réseau natifs : prise en charge directe de SFTP (clé SSH et mot de passe), de serveur REST et de stockage d'objets compatible Amazon S3 (Garage, MinIO, Wasabi, Cloudflare R2, Backblaze B2).
+• Backends cloud et supplémentaires via Rclone : connectez-vous à des dizaines de fournisseurs de stockage et de protocoles (tels que Google Drive, OneDrive, Dropbox, WebDAV, Nextcloud, pCloud, etc.) grâce à la prise en charge intégrée de rclone en important ou en collant un rclone.conf.
 
 Sauvegarde complète des applications et des données (Root requis)
 • Sauvegardez sélectivement les applications utilisateur installées.
@@ -25,12 +26,15 @@ Sauvegarde complète des applications et des données (Root requis)
 Fichiers et médias personnalisés
 • Sauvegardez des dossiers personnels : DCIM, Documents, Téléchargements ou tout autre répertoire de votre appareil.
 
+Contacts et journaux d'appels
+• Sauvegardez et restaurez vos contacts (y compris les groupes et les photos) et journaux d'appels sans nécessiter le root ; les sauvegardes peuvent s'exécuter manuellement ou selon des planifications automatiques.
+
 Planifications automatisées en arrière-plan
 • Configurez des planifications récurrentes (quotidiennes, hebdomadaires ou intervalles personnalisés).
 • Contraintes de déclenchement intelligentes : Exécutez uniquement en cours de charge, sur un Wi-Fi non mesuré ou lorsque les conditions de batterie sont remplies.
 
 Restauration chirurgicale et sûre
-• Restaurez des applications entières ou des parties spécifiques (ex. : restaurer des données sans écraser l'APK installé).
+• Restaurez des applications entières ou des parties spécifiques (ex. : restaurer des données sans écraser l'APK installé), des répertoires personnalisés, des contacts et des journaux d'appels.
 • La protection contre le downgrade empêche la restauration accidentelle d'une ancienne version sur une plus récente.
 
 Zéro verrouillage fournisseur
