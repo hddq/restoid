@@ -960,6 +960,9 @@ private fun chargingStateText(battery: BatteryConditionStatus): String {
 
 @Composable
 private fun networkStateText(network: NetworkConditionStatus): String {
+    if (network.isBlocked) {
+        return stringResource(R.string.condition_state_network_blocked)
+    }
     if (!network.isConnected) {
         return stringResource(R.string.condition_state_network_none)
     }

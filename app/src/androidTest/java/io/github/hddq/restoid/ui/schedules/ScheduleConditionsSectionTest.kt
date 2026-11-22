@@ -127,4 +127,42 @@ class ScheduleConditionsSectionTest {
         composeTestRule.onNodeWithText(expectedCharging).assertIsDisplayed()
         composeTestRule.onNodeWithText(expectedNetwork).assertIsDisplayed()
     }
+
+    @Test
+    fun displaysBlockedNetworkAsNotMet() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val notMet = context.getString(R.string.condition_status_not_met)
+        val expectedNetwork = context.getString(
+            R.string.condition_status_format,
+            context.getString(R.string.condition_state_network_blocked),
+            notMet
+        )
+
+        composeTestRule.setContent {
+            RestoidTheme(dynamicColor = false) {
+                ScheduleConditionsSection(
+                    triggerConditions = TriggerConditions(requireUnmeteredNetwork = true),
+                    conditionStatus = TriggerConditionStatusSnapshot(
+                        battery = BatteryConditionStatus(
+                            levelPercent = 90,
+                            isBatteryNotLow = true,
+                            chargingState = ChargingState.CHARGING,
+                            powerSource = ChargingPowerSource.AC
+                        ),
+                        network = NetworkConditionStatus(
+                            isConnected = true,
+                            isUnmetered = true,
+                            transport = NetworkTransport.WIFI,
+                            isBlocked = true
+                        )
+                    ),
+                    onRequireBatteryNotLowChange = {},
+                    onRequireChargingChange = {},
+                    onRequireUnmeteredNetworkChange = {}
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText(expectedNetwork).assertIsDisplayed()
+    }
 }

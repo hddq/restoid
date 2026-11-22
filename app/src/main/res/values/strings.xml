@@ -765,6 +765,7 @@
     <string name="condition_state_plugged_not_charging">Plugged in, not charging</string>
     <string name="condition_state_not_charging">Not charging</string>
     <string name="condition_state_network_none">No network</string>
+    <string name="condition_state_network_blocked">Network blocked</string>
     <string name="condition_state_network_wifi_unmetered">Wi-Fi (unmetered)</string>
     <string name="condition_state_network_wifi_metered">Wi-Fi (metered)</string>
     <string name="condition_state_network_ethernet_unmetered">Ethernet (unmetered)</string>

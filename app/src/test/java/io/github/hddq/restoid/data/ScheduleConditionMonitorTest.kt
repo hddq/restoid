@@ -1,11 +1,17 @@
 package io.github.hddq.restoid.data
 
+import android.net.NetworkCapabilities
 import android.os.BatteryManager
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Collections
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
 
 class ScheduleConditionMonitorTest {
 
@@ -248,5 +254,252 @@ class ScheduleConditionMonitorTest {
         assertFalse(noInternet.isConnected)
         assertFalse(noInternet.isUnmeteredMet)
         assertEquals(NetworkTransport.NONE, noInternet.transport)
+
+        val blockedWifi = wifiUnmetered.copy(isBlocked = true)
+        assertTrue(blockedWifi.isBlocked)
+        assertFalse(blockedWifi.isUnmeteredMet)
+    }
+
+    @Test
+    fun evaluateNetworkCapabilities_requiresStrictNotMeteredMatchingWorkManager() {
+        val temporarilyNotMeteredCapabilities = setOf(
+            NetworkCapabilities.NET_CAPABILITY_INTERNET,
+            NetworkCapabilities.NET_CAPABILITY_TEMPORARILY_NOT_METERED
+        )
+        val cellularTempUnmetered = evaluateNetworkCapabilities(
+            hasCapability = { it in temporarilyNotMeteredCapabilities },
+            hasTransport = { it == NetworkCapabilities.TRANSPORT_CELLULAR }
+        )
+        assertTrue(cellularTempUnmetered.isConnected)
+        assertFalse(cellularTempUnmetered.isUnmetered)
+        assertFalse(cellularTempUnmetered.isUnmeteredMet)
+        assertEquals(NetworkTransport.CELLULAR, cellularTempUnmetered.transport)
+
+        val strictlyNotMeteredCapabilities = setOf(
+            NetworkCapabilities.NET_CAPABILITY_INTERNET,
+            NetworkCapabilities.NET_CAPABILITY_NOT_METERED
+        )
+        val wifiUnmetered = evaluateNetworkCapabilities(
+            hasCapability = { it in strictlyNotMeteredCapabilities },
+            hasTransport = { it == NetworkCapabilities.TRANSPORT_WIFI }
+        )
+        assertTrue(wifiUnmetered.isConnected)
+        assertTrue(wifiUnmetered.isUnmetered)
+        assertTrue(wifiUnmetered.isUnmeteredMet)
+        assertEquals(NetworkTransport.WIFI, wifiUnmetered.transport)
+    }
+
+    @Test
+    fun defaultNetworkCallbackState_tracksBlockedStatusAndIgnoresStaleNetworks() {
+        val state = DefaultNetworkCallbackState<String>()
+        val wifiUnmetered = NetworkConditionStatus(
+            isConnected = true,
+            isUnmetered = true,
+            transport = NetworkTransport.WIFI
+        )
+        val cellularMetered = NetworkConditionStatus(
+            isConnected = true,
+            isUnmetered = false,
+            transport = NetworkTransport.CELLULAR
+        )
+
+        assertNull(state.onAvailable("wifi-1"))
+
+        val activeWifi = state.onCapabilitiesChanged("wifi-1", wifiUnmetered)
+        assertEquals(wifiUnmetered, activeWifi)
+        assertTrue(activeWifi.isUnmeteredMet)
+
+        val stillUnblocked = state.onBlockedStatusChanged("wifi-1", false)
+        assertEquals(wifiUnmetered, stillUnblocked)
+
+        val blocked = state.onBlockedStatusChanged("wifi-1", true)
+        assertNotNull(blocked)
+        assertTrue(blocked!!.isBlocked)
+        assertFalse(blocked.isUnmeteredMet)
+
+        val restored = state.onBlockedStatusChanged("wifi-1", false)
+        assertEquals(wifiUnmetered, restored)
+        assertTrue(restored!!.isUnmeteredMet)
+
+        // Switching to a new default network clears previous network tracking
+        assertNull(state.onAvailable("cell-2"))
+        val activeCellular = state.onCapabilitiesChanged("cell-2", cellularMetered)
+        assertEquals(cellularMetered, activeCellular)
+        assertFalse(activeCellular.isBlocked)
+
+        // Late callbacks for the old network are ignored
+        assertNull(state.onBlockedStatusChanged("wifi-1", true))
+        assertNull(state.onLost("wifi-1"))
+
+        // Losing the active network transitions to disconnected
+        val lost = state.onLost("cell-2")
+        assertNotNull(lost)
+        assertFalse(lost!!.isConnected)
+        assertFalse(lost.isBlocked)
+        assertFalse(lost.isUnmeteredMet)
+        assertEquals(NetworkTransport.NONE, lost.transport)
+
+        val unavailable = state.onUnavailable()
+        assertFalse(unavailable.isConnected)
+        assertFalse(unavailable.isBlocked)
+        assertEquals(NetworkTransport.NONE, unavailable.transport)
+    }
+
+    @Test
+    fun defaultNetworkCallbackState_preservesBlockedStateDeliveredBeforeCapabilities() {
+        val state = DefaultNetworkCallbackState<String>()
+        val wifiUnmetered = NetworkConditionStatus(
+            isConnected = true,
+            isUnmetered = true,
+            transport = NetworkTransport.WIFI
+        )
+
+        assertNull(state.onAvailable("wifi-1"))
+
+        val blockedBeforeCapabilities = state.onBlockedStatusChanged("wifi-1", true)
+        assertNotNull(blockedBeforeCapabilities)
+        assertTrue(blockedBeforeCapabilities!!.isBlocked)
+        assertFalse(blockedBeforeCapabilities.isUnmeteredMet)
+
+        val capabilitiesWhileBlocked = state.onCapabilitiesChanged("wifi-1", wifiUnmetered)
+        assertTrue(capabilitiesWhileBlocked.isConnected)
+        assertTrue(capabilitiesWhileBlocked.isUnmetered)
+        assertTrue(capabilitiesWhileBlocked.isBlocked)
+        assertFalse(capabilitiesWhileBlocked.isUnmeteredMet)
+
+        val unblocked = state.onBlockedStatusChanged("wifi-1", false)
+        assertEquals(wifiUnmetered, unblocked)
+        assertTrue(unblocked!!.isUnmeteredMet)
+    }
+
+    @Test
+    fun conditionSnapshotAccumulator_serializesSnapshotOrderAcrossThreads() {
+        val initialBattery = BatteryConditionStatus(
+            levelPercent = 50,
+            isBatteryNotLow = true,
+            chargingState = ChargingState.NOT_CHARGING
+        )
+        val initialNetwork = NetworkConditionStatus(
+            isConnected = false,
+            isUnmetered = false,
+            transport = NetworkTransport.NONE
+        )
+
+        // Deterministic interleaving: thread 2 cannot overtake thread 1's onSnapshot emission
+        val emitted = Collections.synchronizedList(mutableListOf<TriggerConditionStatusSnapshot>())
+        val firstEmitStarted = CountDownLatch(1)
+        val releaseFirstEmit = CountDownLatch(1)
+        var firstCall = true
+
+        val accumulator = ConditionSnapshotAccumulator(
+            initialBattery = initialBattery,
+            initialNetwork = initialNetwork,
+            onSnapshot = { snapshot ->
+                if (firstCall) {
+                    firstCall = false
+                    firstEmitStarted.countDown()
+                    releaseFirstEmit.await(2, TimeUnit.SECONDS)
+                }
+                emitted.add(snapshot)
+            }
+        )
+
+        val updatedBattery = initialBattery.copy(levelPercent = 80, chargingState = ChargingState.CHARGING)
+        val updatedNetwork = NetworkConditionStatus(
+            isConnected = true,
+            isUnmetered = true,
+            transport = NetworkTransport.WIFI
+        )
+
+        val batteryThread = thread(start = true) {
+            accumulator.updateBattery(updatedBattery)
+        }
+        assertTrue(firstEmitStarted.await(2, TimeUnit.SECONDS))
+
+        val networkThread = thread(start = true) {
+            accumulator.updateNetwork(updatedNetwork)
+        }
+        // Wait until networkThread is blocked waiting for accumulator's lock (or timeout)
+        val deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(500)
+        while (networkThread.state != Thread.State.BLOCKED && System.nanoTime() < deadlineNanos) {
+            Thread.yield()
+        }
+        releaseFirstEmit.countDown()
+
+        batteryThread.join(2_000)
+        networkThread.join(2_000)
+
+        assertEquals(2, emitted.size)
+        assertEquals(
+            TriggerConditionStatusSnapshot(battery = updatedBattery, network = initialNetwork),
+            emitted[0]
+        )
+        assertEquals(
+            TriggerConditionStatusSnapshot(battery = updatedBattery, network = updatedNetwork),
+            emitted[1]
+        )
+    }
+
+    @Test
+    fun conditionSnapshotAccumulator_emitsMonotonicSnapshotsUnderConcurrentStress() {
+        val emitted = Collections.synchronizedList(mutableListOf<TriggerConditionStatusSnapshot>())
+        val accumulator = ConditionSnapshotAccumulator(
+            initialBattery = BatteryConditionStatus(
+                levelPercent = 0,
+                isBatteryNotLow = false,
+                chargingState = ChargingState.NOT_CHARGING
+            ),
+            initialNetwork = NetworkConditionStatus(
+                isConnected = false,
+                isUnmetered = false,
+                transport = NetworkTransport.NONE
+            ),
+            onSnapshot = { emitted.add(it) }
+        )
+
+        val iterations = 200
+        val startGate = CountDownLatch(1)
+        val batteryThread = thread(start = true) {
+            startGate.await(2, TimeUnit.SECONDS)
+            for (i in 1..iterations) {
+                accumulator.updateBattery(
+                    BatteryConditionStatus(
+                        levelPercent = i,
+                        isBatteryNotLow = true,
+                        chargingState = ChargingState.CHARGING
+                    )
+                )
+            }
+        }
+        val networkThread = thread(start = true) {
+            startGate.await(2, TimeUnit.SECONDS)
+            for (i in 1..iterations) {
+                accumulator.updateNetwork(
+                    NetworkConditionStatus(
+                        isConnected = true,
+                        isUnmetered = i % 2 == 0,
+                        transport = if (i == iterations) NetworkTransport.WIFI else NetworkTransport.CELLULAR
+                    )
+                )
+            }
+        }
+
+        startGate.countDown()
+        batteryThread.join(5_000)
+        networkThread.join(5_000)
+
+        assertEquals(iterations * 2, emitted.size)
+        var maxBatterySeen = 0
+        for (snapshot in emitted) {
+            val level = snapshot.battery.levelPercent ?: 0
+            assertTrue(
+                "Battery level regressed from $maxBatterySeen to $level",
+                level >= maxBatterySeen
+            )
+            maxBatterySeen = level
+        }
+        assertEquals(iterations, emitted.last().battery.levelPercent)
+        assertEquals(NetworkTransport.WIFI, emitted.last().network.transport)
+        assertTrue(emitted.last().network.isUnmeteredMet)
     }
 }

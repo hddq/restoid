@@ -60,11 +60,18 @@ enum class NetworkTransport {
 data class NetworkConditionStatus(
     val isConnected: Boolean,
     val isUnmetered: Boolean,
-    val transport: NetworkTransport
+    val transport: NetworkTransport,
+    val isBlocked: Boolean = false
 ) {
     val isUnmeteredMet: Boolean
-        get() = isConnected && isUnmetered
+        get() = isConnected && isUnmetered && !isBlocked
 }
+
+private val DISCONNECTED_NETWORK_STATUS = NetworkConditionStatus(
+    isConnected = false,
+    isUnmetered = false,
+    transport = NetworkTransport.NONE
+)
 
 data class TriggerConditionStatusSnapshot(
     val battery: BatteryConditionStatus = BatteryConditionStatus(
@@ -72,11 +79,7 @@ data class TriggerConditionStatusSnapshot(
         isBatteryNotLow = null,
         chargingState = ChargingState.UNKNOWN
     ),
-    val network: NetworkConditionStatus = NetworkConditionStatus(
-        isConnected = false,
-        isUnmetered = false,
-        transport = NetworkTransport.NONE
-    )
+    val network: NetworkConditionStatus = DISCONNECTED_NETWORK_STATUS
 )
 
 internal const val WORKMANAGER_BATTERY_LOW_THRESHOLD = 0.15f
@@ -136,14 +139,11 @@ internal fun evaluateNetworkStatus(
     hasWifi: Boolean,
     hasEthernet: Boolean,
     hasCellular: Boolean,
-    hasVpn: Boolean
+    hasVpn: Boolean,
+    isBlocked: Boolean = false
 ): NetworkConditionStatus {
     if (!hasActiveNetwork || !hasInternet) {
-        return NetworkConditionStatus(
-            isConnected = false,
-            isUnmetered = false,
-            transport = NetworkTransport.NONE
-        )
+        return DISCONNECTED_NETWORK_STATUS.copy(isBlocked = isBlocked)
     }
 
     val transport = when {
@@ -157,8 +157,131 @@ internal fun evaluateNetworkStatus(
     return NetworkConditionStatus(
         isConnected = true,
         isUnmetered = isNotMetered,
-        transport = transport
+        transport = transport,
+        isBlocked = isBlocked
     )
+}
+
+internal fun evaluateNetworkCapabilities(
+    hasCapability: (Int) -> Boolean,
+    hasTransport: (Int) -> Boolean
+): NetworkConditionStatus {
+    return evaluateNetworkStatus(
+        hasActiveNetwork = true,
+        hasInternet = hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET),
+        isNotMetered = hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED),
+        hasWifi = hasTransport(NetworkCapabilities.TRANSPORT_WIFI),
+        hasEthernet = hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET),
+        hasCellular = hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR),
+        hasVpn = hasTransport(NetworkCapabilities.TRANSPORT_VPN)
+    )
+}
+
+internal class ConditionSnapshotAccumulator(
+    initialBattery: BatteryConditionStatus,
+    initialNetwork: NetworkConditionStatus,
+    private val onSnapshot: (TriggerConditionStatusSnapshot) -> Unit
+) {
+    private val lock = Any()
+    private var latestBattery: BatteryConditionStatus = initialBattery
+    private var latestNetwork: NetworkConditionStatus = initialNetwork
+
+    fun emitCurrent() {
+        synchronized(lock) {
+            onSnapshot(
+                TriggerConditionStatusSnapshot(
+                    battery = latestBattery,
+                    network = latestNetwork
+                )
+            )
+        }
+    }
+
+    fun updateBattery(updated: BatteryConditionStatus) {
+        synchronized(lock) {
+            latestBattery = updated
+            onSnapshot(
+                TriggerConditionStatusSnapshot(
+                    battery = latestBattery,
+                    network = latestNetwork
+                )
+            )
+        }
+    }
+
+    fun updateNetwork(updated: NetworkConditionStatus) {
+        synchronized(lock) {
+            latestNetwork = updated
+            onSnapshot(
+                TriggerConditionStatusSnapshot(
+                    battery = latestBattery,
+                    network = latestNetwork
+                )
+            )
+        }
+    }
+}
+
+internal class DefaultNetworkCallbackState<N> {
+    private var trackedNetwork: N? = null
+    private var lastCapabilitiesStatus: NetworkConditionStatus? = null
+    private var isBlocked: Boolean = false
+
+    fun onAvailable(network: N): NetworkConditionStatus? = synchronized(this) {
+        if (trackedNetwork != network) {
+            trackedNetwork = network
+            lastCapabilitiesStatus = null
+            isBlocked = false
+        }
+        null
+    }
+
+    fun onCapabilitiesChanged(
+        network: N,
+        status: NetworkConditionStatus
+    ): NetworkConditionStatus = synchronized(this) {
+        if (trackedNetwork != network) {
+            trackedNetwork = network
+            isBlocked = false
+        }
+        lastCapabilitiesStatus = status
+        status.copy(isBlocked = isBlocked)
+    }
+
+    fun onBlockedStatusChanged(
+        network: N,
+        blocked: Boolean
+    ): NetworkConditionStatus? = synchronized(this) {
+        if (trackedNetwork != null && trackedNetwork != network) {
+            return null
+        }
+        trackedNetwork = network
+        isBlocked = blocked
+        val cached = lastCapabilitiesStatus
+        when {
+            cached != null -> cached.copy(isBlocked = blocked)
+            blocked -> DISCONNECTED_NETWORK_STATUS.copy(isBlocked = true)
+            else -> null
+        }
+    }
+
+    fun onLost(network: N): NetworkConditionStatus? = synchronized(this) {
+        if (trackedNetwork == null || trackedNetwork == network) {
+            trackedNetwork = null
+            lastCapabilitiesStatus = null
+            isBlocked = false
+            DISCONNECTED_NETWORK_STATUS
+        } else {
+            null
+        }
+    }
+
+    fun onUnavailable(): NetworkConditionStatus = synchronized(this) {
+        trackedNetwork = null
+        lastCapabilitiesStatus = null
+        isBlocked = false
+        DISCONNECTED_NETWORK_STATUS
+    }
 }
 
 class ScheduleConditionMonitor(context: Context) {
@@ -180,27 +303,12 @@ class ScheduleConditionMonitor(context: Context) {
             appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
         }.getOrNull()
 
-        val lock = Any()
-        var latestBattery = readBatteryStatus(appContext)
-        var latestNetwork = readNetworkStatus(connectivityManager)
-
-        trySend(TriggerConditionStatusSnapshot(battery = latestBattery, network = latestNetwork))
-
-        fun updateBattery(updated: BatteryConditionStatus) {
-            val snapshot = synchronized(lock) {
-                latestBattery = updated
-                TriggerConditionStatusSnapshot(battery = latestBattery, network = latestNetwork)
-            }
-            trySend(snapshot)
-        }
-
-        fun updateNetwork(updated: NetworkConditionStatus) {
-            val snapshot = synchronized(lock) {
-                latestNetwork = updated
-                TriggerConditionStatusSnapshot(battery = latestBattery, network = latestNetwork)
-            }
-            trySend(snapshot)
-        }
+        val accumulator = ConditionSnapshotAccumulator(
+            initialBattery = readBatteryStatus(appContext),
+            initialNetwork = readNetworkStatus(connectivityManager),
+            onSnapshot = { snapshot -> trySend(snapshot) }
+        )
+        accumulator.emitCurrent()
 
         val batteryReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
@@ -213,7 +321,7 @@ class ScheduleConditionMonitor(context: Context) {
                     Intent.ACTION_POWER_DISCONNECTED -> readBatteryStatus(appContext)
                     else -> return
                 }
-                updateBattery(updated)
+                accumulator.updateBattery(updated)
             }
         }
 
@@ -235,50 +343,30 @@ class ScheduleConditionMonitor(context: Context) {
             true
         }.getOrDefault(false)
 
+        val networkCallbackState = DefaultNetworkCallbackState<Network>()
         val networkCallback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
-                updateNetwork(readNetworkStatus(connectivityManager))
+                networkCallbackState.onAvailable(network)?.let(accumulator::updateNetwork)
             }
 
             override fun onCapabilitiesChanged(
                 network: Network,
                 networkCapabilities: NetworkCapabilities
             ) {
-                val active = runCatching { connectivityManager?.activeNetwork }.getOrNull()
-                val updated = if (active == null || active == network) {
-                    evaluateCapabilities(networkCapabilities)
-                } else {
-                    readNetworkStatus(connectivityManager)
-                }
-                updateNetwork(updated)
+                val status = evaluateCapabilities(networkCapabilities)
+                accumulator.updateNetwork(networkCallbackState.onCapabilitiesChanged(network, status))
             }
 
             override fun onLost(network: Network) {
-                val active = runCatching { connectivityManager?.activeNetwork }.getOrNull()
-                val updated = if (active == null || active == network) {
-                    NetworkConditionStatus(
-                        isConnected = false,
-                        isUnmetered = false,
-                        transport = NetworkTransport.NONE
-                    )
-                } else {
-                    readNetworkStatus(connectivityManager)
-                }
-                updateNetwork(updated)
+                networkCallbackState.onLost(network)?.let(accumulator::updateNetwork)
             }
 
             override fun onUnavailable() {
-                updateNetwork(
-                    NetworkConditionStatus(
-                        isConnected = false,
-                        isUnmetered = false,
-                        transport = NetworkTransport.NONE
-                    )
-                )
+                accumulator.updateNetwork(networkCallbackState.onUnavailable())
             }
 
             override fun onBlockedStatusChanged(network: Network, blocked: Boolean) {
-                updateNetwork(readNetworkStatus(connectivityManager))
+                networkCallbackState.onBlockedStatusChanged(network, blocked)?.let(accumulator::updateNetwork)
             }
         }
 
@@ -336,42 +424,21 @@ class ScheduleConditionMonitor(context: Context) {
 
         private fun readNetworkStatus(connectivityManager: ConnectivityManager?): NetworkConditionStatus {
             if (connectivityManager == null) {
-                return NetworkConditionStatus(
-                    isConnected = false,
-                    isUnmetered = false,
-                    transport = NetworkTransport.NONE
-                )
+                return DISCONNECTED_NETWORK_STATUS
             }
             val activeNetwork = runCatching { connectivityManager.activeNetwork }.getOrNull()
-                ?: return NetworkConditionStatus(
-                    isConnected = false,
-                    isUnmetered = false,
-                    transport = NetworkTransport.NONE
-                )
+                ?: return DISCONNECTED_NETWORK_STATUS
             val capabilities = runCatching {
                 connectivityManager.getNetworkCapabilities(activeNetwork)
             }.getOrNull()
-                ?: return NetworkConditionStatus(
-                    isConnected = false,
-                    isUnmetered = false,
-                    transport = NetworkTransport.NONE
-                )
+                ?: return DISCONNECTED_NETWORK_STATUS
             return evaluateCapabilities(capabilities)
         }
 
         private fun evaluateCapabilities(capabilities: NetworkCapabilities): NetworkConditionStatus {
-            val hasInternet = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-            val isNotMetered = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED) ||
-                (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
-                    capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_TEMPORARILY_NOT_METERED))
-            return evaluateNetworkStatus(
-                hasActiveNetwork = true,
-                hasInternet = hasInternet,
-                isNotMetered = isNotMetered,
-                hasWifi = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI),
-                hasEthernet = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET),
-                hasCellular = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR),
-                hasVpn = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
+            return evaluateNetworkCapabilities(
+                hasCapability = capabilities::hasCapability,
+                hasTransport = capabilities::hasTransport
             )
         }
     }
