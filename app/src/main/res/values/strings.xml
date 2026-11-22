@@ -440,7 +440,6 @@
 
     <string name="system_title">System</string>
     <string name="root_access_denied">Root access denied</string>
-    <string name="checking_for_root">Checking for root…</string>
     <string name="root_access_granted">Root access granted</string>
 
     <string name="storage_permission_enabled">All files access granted</string>

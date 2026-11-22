@@ -79,7 +79,7 @@ class SettingsViewModel(
     private val localNetworkPermissionRepository: LocalNetworkPermissionRepository
 ) : ViewModel() {
 
-    val rootState = rootRepository.rootState
+    val hasRoot = rootRepository.hasRoot
     val resticState = resticBinaryManager.resticState
     val rcloneState = resticBinaryManager.rcloneState
 
@@ -87,12 +87,12 @@ class SettingsViewModel(
     val selectedRepository = repositoriesRepository.selectedRepository
     val notificationPermissionState = notificationRepository.permissionState
     val storagePermissionState = storagePermissionRepository.permissionState
-    val hasStorageAccess: StateFlow<Boolean> = combine(rootState, storagePermissionState) { root, storage ->
-        root == RootState.Granted || storage == StoragePermissionState.Granted
+    val hasStorageAccess: StateFlow<Boolean> = combine(hasRoot, storagePermissionState) { root, storage ->
+        root || storage == StoragePermissionState.Granted
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = rootState.value == RootState.Granted || storagePermissionRepository.hasStoragePermission()
+        initialValue = hasRoot.value || storagePermissionRepository.hasStoragePermission()
     )
     val localNetworkPermissionState = localNetworkPermissionRepository.permissionState
 
@@ -179,9 +179,9 @@ class SettingsViewModel(
         }
     }
 
-    fun requestRootAccess() {
+    fun refreshRootAccess() {
         viewModelScope.launch {
-            refreshRootDependentState()
+            rootRepository.checkRootAccess()
         }
     }
 
@@ -191,20 +191,20 @@ class SettingsViewModel(
     }
 
     fun refreshSystemState() {
+        if (hasRoot.value) {
+            viewModelScope.launch {
+                rootRepository.checkRootAccess()
+            }
+        }
         viewModelScope.launch {
-            refreshRootDependentState()
+            withContext(Dispatchers.IO) {
+                resticBinaryManager.checkResticStatus()
+                repositoriesRepository.loadRepositories()
+            }
             refreshBatteryOptimizationStatus()
             checkNotificationPermission()
             checkStoragePermission()
             refreshDeviceHostnameState()
-        }
-    }
-
-    private suspend fun refreshRootDependentState() {
-        rootRepository.checkRootAccess()
-        withContext(Dispatchers.IO) {
-            resticBinaryManager.checkResticStatus()
-            repositoriesRepository.loadRepositories()
         }
     }
 
@@ -528,9 +528,8 @@ class SettingsViewModel(
 
         if (backendType == RepositoryBackendType.LOCAL) {
             checkStoragePermission()
-            val hasRoot = rootState.value == RootState.Granted
             val hasStorage = storagePermissionRepository.hasStoragePermission()
-            if (!hasRoot && !hasStorage) {
+            if (!hasRoot.value && !hasStorage) {
                 _addRepoUiState.update {
                     it.copy(state = AddRepositoryState.Error(context.getString(R.string.storage_permission_disabled)))
                 }

@@ -62,7 +62,6 @@ class RestoidApplication : Application() {
         )
 
         // Initialize specialized components
-        rootRepository = RootRepository()
         storagePermissionRepository = StoragePermissionRepository(applicationContext)
         localNetworkPermissionRepository = LocalNetworkPermissionRepository(applicationContext)
         resticBinaryManager = ResticBinaryManager(applicationContext)
@@ -82,6 +81,11 @@ class RestoidApplication : Application() {
         operationLockManager = OperationLockManager(applicationContext)
         operationRequestStore = OperationRequestStore(applicationContext)
         operationRuntimeRepository = OperationRuntimeRepository(applicationContext)
+        rootRepository = RootRepository(
+            loadPersistedHasRoot = preferencesRepository::loadHasRoot,
+            savePersistedHasRoot = preferencesRepository::saveHasRoot,
+            isShellBusy = { operationRuntimeRepository.state.value.isRunning }
+        )
         operationLogRepository = OperationLogRepository(applicationContext)
         operationWorkRepository = OperationWorkRepository(
             applicationContext,
@@ -93,7 +97,6 @@ class RestoidApplication : Application() {
         notificationRepository.createNotificationChannels()
 
         applicationScope.launch {
-            rootRepository.checkRootAccess()
             resticBinaryManager.checkResticStatus() // New manager handles checks
             repositoriesRepository.loadRepositories()
             scheduleRepository.reconcileAllSchedules()
