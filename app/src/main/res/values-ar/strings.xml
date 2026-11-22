@@ -74,8 +74,21 @@
     <string name="run_tasks_device_data">Device Data</string>
     <string name="title_device_data">Device Data</string>
     <string name="device_data_contacts">Contacts</string>
-    <string name="device_data_include_read_only_contacts">Include read-only contacts</string>
     <string name="device_data_contacts_permission_required">Contacts permission required</string>
+    <string name="device_data_contacts_all_accounts">All accounts</string>
+    <string name="device_data_contacts_none_selected">No accounts selected</string>
+    <plurals name="device_data_contacts_accounts_selected_count">
+        <item quantity="zero">%1$d accounts selected</item>
+        <item quantity="one">%1$d account selected</item>
+        <item quantity="two">%1$d accounts selected</item>
+        <item quantity="few">%1$d accounts selected</item>
+        <item quantity="many">%1$d accounts selected</item>
+        <item quantity="other">%1$d accounts selected</item>
+    </plurals>
+    <string name="device_data_contacts_options_title">Contact accounts</string>
+    <string name="device_data_contacts_accounts_empty">No contact accounts found on this device</string>
+    <string name="device_data_contacts_local_account">Device</string>
+    <string name="device_data_contacts_read_only">Read-only</string>
     <string name="device_data_contacts_not_in_snapshot">Not included in this snapshot</string>
     <string name="device_data_call_logs">Call Logs</string>
     <string name="device_data_call_logs_permission_required">Call logs permission required</string>
@@ -173,6 +186,8 @@
     <string name="summary_all_files_access_required">امنح صلاحية الوصول إلى كافة الملفات، ثم حاول مرة أخرى.</string>
     <string name="error_contacts_read_permission_required">Contacts permission is required to back up contacts.</string>
     <string name="summary_contacts_read_permission_required">Grant Contacts permission, then try again.</string>
+    <string name="error_contacts_none_selected">No contact accounts selected to back up.</string>
+    <string name="summary_contacts_none_selected">Select at least one contact account in Device Data settings.</string>
     <string name="error_contacts_write_permission_required">Contacts permission is required to restore contacts.</string>
     <string name="error_call_logs_read_permission_required">Call logs permission is required to back up call logs.</string>
     <string name="summary_call_logs_read_permission_required">Grant Call logs permission, then try again.</string>
@@ -364,6 +379,9 @@
     <string name="cd_sort_apps">Sort apps</string>
     <string name="sort_by_name">الاسم</string>
     <string name="sort_by_size">الحجم</string>
+    <string name="sort_by_installation_date">Installation Date</string>
+    <string name="sort_ascending">Ascending</string>
+    <string name="sort_descending">Descending</string>
     <string name="dialog_forget_snapshot_title">هل تريد نسيان اللقطة؟</string>
     <string name="dialog_forget_snapshot_failed_title">Failed to Forget Snapshot</string>
     <string name="dialog_forget_snapshot_message">سيؤدي هذا إلى إزالة إدخال اللقطة. سيتم حذف البيانات الفعلية فقط بعد تشغيل عملية تنظيف. هل أنت متأكد؟</string>
@@ -671,6 +689,7 @@
         <item quantity="many">%1$d/%2$d من الملفات</item>
         <item quantity="other">%1$d/%2$d من الملفات</item>
     </plurals>
+    <string name="notification_activity_items_progress">%1$s (%2$d / %3$d)</string>
     <string name="notification_scanning_files">جاري فحص الملفات…</string>
     <string name="notification_operation_finished_success">تمت عملية %1$s بنجاح</string>
     <string name="notification_operation_finished_failure">فشلت عملية %1$s</string>
@@ -739,6 +758,28 @@
     <string name="restic_executor_failure_not_ready">Restic غير مثبت أو غير جاهز.</string>
     <string name="restic_executor_failure_invalid_env_name">اسم واحد أو أكثر من أسماء متغيرات البيئة غير صالح.</string>
     <string name="restic_executor_failure_invalid_option_name">اسم واحد أو أكثر من خيارات Restic غير صالح.</string>
+    <string name="prune_phase_loading_indexes">Loading indexes…</string>
+    <string name="prune_phase_loading_snapshots">Loading snapshots…</string>
+    <string name="prune_phase_finding_used_data">Finding data in use</string>
+    <string name="prune_phase_searching_used_packs">Searching used packs…</string>
+    <string name="prune_phase_collecting_packs">Analyzing packs</string>
+    <string name="prune_phase_deleting_unreferenced">Deleting unreferenced packs</string>
+    <string name="prune_phase_repacking_packs">Repacking packs</string>
+    <string name="prune_phase_rebuilding_index">Rebuilding index</string>
+    <string name="prune_phase_removing_old_packs">Removing old packs</string>
+    <string name="prune_phase_done">Finishing prune…</string>
+    <plurals name="maintenance_summary_blobs">
+        <item quantity="zero">%d blobs</item>
+        <item quantity="one">%d blob</item>
+        <item quantity="two">%d blobs</item>
+        <item quantity="few">%d blobs</item>
+        <item quantity="many">%d blobs</item>
+        <item quantity="other">%d blobs</item>
+    </plurals>
+    <string name="maintenance_summary_prune_freed_and_repacked">Pruned %1$s (%2$s), repacked %3$s (%4$s). Remaining: %5$s (%6$s).</string>
+    <string name="maintenance_summary_prune_freed">Pruned %1$s (%2$s). Remaining: %3$s (%4$s).</string>
+    <string name="maintenance_summary_prune_repacked">Repacked %1$s (%2$s). Remaining: %3$s (%4$s).</string>
+    <string name="maintenance_summary_prune_nothing_removed">No data removed. Remaining: %1$s (%2$s).</string>
     <string name="maintenance_summary_prune_completed">اكتملت عملية التنظيف (Prune).</string>
     <plurals name="maintenance_summary_removed_snapshots">
         <item quantity="zero">تمت إزالة %1$d لقطات.</item>
