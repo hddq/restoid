@@ -10,10 +10,37 @@ data class CustomDirectoryMetadata(
 )
 
 @Serializable
+data class BackedUpContactAccountSummary(
+    val selectionKey: String,
+    val accountName: String = "",
+    val accountType: String = "",
+    val displayName: String,
+    val accountTypeLabel: String? = null,
+    val isLocal: Boolean = false,
+    val isReadOnly: Boolean = false,
+    val contactCount: Int = 0
+)
+
+@Serializable
+data class BackedUpCalendarSummary(
+    val selectionKey: String,
+    val name: String = "",
+    val displayName: String,
+    val accountName: String = "",
+    val accountType: String = "",
+    val color: Int? = null,
+    val timeZone: String? = null,
+    val isReadOnly: Boolean = false,
+    val eventCount: Int = 0
+)
+
+@Serializable
 data class ContactsBackupMetadata(
     val count: Int,
     val size: Long,
-    val path: String
+    val path: String,
+    /** Backwards compatibility: null for snapshots created before contact account summaries were stored in restoid.json. */
+    val accounts: List<BackedUpContactAccountSummary>? = null
 )
 
 @Serializable
@@ -28,7 +55,10 @@ data class CalendarBackupMetadata(
     val count: Int,
     val size: Long,
     val path: String,
-    val calendarCount: Int? = null
+    /** Backwards compatibility: null for snapshots created before calendar counts were stored in restoid.json. */
+    val calendarCount: Int? = null,
+    /** Backwards compatibility: null for snapshots created before calendar summaries were stored in restoid.json. */
+    val calendars: List<BackedUpCalendarSummary>? = null
 )
 
 @Serializable

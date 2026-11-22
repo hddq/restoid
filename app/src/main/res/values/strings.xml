@@ -90,6 +90,7 @@
     </plurals>
     <string name="device_data_contacts_options_title">Contact accounts</string>
     <string name="device_data_contacts_accounts_empty">No contact accounts found on this device</string>
+    <string name="device_data_contacts_accounts_snapshot_empty">No contact accounts found in this snapshot</string>
     <string name="device_data_contacts_local_account">Device</string>
     <string name="device_data_contacts_read_only">Read-only</string>
     <string name="device_data_contacts_not_in_snapshot">Not included in this snapshot</string>
@@ -98,6 +99,7 @@
     <string name="device_data_permissions_required">Permissions required</string>
     <string name="device_data_not_in_snapshot">Not included in this snapshot</string>
     <string name="device_data_none_selected">No items selected</string>
+    <string name="restore_device_data_load_failed">Failed to load options from snapshot.</string>
     <plurals name="device_data_contacts_count">
         <item quantity="one">%1$d contact</item>
         <item quantity="other">%1$d contacts</item>
@@ -118,6 +120,7 @@
     </plurals>
     <string name="device_data_calendar_options_title">Calendars</string>
     <string name="device_data_calendar_empty">No calendars found on this device</string>
+    <string name="device_data_calendar_snapshot_empty">No calendars found in this snapshot</string>
     <string name="device_data_calendar_read_only">Read-only</string>
     <plurals name="device_data_calendar_events_count">
         <item quantity="one">%1$d event</item>
@@ -344,6 +347,7 @@
     <string name="action_grant">Grant</string>
     <string name="action_settings">Settings</string>
     <string name="action_forget">Forget</string>
+    <string name="action_retry">Retry</string>
     <string name="action_try_again">Try Again</string>
     <string name="action_disable">Disable</string>
     <string name="action_enable">Enable</string>
@@ -546,6 +550,10 @@
     <string name="restore_stage_cleanup">Cleanup</string>
     <string name="restore_error_preflight_failed">Pre-restore checks failed.</string>
     <string name="restore_error_no_items_selected">No items selected for restore.</string>
+    <string name="restore_error_contacts_none_selected">No contact accounts selected to restore.</string>
+    <string name="restore_summary_contacts_none_selected">Select at least one contact account to restore.</string>
+    <string name="restore_error_calendar_none_selected">No calendars selected to restore.</string>
+    <string name="restore_summary_calendar_none_selected">Select at least one calendar to restore.</string>
     <string name="restore_error_no_restore_types_selected">No restore types selected.</string>
     <string name="restore_error_password_not_found">Password not found for repository.</string>
     <string name="restore_error_no_files_found">No files found in the snapshot for the selected items.</string>
@@ -571,10 +579,12 @@
     <string name="restore_failure_contact_groups">Failed to restore %1$d contact groups.</string>
     <string name="restore_failure_contact_photos">Failed to restore %1$d contact photos.</string>
     <string name="restore_failure_contacts_missing">Contacts backup data not found in snapshot.</string>
+    <string name="restore_failure_contacts_selection_not_found">None of the selected contact accounts were found in this snapshot.</string>
     <string name="restore_failure_call_logs">Failed to restore %1$d call logs.</string>
     <string name="restore_failure_call_logs_missing">Call logs backup data not found in snapshot.</string>
     <string name="restore_failure_calendar">Failed to restore %1$d calendar events.</string>
     <string name="restore_failure_calendar_missing">Calendar backup data not found in snapshot.</string>
+    <string name="restore_failure_calendar_selection_not_found">None of the selected calendars were found in this snapshot.</string>
     <string name="restore_summary_finished_in">Restore finished in %1$s. </string>
     <plurals name="restore_summary_processed_items">
         <item quantity="one">Successfully processed %1$d item.</item>

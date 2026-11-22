@@ -109,6 +109,20 @@ class RestoreOperationRunner(
                 throw IllegalStateException(context.getString(R.string.root_access_denied))
             }
 
+            if (request.deviceData.contacts &&
+                !request.deviceData.selectAllContactAccounts &&
+                request.deviceData.selectedContactAccountKeys.isEmpty()
+            ) {
+                throw IllegalStateException(context.getString(R.string.restore_error_contacts_none_selected))
+            }
+
+            if (request.deviceData.calendar &&
+                !request.deviceData.selectAllCalendars &&
+                request.deviceData.selectedCalendarKeys.isEmpty()
+            ) {
+                throw IllegalStateException(context.getString(R.string.restore_error_calendar_none_selected))
+            }
+
             if (request.deviceData.contacts && !contactsBackupRepository.hasWriteContactsPermission()) {
                 throw IllegalStateException(context.getString(R.string.error_contacts_write_permission_required))
             }
@@ -553,6 +567,8 @@ class RestoreOperationRunner(
                     if (contactsSourceDir != null && File(contactsSourceDir, ContactsBackupRepository.CONTACTS_FILE_NAME).exists()) {
                         val importResult = contactsBackupRepository.importContacts(
                             inputDir = contactsSourceDir,
+                            selectAllContactAccounts = request.deviceData.selectAllContactAccounts,
+                            selectedContactAccountKeys = request.deviceData.selectedContactAccountKeys,
                             shouldStop = shouldStop,
                             onContactProcessed = { processed, total, displayName ->
                                 val itemFraction = if (total > 0) processed.toFloat() / total.toFloat() else 1f
@@ -573,7 +589,10 @@ class RestoreOperationRunner(
                             }
                         )
                         throwIfCancelled()
-                        if (importResult.failedCount == 0 && importResult.failedGroupCount == 0 && importResult.failedPhotoCount == 0) {
+                        if (importResult.unmatchedSelection) {
+                            failures++
+                            failureDetails.add(context.getString(R.string.restore_failure_contacts_selection_not_found))
+                        } else if (importResult.failedCount == 0 && importResult.failedGroupCount == 0 && importResult.failedPhotoCount == 0) {
                             successes++
                         } else {
                             failures++
@@ -651,6 +670,8 @@ class RestoreOperationRunner(
                     if (calendarSourceDir != null && File(calendarSourceDir, CalendarBackupRepository.CALENDAR_FILE_NAME).exists()) {
                         val importResult = calendarBackupRepository.importCalendars(
                             inputDir = calendarSourceDir,
+                            selectAllCalendars = request.deviceData.selectAllCalendars,
+                            selectedCalendarKeys = request.deviceData.selectedCalendarKeys,
                             shouldStop = shouldStop,
                             onEventProcessed = { processed, total, label ->
                                 val itemFraction = if (total > 0) processed.toFloat() / total.toFloat() else 1f
@@ -671,7 +692,10 @@ class RestoreOperationRunner(
                             }
                         )
                         throwIfCancelled()
-                        if (importResult.failedCount == 0) {
+                        if (importResult.unmatchedSelection) {
+                            failures++
+                            failureDetails.add(context.getString(R.string.restore_failure_calendar_selection_not_found))
+                        } else if (importResult.failedCount == 0) {
                             successes++
                         } else {
                             failures++

@@ -14,6 +14,7 @@ import android.telephony.PhoneNumberUtils
 import android.telephony.TelephonyManager
 import androidx.core.content.ContextCompat
 import io.github.hddq.restoid.R
+import io.github.hddq.restoid.model.BackedUpContactAccountSummary
 import io.github.hddq.restoid.model.BackedUpContactDataRow
 import io.github.hddq.restoid.model.BackedUpContactGroup
 import io.github.hddq.restoid.model.BackedUpRawContact
@@ -23,7 +24,9 @@ import io.github.hddq.restoid.model.buildContactAccountSelectionKey
 import io.github.hddq.restoid.model.buildContactDedupKeys
 import io.github.hddq.restoid.model.coalesceContactsForImport
 import io.github.hddq.restoid.model.extractDedupKeys
+import io.github.hddq.restoid.model.filterContactsArchiveForRestore
 import io.github.hddq.restoid.model.selectExportedContactGroups
+import io.github.hddq.restoid.model.summarizeBackedUpContactAccounts
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
@@ -37,7 +40,8 @@ import java.util.Locale
 data class ExportedContactsResult(
     val contactCount: Int,
     val totalSizeBytes: Long,
-    val outputDir: File
+    val outputDir: File,
+    val accounts: List<BackedUpContactAccountSummary> = emptyList()
 )
 
 data class ImportedContactsResult(
@@ -45,7 +49,8 @@ data class ImportedContactsResult(
     val skippedCount: Int,
     val failedCount: Int,
     val failedGroupCount: Int = 0,
-    val failedPhotoCount: Int = 0
+    val failedPhotoCount: Int = 0,
+    val unmatchedSelection: Boolean = false
 )
 
 private data class EnsureLocalGroupsResult(
@@ -374,18 +379,53 @@ class ContactsBackupRepository(private val context: Context) {
         File(outputDir, CONTACTS_FILE_NAME).writeText(json.encodeToString(archive))
 
         val totalSizeBytes = outputDir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
-        ExportedContactsResult(exportedContacts.size, totalSizeBytes, outputDir)
+        val accountSummaries = summarizeBackedUpContactAccounts(
+            contacts = exportedContacts,
+            localDisplayName = context.getString(R.string.device_data_contacts_local_account),
+            authenticatorLabelByType = resolveAuthenticatorLabels(),
+            readOnlyAccountTypes = readOnlyAccountTypes
+        )
+        ExportedContactsResult(exportedContacts.size, totalSizeBytes, outputDir, accountSummaries)
+    }
+
+    fun parseContactAccountsFromArchiveJson(content: String): List<BackedUpContactAccountSummary> {
+        val archive = json.decodeFromString<ContactsBackupArchive>(content)
+        // Backwards compatibility: legacy snapshots lack contact account summaries in restoid.json;
+        // resolve authenticator labels on the restoring device as a best-effort fallback.
+        return summarizeBackedUpContactAccounts(
+            contacts = archive.contacts,
+            localDisplayName = context.getString(R.string.device_data_contacts_local_account),
+            authenticatorLabelByType = resolveAuthenticatorLabels()
+        )
     }
 
     suspend fun importContacts(
         inputDir: File,
+        selectAllContactAccounts: Boolean = true,
+        selectedContactAccountKeys: Set<String> = emptySet(),
         shouldStop: () -> Boolean = { false },
         onContactProcessed: (processed: Int, total: Int, displayName: String?) -> Unit = { _, _, _ -> }
     ): ImportedContactsResult = withContext(Dispatchers.IO) {
+        if (!selectAllContactAccounts && selectedContactAccountKeys.isEmpty()) {
+            throw IllegalStateException(context.getString(R.string.restore_error_contacts_none_selected))
+        }
         val archiveFile = File(inputDir, CONTACTS_FILE_NAME)
         require(archiveFile.exists()) { "Contacts backup file not found: ${archiveFile.absolutePath}" }
 
-        val archive = json.decodeFromString<ContactsBackupArchive>(archiveFile.readText())
+        val rawArchive = json.decodeFromString<ContactsBackupArchive>(archiveFile.readText())
+        val archive = filterContactsArchiveForRestore(
+            archive = rawArchive,
+            selectAllContactAccounts = selectAllContactAccounts,
+            selectedContactAccountKeys = selectedContactAccountKeys
+        )
+        if (!selectAllContactAccounts && archive.contacts.isEmpty()) {
+            return@withContext ImportedContactsResult(
+                restoredCount = 0,
+                skippedCount = 0,
+                failedCount = 0,
+                unmatchedSelection = true
+            )
+        }
         val photosDir = File(inputDir, PHOTOS_DIR_NAME)
         val resolver = context.contentResolver
         val deviceCountryIso = resolveDeviceCountryIso()

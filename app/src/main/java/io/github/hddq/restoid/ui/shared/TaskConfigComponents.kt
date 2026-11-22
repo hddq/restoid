@@ -2271,12 +2271,14 @@ fun DeviceDataConfigScreen(
 
 internal const val CONTACTS_OPTIONS_SELECT_ALL_TAG = "contacts_options_select_all"
 internal const val CONTACTS_OPTION_ROW_TAG_PREFIX = "contacts_option_row_"
+internal const val CONTACTS_OPTIONS_LOADING_TAG = "contacts_options_loading"
 internal const val CALENDAR_OPTIONS_SELECT_ALL_TAG = "calendar_options_select_all"
 internal const val CALENDAR_OPTION_ROW_TAG_PREFIX = "calendar_option_row_"
+internal const val CALENDAR_OPTIONS_LOADING_TAG = "calendar_options_loading"
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun ContactsOptionsBottomSheet(
+internal fun ContactsOptionsBottomSheet(
     selectAllContactAccounts: Boolean,
     selectedContactAccountKeys: Set<String>,
     availableContactAccounts: List<ContactAccountInfo>,
@@ -2285,7 +2287,10 @@ private fun ContactsOptionsBottomSheet(
     onRequestPermission: () -> Unit,
     onToggleAllContactAccounts: () -> Unit,
     onToggleContactAccount: (String) -> Unit,
-    onDismissRequest: () -> Unit
+    onDismissRequest: () -> Unit,
+    errorMessage: String? = null,
+    onRetry: (() -> Unit)? = null,
+    emptyMessage: String = stringResource(R.string.device_data_contacts_accounts_empty)
 ) {
     val readOnlyLabel = stringResource(R.string.device_data_contacts_read_only)
     val isAllSelected = selectAllContactAccounts ||
@@ -2310,10 +2315,33 @@ private fun ContactsOptionsBottomSheet(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .testTag(CONTACTS_OPTIONS_LOADING_TAG)
                             .padding(vertical = 24.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         LoadingIndicator()
+                    }
+                }
+                errorMessage != null && availableContactAccounts.isEmpty() -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = errorMessage,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        if (onRetry != null) {
+                            FilledTonalButton(
+                                onClick = onRetry,
+                                shape = MaterialTheme.shapes.extraLarge
+                            ) {
+                                Text(stringResource(R.string.action_retry))
+                            }
+                        }
                     }
                 }
                 !hasReadContactsPermission && availableContactAccounts.isEmpty() -> {
@@ -2338,7 +2366,7 @@ private fun ContactsOptionsBottomSheet(
                 }
                 availableContactAccounts.isEmpty() -> {
                     Text(
-                        text = stringResource(R.string.device_data_contacts_accounts_empty),
+                        text = emptyMessage,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(vertical = 12.dp)
@@ -2368,6 +2396,10 @@ private fun ContactsOptionsBottomSheet(
                                 }
                                 if (account.isReadOnly) {
                                     add(readOnlyLabel)
+                                }
+                                val itemCount = account.itemCount
+                                if (itemCount != null) {
+                                    add(pluralStringResource(R.plurals.device_data_contacts_count, itemCount, itemCount))
                                 }
                             }.joinToString(" • ").ifEmpty { null }
 
@@ -2431,7 +2463,7 @@ private fun ContactsOptionsBottomSheet(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun CalendarOptionsBottomSheet(
+internal fun CalendarOptionsBottomSheet(
     selectAllCalendars: Boolean,
     selectedCalendarKeys: Set<String>,
     availableCalendars: List<CalendarInfo>,
@@ -2440,7 +2472,10 @@ private fun CalendarOptionsBottomSheet(
     onRequestPermission: () -> Unit,
     onToggleAllCalendars: () -> Unit,
     onToggleCalendar: (String) -> Unit,
-    onDismissRequest: () -> Unit
+    onDismissRequest: () -> Unit,
+    errorMessage: String? = null,
+    onRetry: (() -> Unit)? = null,
+    emptyMessage: String = stringResource(R.string.device_data_calendar_empty)
 ) {
     val readOnlyLabel = stringResource(R.string.device_data_calendar_read_only)
     val isAllSelected = selectAllCalendars ||
@@ -2465,10 +2500,33 @@ private fun CalendarOptionsBottomSheet(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .testTag(CALENDAR_OPTIONS_LOADING_TAG)
                             .padding(vertical = 24.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         LoadingIndicator()
+                    }
+                }
+                errorMessage != null && availableCalendars.isEmpty() -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = errorMessage,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        if (onRetry != null) {
+                            FilledTonalButton(
+                                onClick = onRetry,
+                                shape = MaterialTheme.shapes.extraLarge
+                            ) {
+                                Text(stringResource(R.string.action_retry))
+                            }
+                        }
                     }
                 }
                 !hasReadCalendarPermission && availableCalendars.isEmpty() -> {
@@ -2493,7 +2551,7 @@ private fun CalendarOptionsBottomSheet(
                 }
                 availableCalendars.isEmpty() -> {
                     Text(
-                        text = stringResource(R.string.device_data_calendar_empty),
+                        text = emptyMessage,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(vertical = 12.dp)
@@ -2523,6 +2581,10 @@ private fun CalendarOptionsBottomSheet(
                                 }
                                 if (calendar.isReadOnly) {
                                     add(readOnlyLabel)
+                                }
+                                val itemCount = calendar.itemCount
+                                if (itemCount != null) {
+                                    add(pluralStringResource(R.plurals.device_data_calendar_events_count, itemCount, itemCount))
                                 }
                             }.joinToString(" • ").ifEmpty { null }
 

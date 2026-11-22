@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.AppInfoRepository
+import io.github.hddq.restoid.data.CalendarBackupRepository
+import io.github.hddq.restoid.data.ContactsBackupRepository
 import io.github.hddq.restoid.data.MetadataRepository
 import io.github.hddq.restoid.data.OperationType
 import io.github.hddq.restoid.data.RepositoriesRepository
@@ -15,10 +17,14 @@ import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.BackupDetail
 import io.github.hddq.restoid.model.CalendarBackupMetadata
+import io.github.hddq.restoid.model.CalendarInfo
 import io.github.hddq.restoid.model.CallLogsBackupMetadata
+import io.github.hddq.restoid.model.ContactAccountInfo
 import io.github.hddq.restoid.model.ContactsBackupMetadata
 import io.github.hddq.restoid.model.CustomDirectoryMetadata
 import io.github.hddq.restoid.model.RestoidMetadata
+import io.github.hddq.restoid.model.toCalendarInfo
+import io.github.hddq.restoid.model.toContactAccountInfo
 import io.github.hddq.restoid.ui.shared.AppSortOrder
 import io.github.hddq.restoid.ui.shared.OperationProgress
 import io.github.hddq.restoid.ui.shared.sortBackupDetails
@@ -28,6 +34,7 @@ import io.github.hddq.restoid.work.RestoreAppSelection
 import io.github.hddq.restoid.work.RestoreTypeSelection
 import io.github.hddq.restoid.work.RestoreWorkRequest
 import kotlinx.serialization.Serializable
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -37,6 +44,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 @Serializable
 data class RestoreTypes(
@@ -104,6 +114,13 @@ class RestoreViewModel(
 ) : ViewModel() {
 
     private var snapshotMetadata: RestoidMetadata? = null
+    private val metadataUpdateMutex = Mutex()
+    private val contactsBackupRepository = ContactsBackupRepository(application)
+    private val calendarBackupRepository = CalendarBackupRepository(application)
+    private var contactAccountsLoadRequestId = 0L
+    private var calendarsLoadRequestId = 0L
+    private var contactAccountsLoaded = false
+    private var calendarsLoaded = false
 
     private val _snapshot = MutableStateFlow<SnapshotInfo?>(null)
     val snapshot = _snapshot.asStateFlow()
@@ -128,6 +145,36 @@ class RestoreViewModel(
 
     private val _calendarMetadata = MutableStateFlow<CalendarBackupMetadata?>(null)
     val calendarMetadata = _calendarMetadata.asStateFlow()
+
+    private val _selectAllContactAccounts = MutableStateFlow(true)
+    val selectAllContactAccounts = _selectAllContactAccounts.asStateFlow()
+
+    private val _selectedContactAccountKeys = MutableStateFlow<Set<String>>(emptySet())
+    val selectedContactAccountKeys = _selectedContactAccountKeys.asStateFlow()
+
+    private val _availableContactAccounts = MutableStateFlow<List<ContactAccountInfo>>(emptyList())
+    val availableContactAccounts = _availableContactAccounts.asStateFlow()
+
+    private val _isLoadingContactAccounts = MutableStateFlow(false)
+    val isLoadingContactAccounts = _isLoadingContactAccounts.asStateFlow()
+
+    private val _contactAccountsError = MutableStateFlow<String?>(null)
+    val contactAccountsError = _contactAccountsError.asStateFlow()
+
+    private val _selectAllCalendars = MutableStateFlow(true)
+    val selectAllCalendars = _selectAllCalendars.asStateFlow()
+
+    private val _selectedCalendarKeys = MutableStateFlow<Set<String>>(emptySet())
+    val selectedCalendarKeys = _selectedCalendarKeys.asStateFlow()
+
+    private val _availableCalendars = MutableStateFlow<List<CalendarInfo>>(emptyList())
+    val availableCalendars = _availableCalendars.asStateFlow()
+
+    private val _isLoadingCalendars = MutableStateFlow(false)
+    val isLoadingCalendars = _isLoadingCalendars.asStateFlow()
+
+    private val _calendarsError = MutableStateFlow<String?>(null)
+    val calendarsError = _calendarsError.asStateFlow()
 
     private val _isLoading = MutableStateFlow(true)
     val isLoading = _isLoading.asStateFlow()
@@ -337,6 +384,38 @@ class RestoreViewModel(
         _restoreCallLogsEnabled.value = callLogsMeta != null
         _restoreCalendarEnabled.value = calendarMeta != null
         _restoreDeviceDataEnabled.value = contactsMeta != null || callLogsMeta != null || calendarMeta != null
+
+        contactAccountsLoadRequestId++
+        calendarsLoadRequestId++
+        val localDisplayName = application.getString(R.string.device_data_contacts_local_account)
+
+        _selectAllContactAccounts.value = true
+        _selectedContactAccountKeys.value = emptySet()
+        _isLoadingContactAccounts.value = false
+        _contactAccountsError.value = null
+        val savedContactAccounts = contactsMeta?.accounts
+        if (contactsMeta != null && savedContactAccounts != null) {
+            _availableContactAccounts.value = savedContactAccounts.map { it.toContactAccountInfo(localDisplayName) }
+            contactAccountsLoaded = true
+        } else {
+            _availableContactAccounts.value = emptyList()
+            contactAccountsLoaded = false
+        }
+
+        _selectAllCalendars.value = true
+        _selectedCalendarKeys.value = emptySet()
+        _isLoadingCalendars.value = false
+        _calendarsError.value = null
+        val savedCalendars = calendarMeta?.calendars
+        if (calendarMeta != null && savedCalendars != null) {
+            _availableCalendars.value = savedCalendars.map {
+                it.toCalendarInfo(CalendarBackupRepository.DEFAULT_CALENDAR_COLOR)
+            }
+            calendarsLoaded = true
+        } else {
+            _availableCalendars.value = emptyList()
+            calendarsLoaded = false
+        }
     }
 
     fun setSortOrder(order: AppSortOrder) {
@@ -368,6 +447,327 @@ class RestoreViewModel(
 
     fun setRestoreCalendarEnabled(enabled: Boolean) {
         _restoreCalendarEnabled.value = enabled
+    }
+
+    fun loadSnapshotContactAccounts(force: Boolean = false) {
+        val meta = _contactsMetadata.value
+        if (meta == null) {
+            _availableContactAccounts.value = emptyList()
+            _isLoadingContactAccounts.value = false
+            _contactAccountsError.value = null
+            contactAccountsLoaded = false
+            return
+        }
+
+        val localDisplayName = application.getString(R.string.device_data_contacts_local_account)
+        val cachedSummaries = meta.accounts
+        if (!force && cachedSummaries != null) {
+            if (!contactAccountsLoaded || _availableContactAccounts.value.isEmpty()) {
+                _availableContactAccounts.value = cachedSummaries.map { it.toContactAccountInfo(localDisplayName) }
+                contactAccountsLoaded = true
+            }
+            _contactAccountsError.value = null
+            return
+        }
+
+        if (!force && (_isLoadingContactAccounts.value || contactAccountsLoaded)) return
+
+        val currentSnapshot = _snapshot.value
+        if (currentSnapshot == null) {
+            _contactAccountsError.value = application.getString(R.string.restore_device_data_load_failed)
+            return
+        }
+
+        val requestId = ++contactAccountsLoadRequestId
+        _isLoadingContactAccounts.value = true
+        _contactAccountsError.value = null
+
+        viewModelScope.launch {
+            try {
+                // Backwards compatibility: legacy snapshots do not record contact account summaries in restoid.json,
+                // so inspect contacts.json via `restic dump --no-lock` on demand and cache summaries in MetadataRepository.
+                val selectedRepoKey = repositoriesRepository.selectedRepository.first()
+                val repo = selectedRepoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
+                val repoPath = repo?.path
+                val repoId = repo?.id
+                val password = selectedRepoKey?.let { repositoriesRepository.getRepositoryPassword(it) }
+                if (repoPath == null || repoId == null || password == null) {
+                    throw IllegalStateException(application.getString(R.string.error_repository_password_or_id_not_found))
+                }
+                val directPath = "${meta.path.trimEnd('/')}/${ContactsBackupRepository.CONTACTS_FILE_NAME}"
+                val (content, resolvedDirPath) = withContext(Dispatchers.IO) {
+                    val executionEnvironment = repositoriesRepository.getExecutionEnvironmentVariables(selectedRepoKey)
+                    val resticOptions = repositoriesRepository.getExecutionResticOptions(selectedRepoKey)
+                    val directDump = resticRepository.dump(
+                        repoPath = repoPath,
+                        password = password,
+                        snapshotId = currentSnapshot.id,
+                        filePath = directPath,
+                        environmentVariables = executionEnvironment,
+                        resticOptions = resticOptions,
+                        noLock = true
+                    )
+                    directDump.fold(
+                        onSuccess = { dumped -> dumped to null },
+                        onFailure = { directError ->
+                            val paths = resticRepository.ls(
+                                repoPath = repoPath,
+                                password = password,
+                                snapshotId = currentSnapshot.id,
+                                environmentVariables = executionEnvironment,
+                                resticOptions = resticOptions,
+                                noLock = true
+                            ).getOrElse { throw directError }
+                            val fallbackPath = paths.find {
+                                it.endsWith("/${ContactsBackupRepository.CONTACTS_RELATIVE_STAGING_PATH}/${ContactsBackupRepository.CONTACTS_FILE_NAME}")
+                            } ?: paths.find {
+                                it.endsWith("/${ContactsBackupRepository.CONTACTS_FILE_NAME}")
+                            } ?: throw directError
+                            val dumped = resticRepository.dump(
+                                repoPath = repoPath,
+                                password = password,
+                                snapshotId = currentSnapshot.id,
+                                filePath = fallbackPath,
+                                environmentVariables = executionEnvironment,
+                                resticOptions = resticOptions,
+                                noLock = true
+                            ).getOrThrow()
+                            dumped to parentDirectoryPath(fallbackPath)
+                        }
+                    )
+                }
+
+                val summaries = withContext(Dispatchers.Default) {
+                    contactsBackupRepository.parseContactAccountsFromArchiveJson(content)
+                }
+                if (contactAccountsLoadRequestId != requestId) return@launch
+
+                metadataUpdateMutex.withLock {
+                    if (contactAccountsLoadRequestId != requestId) return@withLock
+                    val currentMeta = snapshotMetadata
+                    if (currentMeta?.deviceData?.contacts != null) {
+                        val updatedContactsMeta = currentMeta.deviceData.contacts.copy(
+                            path = resolvedDirPath ?: currentMeta.deviceData.contacts.path,
+                            accounts = summaries
+                        )
+                        val updatedMetadata = currentMeta.copy(
+                            deviceData = currentMeta.deviceData.copy(contacts = updatedContactsMeta)
+                        )
+                        snapshotMetadata = updatedMetadata
+                        _contactsMetadata.value = updatedContactsMeta
+                        metadataRepository.saveMetadataForSnapshot(repoId, currentSnapshot.id, updatedMetadata)
+                    } else {
+                        _contactsMetadata.update { current ->
+                            current?.copy(
+                                path = resolvedDirPath ?: current.path,
+                                accounts = summaries
+                            )
+                        }
+                    }
+                }
+
+                if (contactAccountsLoadRequestId == requestId) {
+                    _availableContactAccounts.value = summaries.map { it.toContactAccountInfo(localDisplayName) }
+                    contactAccountsLoaded = true
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                android.util.Log.w("RestoreViewModel", "Failed to load contact accounts from snapshot", e)
+                if (contactAccountsLoadRequestId == requestId) {
+                    _contactAccountsError.value = e.message?.takeIf { it.isNotBlank() }
+                        ?: application.getString(R.string.restore_device_data_load_failed)
+                }
+            } finally {
+                if (contactAccountsLoadRequestId == requestId) {
+                    _isLoadingContactAccounts.value = false
+                }
+            }
+        }
+    }
+
+    fun loadSnapshotCalendars(force: Boolean = false) {
+        val meta = _calendarMetadata.value
+        if (meta == null) {
+            _availableCalendars.value = emptyList()
+            _isLoadingCalendars.value = false
+            _calendarsError.value = null
+            calendarsLoaded = false
+            return
+        }
+
+        val cachedSummaries = meta.calendars
+        if (!force && cachedSummaries != null) {
+            if (!calendarsLoaded || _availableCalendars.value.isEmpty()) {
+                _availableCalendars.value = cachedSummaries.map {
+                    it.toCalendarInfo(CalendarBackupRepository.DEFAULT_CALENDAR_COLOR)
+                }
+                calendarsLoaded = true
+            }
+            _calendarsError.value = null
+            return
+        }
+
+        if (!force && (_isLoadingCalendars.value || calendarsLoaded)) return
+
+        val currentSnapshot = _snapshot.value
+        if (currentSnapshot == null) {
+            _calendarsError.value = application.getString(R.string.restore_device_data_load_failed)
+            return
+        }
+
+        val requestId = ++calendarsLoadRequestId
+        _isLoadingCalendars.value = true
+        _calendarsError.value = null
+
+        viewModelScope.launch {
+            try {
+                // Backwards compatibility: legacy snapshots do not record calendar summaries in restoid.json,
+                // so inspect calendar.json via `restic dump --no-lock` on demand and cache summaries in MetadataRepository.
+                val selectedRepoKey = repositoriesRepository.selectedRepository.first()
+                val repo = selectedRepoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
+                val repoPath = repo?.path
+                val repoId = repo?.id
+                val password = selectedRepoKey?.let { repositoriesRepository.getRepositoryPassword(it) }
+                if (repoPath == null || repoId == null || password == null) {
+                    throw IllegalStateException(application.getString(R.string.error_repository_password_or_id_not_found))
+                }
+
+                val directPath = "${meta.path.trimEnd('/')}/${CalendarBackupRepository.CALENDAR_FILE_NAME}"
+                val (content, resolvedDirPath) = withContext(Dispatchers.IO) {
+                    val executionEnvironment = repositoriesRepository.getExecutionEnvironmentVariables(selectedRepoKey)
+                    val resticOptions = repositoriesRepository.getExecutionResticOptions(selectedRepoKey)
+                    val directDump = resticRepository.dump(
+                        repoPath = repoPath,
+                        password = password,
+                        snapshotId = currentSnapshot.id,
+                        filePath = directPath,
+                        environmentVariables = executionEnvironment,
+                        resticOptions = resticOptions,
+                        noLock = true
+                    )
+                    directDump.fold(
+                        onSuccess = { dumped -> dumped to null },
+                        onFailure = { directError ->
+                            val paths = resticRepository.ls(
+                                repoPath = repoPath,
+                                password = password,
+                                snapshotId = currentSnapshot.id,
+                                environmentVariables = executionEnvironment,
+                                resticOptions = resticOptions,
+                                noLock = true
+                            ).getOrElse { throw directError }
+                            val fallbackPath = paths.find {
+                                it.endsWith("/${CalendarBackupRepository.CALENDAR_RELATIVE_STAGING_PATH}/${CalendarBackupRepository.CALENDAR_FILE_NAME}")
+                            } ?: paths.find {
+                                it.endsWith("/${CalendarBackupRepository.CALENDAR_FILE_NAME}")
+                            } ?: throw directError
+                            val dumped = resticRepository.dump(
+                                repoPath = repoPath,
+                                password = password,
+                                snapshotId = currentSnapshot.id,
+                                filePath = fallbackPath,
+                                environmentVariables = executionEnvironment,
+                                resticOptions = resticOptions,
+                                noLock = true
+                            ).getOrThrow()
+                            dumped to parentDirectoryPath(fallbackPath)
+                        }
+                    )
+                }
+
+                val summaries = withContext(Dispatchers.Default) {
+                    calendarBackupRepository.parseCalendarsFromArchiveJson(content)
+                }
+                if (calendarsLoadRequestId != requestId) return@launch
+
+                metadataUpdateMutex.withLock {
+                    if (calendarsLoadRequestId != requestId) return@withLock
+                    val currentMeta = snapshotMetadata
+                    if (currentMeta?.deviceData?.calendar != null) {
+                        val updatedCalendarMeta = currentMeta.deviceData.calendar.copy(
+                            path = resolvedDirPath ?: currentMeta.deviceData.calendar.path,
+                            calendars = summaries
+                        )
+                        val updatedMetadata = currentMeta.copy(
+                            deviceData = currentMeta.deviceData.copy(calendar = updatedCalendarMeta)
+                        )
+                        snapshotMetadata = updatedMetadata
+                        _calendarMetadata.value = updatedCalendarMeta
+                        metadataRepository.saveMetadataForSnapshot(repoId, currentSnapshot.id, updatedMetadata)
+                    } else {
+                        _calendarMetadata.update { current ->
+                            current?.copy(
+                                path = resolvedDirPath ?: current.path,
+                                calendars = summaries
+                            )
+                        }
+                    }
+                }
+
+                if (calendarsLoadRequestId == requestId) {
+                    _availableCalendars.value = summaries.map {
+                        it.toCalendarInfo(CalendarBackupRepository.DEFAULT_CALENDAR_COLOR)
+                    }
+                    calendarsLoaded = true
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                android.util.Log.w("RestoreViewModel", "Failed to load calendars from snapshot", e)
+                if (calendarsLoadRequestId == requestId) {
+                    _calendarsError.value = e.message?.takeIf { it.isNotBlank() }
+                        ?: application.getString(R.string.restore_device_data_load_failed)
+                }
+            } finally {
+                if (calendarsLoadRequestId == requestId) {
+                    _isLoadingCalendars.value = false
+                }
+            }
+        }
+    }
+
+    private fun parentDirectoryPath(filePath: String): String? {
+        val slashIndex = filePath.lastIndexOf('/')
+        return when {
+            slashIndex < 0 -> null
+            slashIndex == 0 -> "/"
+            else -> filePath.substring(0, slashIndex)
+        }
+    }
+
+    fun toggleAllContactAccounts() {
+        val available = _availableContactAccounts.value
+        val allSelected = _selectAllContactAccounts.value ||
+            (available.isNotEmpty() && available.all { it.selectionKey in _selectedContactAccountKeys.value })
+        _selectAllContactAccounts.value = !allSelected
+        _selectedContactAccountKeys.value = emptySet()
+    }
+
+    fun toggleContactAccount(selectionKey: String) {
+        val allKeys = _availableContactAccounts.value.map { it.selectionKey }.toSet()
+        val currentKeys = if (_selectAllContactAccounts.value) allKeys else _selectedContactAccountKeys.value
+        val updatedKeys = if (selectionKey in currentKeys) currentKeys - selectionKey else currentKeys + selectionKey
+        val newSelectAll = allKeys.isNotEmpty() && allKeys.all { it in updatedKeys }
+        _selectAllContactAccounts.value = newSelectAll
+        _selectedContactAccountKeys.value = if (newSelectAll) emptySet() else updatedKeys
+    }
+
+    fun toggleAllCalendars() {
+        val available = _availableCalendars.value
+        val allSelected = _selectAllCalendars.value ||
+            (available.isNotEmpty() && available.all { it.selectionKey in _selectedCalendarKeys.value })
+        _selectAllCalendars.value = !allSelected
+        _selectedCalendarKeys.value = emptySet()
+    }
+
+    fun toggleCalendar(selectionKey: String) {
+        val allKeys = _availableCalendars.value.map { it.selectionKey }.toSet()
+        val currentKeys = if (_selectAllCalendars.value) allKeys else _selectedCalendarKeys.value
+        val updatedKeys = if (selectionKey in currentKeys) currentKeys - selectionKey else currentKeys + selectionKey
+        val newSelectAll = allKeys.isNotEmpty() && allKeys.all { it in updatedKeys }
+        _selectAllCalendars.value = newSelectAll
+        _selectedCalendarKeys.value = if (newSelectAll) emptySet() else updatedKeys
     }
 
     private fun findBackedUpItems(
@@ -443,6 +843,22 @@ class RestoreViewModel(
 
         if (selectedApps.isEmpty() && selectedCustomDirectories.isEmpty() && !restoreContacts && !restoreCallLogs && !restoreCalendar) {
             failPreflight(application.getString(R.string.restore_error_no_items_selected))
+            return
+        }
+
+        if (restoreContacts && !_selectAllContactAccounts.value && _selectedContactAccountKeys.value.isEmpty()) {
+            failPreflight(
+                application.getString(R.string.restore_error_contacts_none_selected),
+                application.getString(R.string.restore_summary_contacts_none_selected)
+            )
+            return
+        }
+
+        if (restoreCalendar && !_selectAllCalendars.value && _selectedCalendarKeys.value.isEmpty()) {
+            failPreflight(
+                application.getString(R.string.restore_error_calendar_none_selected),
+                application.getString(R.string.restore_summary_calendar_none_selected)
+            )
             return
         }
 
@@ -529,8 +945,12 @@ class RestoreViewModel(
             selectedCustomDirectories = selectedCustomDirectories,
             deviceData = DeviceDataRestoreSelection(
                 contacts = restoreContacts,
+                selectAllContactAccounts = _selectAllContactAccounts.value,
+                selectedContactAccountKeys = if (_selectAllContactAccounts.value) emptySet() else _selectedContactAccountKeys.value,
                 callLogs = restoreCallLogs,
-                calendar = restoreCalendar
+                calendar = restoreCalendar,
+                selectAllCalendars = _selectAllCalendars.value,
+                selectedCalendarKeys = if (_selectAllCalendars.value) emptySet() else _selectedCalendarKeys.value
             )
         )
 
