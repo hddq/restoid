@@ -36,6 +36,7 @@ import io.github.hddq.restoid.work.RestoreWorkRequest
 import kotlinx.serialization.Serializable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -219,6 +220,8 @@ class RestoreViewModel(
     val operationBlocked = _operationBlocked.asStateFlow()
     private val _uiEvents = MutableSharedFlow<RestoreUiEvent>(extraBufferCapacity = 1)
     val uiEvents: SharedFlow<RestoreUiEvent> = _uiEvents.asSharedFlow()
+
+    private var restoreJob: Job? = null
 
     val hasRoot = rootRepository.hasRoot
 
@@ -804,160 +807,164 @@ class RestoreViewModel(
     }
 
     fun startRestore() {
-        if (_isRestoring.value) return
-        preferencesRepository.saveRestoreTypes(_restoreTypes.value)
-        preferencesRepository.saveAllowDowngrade(_allowDowngrade.value)
+        if (_isRestoring.value || restoreJob?.isActive == true) return
 
-        val selectedRepoKey = repositoriesRepository.selectedRepository.value
-        val selectedRepository = selectedRepoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
-        val selectedRepoPath = selectedRepository?.path
-        val currentSnapshot = _snapshot.value
+        restoreJob = viewModelScope.launch {
+            val resolvedHasRoot = rootRepository.checkRootAccess()
+            preferencesRepository.saveRestoreTypes(_restoreTypes.value)
+            preferencesRepository.saveAllowDowngrade(_allowDowngrade.value)
 
-        val selectedApps = if (_restoreAppsEnabled.value && hasRoot.value) {
-            _backupDetails.value.filter { it.appInfo.isSelected && (_allowDowngrade.value || !it.isDowngrade) }
-        } else {
-            emptyList()
-        }
+            val selectedRepoKey = repositoriesRepository.selectedRepository.value
+            val selectedRepository = selectedRepoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
+            val selectedRepoPath = selectedRepository?.path
+            val currentSnapshot = _snapshot.value
 
-        val selectedCustomDirectories = if (_restoreCustomDirectoriesEnabled.value) {
-            _customDirectories.value.filter { it.value }.keys.toList()
-        } else {
-            emptyList()
-        }
-
-        val restoreContacts = _restoreDeviceDataEnabled.value && _contactsMetadata.value != null && _restoreContactsEnabled.value
-        val restoreCallLogs = _restoreDeviceDataEnabled.value && _callLogsMetadata.value != null && _restoreCallLogsEnabled.value
-        val restoreCalendar = _restoreDeviceDataEnabled.value && _calendarMetadata.value != null && _restoreCalendarEnabled.value
-
-        fun failPreflight(error: String, summary: String = error) {
-            _restoreProgress.value = OperationProgress(
-                isFinished = true,
-                error = error,
-                finalSummary = summary
-            )
-            _uiEvents.tryEmit(RestoreUiEvent.ShowError(error))
-        }
-
-        if (!resticBinaryManager.isInstalled || selectedRepoPath == null || currentSnapshot == null) {
-            failPreflight(application.getString(R.string.restore_error_preflight_failed))
-            return
-        }
-
-        if (selectedApps.isEmpty() && selectedCustomDirectories.isEmpty() && !restoreContacts && !restoreCallLogs && !restoreCalendar) {
-            failPreflight(application.getString(R.string.restore_error_no_items_selected))
-            return
-        }
-
-        if (restoreContacts && !_selectAllContactAccounts.value && _selectedContactAccountKeys.value.isEmpty()) {
-            failPreflight(
-                application.getString(R.string.restore_error_contacts_none_selected),
-                application.getString(R.string.restore_summary_contacts_none_selected)
-            )
-            return
-        }
-
-        if (restoreCalendar && !_selectAllCalendars.value && _selectedCalendarKeys.value.isEmpty()) {
-            failPreflight(
-                application.getString(R.string.restore_error_calendar_none_selected),
-                application.getString(R.string.restore_summary_calendar_none_selected)
-            )
-            return
-        }
-
-        val missingPermissions = buildList {
-            if (restoreContacts) {
-                val contactsRepo = io.github.hddq.restoid.data.ContactsBackupRepository(application)
-                if (!contactsRepo.hasReadContactsPermission()) add(android.Manifest.permission.READ_CONTACTS)
-                if (!contactsRepo.hasWriteContactsPermission()) add(android.Manifest.permission.WRITE_CONTACTS)
+            val selectedApps = if (_restoreAppsEnabled.value && resolvedHasRoot) {
+                _backupDetails.value.filter { it.appInfo.isSelected && (_allowDowngrade.value || !it.isDowngrade) }
+            } else {
+                emptyList()
             }
-            if (restoreCallLogs) {
-                val callLogsRepo = io.github.hddq.restoid.data.CallLogsBackupRepository(application)
-                if (!callLogsRepo.hasReadCallLogPermission()) add(android.Manifest.permission.READ_CALL_LOG)
-                if (!callLogsRepo.hasWriteCallLogPermission()) add(android.Manifest.permission.WRITE_CALL_LOG)
+
+            val selectedCustomDirectories = if (_restoreCustomDirectoriesEnabled.value) {
+                _customDirectories.value.filter { it.value }.keys.toList()
+            } else {
+                emptyList()
             }
-            if (restoreCalendar) {
-                val calendarRepo = io.github.hddq.restoid.data.CalendarBackupRepository(application)
-                if (!calendarRepo.hasReadCalendarPermission()) add(android.Manifest.permission.READ_CALENDAR)
-                if (!calendarRepo.hasWriteCalendarPermission()) add(android.Manifest.permission.WRITE_CALENDAR)
-            }
-        }
-        if (missingPermissions.isNotEmpty()) {
-            _uiEvents.tryEmit(RestoreUiEvent.RequestDeviceDataPermissions(missingPermissions))
-            return
-        }
 
-        if (selectedApps.isNotEmpty() && selectedApps.none { effectiveRestoreTypes(it.appInfo.packageName).anyEnabled() }) {
-            failPreflight(application.getString(R.string.restore_error_no_restore_types_selected))
-            return
-        }
+            val restoreContacts = _restoreDeviceDataEnabled.value && _contactsMetadata.value != null && _restoreContactsEnabled.value
+            val restoreCallLogs = _restoreDeviceDataEnabled.value && _callLogsMetadata.value != null && _restoreCallLogsEnabled.value
+            val restoreCalendar = _restoreDeviceDataEnabled.value && _calendarMetadata.value != null && _restoreCalendarEnabled.value
 
-        if (selectedRepository.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpCredentials(selectedRepoKey)) {
-            failPreflight(
-                application.getString(R.string.error_sftp_password_not_found_for_repository),
-                application.getString(R.string.summary_sftp_password_not_found)
-            )
-            return
-        }
-
-        if (
-            selectedRepository.backendType == RepositoryBackendType.REST &&
-            selectedRepository.restAuthRequired &&
-            !repositoriesRepository.hasRestCredentials(selectedRepoKey)
-        ) {
-            failPreflight(
-                application.getString(R.string.error_rest_credentials_not_found_for_repository),
-                application.getString(R.string.summary_rest_credentials_not_found)
-            )
-            return
-        }
-
-        if (
-            selectedRepository.backendType == RepositoryBackendType.S3 &&
-            selectedRepository.s3AuthRequired &&
-            !repositoriesRepository.hasS3Credentials(selectedRepoKey)
-        ) {
-            failPreflight(
-                application.getString(R.string.error_s3_credentials_not_found_for_repository),
-                application.getString(R.string.summary_s3_credentials_not_found)
-            )
-            return
-        }
-
-        val password = repositoriesRepository.getRepositoryPassword(selectedRepoKey)
-        if (password == null) {
-            failPreflight(
-                application.getString(R.string.restore_error_password_not_found),
-                application.getString(R.string.summary_password_not_found)
-            )
-            return
-        }
-
-        val request = RestoreWorkRequest(
-            repositoryKey = selectedRepoKey,
-            snapshotId = currentSnapshot.id,
-            restoreTypes = _restoreTypes.value.toSelection(),
-            allowDowngrade = _allowDowngrade.value,
-            selectedApps = selectedApps.map {
-                RestoreAppSelection(
-                    packageName = it.appInfo.packageName,
-                    appName = it.appInfo.name
+            fun failPreflight(error: String, summary: String = error) {
+                _restoreProgress.value = OperationProgress(
+                    isFinished = true,
+                    error = error,
+                    finalSummary = summary
                 )
-            },
-            appRestoreTypes = selectedApps.associate { it.appInfo.packageName to effectiveRestoreTypes(it.appInfo.packageName).toSelection() },
-            selectedCustomDirectories = selectedCustomDirectories,
-            deviceData = DeviceDataRestoreSelection(
-                contacts = restoreContacts,
-                selectAllContactAccounts = _selectAllContactAccounts.value,
-                selectedContactAccountKeys = if (_selectAllContactAccounts.value) emptySet() else _selectedContactAccountKeys.value,
-                callLogs = restoreCallLogs,
-                calendar = restoreCalendar,
-                selectAllCalendars = _selectAllCalendars.value,
-                selectedCalendarKeys = if (_selectAllCalendars.value) emptySet() else _selectedCalendarKeys.value
-            )
-        )
+                _uiEvents.tryEmit(RestoreUiEvent.ShowError(error))
+            }
 
-        viewModelScope.launch(Dispatchers.IO) {
-            val enqueued = operationWorkRepository.enqueueRestore(request)
+            if (!resticBinaryManager.isInstalled || selectedRepoPath == null || currentSnapshot == null) {
+                failPreflight(application.getString(R.string.restore_error_preflight_failed))
+                return@launch
+            }
+
+            if (selectedApps.isEmpty() && selectedCustomDirectories.isEmpty() && !restoreContacts && !restoreCallLogs && !restoreCalendar) {
+                failPreflight(application.getString(R.string.restore_error_no_items_selected))
+                return@launch
+            }
+
+            if (restoreContacts && !_selectAllContactAccounts.value && _selectedContactAccountKeys.value.isEmpty()) {
+                failPreflight(
+                    application.getString(R.string.restore_error_contacts_none_selected),
+                    application.getString(R.string.restore_summary_contacts_none_selected)
+                )
+                return@launch
+            }
+
+            if (restoreCalendar && !_selectAllCalendars.value && _selectedCalendarKeys.value.isEmpty()) {
+                failPreflight(
+                    application.getString(R.string.restore_error_calendar_none_selected),
+                    application.getString(R.string.restore_summary_calendar_none_selected)
+                )
+                return@launch
+            }
+
+            val missingPermissions = buildList {
+                if (restoreContacts) {
+                    val contactsRepo = io.github.hddq.restoid.data.ContactsBackupRepository(application)
+                    if (!contactsRepo.hasReadContactsPermission()) add(android.Manifest.permission.READ_CONTACTS)
+                    if (!contactsRepo.hasWriteContactsPermission()) add(android.Manifest.permission.WRITE_CONTACTS)
+                }
+                if (restoreCallLogs) {
+                    val callLogsRepo = io.github.hddq.restoid.data.CallLogsBackupRepository(application)
+                    if (!callLogsRepo.hasReadCallLogPermission()) add(android.Manifest.permission.READ_CALL_LOG)
+                    if (!callLogsRepo.hasWriteCallLogPermission()) add(android.Manifest.permission.WRITE_CALL_LOG)
+                }
+                if (restoreCalendar) {
+                    val calendarRepo = io.github.hddq.restoid.data.CalendarBackupRepository(application)
+                    if (!calendarRepo.hasReadCalendarPermission()) add(android.Manifest.permission.READ_CALENDAR)
+                    if (!calendarRepo.hasWriteCalendarPermission()) add(android.Manifest.permission.WRITE_CALENDAR)
+                }
+            }
+            if (missingPermissions.isNotEmpty()) {
+                _uiEvents.tryEmit(RestoreUiEvent.RequestDeviceDataPermissions(missingPermissions))
+                return@launch
+            }
+
+            if (selectedApps.isNotEmpty() && selectedApps.none { effectiveRestoreTypes(it.appInfo.packageName).anyEnabled() }) {
+                failPreflight(application.getString(R.string.restore_error_no_restore_types_selected))
+                return@launch
+            }
+
+            if (selectedRepository.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpCredentials(selectedRepoKey)) {
+                failPreflight(
+                    application.getString(R.string.error_sftp_password_not_found_for_repository),
+                    application.getString(R.string.summary_sftp_password_not_found)
+                )
+                return@launch
+            }
+
+            if (
+                selectedRepository.backendType == RepositoryBackendType.REST &&
+                selectedRepository.restAuthRequired &&
+                !repositoriesRepository.hasRestCredentials(selectedRepoKey)
+            ) {
+                failPreflight(
+                    application.getString(R.string.error_rest_credentials_not_found_for_repository),
+                    application.getString(R.string.summary_rest_credentials_not_found)
+                )
+                return@launch
+            }
+
+            if (
+                selectedRepository.backendType == RepositoryBackendType.S3 &&
+                selectedRepository.s3AuthRequired &&
+                !repositoriesRepository.hasS3Credentials(selectedRepoKey)
+            ) {
+                failPreflight(
+                    application.getString(R.string.error_s3_credentials_not_found_for_repository),
+                    application.getString(R.string.summary_s3_credentials_not_found)
+                )
+                return@launch
+            }
+
+            val password = repositoriesRepository.getRepositoryPassword(selectedRepoKey)
+            if (password == null) {
+                failPreflight(
+                    application.getString(R.string.restore_error_password_not_found),
+                    application.getString(R.string.summary_password_not_found)
+                )
+                return@launch
+            }
+
+            val request = RestoreWorkRequest(
+                repositoryKey = selectedRepoKey,
+                snapshotId = currentSnapshot.id,
+                restoreTypes = _restoreTypes.value.toSelection(),
+                allowDowngrade = _allowDowngrade.value,
+                selectedApps = selectedApps.map {
+                    RestoreAppSelection(
+                        packageName = it.appInfo.packageName,
+                        appName = it.appInfo.name
+                    )
+                },
+                appRestoreTypes = selectedApps.associate { it.appInfo.packageName to effectiveRestoreTypes(it.appInfo.packageName).toSelection() },
+                selectedCustomDirectories = selectedCustomDirectories,
+                deviceData = DeviceDataRestoreSelection(
+                    contacts = restoreContacts,
+                    selectAllContactAccounts = _selectAllContactAccounts.value,
+                    selectedContactAccountKeys = if (_selectAllContactAccounts.value) emptySet() else _selectedContactAccountKeys.value,
+                    callLogs = restoreCallLogs,
+                    calendar = restoreCalendar,
+                    selectAllCalendars = _selectAllCalendars.value,
+                    selectedCalendarKeys = if (_selectAllCalendars.value) emptySet() else _selectedCalendarKeys.value
+                )
+            )
+
+            val enqueued = withContext(Dispatchers.IO) {
+                operationWorkRepository.enqueueRestore(request)
+            }
             if (enqueued) {
                 _uiEvents.tryEmit(RestoreUiEvent.NavigateToOperationProgress)
             } else {

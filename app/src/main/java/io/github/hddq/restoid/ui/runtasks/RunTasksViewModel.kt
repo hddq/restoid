@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import io.github.hddq.restoid.model.MaintenanceConfig
 
 import io.github.hddq.restoid.model.CustomDirectory
@@ -135,6 +136,7 @@ class RunTasksViewModel(
     private var cachedRawExclusions: List<String> = emptyList()
     private var cachedResolvedExclusions: List<String> = emptyList()
     private var conflictResolutionJob: Job? = null
+    private var runJob: Job? = null
     private var contactAccountsRefreshRequestId: Long = 0L
     private var calendarRefreshRequestId: Long = 0L
 
@@ -251,97 +253,102 @@ class RunTasksViewModel(
     }
 
     fun run() {
-        if (_uiState.value.isRunning) return
+        if (_uiState.value.isRunning || runJob?.isActive == true) return
 
-        preferencesRepository.saveBackupTypes(_uiState.value.backupTypes)
-        preferencesRepository.saveRunTasksAppBackupTypes(_uiState.value.appBackupTypes)
-        preferencesRepository.saveMaintenanceState(_uiState.value.maintenance)
-        preferencesRepository.saveRunTasksBackupEnabled(_uiState.value.backupEnabled)
-        
-        val allAppsSelected = _uiState.value.apps.isNotEmpty() && _uiState.value.apps.all { it.isSelected }
-        val selectedPackages = _uiState.value.apps.filter { it.isSelected }.map { it.packageName }.toSet()
-        preferencesRepository.saveRunTasksSelectedApps(allAppsSelected, selectedPackages)
+        runJob = viewModelScope.launch {
+            val resolvedHasRoot = rootRepository.checkRootAccess()
+            val state = _uiState.value
 
-        preferencesRepository.saveCustomDirectoriesBackupEnabled(_uiState.value.customDirectoriesBackupEnabled)
-        preferencesRepository.saveDeviceDataBackupEnabled(_uiState.value.deviceDataBackupEnabled)
-        preferencesRepository.saveDeviceDataContactsEnabled(_uiState.value.contactsBackupEnabled)
-        preferencesRepository.saveDeviceDataContactAccountSelection(
-            _uiState.value.selectAllContactAccounts,
-            _uiState.value.selectedContactAccountKeys
-        )
-        preferencesRepository.saveDeviceDataCallLogsEnabled(_uiState.value.callLogsBackupEnabled)
-        preferencesRepository.saveDeviceDataCalendarEnabled(_uiState.value.calendarBackupEnabled)
-        preferencesRepository.saveDeviceDataCalendarSelection(
-            _uiState.value.selectAllCalendars,
-            _uiState.value.selectedCalendarKeys
-        )
-        val allCustomDirs = _uiState.value.customDirectories.map { it.uri }.toSet()
-        val selectedCustomDirs = _uiState.value.customDirectories.filter { it.isSelected }.map { it.uri }.toSet()
-        preferencesRepository.saveCustomDirectories(allCustomDirs, selectedCustomDirs)
-        val selectedExcludedCustomDirs = _uiState.value.excludedCustomDirectories.filter { it.isSelected }.map { it.uri }.toSet()
-        persistExcludedCustomDirectories()
+            preferencesRepository.saveBackupTypes(state.backupTypes)
+            preferencesRepository.saveRunTasksAppBackupTypes(state.appBackupTypes)
+            preferencesRepository.saveMaintenanceState(state.maintenance)
+            preferencesRepository.saveRunTasksBackupEnabled(state.backupEnabled)
 
-        val errorState = preflightChecks()
-        if (errorState != null) {
-            errorState.error?.let { Toast.makeText(application, it, Toast.LENGTH_LONG).show() }
-            _uiState.update { it.copy(isRunning = false, progress = errorState) }
-            return
-        }
+            val allAppsSelected = state.apps.isNotEmpty() && state.apps.all { it.isSelected }
+            val selectedPackages = state.apps.filter { it.isSelected }.map { it.packageName }.toSet()
+            preferencesRepository.saveRunTasksSelectedApps(allAppsSelected, selectedPackages)
 
-        val selectedRepoKey = repositoriesRepository.selectedRepository.value ?: run {
-            _uiState.update {
-                it.copy(
-                    isRunning = false,
-                    progress = OperationProgress(
-                        isFinished = true,
-                        error = application.getString(R.string.error_no_backup_repository_selected),
-                        finalSummary = application.getString(R.string.summary_no_backup_repository_selected)
-                    )
-                )
+            preferencesRepository.saveCustomDirectoriesBackupEnabled(state.customDirectoriesBackupEnabled)
+            preferencesRepository.saveDeviceDataBackupEnabled(state.deviceDataBackupEnabled)
+            preferencesRepository.saveDeviceDataContactsEnabled(state.contactsBackupEnabled)
+            preferencesRepository.saveDeviceDataContactAccountSelection(
+                state.selectAllContactAccounts,
+                state.selectedContactAccountKeys
+            )
+            preferencesRepository.saveDeviceDataCallLogsEnabled(state.callLogsBackupEnabled)
+            preferencesRepository.saveDeviceDataCalendarEnabled(state.calendarBackupEnabled)
+            preferencesRepository.saveDeviceDataCalendarSelection(
+                state.selectAllCalendars,
+                state.selectedCalendarKeys
+            )
+            val allCustomDirs = state.customDirectories.map { it.uri }.toSet()
+            val selectedCustomDirs = state.customDirectories.filter { it.isSelected }.map { it.uri }.toSet()
+            preferencesRepository.saveCustomDirectories(allCustomDirs, selectedCustomDirs)
+            val selectedExcludedCustomDirs = state.excludedCustomDirectories.filter { it.isSelected }.map { it.uri }.toSet()
+            persistExcludedCustomDirectories()
+
+            val errorState = preflightChecks(state, resolvedHasRoot)
+            if (errorState != null) {
+                errorState.error?.let { Toast.makeText(application, it, Toast.LENGTH_LONG).show() }
+                _uiState.update { it.copy(isRunning = false, progress = errorState) }
+                return@launch
             }
-            return
-        }
 
-        val maintenance = _uiState.value.maintenance
-        val hasCustomDirs = _uiState.value.customDirectoriesBackupEnabled && selectedCustomDirs.isNotEmpty()
-        val hasContactsBackup = _uiState.value.deviceDataBackupEnabled && _uiState.value.contactsBackupEnabled
-        val hasCallLogsBackup = _uiState.value.deviceDataBackupEnabled && _uiState.value.callLogsBackupEnabled
-        val hasCalendarBackup = _uiState.value.deviceDataBackupEnabled && _uiState.value.calendarBackupEnabled
-        val hasDeviceData = hasContactsBackup || hasCallLogsBackup || hasCalendarBackup
-        val backupAppsEnabled = _uiState.value.backupEnabled && hasRoot.value
-        
-        val request = RunTasksWorkRequest(
-            repositoryKey = selectedRepoKey,
-            backupEnabled = backupAppsEnabled || hasCustomDirs || hasDeviceData,
-            backupTypes = _uiState.value.backupTypes.toSelection(),
-            selectedPackageNames = if (backupAppsEnabled) _uiState.value.apps.filter { it.isSelected }.map { it.packageName } else emptyList(),
-            appBackupTypes = if (backupAppsEnabled) selectedAppBackupTypes().mapValues { it.value.toSelection() } else emptyMap(),
-            customDirectories = if (hasCustomDirs) selectedCustomDirs.toList() else emptyList(),
-            excludedCustomDirectories = if (_uiState.value.customDirectoriesBackupEnabled) selectedExcludedCustomDirs.toList() else emptyList(),
-            deviceData = DeviceDataBackupSelection(
-                contacts = hasContactsBackup,
-                selectAllContactAccounts = _uiState.value.selectAllContactAccounts,
-                selectedContactAccountKeys = _uiState.value.selectedContactAccountKeys,
-                callLogs = hasCallLogsBackup,
-                calendar = hasCalendarBackup,
-                selectAllCalendars = _uiState.value.selectAllCalendars,
-                selectedCalendarKeys = _uiState.value.selectedCalendarKeys
-            ),
-            unlockRepo = maintenance.unlockRepo,
-            forgetSnapshots = maintenance.forgetSnapshots,
-            pruneRepo = maintenance.pruneRepo,
-            checkRepo = maintenance.checkRepo,
-            readData = maintenance.readData,
-            keepLast = maintenance.keepLast,
-            keepDaily = maintenance.keepDaily,
-            keepWeekly = maintenance.keepWeekly,
-            keepMonthly = maintenance.keepMonthly,
-            forgetAllHosts = maintenance.forgetAllHosts,
-            forgetHosts = if (maintenance.forgetAllHosts) emptyList() else normalizeForgetHosts(maintenance.forgetHosts)
-        )
+            val selectedRepoKey = repositoriesRepository.selectedRepository.value ?: run {
+                _uiState.update {
+                    it.copy(
+                        isRunning = false,
+                        progress = OperationProgress(
+                            isFinished = true,
+                            error = application.getString(R.string.error_no_backup_repository_selected),
+                            finalSummary = application.getString(R.string.summary_no_backup_repository_selected)
+                        )
+                    )
+                }
+                return@launch
+            }
 
-        viewModelScope.launch(Dispatchers.IO) {
-            val enqueued = operationWorkRepository.enqueueRunTasks(request)
+            val maintenance = state.maintenance
+            val hasCustomDirs = state.customDirectoriesBackupEnabled && selectedCustomDirs.isNotEmpty()
+            val hasContactsBackup = state.deviceDataBackupEnabled && state.contactsBackupEnabled
+            val hasCallLogsBackup = state.deviceDataBackupEnabled && state.callLogsBackupEnabled
+            val hasCalendarBackup = state.deviceDataBackupEnabled && state.calendarBackupEnabled
+            val hasDeviceData = hasContactsBackup || hasCallLogsBackup || hasCalendarBackup
+            val backupAppsEnabled = state.backupEnabled && resolvedHasRoot
+
+            val request = RunTasksWorkRequest(
+                repositoryKey = selectedRepoKey,
+                backupEnabled = backupAppsEnabled || hasCustomDirs || hasDeviceData,
+                backupTypes = state.backupTypes.toSelection(),
+                selectedPackageNames = if (backupAppsEnabled) state.apps.filter { it.isSelected }.map { it.packageName } else emptyList(),
+                appBackupTypes = if (backupAppsEnabled) selectedAppBackupTypes().mapValues { it.value.toSelection() } else emptyMap(),
+                customDirectories = if (hasCustomDirs) selectedCustomDirs.toList() else emptyList(),
+                excludedCustomDirectories = if (state.customDirectoriesBackupEnabled) selectedExcludedCustomDirs.toList() else emptyList(),
+                deviceData = DeviceDataBackupSelection(
+                    contacts = hasContactsBackup,
+                    selectAllContactAccounts = state.selectAllContactAccounts,
+                    selectedContactAccountKeys = state.selectedContactAccountKeys,
+                    callLogs = hasCallLogsBackup,
+                    calendar = hasCalendarBackup,
+                    selectAllCalendars = state.selectAllCalendars,
+                    selectedCalendarKeys = state.selectedCalendarKeys
+                ),
+                unlockRepo = maintenance.unlockRepo,
+                forgetSnapshots = maintenance.forgetSnapshots,
+                pruneRepo = maintenance.pruneRepo,
+                checkRepo = maintenance.checkRepo,
+                readData = maintenance.readData,
+                keepLast = maintenance.keepLast,
+                keepDaily = maintenance.keepDaily,
+                keepWeekly = maintenance.keepWeekly,
+                keepMonthly = maintenance.keepMonthly,
+                forgetAllHosts = maintenance.forgetAllHosts,
+                forgetHosts = if (maintenance.forgetAllHosts) emptyList() else normalizeForgetHosts(maintenance.forgetHosts)
+            )
+
+            val enqueued = withContext(Dispatchers.IO) {
+                operationWorkRepository.enqueueRunTasks(request)
+            }
             if (enqueued) {
                 _uiEvents.tryEmit(RunTasksUiEvent.NavigateToOperationProgress)
             } else {
@@ -360,8 +367,7 @@ class RunTasksViewModel(
         }
     }
 
-    private fun preflightChecks(): OperationProgress? {
-        val state = _uiState.value
+    private fun preflightChecks(state: RunTasksUiState, hasRoot: Boolean): OperationProgress? {
         val maintenance = state.maintenance
         val hasMaintenanceTask = maintenance.unlockRepo || maintenance.forgetSnapshots || maintenance.pruneRepo || maintenance.checkRepo
         val hasCustomDirs = state.customDirectoriesBackupEnabled && state.customDirectories.any { it.isSelected }
@@ -369,7 +375,7 @@ class RunTasksViewModel(
         val hasCallLogsBackup = state.deviceDataBackupEnabled && state.callLogsBackupEnabled
         val hasCalendarBackup = state.deviceDataBackupEnabled && state.calendarBackupEnabled
         val hasDeviceData = hasContactsBackup || hasCallLogsBackup || hasCalendarBackup
-        val backupAppsEnabled = state.backupEnabled && hasRoot.value
+        val backupAppsEnabled = state.backupEnabled && hasRoot
         
         if (!backupAppsEnabled && !hasCustomDirs && !hasDeviceData && !hasMaintenanceTask) {
             return OperationProgress(

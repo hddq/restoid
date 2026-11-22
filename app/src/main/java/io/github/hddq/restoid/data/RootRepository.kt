@@ -18,17 +18,17 @@ class RootRepository(
     private val _hasRoot = MutableStateFlow(false)
     val hasRoot = _hasRoot.asStateFlow()
 
-    suspend fun checkRootAccess(recheckIfDenied: Boolean = false) {
+    suspend fun checkRootAccess(recheckIfDenied: Boolean = false): Boolean {
         checkMutex.withLock {
             when (cachedShellIsRoot()) {
                 true -> {
                     _hasRoot.value = true
-                    return
+                    return true
                 }
                 false -> {
                     if (!recheckIfDenied || isShellBusy()) {
                         _hasRoot.value = false
-                        return
+                        return false
                     }
                 }
                 null -> Unit
@@ -42,6 +42,7 @@ class RootRepository(
                 runCatching { probeRootShell() }.getOrDefault(false)
             }
             _hasRoot.value = granted
+            return granted
         }
     }
 }

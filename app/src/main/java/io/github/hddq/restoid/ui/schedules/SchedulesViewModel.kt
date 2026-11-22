@@ -124,6 +124,7 @@ class SchedulesViewModel(
     private var cachedRawExclusions: List<String> = emptyList()
     private var cachedResolvedExclusions: List<String> = emptyList()
     private var conflictResolutionJob: Job? = null
+    private var runCurrentScheduleJob: Job? = null
     private var addEditSessionId: Long = 0L
     private var contactAccountsRefreshRequestId: Long = 0L
     private var calendarRefreshRequestId: Long = 0L
@@ -350,8 +351,8 @@ class SchedulesViewModel(
         _addEditState.update { it.copy(showDiscardChangesDialog = false) }
     }
 
-    private fun buildScheduleFromState(state: AddEditScheduleUiState): Schedule {
-        val actualBackupEnabled = state.backupEnabled && hasRoot.value
+    private fun buildScheduleFromState(state: AddEditScheduleUiState, hasRoot: Boolean): Schedule {
+        val actualBackupEnabled = state.backupEnabled && hasRoot
 
         return Schedule(
             id = state.id ?: UUID.randomUUID().toString(),
@@ -392,12 +393,13 @@ class SchedulesViewModel(
     }
 
     fun runCurrentScheduleNow() {
+        if (runCurrentScheduleJob?.isActive == true || _addEditState.value.isSaving) return
         val repoKey = _uiState.value.selectedRepoKey ?: return
         val repository = repositoriesRepository.getRepositoryByKey(repoKey) ?: return
         val repoId = repository.id ?: return
         val sessionId = addEditSessionId
-        val state = _addEditState.value
-        if (state.maintenance.forgetSnapshots && !state.maintenance.forgetAllHosts && normalizeForgetHosts(state.maintenance.forgetHosts).isEmpty()) {
+        val initialSnapshot = _addEditState.value
+        if (initialSnapshot.maintenance.forgetSnapshots && !initialSnapshot.maintenance.forgetAllHosts && normalizeForgetHosts(initialSnapshot.maintenance.forgetHosts).isEmpty()) {
             Toast.makeText(
                 application,
                 application.getString(R.string.error_no_forget_hosts_selected),
@@ -405,8 +407,19 @@ class SchedulesViewModel(
             ).show()
             return
         }
-        val schedule = buildScheduleFromState(state)
-        viewModelScope.launch {
+        runCurrentScheduleJob = viewModelScope.launch {
+            val resolvedHasRoot = rootRepository.checkRootAccess()
+            if (addEditSessionId != sessionId) return@launch
+            val state = _addEditState.value
+            if (state.maintenance.forgetSnapshots && !state.maintenance.forgetAllHosts && normalizeForgetHosts(state.maintenance.forgetHosts).isEmpty()) {
+                Toast.makeText(
+                    application,
+                    application.getString(R.string.error_no_forget_hosts_selected),
+                    Toast.LENGTH_LONG
+                ).show()
+                return@launch
+            }
+            val schedule = buildScheduleFromState(state, hasRoot = resolvedHasRoot)
             if (hasChanges(state)) {
                 _addEditState.update { current ->
                     if (addEditSessionId == sessionId) {
@@ -446,12 +459,14 @@ class SchedulesViewModel(
     }
 
     fun saveSchedule() {
+        if (runCurrentScheduleJob?.isActive == true || _addEditState.value.isSaving) return
         val repoKey = _uiState.value.selectedRepoKey ?: return
         val repository = repositoriesRepository.getRepositoryByKey(repoKey) ?: return
         val repoId = repository.id ?: return
+        val sessionId = addEditSessionId
 
-        val state = _addEditState.value
-        if (state.maintenance.forgetSnapshots && !state.maintenance.forgetAllHosts && normalizeForgetHosts(state.maintenance.forgetHosts).isEmpty()) {
+        val initialSnapshot = _addEditState.value
+        if (initialSnapshot.maintenance.forgetSnapshots && !initialSnapshot.maintenance.forgetAllHosts && normalizeForgetHosts(initialSnapshot.maintenance.forgetHosts).isEmpty()) {
             Toast.makeText(
                 application,
                 application.getString(R.string.error_no_forget_hosts_selected),
@@ -460,12 +475,29 @@ class SchedulesViewModel(
             return
         }
 
-        val schedule = buildScheduleFromState(state)
-
         viewModelScope.launch {
-            _addEditState.update { it.copy(isSaving = true) }
+            _addEditState.update { current ->
+                if (addEditSessionId == sessionId) current.copy(isSaving = true) else current
+            }
+            val resolvedHasRoot = rootRepository.checkRootAccess()
+            if (addEditSessionId != sessionId) return@launch
+            val state = _addEditState.value
+            if (state.maintenance.forgetSnapshots && !state.maintenance.forgetAllHosts && normalizeForgetHosts(state.maintenance.forgetHosts).isEmpty()) {
+                _addEditState.update { current ->
+                    if (addEditSessionId == sessionId) current.copy(isSaving = false) else current
+                }
+                Toast.makeText(
+                    application,
+                    application.getString(R.string.error_no_forget_hosts_selected),
+                    Toast.LENGTH_LONG
+                ).show()
+                return@launch
+            }
+            val schedule = buildScheduleFromState(state, hasRoot = resolvedHasRoot)
             scheduleRepository.saveSchedule(repoKey, repoId, schedule)
-            _addEditState.update { it.copy(isSaving = false) }
+            _addEditState.update { current ->
+                if (addEditSessionId == sessionId) current.copy(isSaving = false) else current
+            }
             loadSchedules()
             _uiEvents.emit(SchedulesUiEvent.NavigateBack)
         }

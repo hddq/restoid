@@ -522,17 +522,6 @@ class SettingsViewModel(
         val backendType = addRepoUiState.value.backendType
         val envParseResult = parseEnvironmentVariables(addRepoUiState.value.environmentVariablesRaw)
 
-        if (backendType == RepositoryBackendType.LOCAL) {
-            checkStoragePermission()
-            val hasStorage = storagePermissionRepository.hasStoragePermission()
-            if (!hasRoot.value && !hasStorage) {
-                _addRepoUiState.update {
-                    it.copy(state = AddRepositoryState.Error(context.getString(R.string.storage_permission_disabled)))
-                }
-                return
-            }
-        }
-
         val path = if (backendType == RepositoryBackendType.SFTP) {
             val current = addRepoUiState.value
             when (val specResult = SftpRepositorySpec.build(current.sftpHost, current.sftpPort, current.sftpUsername, current.sftpPath)) {
@@ -616,6 +605,17 @@ class SettingsViewModel(
         )
 
         viewModelScope.launch {
+            if (input.backendType == RepositoryBackendType.LOCAL) {
+                checkStoragePermission()
+                val hasStorage = storagePermissionRepository.hasStoragePermission()
+                if (!hasStorage && !rootRepository.checkRootAccess()) {
+                    _addRepoUiState.update {
+                        it.copy(state = AddRepositoryState.Error(context.getString(R.string.storage_permission_disabled)))
+                    }
+                    return@launch
+                }
+            }
+
             if (input.backendType == RepositoryBackendType.SFTP) {
                 _addRepoUiState.update { it.copy(state = AddRepositoryState.Initializing, sftpServerTrustInfo = null) }
 
