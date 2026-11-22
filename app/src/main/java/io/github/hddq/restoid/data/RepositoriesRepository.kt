@@ -10,6 +10,7 @@ import io.github.hddq.restoid.util.StorageUtils
 import io.github.hddq.restoid.util.buildResticOptionFlags
 import io.github.hddq.restoid.util.buildShellEnvironmentPrefix
 import io.github.hddq.restoid.util.isValidResticOptionName
+import io.github.hddq.restoid.util.resticCacheDirPath
 import io.github.hddq.restoid.util.shellQuote
 import io.github.hddq.restoid.work.isRemoteBackend
 import kotlinx.coroutines.Dispatchers
@@ -791,7 +792,7 @@ class RepositoriesRepository(
                         val checkResult = Shell.cmd(buildString {
                             if (envPrefix.isNotEmpty()) append(envPrefix).append(' ')
                             append("HOME=").append(shellQuote(context.cacheDir.absolutePath)).append(' ')
-                            append("RESTIC_CACHE_DIR=").append(shellQuote(File(context.cacheDir, if (com.topjohnwu.superuser.Shell.getShell().isRoot) "restic" else "restic-user").absolutePath)).append(' ')
+                            append("RESTIC_CACHE_DIR=").append(shellQuote(resticCacheDirPath(context.cacheDir))).append(' ')
                             append("RESTIC_PASSWORD_FILE=").append(shellQuote(passwordFile.absolutePath)).append(' ')
                             append(shellQuote(resticPath)).append(' ')
                             if (resticOptionFlags.isNotEmpty()) append(resticOptionFlags).append(' ')
@@ -867,7 +868,7 @@ class RepositoriesRepository(
                     val checkCommand = buildString {
                         if (envPrefix.isNotEmpty()) append(envPrefix).append(' ')
                         append("HOME=").append(shellQuote(context.cacheDir.absolutePath)).append(' ')
-                        append("RESTIC_CACHE_DIR=").append(shellQuote(File(context.cacheDir, if (com.topjohnwu.superuser.Shell.getShell().isRoot) "restic" else "restic-user").absolutePath)).append(' ')
+                        append("RESTIC_CACHE_DIR=").append(shellQuote(resticCacheDirPath(context.cacheDir))).append(' ')
                         append("RESTIC_PASSWORD_FILE=").append(shellQuote(passwordFile.absolutePath)).append(' ')
                         if (backendType == RepositoryBackendType.S3) {
                             append("timeout ${S3_CHECK_TIMEOUT_SECONDS}s ")

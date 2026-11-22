@@ -10,6 +10,13 @@ import java.nio.file.Files
 class ShellCommandUtilsTest {
 
     @Test
+    fun resticCacheDirPath_usesSeparateDirectoriesForRootAndUser() {
+        val cacheDir = File("/tmp/restoid-cache")
+        assertEquals(File(cacheDir, "restic").absolutePath, resticCacheDirPath(cacheDir, isRoot = true))
+        assertEquals(File(cacheDir, "restic-user").absolutePath, resticCacheDirPath(cacheDir, isRoot = false))
+    }
+
+    @Test
     fun buildResticExcludeFlags_emptyList_returnsEmptyString() {
         assertEquals("", buildResticExcludeFlags(emptyList()))
     }

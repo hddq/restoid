@@ -1,5 +1,8 @@
 package io.github.hddq.restoid.util
 
+import com.topjohnwu.superuser.Shell
+import java.io.File
+
 private val ENV_NAME_REGEX = Regex("^[A-Za-z_][A-Za-z0-9_]*$")
 private val RESTIC_OPTION_NAME_REGEX = Regex("^[A-Za-z0-9_.-]+$")
 
@@ -13,6 +16,10 @@ fun isValidResticOptionName(name: String): Boolean {
 
 fun shellQuote(value: String): String {
     return "'" + value.replace("'", "'\"'\"'") + "'"
+}
+
+fun resticCacheDirPath(cacheDir: File, isRoot: Boolean = Shell.getShell().isRoot): String {
+    return File(cacheDir, if (isRoot) "restic" else "restic-user").absolutePath
 }
 
 /** Escapes a filesystem path so restic's filepath.Match-based filters treat it literally. */

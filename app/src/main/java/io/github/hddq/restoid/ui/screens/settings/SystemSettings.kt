@@ -3,22 +3,16 @@ package io.github.hddq.restoid.ui.screens.settings
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,17 +24,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.LocalNetworkPermissionState
-import io.github.hddq.restoid.data.RootState
 import io.github.hddq.restoid.data.StoragePermissionState
 import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
 import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
 import io.github.hddq.restoid.ui.screens.settings.components.NotificationPermissionRow
-import io.github.hddq.restoid.ui.screens.settings.components.RootRequestRow
-import io.github.hddq.restoid.ui.screens.settings.components.RootStatusRow
 import io.github.hddq.restoid.ui.settings.SettingsViewModel
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SystemSettings(
     viewModel: SettingsViewModel,
@@ -48,7 +38,7 @@ fun SystemSettings(
     localNetworkPermissionLauncher: () -> Unit,
     onOpenSettings: () -> Unit
 ) {
-    val rootState by viewModel.rootState.collectAsStateWithLifecycle()
+    val hasRoot by viewModel.hasRoot.collectAsStateWithLifecycle()
     val storagePermissionState by viewModel.storagePermissionState.collectAsStateWithLifecycle()
     val localNetworkPermissionState by viewModel.localNetworkPermissionState.collectAsStateWithLifecycle()
     val notificationPermissionState by viewModel.notificationPermissionState.collectAsStateWithLifecycle()
@@ -62,32 +52,10 @@ fun SystemSettings(
 
     val rows = buildList<@Composable () -> Unit> {
         add {
-            AnimatedContent(targetState = rootState, label = "RootStatusAnimation") { state ->
-                when (state) {
-                    RootState.Denied -> RootRequestRow(
-                        text = stringResource(R.string.root_access_denied),
-                        buttonText = stringResource(R.string.action_try_again),
-                        icon = Icons.Outlined.ErrorOutline,
-                        onClick = { viewModel.requestRootAccess() }
-                    )
-                    RootState.Checking -> {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            LoadingIndicator(modifier = Modifier.size(24.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.checking_for_root))
-                        }
-                    }
-                    RootState.Granted -> RootStatusRow(
-                        text = stringResource(R.string.root_access_granted),
-                        icon = Icons.Outlined.CheckCircle
-                    )
-                }
-            }
+            RootAccessRow(
+                granted = hasRoot,
+                onRetry = { viewModel.refreshRootAccess() }
+            )
         }
         if (showStorageRow) {
             add {
@@ -148,6 +116,44 @@ fun SystemSettings(
                 ExpressiveSegmentedSurface(index = index, count = rows.size) {
                     rowContent()
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RootAccessRow(
+    granted: Boolean,
+    onRetry: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
+            Icon(
+                imageVector = if (granted) Icons.Outlined.CheckCircle else Icons.Outlined.ErrorOutline,
+                contentDescription = null,
+                modifier = Modifier.padding(end = 16.dp),
+                tint = if (granted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+            )
+            Text(
+                text = if (granted) {
+                    stringResource(R.string.root_access_granted)
+                } else {
+                    stringResource(R.string.root_access_denied)
+                }
+            )
+        }
+        if (!granted) {
+            Button(onClick = onRetry) {
+                Text(stringResource(R.string.action_try_again))
             }
         }
     }

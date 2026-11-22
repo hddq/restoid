@@ -31,6 +31,7 @@ import io.github.hddq.restoid.util.buildResticExcludeFlags
 import io.github.hddq.restoid.util.buildResticOptionFlags
 import io.github.hddq.restoid.util.buildShellEnvironmentPrefix
 import io.github.hddq.restoid.util.escapeResticPattern
+import io.github.hddq.restoid.util.resticCacheDirPath
 import io.github.hddq.restoid.util.shellQuote
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -256,7 +257,7 @@ class BackupOperationRunner(
                 }
                 if (envPrefix.isNotEmpty()) append(envPrefix).append(' ')
                 append("RESTIC_PASSWORD_FILE=").append(shellQuote(passwordFile.absolutePath)).append(' ')
-                append("RESTIC_CACHE_DIR=").append(shellQuote(File(context.cacheDir, if (com.topjohnwu.superuser.Shell.getShell().isRoot) "restic" else "restic-user").absolutePath)).append(' ')
+                append("RESTIC_CACHE_DIR=").append(shellQuote(resticCacheDirPath(context.cacheDir))).append(' ')
                 append(shellQuote(resticPath)).append(' ')
                 append("--retry-lock 5s ")
                 if (resticOptionFlags.isNotEmpty()) append(resticOptionFlags).append(' ')

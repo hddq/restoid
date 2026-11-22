@@ -220,11 +220,14 @@ class RestoreViewModel(
     private val _uiEvents = MutableSharedFlow<RestoreUiEvent>(extraBufferCapacity = 1)
     val uiEvents: SharedFlow<RestoreUiEvent> = _uiEvents.asSharedFlow()
 
-    val rootState = rootRepository.rootState
+    val hasRoot = rootRepository.hasRoot
 
     init {
         _restoreTypes.value = preferencesRepository.loadRestoreTypes()
         _allowDowngrade.value = preferencesRepository.loadAllowDowngrade()
+        viewModelScope.launch {
+            rootRepository.checkRootAccess()
+        }
         observeOperationState()
         if (snapshotId.isNotBlank()) {
             loadSnapshotDetails(snapshotId)
@@ -809,9 +812,8 @@ class RestoreViewModel(
         val selectedRepository = selectedRepoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
         val selectedRepoPath = selectedRepository?.path
         val currentSnapshot = _snapshot.value
-        val hasRoot = rootState.value == io.github.hddq.restoid.data.RootState.Granted
-        
-        val selectedApps = if (_restoreAppsEnabled.value && hasRoot) {
+
+        val selectedApps = if (_restoreAppsEnabled.value && hasRoot.value) {
             _backupDetails.value.filter { it.appInfo.isSelected && (_allowDowngrade.value || !it.isDowngrade) }
         } else {
             emptyList()

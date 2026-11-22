@@ -170,4 +170,28 @@ class ResticBinaryManagerTest {
             tempDir.deleteRecursively()
         }
     }
+
+    @Test
+    fun checkResticStatus_defaultProcessBuilderRunner_readsVersionWithoutLibsu() = kotlinx.coroutines.test.runTest {
+        val tempDir = Files.createTempDirectory("restoid_test_process_builder").toFile()
+        try {
+            val resticBin = File(tempDir, "librestic.so")
+            resticBin.writeText("#!/bin/sh\necho \"restic 0.19.1 compiled with go1.24\"\n")
+            resticBin.setExecutable(true)
+
+            val manager = ResticBinaryManager(
+                context = FakeContext(),
+                nativeLibDirProvider = { tempDir },
+                stringResolver = { "error" }
+            )
+
+            manager.checkResticStatus()
+
+            val state = manager.resticState.value as ResticState.Installed
+            assertEquals("0.19.1", state.version)
+            assertEquals("restic 0.19.1 compiled with go1.24", state.fullVersionOutput)
+        } finally {
+            tempDir.deleteRecursively()
+        }
+    }
 }

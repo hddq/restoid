@@ -207,8 +207,7 @@ fun RestoreScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            val rootState by viewModel.rootState.collectAsState()
-            val hasRoot = rootState == io.github.hddq.restoid.data.RootState.Granted
+            val hasRoot by viewModel.hasRoot.collectAsStateWithLifecycle()
             val selectableBackupDetails = backupDetails.filter { allowDowngrade || !it.isDowngrade }
             val customDirsList = customDirectories.map { io.github.hddq.restoid.model.CustomDirectory(it.key, it.value) }
             val hasContactsInSnapshot = contactsMetadata != null
@@ -349,9 +348,9 @@ fun RestoreAppsConfigScreen(
     val allowDowngrade by viewModel.allowDowngrade.collectAsState()
     val restoreTypes by viewModel.restoreTypes.collectAsState()
     val appRestoreTypes by viewModel.appRestoreTypes.collectAsState()
-    val rootState by viewModel.rootState.collectAsState()
+    val hasRoot by viewModel.hasRoot.collectAsStateWithLifecycle()
 
-    if (rootState != io.github.hddq.restoid.data.RootState.Granted) {
+    if (!hasRoot) {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(stringResource(R.string.root_access_denied))
         }

@@ -57,12 +57,11 @@ class RestoidApplication : Application() {
 
         Shell.enableVerboseLogging = BuildConfig.DEBUG
         
-        com.topjohnwu.superuser.Shell.setDefaultBuilder(
-            com.topjohnwu.superuser.Shell.Builder.create().setFlags(com.topjohnwu.superuser.Shell.FLAG_MOUNT_MASTER)
+        Shell.setDefaultBuilder(
+            Shell.Builder.create().setFlags(Shell.FLAG_MOUNT_MASTER)
         )
 
         // Initialize specialized components
-        rootRepository = RootRepository()
         storagePermissionRepository = StoragePermissionRepository(applicationContext)
         localNetworkPermissionRepository = LocalNetworkPermissionRepository(applicationContext)
         resticBinaryManager = ResticBinaryManager(applicationContext)
@@ -82,6 +81,9 @@ class RestoidApplication : Application() {
         operationLockManager = OperationLockManager(applicationContext)
         operationRequestStore = OperationRequestStore(applicationContext)
         operationRuntimeRepository = OperationRuntimeRepository(applicationContext)
+        rootRepository = RootRepository(
+            isShellBusy = { operationRuntimeRepository.state.value.isRunning }
+        )
         operationLogRepository = OperationLogRepository(applicationContext)
         operationWorkRepository = OperationWorkRepository(
             applicationContext,
@@ -93,7 +95,6 @@ class RestoidApplication : Application() {
         notificationRepository.createNotificationChannels()
 
         applicationScope.launch {
-            rootRepository.checkRootAccess()
             resticBinaryManager.checkResticStatus() // New manager handles checks
             repositoriesRepository.loadRepositories()
             scheduleRepository.reconcileAllSchedules()

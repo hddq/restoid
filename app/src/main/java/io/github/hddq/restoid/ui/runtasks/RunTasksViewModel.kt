@@ -94,7 +94,7 @@ class RunTasksViewModel(
     private val contactsBackupRepository = ContactsBackupRepository(application)
     private val calendarBackupRepository = CalendarBackupRepository(application)
 
-    val rootState = rootRepository.rootState
+    val hasRoot = rootRepository.hasRoot
 
     private val _uiState = MutableStateFlow(
         RunTasksUiState(
@@ -194,7 +194,10 @@ class RunTasksViewModel(
 
     private fun observeRootState() {
         viewModelScope.launch {
-            rootRepository.rootState.collect {
+            rootRepository.checkRootAccess()
+        }
+        viewModelScope.launch {
+            rootRepository.hasRoot.collect {
                 _uiState.update { recomputeConflicts(it) }
             }
         }
@@ -305,8 +308,7 @@ class RunTasksViewModel(
         val hasCallLogsBackup = _uiState.value.deviceDataBackupEnabled && _uiState.value.callLogsBackupEnabled
         val hasCalendarBackup = _uiState.value.deviceDataBackupEnabled && _uiState.value.calendarBackupEnabled
         val hasDeviceData = hasContactsBackup || hasCallLogsBackup || hasCalendarBackup
-        val hasRoot = rootState.value == io.github.hddq.restoid.data.RootState.Granted
-        val backupAppsEnabled = _uiState.value.backupEnabled && hasRoot
+        val backupAppsEnabled = _uiState.value.backupEnabled && hasRoot.value
         
         val request = RunTasksWorkRequest(
             repositoryKey = selectedRepoKey,
@@ -367,8 +369,7 @@ class RunTasksViewModel(
         val hasCallLogsBackup = state.deviceDataBackupEnabled && state.callLogsBackupEnabled
         val hasCalendarBackup = state.deviceDataBackupEnabled && state.calendarBackupEnabled
         val hasDeviceData = hasContactsBackup || hasCallLogsBackup || hasCalendarBackup
-        val hasRoot = rootState.value == io.github.hddq.restoid.data.RootState.Granted
-        val backupAppsEnabled = state.backupEnabled && hasRoot
+        val backupAppsEnabled = state.backupEnabled && hasRoot.value
         
         if (!backupAppsEnabled && !hasCustomDirs && !hasDeviceData && !hasMaintenanceTask) {
             return OperationProgress(
@@ -833,8 +834,7 @@ class RunTasksViewModel(
     fun setBackupAccessibility(value: Boolean) = _uiState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(accessibility = value))) }
 
     private fun recomputeConflicts(state: RunTasksUiState): RunTasksUiState {
-        val hasRoot = rootState.value == io.github.hddq.restoid.data.RootState.Granted
-        val selectedApps = if (state.backupEnabled && hasRoot) state.apps.filter { it.isSelected } else emptyList()
+        val selectedApps = if (state.backupEnabled && hasRoot.value) state.apps.filter { it.isSelected } else emptyList()
         val selectedExcluded = if (state.customDirectoriesBackupEnabled) {
             state.excludedCustomDirectories.filter { it.isSelected }.map { it.uri }
         } else {

@@ -1,12 +1,12 @@
 package io.github.hddq.restoid.data
 
 import android.content.Context
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.content.pm.PermissionInfo
 import android.os.Build
 import io.github.hddq.restoid.model.AppInfo
-import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -83,16 +83,18 @@ class AppInfoRepository(private val context: Context) {
      * It refreshes the list from the package manager and fetches info for any new apps.
      */
     suspend fun getInstalledUserApps(): List<AppInfo> = withContext(Dispatchers.IO) {
-        val packageNamesResult = Shell.cmd("pm list packages -3").exec()
-        if (packageNamesResult.isSuccess) {
-            val packageNames = packageNamesResult.out
-                .map { it.removePrefix("package:").trim() }
-                .filter { it != context.packageName } // Exclude self
-            // This will fetch from cache if available, or from system for new apps.
-            val appInfos = getAppInfoForPackages(packageNames)
-            return@withContext appInfos.sortedBy { it.name.lowercase() }
+        val pm = context.packageManager
+        val installedApps = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            pm.getInstalledApplications(PackageManager.ApplicationInfoFlags.of(0))
+        } else {
+            @Suppress("DEPRECATION")
+            pm.getInstalledApplications(0)
         }
-        return@withContext emptyList()
+        val packageNames = installedApps
+            .filter { (it.flags and ApplicationInfo.FLAG_SYSTEM) == 0 && it.packageName != context.packageName }
+            .map { it.packageName }
+        // This will fetch from cache if available, or from system for new apps.
+        getAppInfoForPackages(packageNames).sortedBy { it.name.lowercase() }
     }
 
 

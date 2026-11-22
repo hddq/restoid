@@ -3,7 +3,6 @@ package io.github.hddq.restoid.data
 import android.content.Context
 import android.os.Build
 import android.util.Log
-import com.topjohnwu.superuser.Shell
 import io.github.hddq.restoid.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,8 +24,15 @@ class ResticBinaryManager(
         runCatching { context.getString(id) }.getOrElse { "res_$id" }
     },
     private val versionCommandRunner: suspend (File) -> Pair<Boolean, List<String>> = { binary ->
-        val result = Shell.cmd("${binary.absolutePath} version").exec()
-        Pair(result.isSuccess, result.out)
+        runCatching {
+            val builder = ProcessBuilder(binary.absolutePath, "version")
+            File("/dev/null").takeIf { it.exists() }?.let { builder.redirectError(it) }
+            val process = builder.start()
+            val output = process.inputStream.bufferedReader().use { it.readLines() }
+            Pair(process.waitFor() == 0, output)
+        }.getOrElse {
+            Pair(false, emptyList())
+        }
     }
 ) {
 

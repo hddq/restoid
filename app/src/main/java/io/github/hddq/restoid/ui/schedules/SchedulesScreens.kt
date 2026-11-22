@@ -413,8 +413,7 @@ fun AddEditScheduleScreen(
         }
 
         item {
-            val rootState by viewModel.rootState.collectAsState()
-            val hasRoot = rootState == io.github.hddq.restoid.data.RootState.Granted
+            val hasRoot by viewModel.hasRoot.collectAsStateWithLifecycle()
 
             Column(modifier = Modifier.fillMaxWidth()) {
                 ExclusionConflictWarningCard(conflicts = state.exclusionConflicts)
