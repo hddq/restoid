@@ -14,9 +14,9 @@ class RootRepository(
     private val isShellBusy: () -> Boolean = { false },
     private val cachedShellIsRoot: () -> Boolean? = { Shell.getCachedShell()?.isRoot },
     private val closeCachedShell: () -> Unit = { runCatching { Shell.getCachedShell()?.close() } },
-    private val probeRootShell: () -> Boolean = { runCatching { Shell.getShell().isRoot }.getOrDefault(false) }
+    private val probeRootShell: () -> Boolean = { runCatching { Shell.getShell().isRoot }.getOrDefault(false) },
+    private val checkMutex: Mutex = Mutex()
 ) {
-    private val checkMutex = Mutex()
     private val _hasRoot = MutableStateFlow(loadPersistedHasRoot())
     val hasRoot = _hasRoot.asStateFlow()
 

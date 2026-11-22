@@ -1,6 +1,12 @@
 package io.github.hddq.restoid.data
 
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -112,5 +118,62 @@ class RootRepositoryTest {
 
         assertFalse(repo.hasRoot.value)
         assertFalse(persisted)
+    }
+
+    @Test
+    fun checkRootAccess_withSharedAdmissionMutex_cannotCloseShellAfterAdmission() = runTest {
+        val sharedMutex = Mutex()
+        var isRunning = false
+        var shellInUse = false
+        var closedWhileInUse = false
+        val events = mutableListOf<String>()
+        val probeStarted = CompletableDeferred<Unit>()
+        val allowProbeFinish = CompletableDeferred<Unit>()
+
+        val repo = RootRepository(
+            loadPersistedHasRoot = { false },
+            savePersistedHasRoot = {},
+            isShellBusy = { isRunning },
+            cachedShellIsRoot = { true },
+            closeCachedShell = {
+                if (shellInUse) closedWhileInUse = true
+                events.add("close")
+            },
+            probeRootShell = {
+                probeStarted.complete(Unit)
+                runBlocking { allowProbeFinish.await() }
+                events.add("probe")
+                true
+            },
+            checkMutex = sharedMutex
+        )
+
+        val checkJob = launch {
+            repo.checkRootAccess()
+        }
+        probeStarted.await()
+
+        val admitJob = launch {
+            sharedMutex.withLock {
+                isRunning = true
+                shellInUse = true
+                events.add("admit")
+            }
+        }
+        yield()
+
+        // Admission must wait while checkRootAccess holds the shared mutex.
+        assertFalse(isRunning)
+
+        allowProbeFinish.complete(Unit)
+        checkJob.join()
+        admitJob.join()
+
+        assertFalse(closedWhileInUse)
+        assertEquals(listOf("close", "probe", "admit"), events)
+
+        // Once admitted and running, a subsequent root check skips closing the active shell.
+        repo.checkRootAccess()
+        assertEquals(listOf("close", "probe", "admit"), events)
     }
 }
