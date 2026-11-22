@@ -227,10 +227,12 @@ class SchedulesViewModel(
     // Add/Edit Screen methods
     fun startAddSchedule() {
         val sessionId = ++addEditSessionId
+        runCurrentScheduleJob?.cancel()
         ++contactAccountsRefreshRequestId
         ++calendarRefreshRequestId
         val defaultHostname = preferencesRepository.getDeviceHostname()
         val newState = AddEditScheduleUiState(
+            isLoadingApps = true,
             maintenance = MaintenanceConfig(
                 forgetAllHosts = false,
                 forgetHosts = listOf(defaultHostname)
@@ -243,6 +245,7 @@ class SchedulesViewModel(
     }
     fun startEditSchedule(schedule: Schedule) {
         val sessionId = ++addEditSessionId
+        runCurrentScheduleJob?.cancel()
         ++contactAccountsRefreshRequestId
         ++calendarRefreshRequestId
         val normalizedHosts = normalizeForgetHosts(schedule.config.forgetHosts)
@@ -251,6 +254,7 @@ class SchedulesViewModel(
             name = schedule.name,
             intervalHours = schedule.intervalHours,
             isEnabled = schedule.isEnabled,
+            isLoadingApps = true,
             backupEnabled = schedule.config.backupEnabled,
             backupTypes = schedule.config.backupTypes.toUiModel(),
             appBackupTypes = schedule.config.appBackupTypes.mapValues { it.value.toUiModel() },
@@ -338,12 +342,17 @@ class SchedulesViewModel(
         if (hasChanges()) {
             _addEditState.update { it.copy(showDiscardChangesDialog = true) }
         } else {
+            ++addEditSessionId
+            runCurrentScheduleJob?.cancel()
+            _addEditState.update { it.copy(isSaving = false) }
             _uiEvents.tryEmit(SchedulesUiEvent.NavigateBack)
         }
     }
 
     fun onConfirmDiscard() {
-        _addEditState.update { it.copy(showDiscardChangesDialog = false) }
+        ++addEditSessionId
+        runCurrentScheduleJob?.cancel()
+        _addEditState.update { it.copy(showDiscardChangesDialog = false, isSaving = false) }
         _uiEvents.tryEmit(SchedulesUiEvent.NavigateBack)
     }
 
@@ -399,6 +408,7 @@ class SchedulesViewModel(
         val repoId = repository.id ?: return
         val sessionId = addEditSessionId
         val initialSnapshot = _addEditState.value
+        if (initialSnapshot.isLoadingApps) return
         if (initialSnapshot.maintenance.forgetSnapshots && !initialSnapshot.maintenance.forgetAllHosts && normalizeForgetHosts(initialSnapshot.maintenance.forgetHosts).isEmpty()) {
             Toast.makeText(
                 application,
@@ -411,6 +421,7 @@ class SchedulesViewModel(
             val resolvedHasRoot = rootRepository.checkRootAccess()
             if (addEditSessionId != sessionId) return@launch
             val state = _addEditState.value
+            if (state.isLoadingApps) return@launch
             if (state.maintenance.forgetSnapshots && !state.maintenance.forgetAllHosts && normalizeForgetHosts(state.maintenance.forgetHosts).isEmpty()) {
                 Toast.makeText(
                     application,
@@ -454,6 +465,7 @@ class SchedulesViewModel(
                 }
                 loadSchedules()
             }
+            if (addEditSessionId != sessionId) return@launch
             scheduleRepository.runNow(repoKey, schedule)
         }
     }
@@ -466,6 +478,7 @@ class SchedulesViewModel(
         val sessionId = addEditSessionId
 
         val initialSnapshot = _addEditState.value
+        if (initialSnapshot.isLoadingApps) return
         if (initialSnapshot.maintenance.forgetSnapshots && !initialSnapshot.maintenance.forgetAllHosts && normalizeForgetHosts(initialSnapshot.maintenance.forgetHosts).isEmpty()) {
             Toast.makeText(
                 application,
@@ -482,6 +495,12 @@ class SchedulesViewModel(
             val resolvedHasRoot = rootRepository.checkRootAccess()
             if (addEditSessionId != sessionId) return@launch
             val state = _addEditState.value
+            if (state.isLoadingApps) {
+                _addEditState.update { current ->
+                    if (addEditSessionId == sessionId) current.copy(isSaving = false) else current
+                }
+                return@launch
+            }
             if (state.maintenance.forgetSnapshots && !state.maintenance.forgetAllHosts && normalizeForgetHosts(state.maintenance.forgetHosts).isEmpty()) {
                 _addEditState.update { current ->
                     if (addEditSessionId == sessionId) current.copy(isSaving = false) else current
@@ -499,7 +518,9 @@ class SchedulesViewModel(
                 if (addEditSessionId == sessionId) current.copy(isSaving = false) else current
             }
             loadSchedules()
-            _uiEvents.emit(SchedulesUiEvent.NavigateBack)
+            if (addEditSessionId == sessionId) {
+                _uiEvents.emit(SchedulesUiEvent.NavigateBack)
+            }
         }
     }
 

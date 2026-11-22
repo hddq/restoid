@@ -9,6 +9,7 @@ import io.github.hddq.restoid.util.SftpRepositorySpec
 import io.github.hddq.restoid.util.isValidEnvironmentVariableName
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -171,6 +172,8 @@ class SettingsViewModel(
     val isIgnoringBatteryOptimizations = _isIgnoringBatteryOptimizations.asStateFlow()
 
     private var pendingSftpTrustRequest: PendingSftpTrustRequest? = null
+    private var addRepoSessionId: Long = 0L
+    private var addRepoJob: Job? = null
 
     init {
         refreshBatteryOptimizationStatus()
@@ -457,6 +460,9 @@ class SettingsViewModel(
 
     fun onSavePasswordChanged(save: Boolean) = _addRepoUiState.update { it.copy(savePassword = save) }
     fun onNewRepoDialogDismiss() {
+        ++addRepoSessionId
+        addRepoJob?.cancel()
+        addRepoJob = null
         pendingSftpTrustRequest = null
         _addRepoUiState.value = AddRepoUiState()
     }
@@ -467,15 +473,18 @@ class SettingsViewModel(
     }
 
     fun onSftpTrustDialogConfirm() {
+        if (addRepoJob?.isActive == true) return
         val pendingRequest = pendingSftpTrustRequest ?: run {
             onSftpTrustDialogDismiss()
             return
         }
+        val sessionId = addRepoSessionId
 
-        viewModelScope.launch {
+        addRepoJob = viewModelScope.launch {
             _addRepoUiState.update { it.copy(state = AddRepositoryState.Initializing) }
 
             val trustResult = repositoriesRepository.trustSftpServer(pendingRequest.knownHostEntries)
+            if (addRepoSessionId != sessionId) return@launch
             if (trustResult.isFailure) {
                 val message = trustResult.exceptionOrNull()?.message
                     ?: context.getString(R.string.repo_error_sftp_known_hosts_setup_failed)
@@ -491,19 +500,24 @@ class SettingsViewModel(
 
             pendingSftpTrustRequest = null
             _addRepoUiState.update { it.copy(sftpServerTrustInfo = null) }
-            executeAddRepository(pendingRequest.input)
+            executeAddRepository(pendingRequest.input, sessionId)
         }
     }
 
     fun onShowAddRepoDialog() {
         if (resticBinaryManager.isInstalled) {
+            ++addRepoSessionId
+            addRepoJob?.cancel()
+            addRepoJob = null
+            pendingSftpTrustRequest = null
             checkStoragePermission()
             refreshRcloneState()
-            _addRepoUiState.update { it.copy(showDialog = true) }
+            _addRepoUiState.value = AddRepoUiState(showDialog = true)
         }
     }
 
     fun addRepository() {
+        if (addRepoJob?.isActive == true) return
         if (!resticBinaryManager.isInstalled) {
             _addRepoUiState.update { it.copy(state = AddRepositoryState.Error(context.getString(R.string.error_restic_not_installed))) }
             return
@@ -604,11 +618,16 @@ class SettingsViewModel(
             savePassword = savePassword
         )
 
-        viewModelScope.launch {
+        val sessionId = addRepoSessionId
+        _addRepoUiState.update { it.copy(state = AddRepositoryState.Initializing, sftpServerTrustInfo = null) }
+
+        addRepoJob = viewModelScope.launch {
             if (input.backendType == RepositoryBackendType.LOCAL) {
                 checkStoragePermission()
                 val hasStorage = storagePermissionRepository.hasStoragePermission()
-                if (!hasStorage && !rootRepository.checkRootAccess()) {
+                val hasRootAccess = if (hasStorage) false else rootRepository.checkRootAccess()
+                if (addRepoSessionId != sessionId) return@launch
+                if (!hasStorage && !hasRootAccess) {
                     _addRepoUiState.update {
                         it.copy(state = AddRepositoryState.Error(context.getString(R.string.storage_permission_disabled)))
                     }
@@ -617,8 +636,6 @@ class SettingsViewModel(
             }
 
             if (input.backendType == RepositoryBackendType.SFTP) {
-                _addRepoUiState.update { it.copy(state = AddRepositoryState.Initializing, sftpServerTrustInfo = null) }
-
                 val trustInfoResult = repositoriesRepository.probeSftpServerTrust(
                     path = input.path,
                     password = input.password,
@@ -629,6 +646,7 @@ class SettingsViewModel(
                     sftpKeyAuthRequired = input.sftpAuthMethod == SftpAuthMethod.KEY,
                     sftpKeyPassphrase = input.sftpKeyPassphrase
                 )
+                if (addRepoSessionId != sessionId) return@launch
 
                 if (trustInfoResult.isFailure) {
                     _addRepoUiState.update {
@@ -657,11 +675,12 @@ class SettingsViewModel(
                 return@launch
             }
 
-            executeAddRepository(input)
+            executeAddRepository(input, sessionId)
         }
     }
 
-    private suspend fun executeAddRepository(input: AddRepositoryInput) {
+    private suspend fun executeAddRepository(input: AddRepositoryInput, sessionId: Long) {
+        if (addRepoSessionId != sessionId) return
         _addRepoUiState.update { it.copy(state = AddRepositoryState.Initializing) }
 
         val result = repositoriesRepository.addRepository(
@@ -681,11 +700,13 @@ class SettingsViewModel(
             resticRepository = resticRepository,
             savePassword = input.savePassword
         )
+        if (addRepoSessionId != sessionId) return
 
         _addRepoUiState.update { it.copy(state = result, sftpServerTrustInfo = null) }
 
         if (result is AddRepositoryState.Success || result is AddRepositoryState.SuccessWithMetadataWarning) {
             delay(1000)
+            if (addRepoSessionId != sessionId) return
             if (result is AddRepositoryState.SuccessWithMetadataWarning) {
                 _showMetadataWarning.value = result.warning
             }

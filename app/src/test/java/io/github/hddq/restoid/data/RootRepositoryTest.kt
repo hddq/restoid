@@ -1,5 +1,6 @@
 package io.github.hddq.restoid.data
 
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runTest
@@ -176,7 +177,10 @@ class RootRepositoryTest {
 
         // Caller arrives while the initial probe is still in flight and hasRoot is still false.
         assertFalse(repository.hasRoot.value)
-        val awaitingAction = async(Dispatchers.Default) { repository.checkRootAccess() }
+        val awaitingAction = async(Dispatchers.Default, start = CoroutineStart.UNDISPATCHED) {
+            repository.checkRootAccess()
+        }
+        assertFalse(awaitingAction.isCompleted)
 
         releaseProbe.countDown()
 
