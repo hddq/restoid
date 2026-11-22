@@ -25,11 +25,11 @@ import java.util.concurrent.ExecutionException
 class OperationWorkRepository(
     context: Context,
     private val requestStore: OperationRequestStore,
-    private val runtimeRepository: OperationRuntimeRepository
+    private val runtimeRepository: OperationRuntimeRepository,
+    private val enqueueMutex: Mutex = Mutex()
 ) {
     private val appContext = context.applicationContext
     private val workManager = WorkManager.getInstance(appContext)
-    private val enqueueMutex = Mutex()
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     val operationState: StateFlow<OperationRuntimeState> = runtimeRepository.state

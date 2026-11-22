@@ -63,7 +63,7 @@ fun RunTasksScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val operationBlocked by viewModel.operationBlocked.collectAsStateWithLifecycle()
-    val rootState by viewModel.rootState.collectAsStateWithLifecycle()
+    val hasRoot by viewModel.hasRoot.collectAsStateWithLifecycle()
     val appBarActions = LocalAppBarActions.current
     var showGuideSheet by remember { mutableStateOf(false) }
 
@@ -111,8 +111,6 @@ fun RunTasksScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            val hasRoot = rootState == io.github.hddq.restoid.data.RootState.Granted
-
             Column(modifier = Modifier.fillMaxWidth()) {
                 ExclusionConflictWarningCard(conflicts = uiState.exclusionConflicts)
                 ExpressiveSectionHeader(title = context.getString(R.string.operation_backup))
@@ -234,8 +232,8 @@ fun BackupConfigScreen(
     viewModel: RunTasksViewModel,
     modifier: Modifier = Modifier
 ) {
-    val rootState by viewModel.rootState.collectAsStateWithLifecycle()
-    if (rootState != io.github.hddq.restoid.data.RootState.Granted) {
+    val hasRoot by viewModel.hasRoot.collectAsStateWithLifecycle()
+    if (!hasRoot) {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(stringResource(R.string.root_access_denied))
         }

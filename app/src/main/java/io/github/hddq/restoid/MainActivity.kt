@@ -102,7 +102,6 @@ import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import io.github.hddq.restoid.data.NotificationRepository
-import io.github.hddq.restoid.data.RootState
 import io.github.hddq.restoid.ui.components.AppSortMenuButton
 import io.github.hddq.restoid.ui.home.HomeViewModel
 import io.github.hddq.restoid.ui.home.HomeViewModelFactory
@@ -853,14 +852,14 @@ class MainActivity : FragmentActivity() {
                                         )
                                     )
                                     val uiState by vm.uiState.collectAsStateWithLifecycle()
-                                    val rootState by vm.rootState.collectAsStateWithLifecycle()
+                                    val hasRoot by vm.hasRoot.collectAsStateWithLifecycle()
                                     DestinationScaffold(
                                         titleRes = R.string.topbar_backup_config,
                                         isTopLevel = false,
                                         isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() },
                                         actions = {
-                                            if (rootState == RootState.Granted && !uiState.isLoadingApps && uiState.apps.isNotEmpty()) {
+                                            if (hasRoot && !uiState.isLoadingApps && uiState.apps.isNotEmpty()) {
                                                 AppSortMenuButton(
                                                     sortOrder = uiState.appSortOrder,
                                                     onSortOrderChange = vm::setAppSortOrder,
@@ -1076,7 +1075,7 @@ class MainActivity : FragmentActivity() {
                                             snapshotId
                                         )
                                     )
-                                    val rootState by vm.rootState.collectAsStateWithLifecycle()
+                                    val hasRoot by vm.hasRoot.collectAsStateWithLifecycle()
                                     val isLoading by vm.isLoading.collectAsStateWithLifecycle()
                                     val backupDetails by vm.backupDetails.collectAsStateWithLifecycle()
                                     val sortOrder by vm.sortOrder.collectAsStateWithLifecycle()
@@ -1086,7 +1085,7 @@ class MainActivity : FragmentActivity() {
                                         isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() },
                                         actions = {
-                                            if (rootState == RootState.Granted && !isLoading && backupDetails.isNotEmpty()) {
+                                            if (hasRoot && !isLoading && backupDetails.isNotEmpty()) {
                                                 AppSortMenuButton(
                                                     sortOrder = sortOrder,
                                                     onSortOrderChange = vm::setSortOrder

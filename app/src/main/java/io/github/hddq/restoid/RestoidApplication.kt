@@ -9,6 +9,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 
 class RestoidApplication : Application() {
 
@@ -62,7 +63,6 @@ class RestoidApplication : Application() {
         )
 
         // Initialize specialized components
-        rootRepository = RootRepository()
         storagePermissionRepository = StoragePermissionRepository(applicationContext)
         localNetworkPermissionRepository = LocalNetworkPermissionRepository(applicationContext)
         resticBinaryManager = ResticBinaryManager(applicationContext)
@@ -82,18 +82,25 @@ class RestoidApplication : Application() {
         operationLockManager = OperationLockManager(applicationContext)
         operationRequestStore = OperationRequestStore(applicationContext)
         operationRuntimeRepository = OperationRuntimeRepository(applicationContext)
+        val shellOperationMutex = Mutex()
+        rootRepository = RootRepository(
+            loadPersistedHasRoot = preferencesRepository::loadHasRoot,
+            savePersistedHasRoot = preferencesRepository::saveHasRoot,
+            isShellBusy = { operationRuntimeRepository.state.value.isRunning },
+            checkMutex = shellOperationMutex
+        )
         operationLogRepository = OperationLogRepository(applicationContext)
         operationWorkRepository = OperationWorkRepository(
             applicationContext,
             operationRequestStore,
-            operationRuntimeRepository
+            operationRuntimeRepository,
+            enqueueMutex = shellOperationMutex
         )
 
         passwordManager.clearTemporaryPasswords()
         notificationRepository.createNotificationChannels()
 
         applicationScope.launch {
-            rootRepository.checkRootAccess()
             resticBinaryManager.checkResticStatus() // New manager handles checks
             repositoriesRepository.loadRepositories()
             scheduleRepository.reconcileAllSchedules()

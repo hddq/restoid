@@ -15,6 +15,7 @@ class PreferencesRepository(private val context: Context) {
     private companion object {
         const val KEY_REQUIRE_APP_UNLOCK = "require_app_unlock"
         const val KEY_DEVICE_HOSTNAME = "device_hostname"
+        const val KEY_HAS_ROOT = "has_root"
     }
 
     // Maintenance Preferences
@@ -292,6 +293,14 @@ class PreferencesRepository(private val context: Context) {
 
     fun loadRequireAppUnlock(): Boolean {
         return prefs.getBoolean(KEY_REQUIRE_APP_UNLOCK, false)
+    }
+
+    fun loadHasRoot(): Boolean {
+        return prefs.getBoolean(KEY_HAS_ROOT, false)
+    }
+
+    fun saveHasRoot(granted: Boolean) {
+        prefs.edit().putBoolean(KEY_HAS_ROOT, granted).apply()
     }
 
     fun getCustomDeviceHostname(): String? {

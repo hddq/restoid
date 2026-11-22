@@ -114,7 +114,7 @@ class SchedulesViewModel(
     private val calendarBackupRepository = CalendarBackupRepository(application)
     private val conditionMonitor = ScheduleConditionMonitor(application)
 
-    val rootState = rootRepository.rootState
+    val hasRoot = rootRepository.hasRoot
 
     val conditionStatus: StateFlow<TriggerConditionStatusSnapshot> = conditionMonitor.observeStatus()
         .stateIn(
@@ -188,7 +188,7 @@ class SchedulesViewModel(
             }
         }
         viewModelScope.launch {
-            rootRepository.rootState.collect {
+            rootRepository.hasRoot.collect {
                 _addEditState.update { recomputeConflicts(it) }
             }
         }
@@ -361,8 +361,7 @@ class SchedulesViewModel(
     }
 
     private fun buildScheduleFromState(state: AddEditScheduleUiState): Schedule {
-        val hasRoot = rootState.value == io.github.hddq.restoid.data.RootState.Granted
-        val actualBackupEnabled = state.backupEnabled && hasRoot
+        val actualBackupEnabled = state.backupEnabled && hasRoot.value
 
         return Schedule(
             id = state.id ?: UUID.randomUUID().toString(),
@@ -823,8 +822,7 @@ class SchedulesViewModel(
     }
 
     private fun recomputeConflicts(state: AddEditScheduleUiState): AddEditScheduleUiState {
-        val hasRoot = rootState.value == io.github.hddq.restoid.data.RootState.Granted
-        val selectedApps = if (state.backupEnabled && hasRoot) state.apps.filter { it.isSelected } else emptyList()
+        val selectedApps = if (state.backupEnabled && hasRoot.value) state.apps.filter { it.isSelected } else emptyList()
         val selectedExcluded = if (state.customDirectoriesBackupEnabled) {
             state.excludedCustomDirectories.filter { it.isSelected }.map { it.uri }
         } else {
