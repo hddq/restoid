@@ -32,6 +32,8 @@ import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.AutoDelete
 import androidx.compose.material.icons.outlined.Battery5Bar
 import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.Cancel
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.Delete
@@ -73,6 +75,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -82,7 +87,14 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.hddq.restoid.LocalAppBarActions
 import io.github.hddq.restoid.R
+import io.github.hddq.restoid.data.BatteryConditionStatus
+import io.github.hddq.restoid.data.ChargingPowerSource
+import io.github.hddq.restoid.data.ChargingState
+import io.github.hddq.restoid.data.NetworkConditionStatus
+import io.github.hddq.restoid.data.NetworkTransport
+import io.github.hddq.restoid.data.TriggerConditionStatusSnapshot
 import io.github.hddq.restoid.model.Schedule
+import io.github.hddq.restoid.model.TriggerConditions
 import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
 import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
@@ -216,7 +228,8 @@ fun AddEditScheduleScreen(
     onNavigateToCheckConfig: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val state by viewModel.addEditState.collectAsState()
+    val state by viewModel.addEditState.collectAsStateWithLifecycle()
+    val conditionStatus by viewModel.conditionStatus.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var intervalText by remember(state.intervalHours) { mutableStateOf(state.intervalHours.toString()) }
     val appBarActions = LocalAppBarActions.current
@@ -381,35 +394,13 @@ fun AddEditScheduleScreen(
         }
 
         item {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                ExpressiveSectionHeader(title = stringResource(R.string.section_conditions))
-                ExpressiveCardGroup {
-                    ExpressiveSegmentedSurface(index = 0, count = 3) {
-                        TaskRow(
-                            title = stringResource(R.string.condition_battery_not_low),
-                            icon = Icons.Outlined.Battery5Bar,
-                            checked = state.triggerConditions.requireBatteryNotLow,
-                            onCheckedChange = viewModel::setRequireBatteryNotLow
-                        )
-                    }
-                    ExpressiveSegmentedSurface(index = 1, count = 3) {
-                        TaskRow(
-                            title = stringResource(R.string.condition_charging),
-                            icon = Icons.Outlined.Bolt,
-                            checked = state.triggerConditions.requireCharging,
-                            onCheckedChange = viewModel::setRequireCharging
-                        )
-                    }
-                    ExpressiveSegmentedSurface(index = 2, count = 3) {
-                        TaskRow(
-                            title = stringResource(R.string.condition_unmetered_network),
-                            icon = Icons.Outlined.Wifi,
-                            checked = state.triggerConditions.requireUnmeteredNetwork,
-                            onCheckedChange = viewModel::setRequireUnmeteredNetwork
-                        )
-                    }
-                }
-            }
+            ScheduleConditionsSection(
+                triggerConditions = state.triggerConditions,
+                conditionStatus = conditionStatus,
+                onRequireBatteryNotLowChange = viewModel::setRequireBatteryNotLow,
+                onRequireChargingChange = viewModel::setRequireCharging,
+                onRequireUnmeteredNetworkChange = viewModel::setRequireUnmeteredNetwork
+            )
         }
 
         item {
@@ -805,3 +796,203 @@ fun ScheduleDeviceDataConfigScreen(
         modifier = modifier
     )
 }
+
+@Composable
+internal fun ScheduleConditionsSection(
+    triggerConditions: TriggerConditions,
+    conditionStatus: TriggerConditionStatusSnapshot,
+    onRequireBatteryNotLowChange: (Boolean) -> Unit,
+    onRequireChargingChange: (Boolean) -> Unit,
+    onRequireUnmeteredNetworkChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        ExpressiveSectionHeader(title = stringResource(R.string.section_conditions))
+        ExpressiveCardGroup {
+            ExpressiveSegmentedSurface(index = 0, count = 3) {
+                TaskRow(
+                    title = stringResource(R.string.condition_battery_not_low),
+                    icon = Icons.Outlined.Battery5Bar,
+                    checked = triggerConditions.requireBatteryNotLow,
+                    onCheckedChange = onRequireBatteryNotLowChange
+                ) {
+                    ConditionStatusSubtitle(
+                        currentStateText = batteryNotLowStateText(conditionStatus.battery),
+                        isMet = conditionStatus.battery.isBatteryNotLow,
+                        isRequired = triggerConditions.requireBatteryNotLow
+                    )
+                }
+            }
+            ExpressiveSegmentedSurface(index = 1, count = 3) {
+                TaskRow(
+                    title = stringResource(R.string.condition_charging),
+                    icon = Icons.Outlined.Bolt,
+                    checked = triggerConditions.requireCharging,
+                    onCheckedChange = onRequireChargingChange
+                ) {
+                    ConditionStatusSubtitle(
+                        currentStateText = chargingStateText(conditionStatus.battery),
+                        isMet = conditionStatus.battery.isChargingMet,
+                        isRequired = triggerConditions.requireCharging
+                    )
+                }
+            }
+            ExpressiveSegmentedSurface(index = 2, count = 3) {
+                TaskRow(
+                    title = stringResource(R.string.condition_unmetered_network),
+                    icon = Icons.Outlined.Wifi,
+                    checked = triggerConditions.requireUnmeteredNetwork,
+                    onCheckedChange = onRequireUnmeteredNetworkChange
+                ) {
+                    ConditionStatusSubtitle(
+                        currentStateText = networkStateText(conditionStatus.network),
+                        isMet = conditionStatus.network.isUnmeteredMet,
+                        isRequired = triggerConditions.requireUnmeteredNetwork
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ConditionStatusSubtitle(
+    currentStateText: String,
+    isMet: Boolean?,
+    isRequired: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val statusColor = when (isMet) {
+        true -> MaterialTheme.colorScheme.primary
+        false -> if (isRequired) {
+            MaterialTheme.colorScheme.error
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        }
+        null -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    val statusText = when (isMet) {
+        true -> stringResource(R.string.condition_status_met)
+        false -> stringResource(R.string.condition_status_not_met)
+        null -> null
+    }
+
+    val formattedText = if (statusText != null) {
+        val fullText = stringResource(R.string.condition_status_format, currentStateText, statusText)
+        val statusStart = fullText.lastIndexOf(statusText)
+        buildAnnotatedString {
+            append(fullText)
+            if (statusStart >= 0) {
+                addStyle(
+                    style = SpanStyle(
+                        color = statusColor,
+                        fontWeight = FontWeight.Medium
+                    ),
+                    start = statusStart,
+                    end = statusStart + statusText.length
+                )
+            }
+        }
+    } else {
+        buildAnnotatedString {
+            append(currentStateText)
+        }
+    }
+
+    Row(
+        modifier = modifier.padding(top = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        if (isMet != null) {
+            Icon(
+                imageVector = if (isMet) Icons.Outlined.CheckCircle else Icons.Outlined.Cancel,
+                contentDescription = null,
+                tint = statusColor,
+                modifier = Modifier.size(14.dp)
+            )
+        }
+        Text(
+            text = formattedText,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun batteryNotLowStateText(battery: BatteryConditionStatus): String {
+    val levelPercent = battery.levelPercent
+    return when (battery.isBatteryNotLow) {
+        true -> if (levelPercent != null) {
+            stringResource(R.string.condition_battery_level, levelPercent)
+        } else {
+            stringResource(R.string.condition_battery_ok)
+        }
+        false -> if (levelPercent != null) {
+            stringResource(R.string.condition_battery_level_low, levelPercent)
+        } else {
+            stringResource(R.string.condition_battery_low)
+        }
+        null -> stringResource(R.string.condition_status_unavailable)
+    }
+}
+
+@Composable
+private fun chargingStateText(battery: BatteryConditionStatus): String {
+    return when (battery.chargingState) {
+        ChargingState.CHARGING -> when (battery.powerSource) {
+            ChargingPowerSource.AC -> stringResource(R.string.condition_state_charging_ac)
+            ChargingPowerSource.USB -> stringResource(R.string.condition_state_charging_usb)
+            ChargingPowerSource.WIRELESS -> stringResource(R.string.condition_state_charging_wireless)
+            ChargingPowerSource.DOCK -> stringResource(R.string.condition_state_charging_dock)
+            ChargingPowerSource.UNKNOWN -> stringResource(R.string.condition_state_charging)
+        }
+        ChargingState.FULL -> stringResource(R.string.condition_state_battery_full)
+        ChargingState.PLUGGED_NOT_CHARGING -> stringResource(R.string.condition_state_plugged_not_charging)
+        ChargingState.NOT_CHARGING -> stringResource(R.string.condition_state_not_charging)
+        ChargingState.UNKNOWN -> stringResource(R.string.condition_status_unavailable)
+    }
+}
+
+@Composable
+private fun networkStateText(network: NetworkConditionStatus): String {
+    if (network.isBlocked) {
+        return stringResource(R.string.condition_state_network_blocked)
+    }
+    if (!network.isConnected) {
+        return stringResource(R.string.condition_state_network_none)
+    }
+    return when (network.transport) {
+        NetworkTransport.WIFI -> if (network.isUnmetered) {
+            stringResource(R.string.condition_state_network_wifi_unmetered)
+        } else {
+            stringResource(R.string.condition_state_network_wifi_metered)
+        }
+        NetworkTransport.ETHERNET -> if (network.isUnmetered) {
+            stringResource(R.string.condition_state_network_ethernet_unmetered)
+        } else {
+            stringResource(R.string.condition_state_network_ethernet_metered)
+        }
+        NetworkTransport.CELLULAR -> if (network.isUnmetered) {
+            stringResource(R.string.condition_state_network_cellular_unmetered)
+        } else {
+            stringResource(R.string.condition_state_network_cellular_metered)
+        }
+        NetworkTransport.VPN -> if (network.isUnmetered) {
+            stringResource(R.string.condition_state_network_vpn_unmetered)
+        } else {
+            stringResource(R.string.condition_state_network_vpn_metered)
+        }
+        NetworkTransport.OTHER -> if (network.isUnmetered) {
+            stringResource(R.string.condition_state_network_other_unmetered)
+        } else {
+            stringResource(R.string.condition_state_network_other_metered)
+        }
+        NetworkTransport.NONE -> stringResource(R.string.condition_state_network_none)
+    }
+}
+
