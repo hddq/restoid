@@ -32,6 +32,8 @@ import io.github.hddq.restoid.util.StorageUtils
 import io.github.hddq.restoid.work.BackupWorkRequest
 import io.github.hddq.restoid.work.DeviceDataBackupSelection
 import io.github.hddq.restoid.work.ExclusionConflict
+import io.github.hddq.restoid.data.ScheduleConditionMonitor
+import io.github.hddq.restoid.data.TriggerConditionStatusSnapshot
 import io.github.hddq.restoid.work.RunTasksConfig
 import io.github.hddq.restoid.work.findConflictingExclusions
 import io.github.hddq.restoid.work.resolveExclusionPaths
@@ -39,8 +41,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -107,8 +112,16 @@ class SchedulesViewModel(
 
     private val contactsBackupRepository = ContactsBackupRepository(application)
     private val calendarBackupRepository = CalendarBackupRepository(application)
+    private val conditionMonitor = ScheduleConditionMonitor(application)
 
     val rootState = rootRepository.rootState
+
+    val conditionStatus: StateFlow<TriggerConditionStatusSnapshot> = conditionMonitor.observeStatus()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = conditionMonitor.readCurrentStatus()
+        )
 
     private val _uiState = MutableStateFlow(SchedulesUiState())
     val uiState = _uiState.asStateFlow()

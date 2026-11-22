@@ -146,7 +146,8 @@ fun TaskRow(
     onCheckedChange: (Boolean) -> Unit,
     onNavigate: (() -> Unit)? = null,
     enabled: Boolean = true,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    subtitleContent: (@Composable () -> Unit)? = null
 ) {
     val rowClick = onNavigate ?: { onCheckedChange(!checked) }
 
@@ -172,7 +173,9 @@ fun TaskRow(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge
             )
-            if (subtitle != null) {
+            if (subtitleContent != null) {
+                subtitleContent()
+            } else if (subtitle != null) {
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
@@ -199,6 +202,8 @@ fun TaskRow(
                     .background(MaterialTheme.colorScheme.outlineVariant)
             )
             Spacer(Modifier.width(16.dp))
+        } else {
+            Spacer(Modifier.width(12.dp))
         }
 
         Switch(
