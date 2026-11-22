@@ -40,7 +40,8 @@ data class ExportedCalendarResult(
 data class ImportedCalendarResult(
     val restoredCount: Int,
     val skippedCount: Int,
-    val failedCount: Int
+    val failedCount: Int,
+    val unmatchedSelection: Boolean = false
 )
 
 private data class DeviceCalendarRecord(
@@ -270,6 +271,14 @@ class CalendarBackupRepository(private val context: Context) {
             selectAllCalendars = selectAllCalendars,
             selectedCalendarKeys = selectedCalendarKeys
         )
+        if (!selectAllCalendars && calendarsToRestore.isEmpty()) {
+            return@withContext ImportedCalendarResult(
+                restoredCount = 0,
+                skippedCount = 0,
+                failedCount = 0,
+                unmatchedSelection = true
+            )
+        }
         val existingLocalCalendars = loadLocalCalendars()
 
         var restoredCount = 0

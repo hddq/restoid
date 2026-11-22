@@ -62,6 +62,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -611,6 +612,9 @@ internal fun RestoreDeviceDataConfigContent(
     var showContactsOptionsSheet by rememberSaveable { mutableStateOf(false) }
     var showCalendarOptionsSheet by rememberSaveable { mutableStateOf(false) }
 
+    val latestLoadSnapshotContactAccounts by rememberUpdatedState(onLoadSnapshotContactAccounts)
+    val latestLoadSnapshotCalendars by rememberUpdatedState(onLoadSnapshotCalendars)
+
     val contactsAvailable = contactsMetadata != null
     val contactsChecked = contactsAvailable && restoreContactsEnabled
     val contactsSubtitle = when {
@@ -647,6 +651,18 @@ internal fun RestoreDeviceDataConfigContent(
         )
     }
 
+    LaunchedEffect(showContactsOptionsSheet, contactsAvailable) {
+        if (showContactsOptionsSheet && contactsAvailable) {
+            latestLoadSnapshotContactAccounts()
+        }
+    }
+
+    LaunchedEffect(showCalendarOptionsSheet, calendarAvailable) {
+        if (showCalendarOptionsSheet && calendarAvailable) {
+            latestLoadSnapshotCalendars()
+        }
+    }
+
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 88.dp, top = 8.dp),
@@ -669,10 +685,7 @@ internal fun RestoreDeviceDataConfigContent(
                         },
                         // Opening the snapshot account picker does not require device contacts permissions.
                         onNavigate = if (contactsAvailable) {
-                            {
-                                onLoadSnapshotContactAccounts()
-                                showContactsOptionsSheet = true
-                            }
+                            { showContactsOptionsSheet = true }
                         } else {
                             null
                         },
@@ -753,10 +766,7 @@ internal fun RestoreDeviceDataConfigContent(
                         },
                         // Opening the snapshot calendar picker does not require device calendar permissions.
                         onNavigate = if (calendarAvailable) {
-                            {
-                                onLoadSnapshotCalendars()
-                                showCalendarOptionsSheet = true
-                            }
+                            { showCalendarOptionsSheet = true }
                         } else {
                             null
                         },

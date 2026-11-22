@@ -261,7 +261,7 @@ class RestoreDeviceDataConfigScreenTest {
         assertTrue(loadCalled)
         assertFalse(permissionRequested)
         composeTestRule.onNodeWithTag(CALENDAR_OPTIONS_SELECT_ALL_TAG).assertIsDisplayed()
-        composeTestRule.onNodeWithText(personalEventsLabel).assertIsDisplayed()
+        composeTestRule.onNodeWithText("alice@example.com • $personalEventsLabel").assertIsDisplayed()
 
         composeTestRule.onNodeWithTag("$CALENDAR_OPTION_ROW_TAG_PREFIX$workKey").performClick()
         composeTestRule.waitForIdle()

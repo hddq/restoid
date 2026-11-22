@@ -8,6 +8,10 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.io.FileOutputStream
+import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 
 class MetadataRepository internal constructor(
     private val metadataRoot: File
@@ -15,6 +19,38 @@ class MetadataRepository internal constructor(
     constructor(context: Context) : this(File(context.filesDir, "metadata"))
 
     private val json = Json { ignoreUnknownKeys = true }
+
+    private fun writeTextAtomically(targetFile: File, content: String) {
+        val parentDir = targetFile.parentFile
+        if (parentDir != null && !parentDir.exists()) {
+            parentDir.mkdirs()
+        }
+        val tempFile = File.createTempFile("${targetFile.name}.", ".tmp", parentDir)
+        try {
+            FileOutputStream(tempFile).use { fos ->
+                fos.write(content.toByteArray(Charsets.UTF_8))
+                fos.flush()
+                runCatching { fos.fd.sync() }
+            }
+            try {
+                Files.move(
+                    tempFile.toPath(),
+                    targetFile.toPath(),
+                    StandardCopyOption.REPLACE_EXISTING,
+                    StandardCopyOption.ATOMIC_MOVE
+                )
+            } catch (_: AtomicMoveNotSupportedException) {
+                Files.move(
+                    tempFile.toPath(),
+                    targetFile.toPath(),
+                    StandardCopyOption.REPLACE_EXISTING
+                )
+            }
+        } catch (e: Exception) {
+            tempFile.delete()
+            throw e
+        }
+    }
 
     suspend fun getSchedules(repoId: String): List<Schedule> {
         return withContext(Dispatchers.IO) {
@@ -39,7 +75,7 @@ class MetadataRepository internal constructor(
                 val repoDir = File(metadataRoot, repoId)
                 if (!repoDir.exists()) repoDir.mkdirs()
                 val schedulesFile = File(repoDir, "schedules.json")
-                schedulesFile.writeText(json.encodeToString(schedules))
+                writeTextAtomically(schedulesFile, json.encodeToString(schedules))
                 true
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -76,7 +112,7 @@ class MetadataRepository internal constructor(
                 val repoDir = File(metadataRoot, repoId)
                 if (!repoDir.exists()) repoDir.mkdirs()
                 val metadataFile = File(repoDir, "$snapshotId.json")
-                metadataFile.writeText(json.encodeToString(metadata))
+                writeTextAtomically(metadataFile, json.encodeToString(metadata))
                 true
             } catch (e: Exception) {
                 e.printStackTrace()

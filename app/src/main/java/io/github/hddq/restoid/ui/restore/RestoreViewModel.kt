@@ -494,11 +494,10 @@ class RestoreViewModel(
                 if (repoPath == null || repoId == null || password == null) {
                     throw IllegalStateException(application.getString(R.string.error_repository_password_or_id_not_found))
                 }
-                val executionEnvironment = repositoriesRepository.getExecutionEnvironmentVariables(selectedRepoKey)
-                val resticOptions = repositoriesRepository.getExecutionResticOptions(selectedRepoKey)
-
                 val directPath = "${meta.path.trimEnd('/')}/${ContactsBackupRepository.CONTACTS_FILE_NAME}"
-                val content = withContext(Dispatchers.IO) {
+                val (content, resolvedDirPath) = withContext(Dispatchers.IO) {
+                    val executionEnvironment = repositoriesRepository.getExecutionEnvironmentVariables(selectedRepoKey)
+                    val resticOptions = repositoriesRepository.getExecutionResticOptions(selectedRepoKey)
                     val directDump = resticRepository.dump(
                         repoPath = repoPath,
                         password = password,
@@ -508,30 +507,34 @@ class RestoreViewModel(
                         resticOptions = resticOptions,
                         noLock = true
                     )
-                    directDump.getOrElse { directError ->
-                        val paths = resticRepository.ls(
-                            repoPath = repoPath,
-                            password = password,
-                            snapshotId = currentSnapshot.id,
-                            environmentVariables = executionEnvironment,
-                            resticOptions = resticOptions,
-                            noLock = true
-                        ).getOrElse { throw directError }
-                        val fallbackPath = paths.find {
-                            it.endsWith("/${ContactsBackupRepository.CONTACTS_RELATIVE_STAGING_PATH}/${ContactsBackupRepository.CONTACTS_FILE_NAME}")
-                        } ?: paths.find {
-                            it.endsWith("/${ContactsBackupRepository.CONTACTS_FILE_NAME}")
-                        } ?: throw directError
-                        resticRepository.dump(
-                            repoPath = repoPath,
-                            password = password,
-                            snapshotId = currentSnapshot.id,
-                            filePath = fallbackPath,
-                            environmentVariables = executionEnvironment,
-                            resticOptions = resticOptions,
-                            noLock = true
-                        ).getOrThrow()
-                    }
+                    directDump.fold(
+                        onSuccess = { dumped -> dumped to null },
+                        onFailure = { directError ->
+                            val paths = resticRepository.ls(
+                                repoPath = repoPath,
+                                password = password,
+                                snapshotId = currentSnapshot.id,
+                                environmentVariables = executionEnvironment,
+                                resticOptions = resticOptions,
+                                noLock = true
+                            ).getOrElse { throw directError }
+                            val fallbackPath = paths.find {
+                                it.endsWith("/${ContactsBackupRepository.CONTACTS_RELATIVE_STAGING_PATH}/${ContactsBackupRepository.CONTACTS_FILE_NAME}")
+                            } ?: paths.find {
+                                it.endsWith("/${ContactsBackupRepository.CONTACTS_FILE_NAME}")
+                            } ?: throw directError
+                            val dumped = resticRepository.dump(
+                                repoPath = repoPath,
+                                password = password,
+                                snapshotId = currentSnapshot.id,
+                                filePath = fallbackPath,
+                                environmentVariables = executionEnvironment,
+                                resticOptions = resticOptions,
+                                noLock = true
+                            ).getOrThrow()
+                            dumped to parentDirectoryPath(fallbackPath)
+                        }
+                    )
                 }
 
                 val summaries = withContext(Dispatchers.Default) {
@@ -543,7 +546,10 @@ class RestoreViewModel(
                     if (contactAccountsLoadRequestId != requestId) return@withLock
                     val currentMeta = snapshotMetadata
                     if (currentMeta?.deviceData?.contacts != null) {
-                        val updatedContactsMeta = currentMeta.deviceData.contacts.copy(accounts = summaries)
+                        val updatedContactsMeta = currentMeta.deviceData.contacts.copy(
+                            path = resolvedDirPath ?: currentMeta.deviceData.contacts.path,
+                            accounts = summaries
+                        )
                         val updatedMetadata = currentMeta.copy(
                             deviceData = currentMeta.deviceData.copy(contacts = updatedContactsMeta)
                         )
@@ -551,7 +557,12 @@ class RestoreViewModel(
                         _contactsMetadata.value = updatedContactsMeta
                         metadataRepository.saveMetadataForSnapshot(repoId, currentSnapshot.id, updatedMetadata)
                     } else {
-                        _contactsMetadata.update { it?.copy(accounts = summaries) }
+                        _contactsMetadata.update { current ->
+                            current?.copy(
+                                path = resolvedDirPath ?: current.path,
+                                accounts = summaries
+                            )
+                        }
                     }
                 }
 
@@ -621,11 +632,11 @@ class RestoreViewModel(
                 if (repoPath == null || repoId == null || password == null) {
                     throw IllegalStateException(application.getString(R.string.error_repository_password_or_id_not_found))
                 }
-                val executionEnvironment = repositoriesRepository.getExecutionEnvironmentVariables(selectedRepoKey)
-                val resticOptions = repositoriesRepository.getExecutionResticOptions(selectedRepoKey)
 
                 val directPath = "${meta.path.trimEnd('/')}/${CalendarBackupRepository.CALENDAR_FILE_NAME}"
-                val content = withContext(Dispatchers.IO) {
+                val (content, resolvedDirPath) = withContext(Dispatchers.IO) {
+                    val executionEnvironment = repositoriesRepository.getExecutionEnvironmentVariables(selectedRepoKey)
+                    val resticOptions = repositoriesRepository.getExecutionResticOptions(selectedRepoKey)
                     val directDump = resticRepository.dump(
                         repoPath = repoPath,
                         password = password,
@@ -635,30 +646,34 @@ class RestoreViewModel(
                         resticOptions = resticOptions,
                         noLock = true
                     )
-                    directDump.getOrElse { directError ->
-                        val paths = resticRepository.ls(
-                            repoPath = repoPath,
-                            password = password,
-                            snapshotId = currentSnapshot.id,
-                            environmentVariables = executionEnvironment,
-                            resticOptions = resticOptions,
-                            noLock = true
-                        ).getOrElse { throw directError }
-                        val fallbackPath = paths.find {
-                            it.endsWith("/${CalendarBackupRepository.CALENDAR_RELATIVE_STAGING_PATH}/${CalendarBackupRepository.CALENDAR_FILE_NAME}")
-                        } ?: paths.find {
-                            it.endsWith("/${CalendarBackupRepository.CALENDAR_FILE_NAME}")
-                        } ?: throw directError
-                        resticRepository.dump(
-                            repoPath = repoPath,
-                            password = password,
-                            snapshotId = currentSnapshot.id,
-                            filePath = fallbackPath,
-                            environmentVariables = executionEnvironment,
-                            resticOptions = resticOptions,
-                            noLock = true
-                        ).getOrThrow()
-                    }
+                    directDump.fold(
+                        onSuccess = { dumped -> dumped to null },
+                        onFailure = { directError ->
+                            val paths = resticRepository.ls(
+                                repoPath = repoPath,
+                                password = password,
+                                snapshotId = currentSnapshot.id,
+                                environmentVariables = executionEnvironment,
+                                resticOptions = resticOptions,
+                                noLock = true
+                            ).getOrElse { throw directError }
+                            val fallbackPath = paths.find {
+                                it.endsWith("/${CalendarBackupRepository.CALENDAR_RELATIVE_STAGING_PATH}/${CalendarBackupRepository.CALENDAR_FILE_NAME}")
+                            } ?: paths.find {
+                                it.endsWith("/${CalendarBackupRepository.CALENDAR_FILE_NAME}")
+                            } ?: throw directError
+                            val dumped = resticRepository.dump(
+                                repoPath = repoPath,
+                                password = password,
+                                snapshotId = currentSnapshot.id,
+                                filePath = fallbackPath,
+                                environmentVariables = executionEnvironment,
+                                resticOptions = resticOptions,
+                                noLock = true
+                            ).getOrThrow()
+                            dumped to parentDirectoryPath(fallbackPath)
+                        }
+                    )
                 }
 
                 val summaries = withContext(Dispatchers.Default) {
@@ -670,7 +685,10 @@ class RestoreViewModel(
                     if (calendarsLoadRequestId != requestId) return@withLock
                     val currentMeta = snapshotMetadata
                     if (currentMeta?.deviceData?.calendar != null) {
-                        val updatedCalendarMeta = currentMeta.deviceData.calendar.copy(calendars = summaries)
+                        val updatedCalendarMeta = currentMeta.deviceData.calendar.copy(
+                            path = resolvedDirPath ?: currentMeta.deviceData.calendar.path,
+                            calendars = summaries
+                        )
                         val updatedMetadata = currentMeta.copy(
                             deviceData = currentMeta.deviceData.copy(calendar = updatedCalendarMeta)
                         )
@@ -678,7 +696,12 @@ class RestoreViewModel(
                         _calendarMetadata.value = updatedCalendarMeta
                         metadataRepository.saveMetadataForSnapshot(repoId, currentSnapshot.id, updatedMetadata)
                     } else {
-                        _calendarMetadata.update { it?.copy(calendars = summaries) }
+                        _calendarMetadata.update { current ->
+                            current?.copy(
+                                path = resolvedDirPath ?: current.path,
+                                calendars = summaries
+                            )
+                        }
                     }
                 }
 
@@ -701,6 +724,15 @@ class RestoreViewModel(
                     _isLoadingCalendars.value = false
                 }
             }
+        }
+    }
+
+    private fun parentDirectoryPath(filePath: String): String? {
+        val slashIndex = filePath.lastIndexOf('/')
+        return when {
+            slashIndex < 0 -> null
+            slashIndex == 0 -> "/"
+            else -> filePath.substring(0, slashIndex)
         }
     }
 

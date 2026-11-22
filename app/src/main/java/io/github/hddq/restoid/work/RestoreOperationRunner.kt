@@ -589,7 +589,10 @@ class RestoreOperationRunner(
                             }
                         )
                         throwIfCancelled()
-                        if (importResult.failedCount == 0 && importResult.failedGroupCount == 0 && importResult.failedPhotoCount == 0) {
+                        if (importResult.unmatchedSelection) {
+                            failures++
+                            failureDetails.add(context.getString(R.string.restore_failure_contacts_selection_not_found))
+                        } else if (importResult.failedCount == 0 && importResult.failedGroupCount == 0 && importResult.failedPhotoCount == 0) {
                             successes++
                         } else {
                             failures++
@@ -689,7 +692,10 @@ class RestoreOperationRunner(
                             }
                         )
                         throwIfCancelled()
-                        if (importResult.failedCount == 0) {
+                        if (importResult.unmatchedSelection) {
+                            failures++
+                            failureDetails.add(context.getString(R.string.restore_failure_calendar_selection_not_found))
+                        } else if (importResult.failedCount == 0) {
                             successes++
                         } else {
                             failures++

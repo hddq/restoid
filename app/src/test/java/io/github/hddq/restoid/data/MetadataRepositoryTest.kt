@@ -55,4 +55,33 @@ class MetadataRepositoryTest {
 
         assertEquals(0, deleted)
     }
+
+    @Test
+    fun `saveMetadataForSnapshot atomically replaces existing metadata without leaving temp files`() = runTest {
+        val metadataRoot = tempFolder.newFolder("metadata")
+        val repository = MetadataRepository(metadataRoot)
+        val repoId = "6102bcf8"
+        val snapshotId = "6fb005a58bd12d7c92ffa63efc0d0747c3db013820203aa6480a23dc11111111"
+
+        val initial = RestoidMetadata(apps = emptyMap(), customDirectories = emptyMap(), deviceData = null)
+        val updated = RestoidMetadata(
+            apps = emptyMap(),
+            customDirectories = emptyMap(),
+            deviceData = io.github.hddq.restoid.model.DeviceDataMetadata(
+                contacts = io.github.hddq.restoid.model.ContactsBackupMetadata(
+                    count = 5,
+                    size = 1024L,
+                    path = "/staging/contacts"
+                )
+            )
+        )
+
+        assertTrue(repository.saveMetadataForSnapshot(repoId, snapshotId, initial))
+        assertTrue(repository.saveMetadataForSnapshot(repoId, snapshotId, updated))
+        assertEquals(updated, repository.getMetadataForSnapshot(repoId, snapshotId))
+
+        val repoDir = File(metadataRoot, repoId)
+        val files = repoDir.listFiles()?.map { it.name }?.sorted().orEmpty()
+        assertEquals(listOf("$snapshotId.json"), files)
+    }
 }

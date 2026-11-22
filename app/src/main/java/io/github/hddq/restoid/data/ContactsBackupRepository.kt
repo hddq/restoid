@@ -49,7 +49,8 @@ data class ImportedContactsResult(
     val skippedCount: Int,
     val failedCount: Int,
     val failedGroupCount: Int = 0,
-    val failedPhotoCount: Int = 0
+    val failedPhotoCount: Int = 0,
+    val unmatchedSelection: Boolean = false
 )
 
 private data class EnsureLocalGroupsResult(
@@ -417,6 +418,14 @@ class ContactsBackupRepository(private val context: Context) {
             selectAllContactAccounts = selectAllContactAccounts,
             selectedContactAccountKeys = selectedContactAccountKeys
         )
+        if (!selectAllContactAccounts && archive.contacts.isEmpty()) {
+            return@withContext ImportedContactsResult(
+                restoredCount = 0,
+                skippedCount = 0,
+                failedCount = 0,
+                unmatchedSelection = true
+            )
+        }
         val photosDir = File(inputDir, PHOTOS_DIR_NAME)
         val resolver = context.contentResolver
         val deviceCountryIso = resolveDeviceCountryIso()
