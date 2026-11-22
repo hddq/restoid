@@ -73,8 +73,18 @@
     <string name="run_tasks_device_data">Device Data</string>
     <string name="title_device_data">Device Data</string>
     <string name="device_data_contacts">Contacts</string>
-    <string name="device_data_include_read_only_contacts">Include read-only contacts</string>
     <string name="device_data_contacts_permission_required">Contacts permission required</string>
+    <string name="device_data_contacts_all_accounts">All accounts</string>
+    <string name="device_data_contacts_none_selected">No accounts selected</string>
+    <plurals name="device_data_contacts_accounts_selected_count">
+        <item quantity="one">%1$d account selected</item>
+        <item quantity="few">%1$d accounts selected</item>
+        <item quantity="other">%1$d accounts selected</item>
+    </plurals>
+    <string name="device_data_contacts_options_title">Contact accounts</string>
+    <string name="device_data_contacts_accounts_empty">No contact accounts found on this device</string>
+    <string name="device_data_contacts_local_account">Device</string>
+    <string name="device_data_contacts_read_only">Read-only</string>
     <string name="device_data_contacts_not_in_snapshot">Not included in this snapshot</string>
     <string name="device_data_call_logs">Call Logs</string>
     <string name="device_data_call_logs_permission_required">Call logs permission required</string>
@@ -157,6 +167,8 @@
     <string name="summary_all_files_access_required">Odobrite pristup svim datotekama, a zatim pokušajte ponovno.</string>
     <string name="error_contacts_read_permission_required">Contacts permission is required to back up contacts.</string>
     <string name="summary_contacts_read_permission_required">Grant Contacts permission, then try again.</string>
+    <string name="error_contacts_none_selected">No contact accounts selected to back up.</string>
+    <string name="summary_contacts_none_selected">Select at least one contact account in Device Data settings.</string>
     <string name="error_contacts_write_permission_required">Contacts permission is required to restore contacts.</string>
     <string name="error_call_logs_read_permission_required">Call logs permission is required to back up call logs.</string>
     <string name="summary_call_logs_read_permission_required">Grant Call logs permission, then try again.</string>
@@ -309,6 +321,9 @@
     <string name="cd_sort_apps">Sort apps</string>
     <string name="sort_by_name">Ime</string>
     <string name="sort_by_size">Veličina</string>
+    <string name="sort_by_installation_date">Installation Date</string>
+    <string name="sort_ascending">Ascending</string>
+    <string name="sort_descending">Descending</string>
     <string name="dialog_forget_snapshot_title">Ukloni snapshot?</string>
     <string name="dialog_forget_snapshot_failed_title">Failed to Forget Snapshot</string>
     <string name="dialog_forget_snapshot_message">Ovo će ukloniti unos snapshota. Stvarni podaci bit će izbrisani tek nakon čišćenja (Prune). Jesi li siguran?</string>
@@ -604,6 +619,7 @@
         <item quantity="few">%1$d/%2$d datoteke</item>
         <item quantity="other">%1$d/%2$d datoteka</item>
     </plurals>
+    <string name="notification_activity_items_progress">%1$s (%2$d / %3$d)</string>
     <string name="notification_scanning_files">Skeniram datoteke…</string>
     <string name="notification_operation_finished_success">%1$s uspješno završeno</string>
     <string name="notification_operation_finished_failure">%1$s nije uspjelo</string>
@@ -666,6 +682,25 @@
     <string name="restic_executor_failure_not_ready">Restic nije instaliran ili spreman.</string>
     <string name="restic_executor_failure_invalid_env_name">Ime jedne ili više varijabli okruženja je nevažeće.</string>
     <string name="restic_executor_failure_invalid_option_name">Ime jedne ili više restic opcija je nevažeće.</string>
+    <string name="prune_phase_loading_indexes">Loading indexes…</string>
+    <string name="prune_phase_loading_snapshots">Loading snapshots…</string>
+    <string name="prune_phase_finding_used_data">Finding data in use</string>
+    <string name="prune_phase_searching_used_packs">Searching used packs…</string>
+    <string name="prune_phase_collecting_packs">Analyzing packs</string>
+    <string name="prune_phase_deleting_unreferenced">Deleting unreferenced packs</string>
+    <string name="prune_phase_repacking_packs">Repacking packs</string>
+    <string name="prune_phase_rebuilding_index">Rebuilding index</string>
+    <string name="prune_phase_removing_old_packs">Removing old packs</string>
+    <string name="prune_phase_done">Finishing prune…</string>
+    <plurals name="maintenance_summary_blobs">
+        <item quantity="one">%d blob</item>
+        <item quantity="few">%d blobs</item>
+        <item quantity="other">%d blobs</item>
+    </plurals>
+    <string name="maintenance_summary_prune_freed_and_repacked">Pruned %1$s (%2$s), repacked %3$s (%4$s). Remaining: %5$s (%6$s).</string>
+    <string name="maintenance_summary_prune_freed">Pruned %1$s (%2$s). Remaining: %3$s (%4$s).</string>
+    <string name="maintenance_summary_prune_repacked">Repacked %1$s (%2$s). Remaining: %3$s (%4$s).</string>
+    <string name="maintenance_summary_prune_nothing_removed">No data removed. Remaining: %1$s (%2$s).</string>
     <string name="maintenance_summary_prune_completed">Čišćenje završeno.</string>
     <plurals name="maintenance_summary_removed_snapshots">
         <item quantity="one">Uklonjen %1$d snapshot.</item>

@@ -73,8 +73,19 @@
     <string name="run_tasks_device_data">Dane urządzenia</string>
     <string name="title_device_data">Dane urządzenia</string>
     <string name="device_data_contacts">Kontakty</string>
-    <string name="device_data_include_read_only_contacts">Uwzględnij kontakty tylko do odczytu</string>
     <string name="device_data_contacts_permission_required">Wymagane uprawnienie do kontaktów</string>
+    <string name="device_data_contacts_all_accounts">Wszystkie konta</string>
+    <string name="device_data_contacts_none_selected">Nie wybrano kont</string>
+    <plurals name="device_data_contacts_accounts_selected_count">
+        <item quantity="one">Wybrano %1$d konto</item>
+        <item quantity="few">Wybrano %1$d konta</item>
+        <item quantity="many">Wybrano %1$d kont</item>
+        <item quantity="other">Wybrano %1$d kont</item>
+    </plurals>
+    <string name="device_data_contacts_options_title">Konta kontaktów</string>
+    <string name="device_data_contacts_accounts_empty">Nie znaleziono kont kontaktów na tym urządzeniu</string>
+    <string name="device_data_contacts_local_account">Urządzenie</string>
+    <string name="device_data_contacts_read_only">Tylko do odczytu</string>
     <string name="device_data_contacts_not_in_snapshot">Nie uwzględniono w tej migawce</string>
     <string name="device_data_call_logs">Rejestr połączeń</string>
     <string name="device_data_call_logs_permission_required">Wymagane uprawnienie do rejestru połączeń</string>
@@ -162,6 +173,8 @@
     <string name="summary_all_files_access_required">Przyznaj dostęp do wszystkich plików, a następnie spróbuj ponownie.</string>
     <string name="error_contacts_read_permission_required">Do tworzenia kopii zapasowej kontaktów wymagane jest uprawnienie do kontaktów.</string>
     <string name="summary_contacts_read_permission_required">Przyznaj uprawnienia do kontaktów, a następnie spróbuj ponownie.</string>
+    <string name="error_contacts_none_selected">Nie wybrano kont kontaktów do backupu.</string>
+    <string name="summary_contacts_none_selected">Wybierz przynajmniej jedno konto kontaktów w ustawieniach danych urządzenia.</string>
     <string name="error_contacts_write_permission_required">Do przywracania kontaktów wymagane jest uprawnienie do kontaktów.</string>
     <string name="error_call_logs_read_permission_required">Do utworzenia kopii zapasowej rejestru połączeń wymagane jest uprawnienie do jego odczytu.</string>
     <string name="summary_call_logs_read_permission_required">Przyznaj uprawnienie do odczytu rejestru połączeń, a następnie spróbuj ponownie.</string>
@@ -327,6 +340,9 @@
     <string name="cd_sort_apps">Sortuj aplikacje</string>
     <string name="sort_by_name">Nazwa</string>
     <string name="sort_by_size">Rozmiar</string>
+    <string name="sort_by_installation_date">Data instalacji</string>
+    <string name="sort_ascending">Rosnąco</string>
+    <string name="sort_descending">Malejąco</string>
     <string name="dialog_forget_snapshot_title">Zapomnieć migawkę?</string>
     <string name="dialog_forget_snapshot_failed_title">Nie udało się usunąć migawki</string>
     <string name="dialog_forget_snapshot_message">To usunie wpis migawki. Faktyczne dane zostaną usunięte dopiero po uruchomieniu oczyszczania (prune). Jesteś pewien?</string>
@@ -626,6 +642,7 @@
         <item quantity="many">%1$d/%2$d plików</item>
         <item quantity="other">%1$d/%2$d plików</item>
     </plurals>
+    <string name="notification_activity_items_progress">%1$s (%2$d z %3$d)</string>
     <string name="notification_scanning_files">Skanowanie plików…</string>
     <string name="notification_operation_finished_success">%1$s zakończono pomyślnie</string>
     <string name="notification_operation_finished_failure">%1$s nie powiodło się</string>
@@ -690,6 +707,26 @@
     <string name="restic_executor_failure_not_ready">Restic nie jest zainstalowany ani gotowy.</string>
     <string name="restic_executor_failure_invalid_env_name">Jedna lub więcej nazw zmiennych środowiskowych jest błędna.</string>
     <string name="restic_executor_failure_invalid_option_name">Jedna lub więcej nazw opcji restic jest błędna.</string>
+    <string name="prune_phase_loading_indexes">Ładowanie indeksów…</string>
+    <string name="prune_phase_loading_snapshots">Ładowanie migawek…</string>
+    <string name="prune_phase_finding_used_data">Wyszukiwanie używanych danych</string>
+    <string name="prune_phase_searching_used_packs">Wyszukiwanie używanych paczek…</string>
+    <string name="prune_phase_collecting_packs">Analiza paczek</string>
+    <string name="prune_phase_deleting_unreferenced">Usuwanie niepowiązanych paczek</string>
+    <string name="prune_phase_repacking_packs">Przepakowywanie paczek</string>
+    <string name="prune_phase_rebuilding_index">Przebudowa indeksu</string>
+    <string name="prune_phase_removing_old_packs">Usuwanie starych paczek</string>
+    <string name="prune_phase_done">Kończenie czyszczenia…</string>
+    <plurals name="maintenance_summary_blobs">
+        <item quantity="one">%d obiekt blob</item>
+        <item quantity="few">%d obiekty blob</item>
+        <item quantity="many">%d obiektów blob</item>
+        <item quantity="other">%d obiektów blob</item>
+    </plurals>
+    <string name="maintenance_summary_prune_freed_and_repacked">Oczyszczono %1$s (%2$s), przepakowano %3$s (%4$s). Pozostało: %5$s (%6$s).</string>
+    <string name="maintenance_summary_prune_freed">Oczyszczono %1$s (%2$s). Pozostało: %3$s (%4$s).</string>
+    <string name="maintenance_summary_prune_repacked">Repakowano %1$s (%2$s). Pozostało: %3$s (%4$s).</string>
+    <string name="maintenance_summary_prune_nothing_removed">Nie usunięto żadnych danych. Pozostało: %1$s (%2$s).</string>
     <string name="maintenance_summary_prune_completed">Operacja oczyszczania (prune) zakończona.</string>
     <plurals name="maintenance_summary_removed_snapshots">
         <item quantity="one">Usunięto %1$d migawkę.</item>
