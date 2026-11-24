@@ -83,6 +83,7 @@
     </plurals>
     <string name="device_data_contacts_options_title">Contact accounts</string>
     <string name="device_data_contacts_accounts_empty">No contact accounts found on this device</string>
+    <string name="device_data_contacts_accounts_snapshot_empty">No contact accounts found in this snapshot</string>
     <string name="device_data_contacts_local_account">Device</string>
     <string name="device_data_contacts_read_only">Read-only</string>
     <string name="device_data_contacts_not_in_snapshot">Not included in this snapshot</string>
@@ -91,6 +92,7 @@
     <string name="device_data_permissions_required">Permissions required</string>
     <string name="device_data_not_in_snapshot">Not included in this snapshot</string>
     <string name="device_data_none_selected">No items selected</string>
+    <string name="restore_device_data_load_failed">Failed to load options from snapshot.</string>
     <plurals name="device_data_contacts_count">
         <item quantity="one">%1$d contact</item>
         <item quantity="other">%1$d contacts</item>
@@ -111,6 +113,7 @@
     </plurals>
     <string name="device_data_calendar_options_title">Calendars</string>
     <string name="device_data_calendar_empty">No calendars found on this device</string>
+    <string name="device_data_calendar_snapshot_empty">No calendars found in this snapshot</string>
     <string name="device_data_calendar_read_only">Read-only</string>
     <plurals name="device_data_calendar_events_count">
         <item quantity="one">%1$d event</item>
@@ -333,6 +336,7 @@
     <string name="action_grant">अनुमति दें</string>
     <string name="action_settings">सेटिंग्स</string>
     <string name="action_forget">हटाएं</string>
+    <string name="action_retry">Retry</string>
     <string name="action_try_again">पुनः प्रयास करें</string>
     <string name="action_disable">अक्षम करें</string>
     <string name="action_enable">सक्षम करें</string>
@@ -407,7 +411,6 @@
     <string name="install_restic_manage_repositories">रिपॉजिटरी प्रबंधित करने के लिए restic स्थापित करें।</string>
     <string name="system_title">सिस्टम</string>
     <string name="root_access_denied">रूट एक्सेस अस्वीकृत</string>
-    <string name="checking_for_root">रूट की जाँच की जा रही है…</string>
     <string name="root_access_granted">रूट एक्सेस स्वीकृत</string>
     <string name="storage_permission_enabled">\'सभी फ़ाइलों का एक्सेस\' प्रदान कर दिया गया</string>
     <string name="storage_permission_disabled">सभी फ़ाइलों तक एक्सेस आवश्यक</string>
@@ -509,6 +512,10 @@
     <string name="restore_stage_cleanup">सफाई (Cleanup)</string>
     <string name="restore_error_preflight_failed">रीस्टोर से पहले की जांच विफल रही।</string>
     <string name="restore_error_no_items_selected">रीस्टोर के लिए कोई आइटम चयनित नहीं है।</string>
+    <string name="restore_error_contacts_none_selected">No contact accounts selected to restore.</string>
+    <string name="restore_summary_contacts_none_selected">Select at least one contact account to restore.</string>
+    <string name="restore_error_calendar_none_selected">No calendars selected to restore.</string>
+    <string name="restore_summary_calendar_none_selected">Select at least one calendar to restore.</string>
     <string name="restore_error_no_restore_types_selected">कोई रिस्टोर प्रकार नहीं चुना गया।</string>
     <string name="restore_error_password_not_found">रिपॉजिटरी के लिए पासवर्ड नहीं मिला।</string>
     <string name="restore_error_no_files_found">चुने गए ऐप्स के लिए स्नैपशॉट में कोई फ़ाइल नहीं मिली।</string>
@@ -534,10 +541,12 @@
     <string name="restore_failure_contact_groups">Failed to restore %1$d contact groups.</string>
     <string name="restore_failure_contact_photos">Failed to restore %1$d contact photos.</string>
     <string name="restore_failure_contacts_missing">Contacts backup data not found in snapshot.</string>
+    <string name="restore_failure_contacts_selection_not_found">None of the selected contact accounts were found in this snapshot.</string>
     <string name="restore_failure_call_logs">Failed to restore %1$d call logs.</string>
     <string name="restore_failure_call_logs_missing">Call logs backup data not found in snapshot.</string>
     <string name="restore_failure_calendar">Failed to restore %1$d calendar events.</string>
     <string name="restore_failure_calendar_missing">Calendar backup data not found in snapshot.</string>
+    <string name="restore_failure_calendar_selection_not_found">None of the selected calendars were found in this snapshot.</string>
     <string name="restore_summary_finished_in">रीस्टोर %1$s में समाप्त हुआ।</string>
     <plurals name="restore_summary_processed_items">
         <item quantity="one">सफलतापूर्वक प्रोसेस किए गए आइटम: %1$d।</item>
@@ -690,6 +699,34 @@
     <string name="condition_battery_not_low">बैटरी कम नहीं है</string>
     <string name="condition_charging">डिवाइस चार्ज हो रहा है</string>
     <string name="condition_unmetered_network">नेटवर्क अनमीटर्ड है (Wi-Fi)</string>
+    <string name="condition_status_format">%1$s · %2$s</string>
+    <string name="condition_status_met">Met</string>
+    <string name="condition_status_not_met">Not met</string>
+    <string name="condition_status_unavailable">Status unavailable</string>
+    <string name="condition_battery_level">%d%%</string>
+    <string name="condition_battery_level_low">%d%% (low)</string>
+    <string name="condition_battery_ok">Battery OK</string>
+    <string name="condition_battery_low">Low battery</string>
+    <string name="condition_state_charging">Charging</string>
+    <string name="condition_state_charging_ac">Charging (AC)</string>
+    <string name="condition_state_charging_usb">Charging (USB)</string>
+    <string name="condition_state_charging_wireless">Charging (wireless)</string>
+    <string name="condition_state_charging_dock">Charging (dock)</string>
+    <string name="condition_state_battery_full">Battery full</string>
+    <string name="condition_state_plugged_not_charging">Plugged in, not charging</string>
+    <string name="condition_state_not_charging">Not charging</string>
+    <string name="condition_state_network_none">No network</string>
+    <string name="condition_state_network_blocked">Network blocked</string>
+    <string name="condition_state_network_wifi_unmetered">Wi-Fi (unmetered)</string>
+    <string name="condition_state_network_wifi_metered">Wi-Fi (metered)</string>
+    <string name="condition_state_network_ethernet_unmetered">Ethernet (unmetered)</string>
+    <string name="condition_state_network_ethernet_metered">Ethernet (metered)</string>
+    <string name="condition_state_network_cellular_unmetered">Mobile data (unmetered)</string>
+    <string name="condition_state_network_cellular_metered">Mobile data (metered)</string>
+    <string name="condition_state_network_vpn_unmetered">VPN (unmetered)</string>
+    <string name="condition_state_network_vpn_metered">VPN (metered)</string>
+    <string name="condition_state_network_other_unmetered">Unmetered network</string>
+    <string name="condition_state_network_other_metered">Metered network</string>
     <string name="unit_hours">घंटे</string>
     <string name="schedule_interval_range_hint">1–720 घंटे</string>
     <string name="preset_hours">%dघंटे</string>

@@ -84,6 +84,7 @@
     </plurals>
     <string name="device_data_contacts_options_title">Konta kontaktów</string>
     <string name="device_data_contacts_accounts_empty">Nie znaleziono kont kontaktów na tym urządzeniu</string>
+    <string name="device_data_contacts_accounts_snapshot_empty">Nie znaleziono kont kontaktów w tej migawce</string>
     <string name="device_data_contacts_local_account">Urządzenie</string>
     <string name="device_data_contacts_read_only">Tylko do odczytu</string>
     <string name="device_data_contacts_not_in_snapshot">Nie uwzględniono w tej migawce</string>
@@ -92,6 +93,7 @@
     <string name="device_data_permissions_required">Wymagane uprawnienia</string>
     <string name="device_data_not_in_snapshot">Nie uwzględniono w tej migawce</string>
     <string name="device_data_none_selected">Nie wybrano żadnych elementów</string>
+    <string name="restore_device_data_load_failed">Nie udało się wczytać opcji z migawki.</string>
     <plurals name="device_data_contacts_count">
         <item quantity="one">%1$d kontakt</item>
         <item quantity="few">%1$d kontakty</item>
@@ -118,6 +120,7 @@
     </plurals>
     <string name="device_data_calendar_options_title">Kalendarze</string>
     <string name="device_data_calendar_empty">Nie znaleziono kalendarzy na tym urządzeniu</string>
+    <string name="device_data_calendar_snapshot_empty">Nie znaleziono kalendarzy w tej migawce</string>
     <string name="device_data_calendar_read_only">Tylko do odczytu</string>
     <plurals name="device_data_calendar_events_count">
         <item quantity="one">%1$d wydarzenie</item>
@@ -370,6 +373,7 @@
     <string name="action_grant">Przyznaj</string>
     <string name="action_settings">Ustawienia</string>
     <string name="action_forget">Zapomnij</string>
+    <string name="action_retry">Ponów</string>
     <string name="action_try_again">Spróbuj ponownie</string>
     <string name="action_disable">Wyłącz</string>
     <string name="action_enable">Włacz</string>
@@ -444,7 +448,6 @@
     <string name="install_restic_manage_repositories">Zainstaluj restic, żeby zarządzać repozytoriami.</string>
     <string name="system_title">System</string>
     <string name="root_access_denied">Brak dostępu do roota</string>
-    <string name="checking_for_root">Sprawdzanie roota…</string>
     <string name="root_access_granted">Dostęp do roota przyznany</string>
     <string name="storage_permission_enabled">Przyznano dostęp do wszystkich plików</string>
     <string name="storage_permission_disabled">Wymagany dostęp do wszystkich plików</string>
@@ -548,6 +551,10 @@
     <string name="restore_stage_cleanup">Sprzątanie</string>
     <string name="restore_error_preflight_failed">Testy przed przywracaniem nie powiodły się.</string>
     <string name="restore_error_no_items_selected">Nie wybrano elementów do przywrócenia.</string>
+    <string name="restore_error_contacts_none_selected">Nie wybrano kont kontaktów do przywrócenia.</string>
+    <string name="restore_summary_contacts_none_selected">Wybierz co najmniej jedno konto kontaktów do przywrócenia.</string>
+    <string name="restore_error_calendar_none_selected">Nie wybrano kalendarzy do przywrócenia.</string>
+    <string name="restore_summary_calendar_none_selected">Wybierz co najmniej jeden kalendarz do przywrócenia.</string>
     <string name="restore_error_no_restore_types_selected">Nie wybrano typów przywracania.</string>
     <string name="restore_error_password_not_found">Nie znaleziono hasła dla repozytorium.</string>
     <string name="restore_error_no_files_found">Nie znaleziono plików w migawce dla wybranych elementów.</string>
@@ -573,10 +580,12 @@
     <string name="restore_failure_contact_groups">Nie udało się przywrócić %1$d grup kontaktów.</string>
     <string name="restore_failure_contact_photos">Nie udało się przywrócić %1$d zdjęć kontaktów.</string>
     <string name="restore_failure_contacts_missing">Nie znaleziono danych kopii zapasowej kontaktów w snapshot.</string>
+    <string name="restore_failure_contacts_selection_not_found">Żadne z wybranych kont kontaktów nie zostało znalezione w tej migawce.</string>
     <string name="restore_failure_call_logs">Nie udało się przywrócić %1$d rejestrów połączeń.</string>
     <string name="restore_failure_call_logs_missing">Nie znaleziono danych kopii zapasowej rejestru połączeń w snapshot.</string>
     <string name="restore_failure_calendar">Nie udało się przywrócić %1$d wydarzeń kalendarza.</string>
     <string name="restore_failure_calendar_missing">Nie znaleziono danych kopii zapasowej kalendarza w snapshocie.</string>
+    <string name="restore_failure_calendar_selection_not_found">Żaden z wybranych kalendarzy nie został znaleziony w tej migawce.</string>
     <string name="restore_summary_finished_in">Przywracanie zakończone w %1$s.</string>
     <plurals name="restore_summary_processed_items">
         <item quantity="one">Pomyślnie przetworzono %1$d element.</item>
@@ -743,6 +752,34 @@
     <string name="condition_battery_not_low">Bateria nie jest słaba</string>
     <string name="condition_charging">Urządzenie się ładuje</string>
     <string name="condition_unmetered_network">Nielimitowana sieć</string>
+    <string name="condition_status_format">%1$s · %2$s</string>
+    <string name="condition_status_met">Spełniony</string>
+    <string name="condition_status_not_met">Niespełniony</string>
+    <string name="condition_status_unavailable">Status niedostępny</string>
+    <string name="condition_battery_level">%d%%</string>
+    <string name="condition_battery_level_low">%d%% (niski)</string>
+    <string name="condition_battery_ok">Bateria OK</string>
+    <string name="condition_battery_low">Niski poziom baterii</string>
+    <string name="condition_state_charging">Ładowanie</string>
+    <string name="condition_state_charging_ac">Ładowanie (AC)</string>
+    <string name="condition_state_charging_usb">Ładowanie (USB)</string>
+    <string name="condition_state_charging_wireless">Ładowanie (bezprzewodowe)</string>
+    <string name="condition_state_charging_dock">Ładowanie (stacja dokująca)</string>
+    <string name="condition_state_battery_full">Bateria naładowana</string>
+    <string name="condition_state_plugged_not_charging">Podłączono, nie ładuje</string>
+    <string name="condition_state_not_charging">Nie ładuje</string>
+    <string name="condition_state_network_none">Brak sieci</string>
+    <string name="condition_state_network_blocked">Sieć zablokowana</string>
+    <string name="condition_state_network_wifi_unmetered">Wi-Fi (nielimitowana)</string>
+    <string name="condition_state_network_wifi_metered">Wi-Fi (limitowana)</string>
+    <string name="condition_state_network_ethernet_unmetered">Ethernet (nielimitowana)</string>
+    <string name="condition_state_network_ethernet_metered">Ethernet (limitowana)</string>
+    <string name="condition_state_network_cellular_unmetered">Dane komórkowe (nielimitowana)</string>
+    <string name="condition_state_network_cellular_metered">Dane komórkowe (limitowana)</string>
+    <string name="condition_state_network_vpn_unmetered">VPN (nielimitowana)</string>
+    <string name="condition_state_network_vpn_metered">VPN (limitowana)</string>
+    <string name="condition_state_network_other_unmetered">Sieć nielimitowana</string>
+    <string name="condition_state_network_other_metered">Sieć limitowana</string>
     <string name="unit_hours">h</string>
     <string name="schedule_interval_range_hint">1–720 h</string>
     <string name="preset_hours">%dh</string>
