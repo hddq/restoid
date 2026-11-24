@@ -1,0 +1,2 @@
+* Select specific calendars and contact accounts during restore
+* Show live condition status for backup schedules
