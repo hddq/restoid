@@ -5,6 +5,7 @@ import android.text.format.Formatter
 import android.widget.Toast
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.rememberScrollState
@@ -31,11 +32,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Call
 import androidx.compose.material.icons.outlined.Contacts
+import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.Smartphone
+import androidx.compose.material.icons.outlined.Tag
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -325,11 +330,28 @@ fun SnapshotDetailsScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SnapshotDetailsHeader(
     snapshot: SnapshotInfo,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
+    val copiedText = stringResource(R.string.snapshot_id_copied_to_clipboard)
+    val shortId = remember(snapshot.id) { snapshot.id.take(8) }
+    val formattedTime = remember(snapshot.time, context) {
+        formatSnapshotHeaderTime(snapshot.time, context)
+    }
+
+    val copySnapshotId: () -> Unit = {
+        scope.launch {
+            clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Snapshot ID", snapshot.id)))
+            Toast.makeText(context, copiedText, Toast.LENGTH_SHORT).show()
+        }
+    }
+
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -337,25 +359,157 @@ fun SnapshotDetailsHeader(
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                stringResource(R.string.snapshot_id, snapshot.id),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                fontFamily = FontFamily.Monospace
-            )
-            snapshot.hostname?.takeIf { it.isNotBlank() }?.let { hostname ->
-                Text(
-                    stringResource(R.string.snapshot_hostname, hostname),
-                    style = MaterialTheme.typography.bodyMedium
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Schedule,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
                 )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = formattedTime.localDateTime,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    formattedTime.relativeTime?.let { relative ->
+                        Text(
+                            text = relative,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
-            Text(
-                stringResource(R.string.snapshot_time, snapshot.time),
-                style = MaterialTheme.typography.bodyMedium
-            )
+
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                itemVerticalAlignment = Alignment.CenterVertically
+            ) {
+                val chipShape = RoundedCornerShape(12.dp)
+                Surface(
+                    shape = chipShape,
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier
+                        .clip(chipShape)
+                        .clickable(onClick = copySnapshotId)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Tag,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = shortId,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Icon(
+                            imageVector = Icons.Outlined.ContentCopy,
+                            contentDescription = stringResource(R.string.cd_copy_snapshot_id),
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+
+                snapshot.hostname?.takeIf { it.isNotBlank() }?.let { hostname ->
+                    Surface(
+                        shape = chipShape,
+                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Smartphone,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = hostname,
+                                style = MaterialTheme.typography.labelLarge,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
         }
+    }
+}
+
+private data class FormattedSnapshotTime(
+    val localDateTime: String,
+    val relativeTime: String?
+)
+
+private fun formatSnapshotHeaderTime(
+    rawTime: String,
+    context: android.content.Context
+): FormattedSnapshotTime {
+    return try {
+        val instant = try {
+            java.time.OffsetDateTime.parse(rawTime).toInstant()
+        } catch (_: Exception) {
+            java.time.Instant.parse(rawTime)
+        }
+        val localZoned = instant.atZone(java.time.ZoneId.systemDefault())
+        val formatter = java.time.format.DateTimeFormatter.ofLocalizedDateTime(
+            java.time.format.FormatStyle.MEDIUM,
+            java.time.format.FormatStyle.SHORT
+        )
+        val localDateTime = formatter.format(localZoned)
+
+        val duration = java.time.Duration.between(instant, java.time.Instant.now())
+        val relativeTime = if (duration.isNegative) {
+            null
+        } else {
+            when {
+                duration.toMinutes() < 1 -> context.getString(R.string.time_just_now)
+                duration.toHours() < 1 -> {
+                    val mins = duration.toMinutes().toInt()
+                    context.resources.getQuantityString(R.plurals.time_mins_ago, mins, mins)
+                }
+                duration.toDays() < 1 -> {
+                    val hours = duration.toHours().toInt()
+                    context.resources.getQuantityString(R.plurals.time_hours_ago, hours, hours)
+                }
+                duration.toDays() < 30 -> {
+                    val days = duration.toDays().toInt()
+                    context.resources.getQuantityString(R.plurals.time_days_ago, days, days)
+                }
+                duration.toDays() < 365 -> {
+                    val months = (duration.toDays() / 30).toInt()
+                    context.resources.getQuantityString(R.plurals.time_months_ago, months, months)
+                }
+                else -> {
+                    val years = (duration.toDays() / 365).toInt()
+                    context.resources.getQuantityString(R.plurals.time_years_ago, years, years)
+                }
+            }
+        }
+
+        FormattedSnapshotTime(localDateTime = localDateTime, relativeTime = relativeTime)
+    } catch (_: Exception) {
+        FormattedSnapshotTime(localDateTime = rawTime, relativeTime = null)
     }
 }
 
@@ -780,7 +934,7 @@ private fun BackedUpAppItemPreview() {
                 SnapshotDetailsHeader(
                     snapshot = SnapshotInfo(
                         id = "a1b2c3d4e5f67890",
-                        time = "2026-11-10 14:30:00",
+                        time = "2026-11-10T14:30:00Z",
                         paths = listOf("/data/app/org.fdroid.fdroid"),
                         tags = emptyList(),
                         hostname = "Pixel-8"
