@@ -308,6 +308,61 @@ class OperationLogRepositoryTest {
         assertEquals(run1Id, recoveredRepo.logs.value[1].id)
         assertEquals("Backing up Run 1", recoveredRepo.logs.value[1].stageTitle)
     }
+
+    @Test
+    fun addLog_persistsTruncatesAndBackwardCompatiblyLoadsPresetName() {
+        val entry = repository.addLog(
+            operationType = OperationType.RUN_TASKS,
+            scheduleName = "Nightly",
+            presetName = "Full App Backup",
+            success = true,
+            stageTitle = "Tasks Complete",
+            summary = "Done"
+        )
+        assertEquals("Full App Backup", entry.presetName)
+
+        val reloaded = OperationLogRepository(fakePrefs, Dispatchers.Unconfined)
+        val restored = reloaded.getLogById(entry.id)
+        assertNotNull(restored)
+        assertEquals("Full App Backup", restored?.presetName)
+        assertEquals("Nightly", restored?.scheduleName)
+
+        val longName = "p".repeat(5000)
+        val truncated = repository.addLog(
+            operationType = OperationType.RUN_TASKS,
+            presetName = longName,
+            success = true,
+            stageTitle = "Done",
+            summary = "Done"
+        )
+        assertEquals(OperationLogRepository.MAX_FIELD_LENGTH, truncated.presetName?.length)
+
+        // Legacy log JSON without presetName key should deserialize cleanly with presetName == null
+        val legacyPrefs = FakeSharedPreferences(
+            mapOf(
+                OperationLogRepository.KEY_LOGS to """
+                    [
+                      {
+                        "id": "legacy-log-1",
+                        "operationType": "BACKUP",
+                        "scheduleName": "Old Schedule",
+                        "startTimeMillis": 1000,
+                        "endTimeMillis": 2000,
+                        "durationSeconds": 1,
+                        "success": true,
+                        "stageTitle": "Complete",
+                        "summary": "OK"
+                      }
+                    ]
+                """.trimIndent()
+            )
+        )
+        val legacyRepo = OperationLogRepository(legacyPrefs, Dispatchers.Unconfined)
+        val legacyEntry = legacyRepo.getLogById("legacy-log-1")
+        assertNotNull(legacyEntry)
+        assertEquals("Old Schedule", legacyEntry?.scheduleName)
+        assertNull(legacyEntry?.presetName)
+    }
 }
 
 /**

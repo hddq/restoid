@@ -1,6 +1,7 @@
 package io.github.hddq.restoid.ui.shared
 
 import android.app.Application
+import android.content.Context
 import android.widget.Toast
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.AppInfoRepository
@@ -171,6 +172,41 @@ fun hasTaskConfigChanges(
         current.selectedCalendarKeys != initial.selectedCalendarKeys ||
         current.customDirectories != initial.customDirectories ||
         current.excludedCustomDirectories != initial.excludedCustomDirectories
+}
+
+fun summarizeTaskConfig(
+    context: Context,
+    config: RunTasksConfig,
+    hasRoot: Boolean
+): String {
+    val parts = mutableListOf<String>()
+    if (config.backupEnabled && hasRoot) {
+        val appCount = config.selectedPackageNames.size
+        parts.add(context.resources.getQuantityString(R.plurals.preset_summary_apps_count, appCount, appCount))
+    }
+    if (config.customDirectories.isNotEmpty()) {
+        parts.add(context.getString(R.string.preset_summary_custom_folders))
+    }
+    if (config.deviceData.anyEnabled()) {
+        parts.add(context.getString(R.string.preset_summary_device_data))
+    }
+    if (config.unlockRepo) {
+        parts.add(context.getString(R.string.task_unlock))
+    }
+    if (config.forgetSnapshots) {
+        parts.add(context.getString(R.string.task_forget))
+    }
+    if (config.pruneRepo) {
+        parts.add(context.getString(R.string.task_prune))
+    }
+    if (config.checkRepo) {
+        parts.add(context.getString(R.string.task_check))
+    }
+    return if (parts.isEmpty()) {
+        context.getString(R.string.preset_summary_no_tasks)
+    } else {
+        parts.joinToString(" · ")
+    }
 }
 
 class TaskConfigEditorController(

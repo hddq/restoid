@@ -38,6 +38,8 @@ class RestoidApplication : Application() {
         private set
     lateinit var scheduleRepository: ScheduleRepository
         private set
+    lateinit var taskPresetRepository: TaskPresetRepository
+        private set
     lateinit var preferencesRepository: PreferencesRepository
         private set
     lateinit var operationCoordinator: OperationCoordinator
@@ -96,6 +98,10 @@ class RestoidApplication : Application() {
             operationRuntimeRepository,
             enqueueMutex = shellOperationMutex
         )
+        taskPresetRepository = TaskPresetRepository(
+            metadataRepository = metadataRepository,
+            operationWorkRepository = operationWorkRepository
+        )
 
         passwordManager.clearTemporaryPasswords()
         notificationRepository.createNotificationChannels()
@@ -103,7 +109,6 @@ class RestoidApplication : Application() {
         applicationScope.launch {
             resticBinaryManager.checkResticStatus() // New manager handles checks
             repositoriesRepository.loadRepositories()
-            scheduleRepository.reconcileAllSchedules()
             notificationRepository.checkPermissionStatus()
             storagePermissionRepository.checkPermissionStatus()
             localNetworkPermissionRepository.checkPermissionStatus()

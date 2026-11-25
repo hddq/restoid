@@ -7,6 +7,7 @@ data class OperationLogEntry(
     val id: String,
     val operationType: OperationType,
     val scheduleName: String? = null,
+    val presetName: String? = null,
     val startTimeMillis: Long,
     val endTimeMillis: Long = System.currentTimeMillis(),
     val durationSeconds: Long = 0L,

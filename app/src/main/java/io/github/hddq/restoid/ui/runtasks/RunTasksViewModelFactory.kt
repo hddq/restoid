@@ -8,17 +8,20 @@ import io.github.hddq.restoid.data.PreferencesRepository
 import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.ResticBinaryManager
 import io.github.hddq.restoid.data.ResticRepository
+import io.github.hddq.restoid.data.RootRepository
+import io.github.hddq.restoid.data.TaskPresetRepository
 import io.github.hddq.restoid.work.OperationWorkRepository
 
 class RunTasksViewModelFactory(
     private val application: Application,
-    private val rootRepository: io.github.hddq.restoid.data.RootRepository,
+    private val rootRepository: RootRepository,
     private val repositoriesRepository: RepositoriesRepository,
     private val resticBinaryManager: ResticBinaryManager,
     private val resticRepository: ResticRepository,
     private val appInfoRepository: AppInfoRepository,
     private val preferencesRepository: PreferencesRepository,
-    private val operationWorkRepository: OperationWorkRepository
+    private val operationWorkRepository: OperationWorkRepository,
+    private val taskPresetRepository: TaskPresetRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(RunTasksViewModel::class.java)) {
@@ -31,7 +34,8 @@ class RunTasksViewModelFactory(
                 resticRepository = resticRepository,
                 appInfoRepository = appInfoRepository,
                 preferencesRepository = preferencesRepository,
-                operationWorkRepository = operationWorkRepository
+                operationWorkRepository = operationWorkRepository,
+                taskPresetRepository = taskPresetRepository
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
