@@ -76,6 +76,7 @@ class RunTasksViewModel(
     val uiEvents: SharedFlow<RunTasksUiEvent> = _uiEvents.asSharedFlow()
 
     private var appliedInitialPresetRepoId: String? = null
+    private var editVersion: Long = 0L
     private var persistCustomJob: Job? = null
     private var refreshPresetsJob: Job? = null
 
@@ -93,6 +94,7 @@ class RunTasksViewModel(
             _uiState.update { state -> state.copy(editor = transform(state.editor)) }
         },
         onConfigMutated = { mutatedEditor ->
+            editVersion++
             if (_uiState.value.selectedPresetId != null) {
                 _uiState.update { it.copy(selectedPresetId = null) }
             }
@@ -162,6 +164,7 @@ class RunTasksViewModel(
             return
         }
 
+        val startEditVersion = editVersion
         refreshPresetsJob = viewModelScope.launch {
             val presets = taskPresetRepository.getPresets(repoId)
             if (repositoriesRepository.selectedRepository.value != repoKey) return@launch
@@ -177,7 +180,7 @@ class RunTasksViewModel(
                 )
             }
 
-            if (shouldRestoreInitialPreset) {
+            if (shouldRestoreInitialPreset && editVersion == startEditVersion) {
                 val lastPresetId = preferencesRepository.loadRunTasksLastPresetId(repoId)
                 if (lastPresetId != null && presets.any { it.id == lastPresetId }) {
                     selectPreset(lastPresetId)
@@ -242,6 +245,7 @@ class RunTasksViewModel(
             return
         }
 
+        val startEditVersion = editVersion
         val newPreset = TaskPreset(
             name = trimmedName,
             config = currentEditor.toRunTasksConfig(hasRoot.value)
@@ -261,7 +265,7 @@ class RunTasksViewModel(
             _uiState.update {
                 it.copy(
                     availablePresets = presets,
-                    selectedPresetId = saved.id,
+                    selectedPresetId = if (editVersion == startEditVersion) saved.id else it.selectedPresetId,
                     showSavePresetDialog = false
                 )
             }
