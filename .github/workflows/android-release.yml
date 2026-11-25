@@ -286,7 +286,7 @@ jobs:
             -f "client_payload[repo]=${{ github.repository }}" \
             -f "client_payload[tag]=${{ github.ref_name }}"
 
-      - name: Build F-Droid repo index
+      - name: Build F-Droid repo index (DEPRECATED)
         env:
           FDROID_REPO_KEYSTORE_BASE64: ${{ secrets.FDROID_REPO_KEYSTORE_BASE64 }}
           FDROID_REPO_KEY_ALIAS: ${{ secrets.FDROID_REPO_KEY_ALIAS }}
@@ -311,8 +311,8 @@ jobs:
           # (current tag + last 2 stable releases), so fdroidserver must not archive any of them.
           cat > fdroid/config.yml <<EOF
           repo_url: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/fdroid/repo
-          repo_name: ${{ github.event.repository.name }}
-          repo_description: Releases published from GitHub tags for ${{ github.event.repository.name }}.
+          repo_name: ${{ github.event.repository.name }} (DEPRECATED)
+          repo_description: ⚠️ DEPRECATED: This repository is deprecated. Please migrate to the central F-Droid repository at https://fdroid.hddq.org/repo
           keystore: keystore.jks
           keystorepass: ${FDROID_REPO_KEYSTORE_PASSWORD}
           keypass: ${FDROID_REPO_KEY_PASSWORD}
