@@ -1,7 +1,7 @@
 ---
 name: Question
 about: Ask a question about using, configuring, or understanding Restoid.
-title: '[QUESTION] '
+title: ''
 labels: 'question'
 assignees: ''
 ---
