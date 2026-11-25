@@ -17,7 +17,7 @@ Whether you want to back up photos to a home NAS, store encrypted snapshots in t
 </p>
 
 <p align="center">
-  Official F-Droid updates may be delayed. For instant updates directly from CI, <a href="https://fdroid.link/#https://hddq.github.io/restoid/fdroid/repo?fingerprint=E6629E27D6CDC87B15F68C43F7D7DF8904AC8EFC76D87C7903976C3A38233AC5">add the custom repository</a>
+  Official F-Droid updates may be delayed. For instant updates directly from CI, <a href="https://fdroid.link/#https://fdroid.hddq.org/repo?fingerprint=A0B4263C095D99C34423F4171D458930CD4167C154A79D38DFC9F6EC0925A595">add the custom repository</a>
 </p>
 
 ## 📸 Screenshots
