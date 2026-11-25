@@ -1,5 +1,6 @@
 package io.github.hddq.restoid.data
 
+import io.github.hddq.restoid.model.Schedule
 import io.github.hddq.restoid.model.TaskPreset
 import io.github.hddq.restoid.work.RunTasksConfig
 import io.github.hddq.restoid.work.RunTasksWorkRequest
@@ -19,20 +20,29 @@ class TaskPresetRepositoryTest {
     @get:Rule
     val tempFolder = TemporaryFolder()
 
-    private fun createPresetRepository(
+    private fun createFixture(
         enqueueResult: Boolean = true
-    ): TaskPresetRepository {
+    ): Triple<TaskPresetRepository, ScheduleRepository, MutableList<String>> {
         val metadataRoot = tempFolder.newFolder()
         val metadataRepository = MetadataRepository(metadataRoot)
-        return TaskPresetRepository(
+        val cancelledScheduleIds = mutableListOf<String>()
+        val scheduleRepository = ScheduleRepository(
             metadataRepository = metadataRepository,
+            repositoriesRepository = null,
+            workManagerProvider = null,
+            onCancelWorkOverride = { scheduleId -> cancelledScheduleIds.add(scheduleId) }
+        )
+        val presetRepository = TaskPresetRepository(
+            metadataRepository = metadataRepository,
+            scheduleRepository = scheduleRepository,
             enqueueRunTasks = { enqueueResult }
         )
+        return Triple(presetRepository, scheduleRepository, cancelledScheduleIds)
     }
 
     @Test
     fun `savePreset creates updates and preserves existing lastRunTimestamp`() = runTest {
-        val presetRepo = createPresetRepository()
+        val (presetRepo, _, _) = createFixture()
         val repoId = "repo-1"
 
         val initial = TaskPreset(
@@ -62,7 +72,7 @@ class TaskPresetRepositoryTest {
 
     @Test
     fun `duplicatePreset copies config with new ID and cleared lastRunTimestamp`() = runTest {
-        val presetRepo = createPresetRepository()
+        val (presetRepo, _, _) = createFixture()
         val repoId = "repo-1"
 
         val original = TaskPreset(
@@ -84,8 +94,9 @@ class TaskPresetRepositoryTest {
     }
 
     @Test
-    fun `deletePreset removes target preset and preserves others`() = runTest {
-        val presetRepo = createPresetRepository()
+    fun `deletePreset cascades deletion and work cancellation to linked schedules only`() = runTest {
+        val (presetRepo, scheduleRepo, cancelledIds) = createFixture()
+        val repoKey = "local:/repo"
         val repoId = "repo-1"
 
         val presetA = TaskPreset(id = "p-a", name = "Preset A", config = RunTasksConfig(checkRepo = true))
@@ -93,19 +104,37 @@ class TaskPresetRepositoryTest {
         presetRepo.savePreset(repoId, presetA)
         presetRepo.savePreset(repoId, presetB)
 
-        presetRepo.deletePreset(repoId, presetA.id)
+        val schedA1 = Schedule(id = "s-a1", presetId = presetA.id, intervalHours = 12)
+        val schedA2 = Schedule(id = "s-a2", presetId = presetA.id, intervalHours = 24)
+        val schedB1 = Schedule(id = "s-b1", presetId = presetB.id, intervalHours = 48)
+        scheduleRepo.saveSchedule(repoKey, repoId, schedA1)
+        scheduleRepo.saveSchedule(repoKey, repoId, schedA2)
+        scheduleRepo.saveSchedule(repoKey, repoId, schedB1)
 
+        val deletedCount = presetRepo.deletePreset(repoId, presetA.id)
+
+        assertEquals(2, deletedCount)
+        assertEquals(listOf("s-a1", "s-a2"), cancelledIds)
         assertEquals(listOf(presetB), presetRepo.getPresets(repoId))
+        assertEquals(listOf(schedB1), scheduleRepo.getSchedules(repoId))
+        assertTrue(scheduleRepo.getSchedulesForPreset(repoId, presetA.id).isEmpty())
+        assertEquals(listOf(schedB1), scheduleRepo.getSchedulesForPreset(repoId, presetB.id))
     }
 
     @Test
     fun `runPresetNow enqueues request with presetName and updates lastRunTimestamp only when enqueued`() = runTest {
         val metadataRoot = tempFolder.newFolder()
         val metadataRepository = MetadataRepository(metadataRoot)
+        val scheduleRepository = ScheduleRepository(
+            metadataRepository = metadataRepository,
+            repositoriesRepository = null,
+            workManagerProvider = null
+        )
         val capturedRequests = mutableListOf<RunTasksWorkRequest>()
         var shouldSucceed = false
         val presetRepo = TaskPresetRepository(
             metadataRepository = metadataRepository,
+            scheduleRepository = scheduleRepository,
             enqueueRunTasks = { req ->
                 capturedRequests.add(req)
                 shouldSucceed

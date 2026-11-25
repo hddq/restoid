@@ -4,23 +4,45 @@ import android.content.Context
 import androidx.work.*
 import io.github.hddq.restoid.model.Schedule
 import io.github.hddq.restoid.work.ScheduleWorker
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.TimeUnit
 
-class ScheduleRepository(
-    private val context: Context,
+class ScheduleRepository internal constructor(
     private val metadataRepository: MetadataRepository,
-    private val repositoriesRepository: RepositoriesRepository
+    private val repositoriesRepository: RepositoriesRepository?,
+    private val workManagerProvider: (() -> WorkManager)?,
+    private val onCancelWorkOverride: ((String) -> Unit)? = null
 ) {
-    private val workManager = WorkManager.getInstance(context)
+    private companion object {
+        val mutationMutex = Mutex()
+    }
+    constructor(
+        context: Context,
+        metadataRepository: MetadataRepository,
+        repositoriesRepository: RepositoriesRepository
+    ) : this(
+        metadataRepository = metadataRepository,
+        repositoriesRepository = repositoriesRepository,
+        workManagerProvider = { WorkManager.getInstance(context) },
+        onCancelWorkOverride = null
+    )
+
+    private val workManager: WorkManager?
+        get() = workManagerProvider?.invoke()
 
     suspend fun getSchedules(repoId: String): List<Schedule> {
         return metadataRepository.getSchedules(repoId)
     }
 
-    suspend fun saveSchedule(repoKey: String, repoId: String, schedule: Schedule) {
+    suspend fun getSchedulesForPreset(repoId: String, presetId: String): List<Schedule> {
+        return getSchedules(repoId).filter { it.presetId == presetId }
+    }
+
+    suspend fun saveSchedule(repoKey: String, repoId: String, schedule: Schedule) = mutationMutex.withLock {
         val schedules = getSchedules(repoId).toMutableList()
         val index = schedules.indexOfFirst { it.id == schedule.id }
-        
+
         val scheduleToSave = if (index != -1) {
             schedule.copy(lastRunTimestamp = schedules[index].lastRunTimestamp)
         } else {
@@ -32,28 +54,59 @@ class ScheduleRepository(
         } else {
             schedules.add(scheduleToSave)
         }
-        metadataRepository.saveSchedules(repoId, schedules)
-        updateWorkManager(repoKey, scheduleToSave)
+        if (metadataRepository.saveSchedules(repoId, schedules)) {
+            updateWorkManager(repoKey, scheduleToSave)
+        }
     }
 
-    suspend fun toggleSchedule(repoKey: String, repoId: String, scheduleId: String, isEnabled: Boolean) {
+    suspend fun toggleSchedule(repoKey: String, repoId: String, scheduleId: String, isEnabled: Boolean) = mutationMutex.withLock {
         val schedules = getSchedules(repoId).toMutableList()
         val index = schedules.indexOfFirst { it.id == scheduleId }
         if (index != -1) {
             val updatedSchedule = schedules[index].copy(isEnabled = isEnabled)
             schedules[index] = updatedSchedule
-            metadataRepository.saveSchedules(repoId, schedules)
-            updateWorkManager(repoKey, updatedSchedule)
+            if (metadataRepository.saveSchedules(repoId, schedules)) {
+                updateWorkManager(repoKey, updatedSchedule)
+            }
         }
     }
 
-    suspend fun deleteSchedule(repoKey: String, repoId: String, scheduleId: String) {
+    suspend fun deleteSchedule(repoKey: String, repoId: String, scheduleId: String) = mutationMutex.withLock {
         val schedules = getSchedules(repoId).filter { it.id != scheduleId }
-        metadataRepository.saveSchedules(repoId, schedules)
-        cancelWork(scheduleId)
+        if (metadataRepository.saveSchedules(repoId, schedules)) {
+            cancelWork(scheduleId)
+        }
+    }
+
+    suspend fun deleteSchedulesForPreset(repoId: String, presetId: String): Int? = mutationMutex.withLock {
+        val existing = getSchedules(repoId)
+        val (toDelete, remaining) = existing.partition { it.presetId == presetId }
+        if (toDelete.isEmpty()) return@withLock 0
+
+        if (!metadataRepository.saveSchedules(repoId, remaining)) {
+            return@withLock null
+        }
+        for (schedule in toDelete) {
+            cancelWork(schedule.id)
+        }
+        toDelete.size
+    }
+
+    suspend fun updateLastRunTimestamp(
+        repoId: String,
+        scheduleId: String,
+        timestamp: Long = System.currentTimeMillis()
+    ) = mutationMutex.withLock {
+        val schedules = getSchedules(repoId).toMutableList()
+        val index = schedules.indexOfFirst { it.id == scheduleId }
+        if (index != -1) {
+            schedules[index] = schedules[index].copy(lastRunTimestamp = timestamp)
+            metadataRepository.saveSchedules(repoId, schedules)
+        }
     }
 
     private fun updateWorkManager(repoKey: String, schedule: Schedule) {
+        val wm = workManager ?: return
         if (schedule.isEnabled) {
             val networkType = if (schedule.triggerConditions.requireUnmeteredNetwork)
                 NetworkType.UNMETERED else NetworkType.NOT_REQUIRED
@@ -86,7 +139,7 @@ class ScheduleRepository(
                 )
                 .build()
 
-            workManager.enqueueUniquePeriodicWork(
+            wm.enqueueUniquePeriodicWork(
                 getWorkName(schedule.id),
                 ExistingPeriodicWorkPolicy.UPDATE,
                 workRequest
@@ -97,31 +150,42 @@ class ScheduleRepository(
     }
 
     private fun cancelWork(scheduleId: String) {
-        workManager.cancelUniqueWork(getWorkName(scheduleId))
+        onCancelWorkOverride?.invoke(scheduleId)
+        workManager?.cancelUniqueWork(getWorkName(scheduleId))
     }
 
     private fun getWorkName(scheduleId: String): String = "schedule_$scheduleId"
 
     fun runNow(repoKey: String, schedule: Schedule) {
+        val wm = workManager ?: return
         val workRequest = OneTimeWorkRequestBuilder<ScheduleWorker>()
             .setInputData(
                 workDataOf(
                     ScheduleWorker.KEY_REPO_KEY to repoKey,
-                    ScheduleWorker.KEY_SCHEDULE_ID to schedule.id
+                    ScheduleWorker.KEY_SCHEDULE_ID to schedule.id,
+                    ScheduleWorker.KEY_FORCE_RUN to true
                 )
             )
             .build()
-        workManager.enqueue(workRequest)
+        wm.enqueue(workRequest)
     }
 
     suspend fun reconcileAllSchedules() {
-        val reposList = repositoriesRepository.repositories.value
+        val reposRepo = repositoriesRepository ?: return
+        val reposList = reposRepo.repositories.value
         for (repository in reposList) {
-            val repoKey = repositoriesRepository.repositoryKey(repository)
+            val repoKey = reposRepo.repositoryKey(repository)
             val repoId = repository.id ?: continue
+            // Reading schedules before presets ensures a newly created preset + schedule pair isn't seen as orphaned.
             val schedules = getSchedules(repoId)
+            val validPresetIds = metadataRepository.getTaskPresets(repoId)
+                .mapTo(mutableSetOf()) { it.id }
             for (schedule in schedules) {
-                updateWorkManager(repoKey, schedule)
+                if (schedule.presetId !in validPresetIds) {
+                    cancelWork(schedule.id)
+                } else {
+                    updateWorkManager(repoKey, schedule)
+                }
             }
         }
     }

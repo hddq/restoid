@@ -1,6 +1,5 @@
 package io.github.hddq.restoid.model
 
-import io.github.hddq.restoid.work.RunTasksConfig
 import kotlinx.serialization.Serializable
 import java.util.UUID
 
@@ -14,9 +13,9 @@ data class TriggerConditions(
 @Serializable
 data class Schedule(
     val id: String = UUID.randomUUID().toString(),
-    val name: String,
+    val presetId: String,
+    val name: String? = null,
     val intervalHours: Int,
-    val config: RunTasksConfig,
     val triggerConditions: TriggerConditions = TriggerConditions(),
     val lastRunTimestamp: Long? = null,
     val isEnabled: Boolean = true

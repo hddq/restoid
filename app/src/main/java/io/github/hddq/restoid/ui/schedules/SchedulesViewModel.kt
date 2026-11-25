@@ -5,39 +5,15 @@ import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.hddq.restoid.R
-import io.github.hddq.restoid.data.AppInfoRepository
-import io.github.hddq.restoid.data.CalendarBackupRepository
-import io.github.hddq.restoid.data.ContactsBackupRepository
-import io.github.hddq.restoid.data.PreferencesRepository
 import io.github.hddq.restoid.data.RepositoriesRepository
-import io.github.hddq.restoid.data.RepositoryBackendType
-import io.github.hddq.restoid.data.ResticBinaryManager
-import io.github.hddq.restoid.data.ResticRepository
-import io.github.hddq.restoid.data.ScheduleRepository
-import io.github.hddq.restoid.model.AppInfo
-import io.github.hddq.restoid.model.CalendarInfo
-import io.github.hddq.restoid.model.ContactAccountInfo
-import io.github.hddq.restoid.model.Schedule
-import io.github.hddq.restoid.model.TriggerConditions
-import io.github.hddq.restoid.model.MaintenanceConfig
-import io.github.hddq.restoid.ui.shared.AppSortOrder
-import io.github.hddq.restoid.ui.shared.BackupTypes
-import io.github.hddq.restoid.ui.shared.ForgetHostOption
-import io.github.hddq.restoid.ui.shared.ForgetHostsController
-import io.github.hddq.restoid.ui.shared.ForgetHostsSlice
-import io.github.hddq.restoid.ui.shared.normalizeForgetHosts
-import io.github.hddq.restoid.ui.shared.sortApps
-import io.github.hddq.restoid.ui.shared.toUiModel
-import io.github.hddq.restoid.util.StorageUtils
-import io.github.hddq.restoid.work.BackupWorkRequest
-import io.github.hddq.restoid.work.DeviceDataBackupSelection
-import io.github.hddq.restoid.work.ExclusionConflict
+import io.github.hddq.restoid.data.RootRepository
 import io.github.hddq.restoid.data.ScheduleConditionMonitor
+import io.github.hddq.restoid.data.ScheduleRepository
+import io.github.hddq.restoid.data.TaskPresetRepository
 import io.github.hddq.restoid.data.TriggerConditionStatusSnapshot
-import io.github.hddq.restoid.work.RunTasksConfig
-import io.github.hddq.restoid.work.findConflictingExclusions
-import io.github.hddq.restoid.work.resolveExclusionPaths
-import kotlinx.coroutines.Job
+import io.github.hddq.restoid.model.Schedule
+import io.github.hddq.restoid.model.TaskPreset
+import io.github.hddq.restoid.model.TriggerConditions
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -52,47 +28,23 @@ import java.util.UUID
 
 data class SchedulesUiState(
     val schedules: List<Schedule> = emptyList(),
+    val presetsById: Map<String, TaskPreset> = emptyMap(),
     val selectedRepoKey: String? = null,
     val isLoading: Boolean = false
 )
 
 data class AddEditScheduleUiState(
     val id: String? = null,
+    val presetId: String? = null,
     val name: String = "",
     val intervalHours: Int = 24,
     val isEnabled: Boolean = true,
-    val backupEnabled: Boolean = true,
-    val backupTypes: BackupTypes = BackupTypes(),
-    val appBackupTypes: Map<String, BackupTypes> = emptyMap(),
-    val apps: List<AppInfo> = emptyList(),
-    val appSortOrder: AppSortOrder = AppSortOrder.NAME_ASCENDING,
-    val maintenance: MaintenanceConfig = MaintenanceConfig(),
     val triggerConditions: TriggerConditions = TriggerConditions(),
     val lastRunTimestamp: Long? = null,
-    val isLoadingApps: Boolean = false,
+    val availablePresets: List<TaskPreset> = emptyList(),
     val isSaving: Boolean = false,
     val showConfirmDeleteDialog: Boolean = false,
-    val showDiscardChangesDialog: Boolean = false,
-    val customDirectoriesBackupEnabled: Boolean = false,
-    val deviceDataBackupEnabled: Boolean = false,
-    val contactsBackupEnabled: Boolean = true,
-    val selectAllContactAccounts: Boolean = true,
-    val selectedContactAccountKeys: Set<String> = emptySet(),
-    val availableContactAccounts: List<ContactAccountInfo> = emptyList(),
-    val isLoadingContactAccounts: Boolean = false,
-    val callLogsBackupEnabled: Boolean = false,
-    val calendarBackupEnabled: Boolean = false,
-    val selectAllCalendars: Boolean = true,
-    val selectedCalendarKeys: Set<String> = emptySet(),
-    val availableCalendars: List<CalendarInfo> = emptyList(),
-    val isLoadingCalendars: Boolean = false,
-    val customDirectories: List<io.github.hddq.restoid.model.CustomDirectory> = emptyList(),
-    val excludedCustomDirectories: List<io.github.hddq.restoid.model.CustomDirectory> = emptyList(),
-    val exclusionConflicts: List<ExclusionConflict> = emptyList(),
-    val availableForgetHosts: List<ForgetHostOption> = emptyList(),
-    val areRepoSnapshotsLoaded: Boolean = false,
-    val isLoadingForgetHosts: Boolean = false,
-    val forgetHostsError: String? = null
+    val showDiscardChangesDialog: Boolean = false
 )
 
 sealed interface SchedulesUiEvent {
@@ -102,16 +54,11 @@ sealed interface SchedulesUiEvent {
 class SchedulesViewModel(
     private val application: Application,
     private val scheduleRepository: ScheduleRepository,
+    private val taskPresetRepository: TaskPresetRepository,
     private val repositoriesRepository: RepositoriesRepository,
-    private val appInfoRepository: AppInfoRepository,
-    private val rootRepository: io.github.hddq.restoid.data.RootRepository,
-    private val resticBinaryManager: ResticBinaryManager,
-    private val resticRepository: ResticRepository,
-    private val preferencesRepository: PreferencesRepository
+    private val rootRepository: RootRepository
 ) : ViewModel() {
 
-    private val contactsBackupRepository = ContactsBackupRepository(application)
-    private val calendarBackupRepository = CalendarBackupRepository(application)
     private val conditionMonitor = ScheduleConditionMonitor(application)
 
     val hasRoot = rootRepository.hasRoot
@@ -130,55 +77,10 @@ class SchedulesViewModel(
     val addEditState = _addEditState.asStateFlow()
 
     private var initialState: AddEditScheduleUiState? = null
+    private var addEditSessionId: Long = 0L
 
     private val _uiEvents = MutableSharedFlow<SchedulesUiEvent>(extraBufferCapacity = 1)
     val uiEvents: SharedFlow<SchedulesUiEvent> = _uiEvents.asSharedFlow()
-
-    private var cachedRawExclusions: List<String> = emptyList()
-    private var cachedResolvedExclusions: List<String> = emptyList()
-    private var conflictResolutionJob: Job? = null
-    private var addEditSessionId: Long = 0L
-    private var contactAccountsRefreshRequestId: Long = 0L
-    private var calendarRefreshRequestId: Long = 0L
-
-    private val forgetHostsController = ForgetHostsController(
-        context = application,
-        scope = viewModelScope,
-        repositoriesRepository = repositoriesRepository,
-        resticBinaryManager = resticBinaryManager,
-        resticRepository = resticRepository,
-        preferencesRepository = preferencesRepository,
-        readSlice = {
-            val state = _addEditState.value
-            ForgetHostsSlice(
-                maintenance = state.maintenance,
-                availableForgetHosts = state.availableForgetHosts,
-                areRepoSnapshotsLoaded = state.areRepoSnapshotsLoaded,
-                isLoadingForgetHosts = state.isLoadingForgetHosts,
-                forgetHostsError = state.forgetHostsError
-            )
-        },
-        updateSlice = { transform ->
-            _addEditState.update { state ->
-                val updated = transform(
-                    ForgetHostsSlice(
-                        maintenance = state.maintenance,
-                        availableForgetHosts = state.availableForgetHosts,
-                        areRepoSnapshotsLoaded = state.areRepoSnapshotsLoaded,
-                        isLoadingForgetHosts = state.isLoadingForgetHosts,
-                        forgetHostsError = state.forgetHostsError
-                    )
-                )
-                state.copy(
-                    maintenance = updated.maintenance,
-                    availableForgetHosts = updated.availableForgetHosts,
-                    areRepoSnapshotsLoaded = updated.areRepoSnapshotsLoaded,
-                    isLoadingForgetHosts = updated.isLoadingForgetHosts,
-                    forgetHostsError = updated.forgetHostsError
-                )
-            }
-        }
-    )
 
     init {
         viewModelScope.launch {
@@ -187,22 +89,80 @@ class SchedulesViewModel(
                 loadSchedules()
             }
         }
-        viewModelScope.launch {
-            rootRepository.hasRoot.collect {
-                _addEditState.update { recomputeConflicts(it) }
-            }
-        }
     }
 
     fun loadSchedules() {
-        val repoKey = _uiState.value.selectedRepoKey ?: return
-        val repository = repositoriesRepository.getRepositoryByKey(repoKey) ?: return
-        val repoId = repository.id ?: return
+        val repoKey = _uiState.value.selectedRepoKey ?: repositoriesRepository.selectedRepository.value
+        val repository = repoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
+        val repoId = repository?.id
+        if (repoId == null) {
+            _uiState.update {
+                it.copy(
+                    schedules = emptyList(),
+                    presetsById = emptyMap(),
+                    isLoading = false
+                )
+            }
+            return
+        }
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             val schedules = scheduleRepository.getSchedules(repoId)
-            _uiState.update { it.copy(schedules = schedules, isLoading = false) }
+            val presets = taskPresetRepository.getPresets(repoId)
+            _uiState.update {
+                it.copy(
+                    schedules = schedules,
+                    presetsById = presets.associateBy { preset -> preset.id },
+                    isLoading = false
+                )
+            }
+            _addEditState.update { it.copy(availablePresets = presets) }
+        }
+    }
+
+    fun refreshPresets(selectPresetId: String? = null) {
+        val repoKey = _uiState.value.selectedRepoKey ?: repositoriesRepository.selectedRepository.value ?: return
+        val repository = repositoriesRepository.getRepositoryByKey(repoKey) ?: return
+        val repoId = repository.id ?: return
+        val sessionId = addEditSessionId
+
+        viewModelScope.launch {
+            val presets = taskPresetRepository.getPresets(repoId)
+            val schedules = scheduleRepository.getSchedules(repoId)
+            _uiState.update {
+                it.copy(
+                    schedules = schedules,
+                    presetsById = presets.associateBy { preset -> preset.id }
+                )
+            }
+            if (addEditSessionId != sessionId) return@launch
+
+            val currentEditId = _addEditState.value.id
+            if (currentEditId != null && schedules.none { it.id == currentEditId }) {
+                _uiEvents.tryEmit(SchedulesUiEvent.NavigateBack)
+                return@launch
+            }
+
+            _addEditState.update { current ->
+                val resolvedPresetId = when {
+                    selectPresetId != null && presets.any { it.id == selectPresetId } -> selectPresetId
+                    current.presetId != null && presets.any { it.id == current.presetId } -> current.presetId
+                    else -> presets.firstOrNull()?.id
+                }
+                val updated = current.copy(
+                    availablePresets = presets,
+                    presetId = resolvedPresetId
+                )
+                val currentInitial = initialState
+                if (selectPresetId == null && currentInitial != null && currentInitial.presetId == null && resolvedPresetId != null && !hasScheduleChanges(current, currentInitial)) {
+                    initialState = currentInitial.copy(
+                        availablePresets = presets,
+                        presetId = resolvedPresetId
+                    )
+                }
+                updated
+            }
         }
     }
 
@@ -231,106 +191,70 @@ class SchedulesViewModel(
     fun runNow(schedule: Schedule) {
         val repoKey = _uiState.value.selectedRepoKey ?: return
         scheduleRepository.runNow(repoKey, schedule)
+        Toast.makeText(
+            application,
+            application.getString(R.string.toast_schedule_triggered),
+            Toast.LENGTH_SHORT
+        ).show()
     }
 
-    // Add/Edit Screen methods
-    fun startAddSchedule() {
+    fun startAddSchedule(preselectedPresetId: String? = null) {
         val sessionId = ++addEditSessionId
-        ++contactAccountsRefreshRequestId
-        ++calendarRefreshRequestId
-        val defaultHostname = preferencesRepository.getDeviceHostname()
+        val cachedPresets = _uiState.value.presetsById.values.toList()
+        val initialPresetId = preselectedPresetId ?: cachedPresets.firstOrNull()?.id
         val newState = AddEditScheduleUiState(
-            maintenance = MaintenanceConfig(
-                forgetAllHosts = false,
-                forgetHosts = listOf(defaultHostname)
-            )
+            presetId = initialPresetId,
+            availablePresets = cachedPresets
         )
         _addEditState.value = newState
-        forgetHostsController.setManualHosts(listOf(defaultHostname))
-        initialState = _addEditState.value
-        loadAppsForAddEdit(sessionId = sessionId)
-    }
-    fun startEditSchedule(schedule: Schedule) {
-        val sessionId = ++addEditSessionId
-        ++contactAccountsRefreshRequestId
-        ++calendarRefreshRequestId
-        val normalizedHosts = normalizeForgetHosts(schedule.config.forgetHosts)
-        val newState = AddEditScheduleUiState(
-            id = schedule.id,
-            name = schedule.name,
-            intervalHours = schedule.intervalHours,
-            isEnabled = schedule.isEnabled,
-            backupEnabled = schedule.config.backupEnabled,
-            backupTypes = schedule.config.backupTypes.toUiModel(),
-            appBackupTypes = schedule.config.appBackupTypes.mapValues { it.value.toUiModel() },
-            maintenance = MaintenanceConfig(
-                unlockRepo = schedule.config.unlockRepo,
-                forgetSnapshots = schedule.config.forgetSnapshots,
-                pruneRepo = schedule.config.pruneRepo,
-                checkRepo = schedule.config.checkRepo,
-                readData = schedule.config.readData,
-                keepLast = schedule.config.keepLast,
-                keepDaily = schedule.config.keepDaily,
-                keepWeekly = schedule.config.keepWeekly,
-                keepMonthly = schedule.config.keepMonthly,
-                forgetAllHosts = schedule.config.forgetAllHosts,
-                forgetHosts = normalizedHosts
-            ),
-            triggerConditions = schedule.triggerConditions,
-            lastRunTimestamp = schedule.lastRunTimestamp,
-            customDirectoriesBackupEnabled = schedule.config.customDirectories.isNotEmpty(),
-            deviceDataBackupEnabled = schedule.config.deviceData.anyEnabled(),
-            contactsBackupEnabled = if (schedule.config.deviceData.anyEnabled()) schedule.config.deviceData.contacts else true,
-            selectAllContactAccounts = schedule.config.deviceData.selectAllContactAccounts,
-            selectedContactAccountKeys = schedule.config.deviceData.selectedContactAccountKeys,
-            callLogsBackupEnabled = schedule.config.deviceData.callLogs,
-            calendarBackupEnabled = schedule.config.deviceData.calendar,
-            selectAllCalendars = schedule.config.deviceData.selectAllCalendars,
-            selectedCalendarKeys = schedule.config.deviceData.selectedCalendarKeys,
-            customDirectories = schedule.config.customDirectories.map { io.github.hddq.restoid.model.CustomDirectory(it, true) },
-            excludedCustomDirectories = schedule.config.excludedCustomDirectories.map { io.github.hddq.restoid.model.CustomDirectory(it, true) }
-        )
-        val withConflicts = recomputeConflicts(newState)
-        _addEditState.value = withConflicts
-        forgetHostsController.setManualHosts(normalizedHosts)
-        initialState = _addEditState.value
-        loadAppsForAddEdit(schedule.config.selectedPackageNames, sessionId = sessionId)
+        initialState = newState
+        refreshPresetsForSession(sessionId = sessionId, preferredPresetId = preselectedPresetId)
     }
 
-    private fun loadAppsForAddEdit(
-        selectedPackageNames: List<String>? = null,
-        sessionId: Long = addEditSessionId
-    ) {
+    fun startEditSchedule(schedule: Schedule) {
+        val sessionId = ++addEditSessionId
+        val cachedPresets = _uiState.value.presetsById.values.toList()
+        val editState = AddEditScheduleUiState(
+            id = schedule.id,
+            presetId = schedule.presetId,
+            name = schedule.name.orEmpty(),
+            intervalHours = schedule.intervalHours,
+            isEnabled = schedule.isEnabled,
+            triggerConditions = schedule.triggerConditions,
+            lastRunTimestamp = schedule.lastRunTimestamp,
+            availablePresets = cachedPresets
+        )
+        _addEditState.value = editState
+        initialState = editState
+        refreshPresetsForSession(sessionId = sessionId, preferredPresetId = schedule.presetId)
+    }
+
+    private fun refreshPresetsForSession(sessionId: Long, preferredPresetId: String?) {
+        val repoKey = _uiState.value.selectedRepoKey ?: repositoriesRepository.selectedRepository.value ?: return
+        val repository = repositoriesRepository.getRepositoryByKey(repoKey) ?: return
+        val repoId = repository.id ?: return
+
         viewModelScope.launch {
-            _addEditState.update { it.copy(isLoadingApps = true) }
-            val allApps = appInfoRepository.getInstalledUserApps()
+            val presets = taskPresetRepository.getPresets(repoId)
+            _uiState.update { it.copy(presetsById = presets.associateBy { preset -> preset.id }) }
             if (addEditSessionId != sessionId) return@launch
-            val currentTypes = _addEditState.value.appBackupTypes
-            val defaultTypes = _addEditState.value.backupTypes
-            val apps = if (selectedPackageNames != null) {
-                allApps.map { it.copy(isSelected = selectedPackageNames.contains(it.packageName)) }
-            } else {
-                allApps // Default selection from AppInfo might be true, we might want to default to true for new schedules too
-            }
-            val sortedApps = sortApps(apps, _addEditState.value.appSortOrder)
-            val appBackupTypes = sortedApps.associate { app ->
-                app.packageName to (currentTypes[app.packageName] ?: defaultTypes)
-            }
-            _addEditState.update {
-                if (addEditSessionId != sessionId) return@update it
-                val updated = recomputeConflicts(it.copy(apps = sortedApps, appBackupTypes = appBackupTypes, isLoadingApps = false))
-                // Update initialState if it was just set (apps are loaded asynchronously)
+
+            _addEditState.update { current ->
+                val userChangedPreset = initialState?.let { current.presetId != it.presetId } == true
+                val resolvedPresetId = when {
+                    !userChangedPreset && preferredPresetId != null && presets.any { it.id == preferredPresetId } -> preferredPresetId
+                    current.presetId != null && presets.any { it.id == current.presetId } -> current.presetId
+                    else -> presets.firstOrNull()?.id
+                }
+                val updated = current.copy(
+                    availablePresets = presets,
+                    presetId = resolvedPresetId
+                )
                 val currentInitial = initialState
-                if (currentInitial != null && currentInitial.apps.isEmpty() && apps.isNotEmpty()) {
-                    val initialAppBackupTypes = apps.associate { app ->
-                        app.packageName to (currentInitial.appBackupTypes[app.packageName] ?: currentInitial.backupTypes)
-                    }
-                    initialState = recomputeConflicts(
-                        currentInitial.copy(
-                            apps = apps,
-                            appBackupTypes = initialAppBackupTypes,
-                            isLoadingApps = false
-                        )
+                if (currentInitial != null && !hasScheduleChanges(current, currentInitial)) {
+                    initialState = currentInitial.copy(
+                        availablePresets = presets,
+                        presetId = resolvedPresetId
                     )
                 }
                 updated
@@ -360,64 +284,40 @@ class SchedulesViewModel(
         _addEditState.update { it.copy(showDiscardChangesDialog = false) }
     }
 
-    private fun buildScheduleFromState(state: AddEditScheduleUiState): Schedule {
-        val actualBackupEnabled = state.backupEnabled && hasRoot.value
+    private fun buildScheduleFromState(state: AddEditScheduleUiState): Schedule? {
+        val selectedPresetId = state.presetId?.takeIf { id ->
+            id.isNotBlank() && state.availablePresets.any { it.id == id }
+        } ?: return null
 
         return Schedule(
             id = state.id ?: UUID.randomUUID().toString(),
-            name = state.name.ifBlank { "Schedule" },
-            intervalHours = state.intervalHours,
-            isEnabled = state.isEnabled,
-            config = RunTasksConfig(
-                backupEnabled = actualBackupEnabled,
-                backupTypes = state.backupTypes.toSelection(),
-                selectedPackageNames = if (actualBackupEnabled) state.apps.filter { it.isSelected }.map { it.packageName } else emptyList(),
-                appBackupTypes = if (actualBackupEnabled) selectedAppBackupTypes(state).mapValues { it.value.toSelection() } else emptyMap(),
-                customDirectories = if (state.customDirectoriesBackupEnabled) state.customDirectories.filter { it.isSelected }.map { it.uri } else emptyList(),
-                excludedCustomDirectories = if (state.customDirectoriesBackupEnabled) state.excludedCustomDirectories.filter { it.isSelected }.map { it.uri } else emptyList(),
-                deviceData = DeviceDataBackupSelection(
-                    contacts = state.deviceDataBackupEnabled && state.contactsBackupEnabled,
-                    selectAllContactAccounts = state.selectAllContactAccounts,
-                    selectedContactAccountKeys = state.selectedContactAccountKeys,
-                    callLogs = state.deviceDataBackupEnabled && state.callLogsBackupEnabled,
-                    calendar = state.deviceDataBackupEnabled && state.calendarBackupEnabled,
-                    selectAllCalendars = state.selectAllCalendars,
-                    selectedCalendarKeys = state.selectedCalendarKeys
-                ),
-                unlockRepo = state.maintenance.unlockRepo,
-                forgetSnapshots = state.maintenance.forgetSnapshots,
-                pruneRepo = state.maintenance.pruneRepo,
-                checkRepo = state.maintenance.checkRepo,
-                readData = state.maintenance.readData,
-                keepLast = state.maintenance.keepLast,
-                keepDaily = state.maintenance.keepDaily,
-                keepWeekly = state.maintenance.keepWeekly,
-                keepMonthly = state.maintenance.keepMonthly,
-                forgetAllHosts = state.maintenance.forgetAllHosts,
-                forgetHosts = if (state.maintenance.forgetAllHosts) emptyList() else normalizeForgetHosts(state.maintenance.forgetHosts)
-            ),
+            presetId = selectedPresetId,
+            name = state.name.trim().ifBlank { null },
+            intervalHours = state.intervalHours.coerceIn(1, 720),
             triggerConditions = state.triggerConditions,
-            lastRunTimestamp = state.lastRunTimestamp
+            lastRunTimestamp = state.lastRunTimestamp,
+            isEnabled = state.isEnabled
         )
     }
 
     fun runCurrentScheduleNow() {
-        val repoKey = _uiState.value.selectedRepoKey ?: return
+        val repoKey = _uiState.value.selectedRepoKey ?: repositoriesRepository.selectedRepository.value ?: return
         val repository = repositoriesRepository.getRepositoryByKey(repoKey) ?: return
         val repoId = repository.id ?: return
         val sessionId = addEditSessionId
         val state = _addEditState.value
-        if (state.maintenance.forgetSnapshots && !state.maintenance.forgetAllHosts && normalizeForgetHosts(state.maintenance.forgetHosts).isEmpty()) {
+        val schedule = buildScheduleFromState(state)
+        if (schedule == null) {
             Toast.makeText(
                 application,
-                application.getString(R.string.error_no_forget_hosts_selected),
+                application.getString(R.string.schedule_error_preset_required),
                 Toast.LENGTH_LONG
             ).show()
             return
         }
-        val schedule = buildScheduleFromState(state)
+
         viewModelScope.launch {
-            if (hasChanges(state)) {
+            if (hasChanges(state) || state.id == null) {
                 _addEditState.update { current ->
                     if (addEditSessionId == sessionId) {
                         current.copy(id = schedule.id, isSaving = true)
@@ -427,50 +327,36 @@ class SchedulesViewModel(
                 }
                 scheduleRepository.saveSchedule(repoKey, repoId, schedule)
                 if (addEditSessionId == sessionId) {
-                    val currentInitial = initialState
-                    initialState = if (state.apps.isEmpty() && !currentInitial?.apps.isNullOrEmpty()) {
-                        recomputeConflicts(
-                            state.copy(
-                                id = schedule.id,
-                                isSaving = false,
-                                isLoadingApps = false,
-                                apps = currentInitial.apps,
-                                appBackupTypes = currentInitial.appBackupTypes
-                            )
-                        )
-                    } else {
-                        state.copy(id = schedule.id, isSaving = false)
-                    }
-                    _addEditState.update { current ->
-                        if (addEditSessionId == sessionId) {
-                            current.copy(id = schedule.id, isSaving = false)
-                        } else {
-                            current
-                        }
-                    }
+                    val synced = _addEditState.value.copy(id = schedule.id, isSaving = false)
+                    _addEditState.value = synced
+                    initialState = synced
                 }
                 loadSchedules()
             }
             scheduleRepository.runNow(repoKey, schedule)
+            Toast.makeText(
+                application,
+                application.getString(R.string.toast_schedule_triggered),
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 
     fun saveSchedule() {
-        val repoKey = _uiState.value.selectedRepoKey ?: return
+        val repoKey = _uiState.value.selectedRepoKey ?: repositoriesRepository.selectedRepository.value ?: return
         val repository = repositoriesRepository.getRepositoryByKey(repoKey) ?: return
         val repoId = repository.id ?: return
 
         val state = _addEditState.value
-        if (state.maintenance.forgetSnapshots && !state.maintenance.forgetAllHosts && normalizeForgetHosts(state.maintenance.forgetHosts).isEmpty()) {
+        val schedule = buildScheduleFromState(state)
+        if (schedule == null) {
             Toast.makeText(
                 application,
-                application.getString(R.string.error_no_forget_hosts_selected),
+                application.getString(R.string.schedule_error_preset_required),
                 Toast.LENGTH_LONG
             ).show()
             return
         }
-
-        val schedule = buildScheduleFromState(state)
 
         viewModelScope.launch {
             _addEditState.update { it.copy(isSaving = true) }
@@ -481,324 +367,24 @@ class SchedulesViewModel(
         }
     }
 
+    fun setPresetId(presetId: String) = _addEditState.update { it.copy(presetId = presetId) }
     fun setName(name: String) = _addEditState.update { it.copy(name = name) }
     fun setIntervalHours(hours: Int) = _addEditState.update { it.copy(intervalHours = hours) }
-    fun setBackupEnabled(enabled: Boolean) = _addEditState.update { recomputeConflicts(it.copy(backupEnabled = enabled)) }
-    fun setBackupApk(value: Boolean) = _addEditState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(apk = value))) }
-    fun setBackupData(value: Boolean) = _addEditState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(data = value))) }
-    fun setBackupDeviceProtectedData(value: Boolean) = _addEditState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(deviceProtectedData = value))) }
-    fun setBackupExternalData(value: Boolean) = _addEditState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(externalData = value))) }
-    fun setBackupObb(value: Boolean) = _addEditState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(obb = value))) }
-    fun setBackupMedia(value: Boolean) = _addEditState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(media = value))) }
-    fun setBackupPermissions(value: Boolean) = _addEditState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(permissions = value))) }
-    fun setBackupSpecialAccess(value: Boolean) = _addEditState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(specialAccess = value))) }
-    fun setBackupAccessibility(value: Boolean) = _addEditState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(accessibility = value))) }
-
-    fun setCustomDirectoriesBackupEnabled(enabled: Boolean) {
-        _addEditState.update { recomputeConflicts(it.copy(customDirectoriesBackupEnabled = enabled)) }
-    }
-
-    fun setDeviceDataBackupEnabled(enabled: Boolean) {
-        _addEditState.update { it.copy(deviceDataBackupEnabled = enabled) }
-    }
-
-    fun setContactsBackupEnabled(enabled: Boolean) {
-        _addEditState.update { it.copy(contactsBackupEnabled = enabled) }
-        if (enabled) {
-            refreshContactAccounts()
-        }
-    }
-
-    fun refreshContactAccounts() {
-        val sessionId = addEditSessionId
-        val requestId = ++contactAccountsRefreshRequestId
-        if (!contactsBackupRepository.hasReadContactsPermission()) {
-            _addEditState.update { it.copy(availableContactAccounts = emptyList(), isLoadingContactAccounts = false) }
-            return
-        }
-        viewModelScope.launch {
-            _addEditState.update { it.copy(isLoadingContactAccounts = true) }
-            try {
-                val accounts = contactsBackupRepository.queryDeviceContactAccounts()
-                if (contactAccountsRefreshRequestId == requestId && addEditSessionId == sessionId) {
-                    _addEditState.update { it.copy(availableContactAccounts = accounts) }
-                }
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                android.util.Log.w("SchedulesViewModel", "Failed to load device contact accounts", e)
-                if (contactAccountsRefreshRequestId == requestId && addEditSessionId == sessionId) {
-                    _addEditState.update { it.copy(availableContactAccounts = emptyList()) }
-                }
-            } finally {
-                if (contactAccountsRefreshRequestId == requestId && addEditSessionId == sessionId) {
-                    _addEditState.update { it.copy(isLoadingContactAccounts = false) }
-                }
-            }
-        }
-    }
-
-    fun toggleAllContactAccounts() {
-        _addEditState.update { state ->
-            val allSelected = state.selectAllContactAccounts ||
-                (state.availableContactAccounts.isNotEmpty() && state.availableContactAccounts.all { it.selectionKey in state.selectedContactAccountKeys })
-            state.copy(
-                selectAllContactAccounts = !allSelected,
-                selectedContactAccountKeys = emptySet()
-            )
-        }
-    }
-
-    fun toggleContactAccount(selectionKey: String) {
-        _addEditState.update { state ->
-            val allKeys = state.availableContactAccounts.map { it.selectionKey }.toSet()
-            val currentKeys = if (state.selectAllContactAccounts) allKeys else state.selectedContactAccountKeys
-            val updatedKeys = if (selectionKey in currentKeys) currentKeys - selectionKey else currentKeys + selectionKey
-            val newSelectAll = allKeys.isNotEmpty() && allKeys.all { it in updatedKeys }
-            state.copy(
-                selectAllContactAccounts = newSelectAll,
-                selectedContactAccountKeys = if (newSelectAll) emptySet() else updatedKeys
-            )
-        }
-    }
-
-    fun setCallLogsBackupEnabled(enabled: Boolean) {
-        _addEditState.update { it.copy(callLogsBackupEnabled = enabled) }
-    }
-
-    fun setCalendarBackupEnabled(enabled: Boolean) {
-        _addEditState.update { it.copy(calendarBackupEnabled = enabled) }
-        if (enabled) {
-            refreshCalendars()
-        }
-    }
-
-    fun refreshCalendars() {
-        val sessionId = addEditSessionId
-        val requestId = ++calendarRefreshRequestId
-        if (!calendarBackupRepository.hasReadCalendarPermission()) {
-            _addEditState.update { it.copy(availableCalendars = emptyList(), isLoadingCalendars = false) }
-            return
-        }
-        viewModelScope.launch {
-            _addEditState.update { it.copy(isLoadingCalendars = true) }
-            try {
-                val calendars = calendarBackupRepository.queryDeviceCalendars()
-                if (calendarRefreshRequestId == requestId && addEditSessionId == sessionId) {
-                    _addEditState.update { it.copy(availableCalendars = calendars) }
-                }
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                android.util.Log.w("SchedulesViewModel", "Failed to load device calendars", e)
-                if (calendarRefreshRequestId == requestId && addEditSessionId == sessionId) {
-                    _addEditState.update { it.copy(availableCalendars = emptyList()) }
-                }
-            } finally {
-                if (calendarRefreshRequestId == requestId && addEditSessionId == sessionId) {
-                    _addEditState.update { it.copy(isLoadingCalendars = false) }
-                }
-            }
-        }
-    }
-
-    fun toggleAllCalendars() {
-        _addEditState.update { state ->
-            val allSelected = state.selectAllCalendars ||
-                (state.availableCalendars.isNotEmpty() && state.availableCalendars.all { it.selectionKey in state.selectedCalendarKeys })
-            state.copy(
-                selectAllCalendars = !allSelected,
-                selectedCalendarKeys = emptySet()
-            )
-        }
-    }
-
-    fun toggleCalendar(selectionKey: String) {
-        _addEditState.update { state ->
-            val allKeys = state.availableCalendars.map { it.selectionKey }.toSet()
-            val currentKeys = if (state.selectAllCalendars) allKeys else state.selectedCalendarKeys
-            val updatedKeys = if (selectionKey in currentKeys) currentKeys - selectionKey else currentKeys + selectionKey
-            val newSelectAll = allKeys.isNotEmpty() && allKeys.all { it in updatedKeys }
-            state.copy(
-                selectAllCalendars = newSelectAll,
-                selectedCalendarKeys = if (newSelectAll) emptySet() else updatedKeys
-            )
-        }
-    }
-
-    fun addCustomDirectory(uriString: String) {
-        val newKey = StorageUtils.resolveCustomDirectoryKey(uriString)
-        if (_addEditState.value.customDirectories.any { StorageUtils.resolveCustomDirectoryKey(it.uri) == newKey }) {
-            Toast.makeText(
-                application,
-                application.getString(R.string.custom_directories_already_added),
-                Toast.LENGTH_LONG
-            ).show()
-            return
-        }
-
-        val repoKey = _uiState.value.selectedRepoKey
-        val repository = repoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
-
-        if (repository != null && repository.backendType == RepositoryBackendType.LOCAL) {
-            val repoCanonicalKey = StorageUtils.resolveCustomDirectoryKey(repository.path)
-            if (repoCanonicalKey == newKey) {
-                Toast.makeText(
-                    application,
-                    application.getString(R.string.error_cannot_backup_repo_to_itself),
-                    Toast.LENGTH_LONG
-                ).show()
-                return
-            }
-        }
-
-        _addEditState.update { state ->
-            state.copy(customDirectories = state.customDirectories + io.github.hddq.restoid.model.CustomDirectory(uriString))
-        }
-    }
-
-    fun toggleCustomDirectory(uriString: String) {
-        _addEditState.update { state ->
-            state.copy(
-                customDirectories = state.customDirectories.map {
-                    if (it.uri == uriString) it.copy(isSelected = !it.isSelected) else it
-                }
-            )
-        }
-    }
-
-    fun removeCustomDirectory(uriString: String) {
-        _addEditState.update { state ->
-            state.copy(customDirectories = state.customDirectories.filter { it.uri != uriString })
-        }
-    }
-
-    fun addExcludedCustomDirectory(uriString: String) {
-        val newKey = StorageUtils.resolveCustomDirectoryKey(uriString)
-        if (_addEditState.value.excludedCustomDirectories.any { StorageUtils.resolveCustomDirectoryKey(it.uri) == newKey }) {
-            Toast.makeText(
-                application,
-                application.getString(R.string.custom_directories_already_added),
-                Toast.LENGTH_LONG
-            ).show()
-            return
-        }
-
-        _addEditState.update { state ->
-            recomputeConflicts(state.copy(excludedCustomDirectories = state.excludedCustomDirectories + io.github.hddq.restoid.model.CustomDirectory(uriString)))
-        }
-    }
-
-    fun toggleExcludedCustomDirectory(uriString: String) {
-        _addEditState.update { state ->
-            recomputeConflicts(
-                state.copy(
-                    excludedCustomDirectories = state.excludedCustomDirectories.map {
-                        if (it.uri == uriString) it.copy(isSelected = !it.isSelected) else it
-                    }
-                )
-            )
-        }
-    }
-
-    fun removeExcludedCustomDirectory(uriString: String) {
-        _addEditState.update { state ->
-            recomputeConflicts(state.copy(excludedCustomDirectories = state.excludedCustomDirectories.filter { it.uri != uriString }))
-        }
-    }
-
-    fun setAppSortOrder(order: AppSortOrder) {
-        if (_addEditState.value.appSortOrder == order) return
-        _addEditState.update { state ->
-            state.copy(
-                appSortOrder = order,
-                apps = sortApps(state.apps, order)
-            )
-        }
-    }
-
-    fun toggleAppSelection(packageName: String) {
-        _addEditState.update { state ->
-            recomputeConflicts(
-                state.copy(
-                    apps = state.apps.map {
-                        if (it.packageName == packageName) it.copy(isSelected = !it.isSelected) else it
-                    },
-                    appBackupTypes = state.appBackupTypes.ensurePackage(packageName, state.backupTypes)
-                )
-            )
-        }
-    }
-
-    fun toggleAllApps() {
-        _addEditState.update { state ->
-            val shouldSelectAll = state.apps.any { !it.isSelected }
-            val apps = state.apps.map { it.copy(isSelected = shouldSelectAll) }
-            recomputeConflicts(
-                state.copy(
-                    apps = apps,
-                    appBackupTypes = apps.fold(state.appBackupTypes) { acc, app ->
-                        acc.ensurePackage(app.packageName, state.backupTypes)
-                    }
-                )
-            )
-        }
-    }
-
-    fun setAppBackupTypes(packageName: String, backupTypes: BackupTypes) {
-        _addEditState.update { state ->
-            recomputeConflicts(
-                state.copy(appBackupTypes = state.appBackupTypes + (packageName to backupTypes))
-            )
-        }
-    }
-
-    fun setSelectedAppsBackupTypes(backupTypes: BackupTypes) {
-        _addEditState.update { state ->
-            val selectedPackageNames = state.apps.filter { it.isSelected }.map { it.packageName }
-            recomputeConflicts(
-                state.copy(
-                    backupTypes = backupTypes,
-                    appBackupTypes = state.appBackupTypes + selectedPackageNames.associateWith { backupTypes }
-                )
-            )
-        }
-    }
-
-    fun setUnlockRepo(value: Boolean) = _addEditState.update { it.copy(maintenance = it.maintenance.copy(unlockRepo = value)) }
-    fun setForgetSnapshots(value: Boolean) = _addEditState.update { it.copy(maintenance = it.maintenance.copy(forgetSnapshots = value)) }
-    fun setPruneRepo(value: Boolean) = _addEditState.update { it.copy(maintenance = it.maintenance.copy(pruneRepo = value)) }
-    fun setCheckRepo(value: Boolean) = _addEditState.update { it.copy(maintenance = it.maintenance.copy(checkRepo = value)) }
-    fun setReadData(value: Boolean) = _addEditState.update { it.copy(maintenance = it.maintenance.copy(readData = value)) }
-    fun setKeepLast(value: Int) = _addEditState.update { it.copy(maintenance = it.maintenance.copy(keepLast = value)) }
-    fun setKeepDaily(value: Int) = _addEditState.update { it.copy(maintenance = it.maintenance.copy(keepDaily = value)) }
-    fun setKeepWeekly(value: Int) = _addEditState.update { it.copy(maintenance = it.maintenance.copy(keepWeekly = value)) }
-    fun setKeepMonthly(value: Int) = _addEditState.update { it.copy(maintenance = it.maintenance.copy(keepMonthly = value)) }
-
-    fun toggleAllForgetHosts() = forgetHostsController.toggleAll()
-    fun toggleForgetHost(hostname: String) = forgetHostsController.toggleHost(hostname)
-    fun addCustomForgetHost(hostname: String) = forgetHostsController.addCustomHost(hostname)
-    fun removeCustomForgetHost(hostname: String) = forgetHostsController.removeCustomHost(hostname)
-    fun refreshForgetHosts(userInitiated: Boolean = true) =
-        forgetHostsController.refreshHosts(selectedRepoKeyOverride = _uiState.value.selectedRepoKey, userInitiated = userInitiated)
-
-    fun setRequireBatteryNotLow(value: Boolean) = _addEditState.update { it.copy(triggerConditions = it.triggerConditions.copy(requireBatteryNotLow = value)) }
-    fun setRequireCharging(value: Boolean) = _addEditState.update { it.copy(triggerConditions = it.triggerConditions.copy(requireCharging = value)) }
-    fun setRequireUnmeteredNetwork(value: Boolean) = _addEditState.update { it.copy(triggerConditions = it.triggerConditions.copy(requireUnmeteredNetwork = value)) }
-
-    fun refreshAppsList() {
-        loadAppsForAddEdit(_addEditState.value.apps.filter { it.isSelected }.map { it.packageName })
-    }
+    fun setRequireBatteryNotLow(value: Boolean) =
+        _addEditState.update { it.copy(triggerConditions = it.triggerConditions.copy(requireBatteryNotLow = value)) }
+    fun setRequireCharging(value: Boolean) =
+        _addEditState.update { it.copy(triggerConditions = it.triggerConditions.copy(requireCharging = value)) }
+    fun setRequireUnmeteredNetwork(value: Boolean) =
+        _addEditState.update { it.copy(triggerConditions = it.triggerConditions.copy(requireUnmeteredNetwork = value)) }
 
     fun onDeleteScheduleClick() = _addEditState.update { it.copy(showConfirmDeleteDialog = true) }
-
     fun onCancelDeleteSchedule() = _addEditState.update { it.copy(showConfirmDeleteDialog = false) }
 
     fun confirmDeleteSchedule() {
         val scheduleId = _addEditState.value.id ?: return
         _addEditState.update { it.copy(showConfirmDeleteDialog = false) }
 
-        val repoKey = _uiState.value.selectedRepoKey ?: return
+        val repoKey = _uiState.value.selectedRepoKey ?: repositoriesRepository.selectedRepository.value ?: return
         val repository = repositoriesRepository.getRepositoryByKey(repoKey) ?: return
         val repoId = repository.id ?: return
 
@@ -808,92 +394,15 @@ class SchedulesViewModel(
             _uiEvents.emit(SchedulesUiEvent.NavigateBack)
         }
     }
-
-    private fun selectedAppBackupTypes(state: AddEditScheduleUiState): Map<String, BackupTypes> {
-        return state.apps
-            .filter { it.isSelected }
-            .associate { app ->
-                app.packageName to (state.appBackupTypes[app.packageName] ?: state.backupTypes)
-            }
-    }
-
-    private fun Map<String, BackupTypes>.ensurePackage(packageName: String, defaultTypes: BackupTypes): Map<String, BackupTypes> {
-        return if (containsKey(packageName)) this else this + (packageName to defaultTypes)
-    }
-
-    private fun recomputeConflicts(state: AddEditScheduleUiState): AddEditScheduleUiState {
-        val selectedApps = if (state.backupEnabled && hasRoot.value) state.apps.filter { it.isSelected } else emptyList()
-        val selectedExcluded = if (state.customDirectoriesBackupEnabled) {
-            state.excludedCustomDirectories.filter { it.isSelected }.map { it.uri }
-        } else {
-            emptyList()
-        }
-
-        if (selectedApps.isEmpty() || selectedExcluded.isEmpty()) {
-            return if (state.exclusionConflicts.isEmpty()) state else state.copy(exclusionConflicts = emptyList())
-        }
-
-        if (selectedExcluded != cachedRawExclusions) {
-            triggerBackgroundExclusionResolution(selectedExcluded)
-        }
-
-        val effectiveBackupTypes = state.backupTypes.toSelection()
-        val appBackupTypes = state.appBackupTypes.mapValues { it.value.toSelection() }
-        val currentUserId = runCatching {
-            android.os.UserHandle::class.java.getMethod("myUserId").invoke(null) as Int
-        }.getOrElse { android.os.Process.myUid() / 100000 }
-
-        val dummyRequest = BackupWorkRequest(
-            repositoryKey = "",
-            backupTypes = effectiveBackupTypes,
-            selectedPackageNames = selectedApps.map { it.packageName },
-            appBackupTypes = appBackupTypes,
-            excludedCustomDirectories = selectedExcluded
-        )
-        val resolved = if (selectedExcluded == cachedRawExclusions) {
-            cachedResolvedExclusions
-        } else {
-            selectedExcluded.mapNotNull { uri ->
-                (io.github.hddq.restoid.util.StorageUtils.resolveCustomDirectoryPath(uri) ?: uri).trimEnd('/')
-            }
-        }
-        val conflicts = findConflictingExclusions(selectedApps, dummyRequest, currentUserId, resolved)
-        return state.copy(exclusionConflicts = conflicts)
-    }
-
-    private fun triggerBackgroundExclusionResolution(selectedExcluded: List<String>) {
-        conflictResolutionJob?.cancel()
-        conflictResolutionJob = viewModelScope.launch {
-            val resolved = resolveExclusionPaths(selectedExcluded)
-            cachedRawExclusions = selectedExcluded
-            cachedResolvedExclusions = resolved
-            _addEditState.update { recomputeConflicts(it) }
-        }
-    }
 }
 
 internal fun hasScheduleChanges(
     current: AddEditScheduleUiState,
     initial: AddEditScheduleUiState
 ): Boolean {
-    return current.name != initial.name ||
-            current.intervalHours != initial.intervalHours ||
-            current.isEnabled != initial.isEnabled ||
-            current.backupEnabled != initial.backupEnabled ||
-            current.backupTypes != initial.backupTypes ||
-            current.appBackupTypes != initial.appBackupTypes ||
-            current.apps.associate { it.packageName to it.isSelected } != initial.apps.associate { it.packageName to it.isSelected } ||
-            current.maintenance != initial.maintenance ||
-            current.triggerConditions != initial.triggerConditions ||
-            current.customDirectoriesBackupEnabled != initial.customDirectoriesBackupEnabled ||
-            current.deviceDataBackupEnabled != initial.deviceDataBackupEnabled ||
-            current.contactsBackupEnabled != initial.contactsBackupEnabled ||
-            current.selectAllContactAccounts != initial.selectAllContactAccounts ||
-            current.selectedContactAccountKeys != initial.selectedContactAccountKeys ||
-            current.callLogsBackupEnabled != initial.callLogsBackupEnabled ||
-            current.calendarBackupEnabled != initial.calendarBackupEnabled ||
-            current.selectAllCalendars != initial.selectAllCalendars ||
-            current.selectedCalendarKeys != initial.selectedCalendarKeys ||
-            current.customDirectories != initial.customDirectories ||
-            current.excludedCustomDirectories != initial.excludedCustomDirectories
+    return current.presetId != initial.presetId ||
+        current.name != initial.name ||
+        current.intervalHours != initial.intervalHours ||
+        current.isEnabled != initial.isEnabled ||
+        current.triggerConditions != initial.triggerConditions
 }

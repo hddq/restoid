@@ -34,30 +34,19 @@ class ScheduleWorker(
         if (scheduleIndex == -1) return Result.failure()
 
         val schedule = schedules[scheduleIndex]
-        if (!schedule.isEnabled) return Result.success()
+        val forceRun = inputData.getBoolean(KEY_FORCE_RUN, false)
+        if (!schedule.isEnabled && !forceRun) return Result.success()
 
-        // Trigger the run tasks operation
-        val workRequest = RunTasksWorkRequest(
+        val preset = app.metadataRepository.getTaskPresets(repoId)
+            .firstOrNull { it.id == schedule.presetId }
+            ?: return Result.failure()
+
+        val effectiveScheduleName = schedule.name?.takeIf { it.isNotBlank() } ?: preset.name
+        val workRequest = preset.config.toWorkRequest(
             repositoryKey = repoKey,
-            backupEnabled = schedule.config.backupEnabled || schedule.config.customDirectories.isNotEmpty() || schedule.config.deviceData.anyEnabled(),
-            backupTypes = schedule.config.backupTypes,
-            selectedPackageNames = if (schedule.config.backupEnabled) schedule.config.selectedPackageNames else emptyList(),
-            appBackupTypes = if (schedule.config.backupEnabled) schedule.config.appBackupTypes else emptyMap(),
-            customDirectories = schedule.config.customDirectories,
-            excludedCustomDirectories = schedule.config.excludedCustomDirectories,
-            deviceData = schedule.config.deviceData,
-            unlockRepo = schedule.config.unlockRepo,
-            forgetSnapshots = schedule.config.forgetSnapshots,
-            pruneRepo = schedule.config.pruneRepo,
-            checkRepo = schedule.config.checkRepo,
-            readData = schedule.config.readData,
-            keepLast = schedule.config.keepLast,
-            keepDaily = schedule.config.keepDaily,
-            keepWeekly = schedule.config.keepWeekly,
-            keepMonthly = schedule.config.keepMonthly,
-            forgetAllHosts = schedule.config.forgetAllHosts,
-            forgetHosts = schedule.config.forgetHosts,
-            scheduleName = schedule.name,
+            hasRoot = true,
+            presetName = preset.name,
+            scheduleName = effectiveScheduleName,
             requireUnmeteredNetwork = schedule.triggerConditions.requireUnmeteredNetwork
         )
         val enqueued = app.operationWorkRepository.enqueueRunTasks(workRequest)
@@ -65,10 +54,10 @@ class ScheduleWorker(
             return Result.retry()
         }
 
-        // Update last run timestamp
-        val updatedSchedule = schedule.copy(lastRunTimestamp = System.currentTimeMillis())
-        schedules[scheduleIndex] = updatedSchedule
-        app.metadataRepository.saveSchedules(repoId, schedules)
+        // Update last run timestamp on both schedule and linked preset
+        val now = System.currentTimeMillis()
+        app.scheduleRepository.updateLastRunTimestamp(repoId, schedule.id, now)
+        app.taskPresetRepository.updateLastRunTimestamp(repoId, preset.id, now)
 
         return Result.success()
     }
@@ -88,5 +77,6 @@ class ScheduleWorker(
     companion object {
         const val KEY_REPO_KEY = "repo_key"
         const val KEY_SCHEDULE_ID = "schedule_id"
+        const val KEY_FORCE_RUN = "force_run"
     }
 }
