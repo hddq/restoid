@@ -215,6 +215,74 @@ private fun PermissionsBottomSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        sheetState = sheetState,
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(start = 16.dp, end = 16.dp, bottom = 32.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.permissions_and_access_title),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            AccessModeCard(
+                hasRoot = hasRoot,
+                onRefreshRoot = onRefreshRoot
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            PermissionsSectionsContent(
+                hasRoot = hasRoot,
+                storagePermissionState = storagePermissionState,
+                notificationPermissionState = notificationPermissionState,
+                localNetworkPermissionState = localNetworkPermissionState,
+                batteryOptimizationDisabled = batteryOptimizationDisabled,
+                deviceDataPermissions = deviceDataPermissions,
+                showStorageRow = showStorageRow,
+                showNotificationRow = showNotificationRow,
+                showLocalNetworkRow = showLocalNetworkRow,
+                onRequestStorage = onRequestStorage,
+                onRequestNotification = onRequestNotification,
+                onOpenNotificationSettings = onOpenNotificationSettings,
+                onRequestBatteryUnrestricted = onRequestBatteryUnrestricted,
+                onRequestLocalNetwork = onRequestLocalNetwork,
+                onRequestDeviceDataPermissions = onRequestDeviceDataPermissions
+            )
+        }
+    }
+}
+
+@Composable
+internal fun PermissionsSectionsContent(
+    hasRoot: Boolean,
+    storagePermissionState: StoragePermissionState,
+    notificationPermissionState: NotificationPermissionState,
+    localNetworkPermissionState: LocalNetworkPermissionState,
+    batteryOptimizationDisabled: Boolean,
+    deviceDataPermissions: DeviceDataPermissionsState,
+    showStorageRow: Boolean,
+    showNotificationRow: Boolean,
+    showLocalNetworkRow: Boolean,
+    onRequestStorage: () -> Unit,
+    onRequestNotification: () -> Unit,
+    onOpenNotificationSettings: () -> Unit,
+    onRequestBatteryUnrestricted: () -> Unit,
+    onRequestLocalNetwork: () -> Unit,
+    onRequestDeviceDataPermissions: (Array<String>) -> Unit,
+    modifier: Modifier = Modifier,
+    preferRuntimeNotificationRequest: Boolean = false
+) {
     val systemRows = buildList<@Composable () -> Unit> {
         if (showStorageRow) {
             val storageGranted = storagePermissionState == StoragePermissionState.Granted
@@ -249,10 +317,14 @@ private fun PermissionsBottomSheet(
                     granted = granted,
                     actionLabel = when {
                         granted -> null
-                        isDenied -> stringResource(R.string.action_settings)
+                        isDenied && !preferRuntimeNotificationRequest -> stringResource(R.string.action_settings)
                         else -> stringResource(R.string.action_grant)
                     },
-                    onAction = if (isDenied) onOpenNotificationSettings else onRequestNotification,
+                    onAction = if (isDenied && !preferRuntimeNotificationRequest) {
+                        onOpenNotificationSettings
+                    } else {
+                        onRequestNotification
+                    },
                     trailingIconAction = if (granted) {
                         {
                             IconButton(onClick = onOpenNotificationSettings) {
@@ -301,107 +373,80 @@ private fun PermissionsBottomSheet(
         }
     }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismissRequest,
-        sheetState = sheetState,
-        modifier = modifier
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(start = 16.dp, end = 16.dp, bottom = 32.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.permissions_and_access_title),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            AccessModeCard(
-                hasRoot = hasRoot,
-                onRefreshRoot = onRefreshRoot
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            ExpressiveSectionHeader(title = stringResource(R.string.system_title))
-            ExpressiveCardGroup {
-                systemRows.forEachIndexed { index, rowContent ->
-                    ExpressiveSegmentedSurface(index = index, count = systemRows.size) {
-                        rowContent()
-                    }
+    Column(modifier = modifier.fillMaxWidth()) {
+        ExpressiveSectionHeader(title = stringResource(R.string.system_title))
+        ExpressiveCardGroup {
+            systemRows.forEachIndexed { index, rowContent ->
+                ExpressiveSegmentedSurface(index = index, count = systemRows.size) {
+                    rowContent()
                 }
             }
+        }
 
-            Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-            ExpressiveSectionHeader(title = stringResource(R.string.permissions_section_device_data))
-            ExpressiveCardGroup {
-                ExpressiveSegmentedSurface(index = 0, count = 3) {
-                    PermissionItemRow(
-                        icon = Icons.Outlined.Contacts,
-                        title = stringResource(R.string.permissions_contacts_title),
-                        subtitle = if (deviceDataPermissions.contactsGranted) {
-                            stringResource(R.string.permissions_status_granted)
-                        } else {
-                            stringResource(R.string.permissions_contacts_description)
-                        },
-                        granted = deviceDataPermissions.contactsGranted,
-                        actionLabel = if (!deviceDataPermissions.contactsGranted) stringResource(R.string.action_grant) else null,
-                        onAction = {
-                            onRequestDeviceDataPermissions(
-                                arrayOf(Manifest.permission.READ_CONTACTS, Manifest.permission.WRITE_CONTACTS)
-                            )
-                        }
-                    )
-                }
-                ExpressiveSegmentedSurface(index = 1, count = 3) {
-                    PermissionItemRow(
-                        icon = Icons.Outlined.Call,
-                        title = stringResource(R.string.permissions_call_logs_title),
-                        subtitle = if (deviceDataPermissions.callLogsGranted) {
-                            stringResource(R.string.permissions_status_granted)
-                        } else {
-                            stringResource(R.string.permissions_call_logs_description)
-                        },
-                        granted = deviceDataPermissions.callLogsGranted,
-                        actionLabel = if (!deviceDataPermissions.callLogsGranted) stringResource(R.string.action_grant) else null,
-                        onAction = {
-                            onRequestDeviceDataPermissions(
-                                arrayOf(Manifest.permission.READ_CALL_LOG, Manifest.permission.WRITE_CALL_LOG)
-                            )
-                        }
-                    )
-                }
-                ExpressiveSegmentedSurface(index = 2, count = 3) {
-                    PermissionItemRow(
-                        icon = Icons.Outlined.CalendarMonth,
-                        title = stringResource(R.string.permissions_calendar_title),
-                        subtitle = if (deviceDataPermissions.calendarGranted) {
-                            stringResource(R.string.permissions_status_granted)
-                        } else {
-                            stringResource(R.string.permissions_calendar_description)
-                        },
-                        granted = deviceDataPermissions.calendarGranted,
-                        actionLabel = if (!deviceDataPermissions.calendarGranted) stringResource(R.string.action_grant) else null,
-                        onAction = {
-                            onRequestDeviceDataPermissions(
-                                arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR)
-                            )
-                        }
-                    )
-                }
+        ExpressiveSectionHeader(title = stringResource(R.string.permissions_section_device_data))
+        ExpressiveCardGroup {
+            ExpressiveSegmentedSurface(index = 0, count = 3) {
+                PermissionItemRow(
+                    icon = Icons.Outlined.Contacts,
+                    title = stringResource(R.string.permissions_contacts_title),
+                    subtitle = if (deviceDataPermissions.contactsGranted) {
+                        stringResource(R.string.permissions_status_granted)
+                    } else {
+                        stringResource(R.string.permissions_contacts_description)
+                    },
+                    granted = deviceDataPermissions.contactsGranted,
+                    actionLabel = if (!deviceDataPermissions.contactsGranted) stringResource(R.string.action_grant) else null,
+                    onAction = {
+                        onRequestDeviceDataPermissions(
+                            arrayOf(Manifest.permission.READ_CONTACTS, Manifest.permission.WRITE_CONTACTS)
+                        )
+                    }
+                )
+            }
+            ExpressiveSegmentedSurface(index = 1, count = 3) {
+                PermissionItemRow(
+                    icon = Icons.Outlined.Call,
+                    title = stringResource(R.string.permissions_call_logs_title),
+                    subtitle = if (deviceDataPermissions.callLogsGranted) {
+                        stringResource(R.string.permissions_status_granted)
+                    } else {
+                        stringResource(R.string.permissions_call_logs_description)
+                    },
+                    granted = deviceDataPermissions.callLogsGranted,
+                    actionLabel = if (!deviceDataPermissions.callLogsGranted) stringResource(R.string.action_grant) else null,
+                    onAction = {
+                        onRequestDeviceDataPermissions(
+                            arrayOf(Manifest.permission.READ_CALL_LOG, Manifest.permission.WRITE_CALL_LOG)
+                        )
+                    }
+                )
+            }
+            ExpressiveSegmentedSurface(index = 2, count = 3) {
+                PermissionItemRow(
+                    icon = Icons.Outlined.CalendarMonth,
+                    title = stringResource(R.string.permissions_calendar_title),
+                    subtitle = if (deviceDataPermissions.calendarGranted) {
+                        stringResource(R.string.permissions_status_granted)
+                    } else {
+                        stringResource(R.string.permissions_calendar_description)
+                    },
+                    granted = deviceDataPermissions.calendarGranted,
+                    actionLabel = if (!deviceDataPermissions.calendarGranted) stringResource(R.string.action_grant) else null,
+                    onAction = {
+                        onRequestDeviceDataPermissions(
+                            arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR)
+                        )
+                    }
+                )
             }
         }
     }
 }
 
 @Composable
-private fun AccessModeCard(
+internal fun AccessModeCard(
     hasRoot: Boolean,
     onRefreshRoot: () -> Unit,
     modifier: Modifier = Modifier

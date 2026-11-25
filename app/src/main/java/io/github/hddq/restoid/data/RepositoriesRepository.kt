@@ -74,6 +74,12 @@ class RepositoriesRepository(
 
     private val json = Json { ignoreUnknownKeys = true }
 
+    fun hasAnyConfiguredRepositories(): Boolean {
+        val reposV2 = prefs.getStringSet(REPOS_KEY, null)
+        val reposV1 = prefs.getStringSet(LEGACY_REPOS_KEY, null)
+        return !reposV2.isNullOrEmpty() || !reposV1.isNullOrEmpty()
+    }
+
     fun loadRepositories() {
         val reposV2 = prefs.getStringSet(REPOS_KEY, null)
         val reposV1 = prefs.getStringSet(LEGACY_REPOS_KEY, emptySet()) ?: emptySet()
