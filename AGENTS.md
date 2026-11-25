@@ -9,6 +9,7 @@
 - Write the minimum working code that directly fulfills the prompt.
 - NEVER add features, banners, badges, tooltips, onboarding wizards, or extra buttons that were not explicitly requested.
 - Build only the exact UI elements described in the prompt.
+- NEVER wrap screen or hero icons in decorative rounded-square container boxes (`Surface` or `Box` with `RoundedCornerShape` and a `*Container` background color); render the `Icon` directly.
 - If a task seems to require creating more than 2 new files or writing more than ~200 lines of code, STOP before editing. Briefly list the files, estimated line count, your implementation plan, and ask for confirmation first.
 - Prefer deleting or simplifying design over layering guards (session IDs, extra coroutines, mutexes, fallback states); if a fix or review comment requires complex synchronization across multiple ViewModels, stop and propose a simpler design first.
 - Count follow-up review fixes toward the ~200-line / simplicity budget—if review fixes make the diff grow complex, pause and discuss a simpler approach instead of patching symptoms.
