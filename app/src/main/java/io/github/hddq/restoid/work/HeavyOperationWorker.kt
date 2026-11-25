@@ -46,6 +46,7 @@ class HeavyOperationWorker(
         val startElapsedMs = SystemClock.elapsedRealtime()
         val interruptedSummary = applicationContext.getString(R.string.operation_interrupted)
         var scheduleName: String? = null
+        var presetName: String? = null
 
         fun saveInProgressLog(
             progress: OperationProgress,
@@ -57,6 +58,7 @@ class HeavyOperationWorker(
                 id = logId,
                 operationType = operationType,
                 scheduleName = scheduleName,
+                presetName = presetName,
                 startTimeMillis = startTimeMillis,
                 endTimeMillis = timestampMillis,
                 durationSeconds = durationSeconds,
@@ -141,7 +143,8 @@ class HeavyOperationWorker(
                         OperationType.RUN_TASKS -> {
                             val request = app.operationRequestStore.loadRunTasksRequest(requestId)
                             scheduleName = request.scheduleName
-                            if (scheduleName != null) {
+                            presetName = request.presetName
+                            if (scheduleName != null || presetName != null) {
                                 saveInProgressLog(initialProgress, startTimeMillis, durable = true)
                             }
                             armLossMonitor(request.repositoryKey, request.requireUnmeteredNetwork)
@@ -223,6 +226,7 @@ class HeavyOperationWorker(
                 id = logId,
                 operationType = operationType,
                 scheduleName = scheduleName,
+                presetName = presetName,
                 startTimeMillis = startTimeMillis,
                 endTimeMillis = endTimeMillis,
                 durationSeconds = durationSeconds,
@@ -232,10 +236,25 @@ class HeavyOperationWorker(
                 error = finalResult.progress.error
             )
 
-            val displayName = if (scheduleName != null) {
-                applicationContext.getString(R.string.operation_schedule_name, scheduleName)
-            } else {
-                operationName(operationType)
+            val resolvedScheduleName = scheduleName?.takeIf { it.isNotBlank() }
+            val resolvedPresetName = presetName?.takeIf { it.isNotBlank() }
+            val displayName = when {
+                resolvedScheduleName != null && resolvedPresetName != null && resolvedScheduleName != resolvedPresetName -> {
+                    applicationContext.getString(
+                        R.string.operation_schedule_with_preset_name,
+                        resolvedScheduleName,
+                        resolvedPresetName
+                    )
+                }
+                resolvedScheduleName != null -> {
+                    applicationContext.getString(R.string.operation_schedule_name, resolvedScheduleName)
+                }
+                resolvedPresetName != null -> {
+                    applicationContext.getString(R.string.operation_preset_name, resolvedPresetName)
+                }
+                else -> {
+                    operationName(operationType)
+                }
             }
             notificationRepository.showOperationFinishedNotification(
                 displayName,

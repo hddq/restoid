@@ -1,6 +1,8 @@
 package io.github.hddq.restoid.data
 
 import io.github.hddq.restoid.model.RestoidMetadata
+import io.github.hddq.restoid.model.TaskPreset
+import io.github.hddq.restoid.work.RunTasksConfig
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -16,7 +18,7 @@ class MetadataRepositoryTest {
     val tempFolder = TemporaryFolder()
 
     @Test
-    fun `pruneOrphanedMetadata deletes stale snapshot files and preserves active snapshots and schedules`() = runTest {
+    fun `pruneOrphanedMetadata deletes stale snapshot files and preserves active snapshots schedules and presets`() = runTest {
         val metadataRoot = tempFolder.newFolder("metadata")
         val repository = MetadataRepository(metadataRoot)
         val repoId = "6102bcf8"
@@ -32,7 +34,8 @@ class MetadataRepositoryTest {
         repository.saveMetadataForSnapshot(repoId, activeId2, sampleMetadata)
         repository.saveMetadataForSnapshot(repoId, staleId1, sampleMetadata)
         repository.saveMetadataForSnapshot(repoId, staleId2, sampleMetadata)
-        File(repoDir, "schedules.json").writeText("[]")
+        File(repoDir, MetadataRepository.SCHEDULES_FILE_NAME).writeText("[]")
+        File(repoDir, MetadataRepository.PRESETS_FILE_NAME).writeText("[]")
         File(repoDir, "notes.json").writeText("{}")
 
         val deleted = repository.pruneOrphanedMetadata(repoId, setOf(activeId1, activeId2))
@@ -42,8 +45,57 @@ class MetadataRepositoryTest {
         assertTrue(File(repoDir, "$activeId2.json").exists())
         assertFalse(File(repoDir, "$staleId1.json").exists())
         assertFalse(File(repoDir, "$staleId2.json").exists())
-        assertTrue(File(repoDir, "schedules.json").exists())
+        assertTrue(File(repoDir, MetadataRepository.SCHEDULES_FILE_NAME).exists())
+        assertTrue(File(repoDir, MetadataRepository.PRESETS_FILE_NAME).exists())
         assertTrue(File(repoDir, "notes.json").exists())
+    }
+
+    @Test
+    fun `getAllMetadata excludes schedules json and presets json`() = runTest {
+        val metadataRoot = tempFolder.newFolder("metadata")
+        val repository = MetadataRepository(metadataRoot)
+        val repoId = "6102bcf8"
+        val snapshotId = "6fb005a58bd12d7c92ffa63efc0d0747c3db013820203aa6480a23dc11111111"
+
+        val sampleMetadata = RestoidMetadata(apps = emptyMap(), customDirectories = emptyMap())
+        repository.saveMetadataForSnapshot(repoId, snapshotId, sampleMetadata)
+        repository.saveTaskPresets(
+            repoId,
+            listOf(TaskPreset(id = "p1", name = "Daily", config = RunTasksConfig(checkRepo = true)))
+        )
+        repository.saveSchedules(repoId, emptyList())
+
+        val allMetadata = repository.getAllMetadata(repoId)
+
+        assertEquals(setOf(snapshotId), allMetadata.keys)
+    }
+
+    @Test
+    fun `saveTaskPresets and getTaskPresets round-trip atomically without leaving temp files`() = runTest {
+        val metadataRoot = tempFolder.newFolder("metadata")
+        val repository = MetadataRepository(metadataRoot)
+        val repoId = "6102bcf8"
+
+        val presets = listOf(
+            TaskPreset(
+                id = "preset-1",
+                name = "Nightly Full",
+                config = RunTasksConfig(backupEnabled = true, selectedPackageNames = listOf("com.foo.bar"), pruneRepo = true),
+                lastRunTimestamp = 123456L
+            ),
+            TaskPreset(
+                id = "preset-2",
+                name = "Weekly Check",
+                config = RunTasksConfig(backupEnabled = false, checkRepo = true, readData = true)
+            )
+        )
+
+        assertTrue(repository.saveTaskPresets(repoId, presets))
+        assertEquals(presets, repository.getTaskPresets(repoId))
+
+        val repoDir = File(metadataRoot, repoId)
+        val files = repoDir.listFiles()?.map { it.name }?.sorted().orEmpty()
+        assertEquals(listOf(MetadataRepository.PRESETS_FILE_NAME), files)
     }
 
     @Test

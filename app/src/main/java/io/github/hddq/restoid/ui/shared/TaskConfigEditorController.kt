@@ -1,6 +1,7 @@
 package io.github.hddq.restoid.ui.shared
 
 import android.app.Application
+import android.content.Context
 import android.widget.Toast
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.AppInfoRepository
@@ -137,7 +138,7 @@ fun TaskConfigEditorState.withAppliedRunTasksConfig(
             forgetAllHosts = config.forgetAllHosts,
             forgetHosts = normalizedHosts
         ),
-        customDirectoriesBackupEnabled = config.customDirectories.isNotEmpty(),
+        customDirectoriesBackupEnabled = config.customDirectories.isNotEmpty() || config.excludedCustomDirectories.isNotEmpty(),
         deviceDataBackupEnabled = config.deviceData.anyEnabled(),
         contactsBackupEnabled = if (config.deviceData.anyEnabled()) config.deviceData.contacts else true,
         selectAllContactAccounts = config.deviceData.selectAllContactAccounts,
@@ -171,6 +172,41 @@ fun hasTaskConfigChanges(
         current.selectedCalendarKeys != initial.selectedCalendarKeys ||
         current.customDirectories != initial.customDirectories ||
         current.excludedCustomDirectories != initial.excludedCustomDirectories
+}
+
+fun summarizeTaskConfig(
+    context: Context,
+    config: RunTasksConfig,
+    hasRoot: Boolean
+): String {
+    val parts = mutableListOf<String>()
+    if (config.backupEnabled && hasRoot) {
+        val appCount = config.selectedPackageNames.size
+        parts.add(context.resources.getQuantityString(R.plurals.preset_summary_apps_count, appCount, appCount))
+    }
+    if (config.customDirectories.isNotEmpty()) {
+        parts.add(context.getString(R.string.preset_summary_custom_folders))
+    }
+    if (config.deviceData.anyEnabled()) {
+        parts.add(context.getString(R.string.preset_summary_device_data))
+    }
+    if (config.unlockRepo) {
+        parts.add(context.getString(R.string.task_unlock))
+    }
+    if (config.forgetSnapshots) {
+        parts.add(context.getString(R.string.task_forget))
+    }
+    if (config.pruneRepo) {
+        parts.add(context.getString(R.string.task_prune))
+    }
+    if (config.checkRepo) {
+        parts.add(context.getString(R.string.task_check))
+    }
+    return if (parts.isEmpty()) {
+        context.getString(R.string.preset_summary_no_tasks)
+    } else {
+        parts.joinToString(" · ")
+    }
 }
 
 class TaskConfigEditorController(
@@ -296,7 +332,12 @@ class TaskConfigEditorController(
         val normalizedHosts = normalizeForgetHosts(config.forgetHosts)
         val existingApps = if (reloadApps) emptyList() else readState().apps
         updateState { state ->
-            recomputeConflicts(state.withAppliedRunTasksConfig(config, existingApps = existingApps))
+            recomputeConflicts(
+                state.withAppliedRunTasksConfig(config, existingApps = existingApps).copy(
+                    isLoadingContactAccounts = false,
+                    isLoadingCalendars = false
+                )
+            )
         }
         forgetHostsController.setManualHosts(normalizedHosts)
         if (existingApps.isEmpty()) {
@@ -316,8 +357,9 @@ class TaskConfigEditorController(
     }
 
     fun refreshAppsList() {
-        val currentSelected = readState().apps.filter { it.isSelected }.map { it.packageName }
-        loadInstalledApps(selectedPackageNames = currentSelected)
+        val state = readState()
+        if (state.isLoadingApps && state.apps.isEmpty()) return
+        loadInstalledApps(selectedPackageNames = null)
     }
 
     fun loadInstalledApps(

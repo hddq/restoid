@@ -229,10 +229,19 @@ private fun OperationLogItem(
         OperationType.MAINTENANCE -> stringResource(R.string.operation_maintenance)
     }
 
-    val title = if (log.scheduleName != null) {
-        stringResource(R.string.operation_schedule_name, log.scheduleName)
-    } else {
-        operationLabel
+    val title = when {
+        !log.scheduleName.isNullOrBlank() && !log.presetName.isNullOrBlank() && log.scheduleName != log.presetName -> {
+            stringResource(R.string.operation_schedule_with_preset_name, log.scheduleName, log.presetName)
+        }
+        !log.scheduleName.isNullOrBlank() -> {
+            stringResource(R.string.operation_schedule_name, log.scheduleName)
+        }
+        !log.presetName.isNullOrBlank() -> {
+            stringResource(R.string.operation_preset_name, log.presetName)
+        }
+        else -> {
+            operationLabel
+        }
     }
 
     val formattedDate = remember(log.startTimeMillis) {

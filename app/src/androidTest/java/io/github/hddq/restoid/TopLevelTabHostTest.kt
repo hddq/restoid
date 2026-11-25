@@ -41,8 +41,9 @@ class TopLevelTabHostTest {
 
     private val tabOrder = mapOf(
         Screen.Home.route to 0,
-        Screen.Schedules.route to 1,
-        Screen.Settings.route to 2
+        Screen.Presets.route to 1,
+        Screen.Schedules.route to 2,
+        Screen.Settings.route to 3
     )
 
     @Test

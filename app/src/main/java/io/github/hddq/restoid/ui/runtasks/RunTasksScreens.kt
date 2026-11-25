@@ -10,18 +10,26 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.FactCheck
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.AutoDelete
+import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.Smartphone
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -33,7 +41,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.hddq.restoid.LocalAppBarActions
 import io.github.hddq.restoid.R
@@ -66,6 +78,7 @@ fun RunTasksScreen(
     val operationBlocked by viewModel.operationBlocked.collectAsStateWithLifecycle()
     val hasRoot by viewModel.hasRoot.collectAsStateWithLifecycle()
     val appBarActions = LocalAppBarActions.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     var showGuideSheet by remember { mutableStateOf(false) }
 
     val (deviceDataPermissions, requestDeviceDataPermissions) = rememberPermissionsMap(
@@ -77,8 +90,26 @@ fun RunTasksScreen(
     val hasReadCallLogPermission = deviceDataPermissions[Manifest.permission.READ_CALL_LOG] == true
     val hasReadCalendarPermission = deviceDataPermissions[Manifest.permission.READ_CALENDAR] == true
 
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshPresets()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     DisposableEffect(Unit) {
         appBarActions.value = {
+            IconButton(onClick = { viewModel.openSaveAsPresetDialog() }) {
+                Icon(
+                    imageVector = Icons.Outlined.BookmarkAdd,
+                    contentDescription = stringResource(R.string.action_save_as_preset)
+                )
+            }
             IconButton(onClick = { showGuideSheet = true }) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Outlined.HelpOutline,
@@ -113,6 +144,56 @@ fun RunTasksScreen(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 88.dp, top = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        if (uiState.availablePresets.isNotEmpty()) {
+            item(key = "preset_chips_strip") {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        item(key = "preset_chip_custom") {
+                            FilterChip(
+                                selected = uiState.selectedPresetId == null,
+                                onClick = { viewModel.selectCustom() },
+                                label = {
+                                    Text(
+                                        text = stringResource(R.string.run_tasks_preset_custom),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            )
+                        }
+                        items(
+                            items = uiState.availablePresets,
+                            key = { it.id }
+                        ) { preset ->
+                            FilterChip(
+                                selected = uiState.selectedPresetId == preset.id,
+                                onClick = { viewModel.selectPreset(preset.id) },
+                                label = {
+                                    Text(
+                                        text = preset.name,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            )
+                        }
+                    }
+
+                    if (uiState.isModifiedFromPreset && uiState.selectedPresetId != null) {
+                        Text(
+                            text = stringResource(R.string.run_tasks_preset_modified_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 6.dp, start = 4.dp)
+                        )
+                    }
+                }
+            }
+        }
+
         item {
             Column(modifier = Modifier.fillMaxWidth()) {
                 ExclusionConflictWarningCard(conflicts = editor.exclusionConflicts)
@@ -223,6 +304,53 @@ fun RunTasksScreen(
                 }
             }
         }
+    }
+
+    if (uiState.showSavePresetDialog) {
+        val selectedPreset = remember(uiState.selectedPresetId, uiState.availablePresets) {
+            uiState.availablePresets.find { it.id == uiState.selectedPresetId }
+        }
+        val suggestedName = if (selectedPreset != null) {
+            stringResource(R.string.preset_copy_name_format, selectedPreset.name)
+        } else {
+            ""
+        }
+        var presetName by remember(uiState.showSavePresetDialog, suggestedName) {
+            mutableStateOf(suggestedName)
+        }
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissSaveAsPresetDialog() },
+            title = { Text(stringResource(R.string.dialog_save_as_preset_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = stringResource(R.string.dialog_save_as_preset_desc),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedTextField(
+                        value = presetName,
+                        onValueChange = { presetName = it },
+                        label = { Text(stringResource(R.string.preset_name_label)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { viewModel.saveCurrentAsPreset(presetName) },
+                    enabled = presetName.isNotBlank()
+                ) {
+                    Text(stringResource(R.string.action_save))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissSaveAsPresetDialog() }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
     }
 
     if (showGuideSheet) {

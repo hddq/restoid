@@ -38,6 +38,8 @@ class RestoidApplication : Application() {
         private set
     lateinit var scheduleRepository: ScheduleRepository
         private set
+    lateinit var taskPresetRepository: TaskPresetRepository
+        private set
     lateinit var preferencesRepository: PreferencesRepository
         private set
     lateinit var operationCoordinator: OperationCoordinator
@@ -95,6 +97,10 @@ class RestoidApplication : Application() {
             operationRequestStore,
             operationRuntimeRepository,
             enqueueMutex = shellOperationMutex
+        )
+        taskPresetRepository = TaskPresetRepository(
+            metadataRepository = metadataRepository,
+            operationWorkRepository = operationWorkRepository
         )
 
         passwordManager.clearTemporaryPasswords()

@@ -3,6 +3,7 @@ package io.github.hddq.restoid.data
 import android.content.Context
 import io.github.hddq.restoid.model.RestoidMetadata
 import io.github.hddq.restoid.model.Schedule
+import io.github.hddq.restoid.model.TaskPreset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
@@ -20,7 +21,7 @@ class MetadataRepository internal constructor(
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    private fun writeTextAtomically(targetFile: File, content: String) {
+    internal fun writeTextAtomically(targetFile: File, content: String) {
         val parentDir = targetFile.parentFile
         if (parentDir != null && !parentDir.exists()) {
             parentDir.mkdirs()
@@ -52,11 +53,43 @@ class MetadataRepository internal constructor(
         }
     }
 
+    suspend fun getTaskPresets(repoId: String): List<TaskPreset> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val repoDir = File(metadataRoot, repoId)
+                val presetsFile = File(repoDir, PRESETS_FILE_NAME)
+                if (presetsFile.exists()) {
+                    json.decodeFromString<List<TaskPreset>>(presetsFile.readText())
+                } else {
+                    emptyList()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                emptyList()
+            }
+        }
+    }
+
+    suspend fun saveTaskPresets(repoId: String, presets: List<TaskPreset>): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                val repoDir = File(metadataRoot, repoId)
+                if (!repoDir.exists()) repoDir.mkdirs()
+                val presetsFile = File(repoDir, PRESETS_FILE_NAME)
+                writeTextAtomically(presetsFile, json.encodeToString(presets))
+                true
+            } catch (e: Exception) {
+                e.printStackTrace()
+                false
+            }
+        }
+    }
+
     suspend fun getSchedules(repoId: String): List<Schedule> {
         return withContext(Dispatchers.IO) {
             try {
                 val repoDir = File(metadataRoot, repoId)
-                val schedulesFile = File(repoDir, "schedules.json")
+                val schedulesFile = File(repoDir, SCHEDULES_FILE_NAME)
                 if (schedulesFile.exists()) {
                     json.decodeFromString<List<Schedule>>(schedulesFile.readText())
                 } else {
@@ -74,7 +107,7 @@ class MetadataRepository internal constructor(
             try {
                 val repoDir = File(metadataRoot, repoId)
                 if (!repoDir.exists()) repoDir.mkdirs()
-                val schedulesFile = File(repoDir, "schedules.json")
+                val schedulesFile = File(repoDir, SCHEDULES_FILE_NAME)
                 writeTextAtomically(schedulesFile, json.encodeToString(schedules))
                 true
             } catch (e: Exception) {
@@ -126,7 +159,9 @@ class MetadataRepository internal constructor(
             val repoDir = File(metadataRoot, repoId)
             if (!repoDir.exists() || !repoDir.isDirectory) return@withContext emptyMap()
 
-            repoDir.listFiles { _, name -> name.endsWith(".json") }
+            repoDir.listFiles { _, name ->
+                name.endsWith(".json") && name !in NON_SNAPSHOT_METADATA_FILES
+            }
                 ?.associate { file ->
                     val snapshotId = file.nameWithoutExtension
                     val metadata = try {
@@ -167,7 +202,7 @@ class MetadataRepository internal constructor(
                 if (!repoDir.exists() || !repoDir.isDirectory) return@withContext 0
 
                 val files = repoDir.listFiles { _, name ->
-                    name.endsWith(".json") && name != SCHEDULES_FILE_NAME
+                    name.endsWith(".json") && name !in NON_SNAPSHOT_METADATA_FILES
                 } ?: return@withContext 0
 
                 var deletedCount = 0
@@ -186,9 +221,11 @@ class MetadataRepository internal constructor(
         }
     }
 
-    private companion object {
+    internal companion object {
         const val SCHEDULES_FILE_NAME = "schedules.json"
-        val SNAPSHOT_ID_REGEX = Regex("^[0-9a-fA-F]{8,64}$")
+        const val PRESETS_FILE_NAME = "presets.json"
+        private val NON_SNAPSHOT_METADATA_FILES = setOf(SCHEDULES_FILE_NAME, PRESETS_FILE_NAME)
+        private val SNAPSHOT_ID_REGEX = Regex("^[0-9a-fA-F]{8,64}$")
     }
 }
 

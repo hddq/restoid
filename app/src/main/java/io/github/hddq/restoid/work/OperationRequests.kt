@@ -145,6 +145,7 @@ data class RunTasksWorkRequest(
     val keepMonthly: Int,
     val forgetAllHosts: Boolean = true,
     val forgetHosts: List<String> = emptyList(),
+    val presetName: String? = null,
     val scheduleName: String? = null,
     val requireUnmeteredNetwork: Boolean = false
 )
@@ -152,6 +153,7 @@ data class RunTasksWorkRequest(
 fun RunTasksConfig.toWorkRequest(
     repositoryKey: String,
     hasRoot: Boolean,
+    presetName: String? = null,
     scheduleName: String? = null,
     requireUnmeteredNetwork: Boolean = false
 ): RunTasksWorkRequest {
@@ -183,6 +185,7 @@ fun RunTasksConfig.toWorkRequest(
         keepMonthly = keepMonthly,
         forgetAllHosts = forgetAllHosts,
         forgetHosts = normalizedForgetHosts,
+        presetName = presetName,
         scheduleName = scheduleName,
         requireUnmeteredNetwork = requireUnmeteredNetwork
     )
