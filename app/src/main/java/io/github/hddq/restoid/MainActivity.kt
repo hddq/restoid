@@ -733,7 +733,7 @@ class MainActivity : FragmentActivity() {
                                     isExiting = transition.targetState == EnterExitState.PostExit,
                                     onBack = { vm.onBackPress() },
                                     floatingActionButton = {
-                                        if (!state.isSaving) {
+                                        if (!state.isSaving && !state.editor.isLoadingApps) {
                                             ExtendedFloatingActionButton(
                                                 onClick = { vm.savePreset() },
                                                 shape = RoundedCornerShape(20.dp),

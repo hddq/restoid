@@ -877,4 +877,6 @@
     <string name="dialog_save_as_preset_desc">Save the current task configuration as a reusable preset for this repository.</string>
     <string name="toast_preset_saved">Preset saved</string>
     <string name="toast_preset_duplicated">Preset duplicated</string>
+    <string name="toast_preset_save_failed">Failed to save preset</string>
+    <string name="toast_preset_delete_failed">Failed to delete preset</string>
 </resources>

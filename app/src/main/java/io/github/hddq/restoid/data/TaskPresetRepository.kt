@@ -4,12 +4,16 @@ import io.github.hddq.restoid.model.TaskPreset
 import io.github.hddq.restoid.work.OperationWorkRepository
 import io.github.hddq.restoid.work.RunTasksWorkRequest
 import io.github.hddq.restoid.work.toWorkRequest
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.UUID
 
 class TaskPresetRepository internal constructor(
     private val metadataRepository: MetadataRepository,
     private val enqueueRunTasks: suspend (RunTasksWorkRequest) -> Boolean
 ) {
+    private val mutationMutex = Mutex()
+
     constructor(
         metadataRepository: MetadataRepository,
         operationWorkRepository: OperationWorkRepository
@@ -26,7 +30,11 @@ class TaskPresetRepository internal constructor(
         return getPresets(repoId).firstOrNull { it.id == presetId }
     }
 
-    suspend fun savePreset(repoId: String, preset: TaskPreset): TaskPreset {
+    suspend fun savePreset(repoId: String, preset: TaskPreset): TaskPreset? = mutationMutex.withLock {
+        savePresetLocked(repoId, preset)
+    }
+
+    private suspend fun savePresetLocked(repoId: String, preset: TaskPreset): TaskPreset? {
         val presets = getPresets(repoId).toMutableList()
         val index = presets.indexOfFirst { it.id == preset.id }
 
@@ -41,21 +49,23 @@ class TaskPresetRepository internal constructor(
         } else {
             presets.add(presetToSave)
         }
-        metadataRepository.saveTaskPresets(repoId, presets)
+        if (!metadataRepository.saveTaskPresets(repoId, presets)) {
+            return null
+        }
         return presetToSave
     }
 
-    suspend fun duplicatePreset(repoId: String, presetId: String, copyName: String): TaskPreset? {
-        val original = getPresetById(repoId, presetId) ?: return null
+    suspend fun duplicatePreset(repoId: String, presetId: String, copyName: String): TaskPreset? = mutationMutex.withLock {
+        val original = getPresetById(repoId, presetId) ?: return@withLock null
         val duplicated = original.copy(
             id = UUID.randomUUID().toString(),
             name = copyName,
             lastRunTimestamp = null
         )
-        return savePreset(repoId, duplicated)
+        savePresetLocked(repoId, duplicated)
     }
 
-    suspend fun deletePreset(repoId: String, presetId: String) {
+    suspend fun deletePreset(repoId: String, presetId: String): Boolean = mutationMutex.withLock {
         val remaining = getPresets(repoId).filterNot { it.id == presetId }
         metadataRepository.saveTaskPresets(repoId, remaining)
     }
@@ -64,7 +74,7 @@ class TaskPresetRepository internal constructor(
         repoId: String,
         presetId: String,
         timestamp: Long = System.currentTimeMillis()
-    ) {
+    ) = mutationMutex.withLock {
         val presets = getPresets(repoId).toMutableList()
         val index = presets.indexOfFirst { it.id == presetId }
         if (index != -1) {

@@ -138,7 +138,7 @@ fun TaskConfigEditorState.withAppliedRunTasksConfig(
             forgetAllHosts = config.forgetAllHosts,
             forgetHosts = normalizedHosts
         ),
-        customDirectoriesBackupEnabled = config.customDirectories.isNotEmpty(),
+        customDirectoriesBackupEnabled = config.customDirectories.isNotEmpty() || config.excludedCustomDirectories.isNotEmpty(),
         deviceDataBackupEnabled = config.deviceData.anyEnabled(),
         contactsBackupEnabled = if (config.deviceData.anyEnabled()) config.deviceData.contacts else true,
         selectAllContactAccounts = config.deviceData.selectAllContactAccounts,
@@ -332,7 +332,12 @@ class TaskConfigEditorController(
         val normalizedHosts = normalizeForgetHosts(config.forgetHosts)
         val existingApps = if (reloadApps) emptyList() else readState().apps
         updateState { state ->
-            recomputeConflicts(state.withAppliedRunTasksConfig(config, existingApps = existingApps))
+            recomputeConflicts(
+                state.withAppliedRunTasksConfig(config, existingApps = existingApps).copy(
+                    isLoadingContactAccounts = false,
+                    isLoadingCalendars = false
+                )
+            )
         }
         forgetHostsController.setManualHosts(normalizedHosts)
         if (existingApps.isEmpty()) {
@@ -352,8 +357,9 @@ class TaskConfigEditorController(
     }
 
     fun refreshAppsList() {
-        val currentSelected = readState().apps.filter { it.isSelected }.map { it.packageName }
-        loadInstalledApps(selectedPackageNames = currentSelected)
+        val state = readState()
+        if (state.isLoadingApps && state.apps.isEmpty()) return
+        loadInstalledApps(selectedPackageNames = null)
     }
 
     fun loadInstalledApps(

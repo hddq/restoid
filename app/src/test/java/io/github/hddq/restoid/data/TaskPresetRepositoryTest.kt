@@ -51,7 +51,8 @@ class TaskPresetRepositoryTest {
         )
         val saved = presetRepo.savePreset(repoId, edited)
 
-        assertEquals("Nightly Updated", saved.name)
+        assertNotNull(saved)
+        assertEquals("Nightly Updated", saved!!.name)
         assertEquals(1_700_000_000_000L, saved.lastRunTimestamp)
         assertTrue(saved.config.pruneRepo)
 

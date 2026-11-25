@@ -22,6 +22,7 @@ import io.github.hddq.restoid.ui.shared.normalizeForgetHosts
 import io.github.hddq.restoid.ui.shared.toRunTasksConfig
 import io.github.hddq.restoid.work.OperationWorkRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -76,6 +77,7 @@ class PresetsViewModel(
 
     private var initialState: AddEditPresetUiState? = null
     private var addEditSessionId: Long = 0L
+    private var loadPresetsJob: Job? = null
 
     private val _uiEvents = MutableSharedFlow<PresetsUiEvent>(extraBufferCapacity = 2)
     val uiEvents: SharedFlow<PresetsUiEvent> = _uiEvents.asSharedFlow()
@@ -111,6 +113,7 @@ class PresetsViewModel(
     }
 
     fun loadPresets() {
+        loadPresetsJob?.cancel()
         val repoKey = _uiState.value.selectedRepoKey
         if (repoKey == null) {
             _uiState.update {
@@ -124,9 +127,10 @@ class PresetsViewModel(
         val repository = repositoriesRepository.getRepositoryByKey(repoKey) ?: return
         val repoId = repository.id ?: return
 
-        viewModelScope.launch {
+        loadPresetsJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             val presets = taskPresetRepository.getPresets(repoId)
+            if (_uiState.value.selectedRepoKey != repoKey) return@launch
             _uiState.update {
                 it.copy(
                     presets = presets,
@@ -234,7 +238,7 @@ class PresetsViewModel(
         return TaskPreset(
             id = state.id ?: UUID.randomUUID().toString(),
             name = name,
-            config = state.editor.toRunTasksConfig(hasRoot.value),
+            config = state.editor.toRunTasksConfig(hasRoot = true),
             lastRunTimestamp = state.lastRunTimestamp
         )
     }
@@ -245,6 +249,7 @@ class PresetsViewModel(
         val repoId = repository.id ?: return
 
         val state = _addEditState.value
+        if (state.isSaving || state.editor.isLoadingApps) return
         if (state.editor.maintenance.forgetSnapshots &&
             !state.editor.maintenance.forgetAllHosts &&
             normalizeForgetHosts(state.editor.maintenance.forgetHosts).isEmpty()
@@ -261,6 +266,15 @@ class PresetsViewModel(
         viewModelScope.launch {
             _addEditState.update { it.copy(isSaving = true) }
             val saved = taskPresetRepository.savePreset(repoId, preset)
+            if (saved == null) {
+                _addEditState.update { it.copy(isSaving = false) }
+                Toast.makeText(
+                    application,
+                    application.getString(R.string.toast_preset_save_failed),
+                    Toast.LENGTH_LONG
+                ).show()
+                return@launch
+            }
             loadPresets()
             _addEditState.update { it.copy(id = saved.id, isSaving = false) }
             initialState = _addEditState.value
@@ -282,6 +296,12 @@ class PresetsViewModel(
                     application.getString(R.string.toast_preset_duplicated),
                     Toast.LENGTH_SHORT
                 ).show()
+            } else {
+                Toast.makeText(
+                    application,
+                    application.getString(R.string.toast_preset_save_failed),
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
     }
@@ -291,8 +311,16 @@ class PresetsViewModel(
         val repoId = repositoriesRepository.getRepositoryByKey(repoKey)?.id ?: return
 
         viewModelScope.launch {
-            taskPresetRepository.deletePreset(repoId, presetId)
-            loadPresets()
+            val deleted = taskPresetRepository.deletePreset(repoId, presetId)
+            if (deleted) {
+                loadPresets()
+            } else {
+                Toast.makeText(
+                    application,
+                    application.getString(R.string.toast_preset_delete_failed),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
         }
     }
 
@@ -306,7 +334,15 @@ class PresetsViewModel(
         val repoId = repositoriesRepository.getRepositoryByKey(repoKey)?.id ?: return
 
         viewModelScope.launch {
-            taskPresetRepository.deletePreset(repoId, presetId)
+            val deleted = taskPresetRepository.deletePreset(repoId, presetId)
+            if (!deleted) {
+                Toast.makeText(
+                    application,
+                    application.getString(R.string.toast_preset_delete_failed),
+                    Toast.LENGTH_LONG
+                ).show()
+                return@launch
+            }
             loadPresets()
             _uiEvents.emit(PresetsUiEvent.NavigateBack(savedPresetId = null))
         }
@@ -373,6 +409,7 @@ class PresetsViewModel(
         }
 
         val state = _addEditState.value
+        if (state.isSaving || state.editor.isLoadingApps) return
         val preset = buildPresetFromState(state)
         val error = editorController.validateForExecution(
             config = preset.config,
@@ -391,6 +428,19 @@ class PresetsViewModel(
                     if (addEditSessionId == sessionId) current.copy(isSaving = true) else current
                 }
                 val saved = taskPresetRepository.savePreset(repoId, preset)
+                if (saved == null) {
+                    if (addEditSessionId == sessionId) {
+                        _addEditState.update { current ->
+                            if (addEditSessionId == sessionId) current.copy(isSaving = false) else current
+                        }
+                    }
+                    Toast.makeText(
+                        application,
+                        application.getString(R.string.toast_preset_save_failed),
+                        Toast.LENGTH_LONG
+                    ).show()
+                    return@launch
+                }
                 if (addEditSessionId == sessionId) {
                     _addEditState.update { current ->
                         if (addEditSessionId == sessionId) current.copy(id = saved.id, isSaving = false) else current

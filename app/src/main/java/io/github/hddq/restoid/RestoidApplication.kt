@@ -109,6 +109,7 @@ class RestoidApplication : Application() {
         applicationScope.launch {
             resticBinaryManager.checkResticStatus() // New manager handles checks
             repositoriesRepository.loadRepositories()
+            scheduleRepository.reconcileAllSchedules()
             notificationRepository.checkPermissionStatus()
             storagePermissionRepository.checkPermissionStatus()
             localNetworkPermissionRepository.checkPermissionStatus()
