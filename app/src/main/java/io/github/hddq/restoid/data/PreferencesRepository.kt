@@ -113,6 +113,17 @@ class PreferencesRepository(private val context: Context) {
         }
     }
 
+    fun saveRunTasksLastPresetId(repoId: String, presetId: String?) {
+        val key = "runtasks_last_preset_id_$repoId"
+        prefs.edit().apply {
+            if (presetId == null) remove(key) else putString(key, presetId)
+        }.apply()
+    }
+
+    fun loadRunTasksLastPresetId(repoId: String): String? {
+        return prefs.getString("runtasks_last_preset_id_$repoId", null)
+    }
+
     // Custom Directories Backup Preferences
     fun saveCustomDirectoriesBackupEnabled(enabled: Boolean) {
         prefs.edit().putBoolean("runtasks_custom_directories_enabled", enabled).apply()

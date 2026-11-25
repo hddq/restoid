@@ -20,7 +20,6 @@ import io.github.hddq.restoid.ui.shared.BackupTypes
 import io.github.hddq.restoid.ui.shared.OperationProgress
 import io.github.hddq.restoid.ui.shared.TaskConfigEditorController
 import io.github.hddq.restoid.ui.shared.TaskConfigEditorState
-import io.github.hddq.restoid.ui.shared.hasTaskConfigChanges
 import io.github.hddq.restoid.ui.shared.normalizeForgetHosts
 import io.github.hddq.restoid.ui.shared.toRunTasksConfig
 import io.github.hddq.restoid.work.OperationWorkRepository
@@ -40,7 +39,6 @@ data class RunTasksUiState(
     val editor: TaskConfigEditorState = TaskConfigEditorState(isLoadingApps = true),
     val availablePresets: List<TaskPreset> = emptyList(),
     val selectedPresetId: String? = null,
-    val isModifiedFromPreset: Boolean = false,
     val showSavePresetDialog: Boolean = false,
     val isRunning: Boolean = false,
     val progress: OperationProgress = OperationProgress()
@@ -77,9 +75,8 @@ class RunTasksViewModel(
     private val _uiEvents = MutableSharedFlow<RunTasksUiEvent>(extraBufferCapacity = 1)
     val uiEvents: SharedFlow<RunTasksUiEvent> = _uiEvents.asSharedFlow()
 
-    private var customEditorSnapshot: TaskConfigEditorState = _uiState.value.editor
-    private var loadedPresetBaseline: TaskConfigEditorState? = null
-    private var isInitialCustomAppsLoaded = false
+    private var appliedInitialPresetRepoId: String? = null
+    private var editVersion: Long = 0L
     private var persistCustomJob: Job? = null
     private var refreshPresetsJob: Job? = null
 
@@ -97,13 +94,11 @@ class RunTasksViewModel(
             _uiState.update { state -> state.copy(editor = transform(state.editor)) }
         },
         onConfigMutated = { mutatedEditor ->
-            if (_uiState.value.selectedPresetId == null) {
-                customEditorSnapshot = mutatedEditor
-                schedulePersistCustomEditor(mutatedEditor)
-            } else {
-                val modified = loadedPresetBaseline?.let { hasTaskConfigChanges(mutatedEditor, it) } ?: true
-                _uiState.update { it.copy(isModifiedFromPreset = modified) }
+            editVersion++
+            if (_uiState.value.selectedPresetId != null) {
+                _uiState.update { it.copy(selectedPresetId = null) }
             }
+            schedulePersistCustomEditor(mutatedEditor)
         }
     )
 
@@ -147,13 +142,7 @@ class RunTasksViewModel(
         editorController.loadInstalledApps(
             selectedPackageNames = selectedPackages,
             selectAllDefault = if (selectAll) true else null,
-            savedAppBackupTypes = savedAppBackupTypes,
-            onAppsLoaded = { _, _ ->
-                isInitialCustomAppsLoaded = true
-                if (_uiState.value.selectedPresetId == null) {
-                    customEditorSnapshot = _uiState.value.editor
-                }
-            }
+            savedAppBackupTypes = savedAppBackupTypes
         )
     }
 
@@ -170,103 +159,45 @@ class RunTasksViewModel(
         val repoKey = repositoriesRepository.selectedRepository.value
         val repoId = repoKey?.let { repositoriesRepository.getRepositoryByKey(it)?.id }
         if (repoId == null) {
-            _uiState.update { it.copy(availablePresets = emptyList()) }
-            if (_uiState.value.selectedPresetId != null) {
-                selectCustom()
-            }
+            appliedInitialPresetRepoId = null
+            _uiState.update { it.copy(availablePresets = emptyList(), selectedPresetId = null) }
             return
         }
 
+        val startEditVersion = editVersion
         refreshPresetsJob = viewModelScope.launch {
             val presets = taskPresetRepository.getPresets(repoId)
             if (repositoriesRepository.selectedRepository.value != repoKey) return@launch
             val currentSelectedId = _uiState.value.selectedPresetId
-            _uiState.update { it.copy(availablePresets = presets) }
-            if (currentSelectedId != null && presets.none { it.id == currentSelectedId }) {
-                selectCustom()
-            }
-        }
-    }
+            val shouldRestoreInitialPreset = appliedInitialPresetRepoId != repoId
+            appliedInitialPresetRepoId = repoId
 
-    fun selectCustom() {
-        if (_uiState.value.selectedPresetId == null) return
-        editorController.invalidatePendingRefreshes()
-
-        val currentApps = _uiState.value.editor.apps
-        val restoredEditor = if (customEditorSnapshot.apps.isEmpty() && currentApps.isNotEmpty()) {
-            val selectAll = preferencesRepository.loadRunTasksSelectAllApps()
-            val selectedPkgs = preferencesRepository.loadRunTasksSelectedPackages()
-            val savedTypes = preferencesRepository.loadRunTasksAppBackupTypes()
-            val restoredApps = currentApps.map { app ->
-                app.copy(isSelected = if (selectAll) true else selectedPkgs.contains(app.packageName))
+            val validSelectedId = currentSelectedId?.takeIf { id -> presets.any { it.id == id } }
+            _uiState.update {
+                it.copy(
+                    availablePresets = presets,
+                    selectedPresetId = validSelectedId
+                )
             }
-            val restoredTypes = restoredApps.associate { app ->
-                app.packageName to (savedTypes[app.packageName] ?: customEditorSnapshot.backupTypes)
-            }
-            customEditorSnapshot.copy(
-                apps = restoredApps,
-                appBackupTypes = restoredTypes,
-                isLoadingApps = false
-            )
-        } else {
-            customEditorSnapshot
-        }
 
-        loadedPresetBaseline = null
-        val recomputed = editorController.recomputeConflicts(restoredEditor)
-        _uiState.update {
-            it.copy(
-                selectedPresetId = null,
-                isModifiedFromPreset = false,
-                editor = recomputed
-            )
-        }
-        editorController.setManualForgetHosts(recomputed.maintenance.forgetHosts)
-        if (recomputed.apps.isEmpty() && !isInitialCustomAppsLoaded) {
-            loadInitialCustomApps()
+            if (shouldRestoreInitialPreset && editVersion == startEditVersion) {
+                val lastPresetId = preferencesRepository.loadRunTasksLastPresetId(repoId)
+                if (lastPresetId != null && presets.any { it.id == lastPresetId }) {
+                    selectPreset(lastPresetId)
+                }
+            }
         }
     }
 
     fun selectPreset(presetId: String) {
         val preset = _uiState.value.availablePresets.find { it.id == presetId } ?: return
-        if (_uiState.value.selectedPresetId == presetId && !_uiState.value.isModifiedFromPreset) return
+        if (_uiState.value.selectedPresetId == presetId) return
 
-        if (_uiState.value.selectedPresetId == null) {
-            customEditorSnapshot = _uiState.value.editor
-        }
-
-        _uiState.update {
-            it.copy(
-                selectedPresetId = presetId,
-                isModifiedFromPreset = false
-            )
-        }
-
+        _uiState.update { it.copy(selectedPresetId = presetId) }
         editorController.applyRunTasksConfig(
             config = preset.config,
-            reloadApps = false,
-            onAppsLoaded = { loadedApps, _ ->
-                if (_uiState.value.selectedPresetId == presetId) {
-                    val currentBaseline = loadedPresetBaseline
-                    if (currentBaseline != null && currentBaseline.apps.isEmpty() && loadedApps.isNotEmpty()) {
-                        val baselineAppTypes = loadedApps.associate { app ->
-                            app.packageName to (currentBaseline.appBackupTypes[app.packageName] ?: currentBaseline.backupTypes)
-                        }
-                        val updatedBaseline = editorController.recomputeConflicts(
-                            currentBaseline.copy(
-                                apps = loadedApps,
-                                appBackupTypes = baselineAppTypes,
-                                isLoadingApps = false
-                            )
-                        )
-                        loadedPresetBaseline = updatedBaseline
-                        val modified = hasTaskConfigChanges(_uiState.value.editor, updatedBaseline)
-                        _uiState.update { it.copy(isModifiedFromPreset = modified) }
-                    }
-                }
-            }
+            reloadApps = false
         )
-        loadedPresetBaseline = _uiState.value.editor
     }
 
     fun openSaveAsPresetDialog() {
@@ -314,10 +245,7 @@ class RunTasksViewModel(
             return
         }
 
-        if (_uiState.value.selectedPresetId == null) {
-            customEditorSnapshot = currentEditor
-        }
-
+        val startEditVersion = editVersion
         val newPreset = TaskPreset(
             name = trimmedName,
             config = currentEditor.toRunTasksConfig(hasRoot.value)
@@ -334,12 +262,10 @@ class RunTasksViewModel(
                 return@launch
             }
             val presets = taskPresetRepository.getPresets(repoId)
-            loadedPresetBaseline = _uiState.value.editor
             _uiState.update {
                 it.copy(
                     availablePresets = presets,
-                    selectedPresetId = saved.id,
-                    isModifiedFromPreset = false,
+                    selectedPresetId = if (editVersion == startEditVersion) saved.id else it.selectedPresetId,
                     showSavePresetDialog = false
                 )
             }
@@ -445,25 +371,24 @@ class RunTasksViewModel(
             return
         }
 
-        val unmodifiedPreset = if (!state.isModifiedFromPreset && state.selectedPresetId != null) {
-            state.availablePresets.find { it.id == state.selectedPresetId }
-        } else {
-            null
+        val selectedPreset = state.selectedPresetId?.let { id ->
+            state.availablePresets.find { it.id == id }
         }
 
         val request = config.toWorkRequest(
             repositoryKey = selectedRepoKey,
             hasRoot = hasRoot.value,
-            presetName = unmodifiedPreset?.name
+            presetName = selectedPreset?.name
         )
 
         viewModelScope.launch(Dispatchers.IO) {
             val enqueued = operationWorkRepository.enqueueRunTasks(request)
             if (enqueued) {
-                if (unmodifiedPreset != null) {
-                    val repoId = repositoriesRepository.getRepositoryByKey(selectedRepoKey)?.id
-                    if (repoId != null) {
-                        taskPresetRepository.updateLastRunTimestamp(repoId, unmodifiedPreset.id)
+                val repoId = repositoriesRepository.getRepositoryByKey(selectedRepoKey)?.id
+                if (repoId != null) {
+                    preferencesRepository.saveRunTasksLastPresetId(repoId, selectedPreset?.id)
+                    if (selectedPreset != null) {
+                        taskPresetRepository.updateLastRunTimestamp(repoId, selectedPreset.id)
                     }
                 }
                 _uiEvents.tryEmit(RunTasksUiEvent.NavigateToOperationProgress)
