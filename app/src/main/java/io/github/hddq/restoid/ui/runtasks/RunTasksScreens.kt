@@ -8,13 +8,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.FactCheck
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.AutoDelete
 import androidx.compose.material.icons.outlined.CleaningServices
-import androidx.compose.material.icons.outlined.FactCheck
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.Smartphone
@@ -28,12 +29,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.hddq.restoid.LocalAppBarActions
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
@@ -105,6 +106,8 @@ fun RunTasksScreen(
         }
     }
 
+    val editor = uiState.editor
+
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 88.dp, top = 8.dp),
@@ -112,15 +115,15 @@ fun RunTasksScreen(
     ) {
         item {
             Column(modifier = Modifier.fillMaxWidth()) {
-                ExclusionConflictWarningCard(conflicts = uiState.exclusionConflicts)
+                ExclusionConflictWarningCard(conflicts = editor.exclusionConflicts)
                 ExpressiveSectionHeader(title = context.getString(R.string.operation_backup))
                 ExpressiveCardGroup {
                     ExpressiveSegmentedSurface(index = 0, count = 3) {
                         TaskRow(
                             title = context.getString(R.string.run_tasks_applications),
-                            subtitle = if (hasRoot) buildBackupSubtitle(uiState.apps, uiState.appBackupTypes, uiState.backupTypes, context) else context.getString(R.string.root_access_denied),
+                            subtitle = if (hasRoot) buildBackupSubtitle(editor.apps, editor.appBackupTypes, editor.backupTypes, context) else context.getString(R.string.root_access_denied),
                             icon = Icons.Outlined.Apps,
-                            checked = if (hasRoot) uiState.backupEnabled else false,
+                            checked = if (hasRoot) editor.backupEnabled else false,
                             onCheckedChange = viewModel::setBackupEnabled,
                             onNavigate = if (hasRoot) onNavigateToBackupConfig else null,
                             enabled = hasRoot
@@ -129,9 +132,9 @@ fun RunTasksScreen(
                     ExpressiveSegmentedSurface(index = 1, count = 3) {
                         TaskRow(
                             title = context.getString(R.string.run_tasks_custom_directories),
-                            subtitle = buildCustomDirectoriesSubtitle(uiState.customDirectories, uiState.excludedCustomDirectories, context),
+                            subtitle = buildCustomDirectoriesSubtitle(editor.customDirectories, editor.excludedCustomDirectories, context),
                             icon = Icons.Outlined.Folder,
-                            checked = uiState.customDirectoriesBackupEnabled,
+                            checked = editor.customDirectoriesBackupEnabled,
                             onCheckedChange = viewModel::setCustomDirectoriesBackupEnabled,
                             onNavigate = onNavigateToCustomDirectoriesConfig
                         )
@@ -140,28 +143,28 @@ fun RunTasksScreen(
                         TaskRow(
                             title = stringResource(R.string.run_tasks_device_data),
                             subtitle = buildDeviceDataSubtitle(
-                                contactsEnabled = uiState.contactsBackupEnabled,
-                                callLogsEnabled = uiState.callLogsBackupEnabled,
-                                calendarEnabled = uiState.calendarBackupEnabled,
-                                deviceDataBackupEnabled = uiState.deviceDataBackupEnabled,
+                                contactsEnabled = editor.contactsBackupEnabled,
+                                callLogsEnabled = editor.callLogsBackupEnabled,
+                                calendarEnabled = editor.calendarBackupEnabled,
+                                deviceDataBackupEnabled = editor.deviceDataBackupEnabled,
                                 hasReadContactsPermission = hasReadContactsPermission,
                                 hasReadCallLogPermission = hasReadCallLogPermission,
                                 hasReadCalendarPermission = hasReadCalendarPermission,
                                 context = context
                             ),
                             icon = Icons.Outlined.Smartphone,
-                            checked = uiState.deviceDataBackupEnabled,
+                            checked = editor.deviceDataBackupEnabled,
                             onCheckedChange = { enabled ->
                                 viewModel.setDeviceDataBackupEnabled(enabled)
                                 if (enabled) {
                                     val missing = buildList {
-                                        if (uiState.contactsBackupEnabled && !hasReadContactsPermission) {
+                                        if (editor.contactsBackupEnabled && !hasReadContactsPermission) {
                                             add(Manifest.permission.READ_CONTACTS)
                                         }
-                                        if (uiState.callLogsBackupEnabled && !hasReadCallLogPermission) {
+                                        if (editor.callLogsBackupEnabled && !hasReadCallLogPermission) {
                                             add(Manifest.permission.READ_CALL_LOG)
                                         }
-                                        if (uiState.calendarBackupEnabled && !hasReadCalendarPermission) {
+                                        if (editor.calendarBackupEnabled && !hasReadCalendarPermission) {
                                             add(Manifest.permission.READ_CALENDAR)
                                         }
                                     }
@@ -185,16 +188,16 @@ fun RunTasksScreen(
                         TaskRow(
                             title = context.getString(R.string.maintenance_task_unlock_repository),
                             icon = Icons.Outlined.LockOpen,
-                            checked = uiState.maintenance.unlockRepo,
+                            checked = editor.maintenance.unlockRepo,
                             onCheckedChange = viewModel::setUnlockRepo
                         )
                     }
                     ExpressiveSegmentedSurface(index = 1, count = 4) {
                         TaskRow(
                             title = context.getString(R.string.run_tasks_forget_snapshots),
-                            subtitle = buildForgetSubtitle(uiState.maintenance, context),
+                            subtitle = buildForgetSubtitle(editor.maintenance, context),
                             icon = Icons.Outlined.AutoDelete,
-                            checked = uiState.maintenance.forgetSnapshots,
+                            checked = editor.maintenance.forgetSnapshots,
                             onCheckedChange = viewModel::setForgetSnapshots,
                             onNavigate = onNavigateToForgetConfig
                         )
@@ -203,16 +206,16 @@ fun RunTasksScreen(
                         TaskRow(
                             title = context.getString(R.string.maintenance_task_prune_repository),
                             icon = Icons.Outlined.CleaningServices,
-                            checked = uiState.maintenance.pruneRepo,
+                            checked = editor.maintenance.pruneRepo,
                             onCheckedChange = viewModel::setPruneRepo
                         )
                     }
                     ExpressiveSegmentedSurface(index = 3, count = 4) {
                         TaskRow(
                             title = context.getString(R.string.run_tasks_check_integrity),
-                            subtitle = buildCheckSubtitle(uiState.maintenance, context),
-                            icon = Icons.Outlined.FactCheck,
-                            checked = uiState.maintenance.checkRepo,
+                            subtitle = buildCheckSubtitle(editor.maintenance, context),
+                            icon = Icons.AutoMirrored.Outlined.FactCheck,
+                            checked = editor.maintenance.checkRepo,
                             onCheckedChange = viewModel::setCheckRepo,
                             onNavigate = onNavigateToCheckConfig
                         )
@@ -241,11 +244,12 @@ fun BackupConfigScreen(
     }
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val editor = uiState.editor
     io.github.hddq.restoid.ui.shared.BackupConfigScreen(
-        isLoadingApps = uiState.isLoadingApps,
-        apps = uiState.apps,
-        appBackupTypes = uiState.appBackupTypes,
-        backupTypes = uiState.backupTypes,
+        isLoadingApps = editor.isLoadingApps,
+        apps = editor.apps,
+        appBackupTypes = editor.appBackupTypes,
+        backupTypes = editor.backupTypes,
         onRefreshApps = viewModel::refreshAppsList,
         onToggleAllApps = viewModel::toggleAllApps,
         onToggleAppSelection = viewModel::toggleAppSelection,
@@ -261,16 +265,17 @@ fun ForgetConfigScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val editor = uiState.editor
     io.github.hddq.restoid.ui.shared.ForgetConfigScreen(
-        maintenance = uiState.maintenance,
+        maintenance = editor.maintenance,
         onKeepLastChange = viewModel::setKeepLast,
         onKeepDailyChange = viewModel::setKeepDaily,
         onKeepWeeklyChange = viewModel::setKeepWeekly,
         onKeepMonthlyChange = viewModel::setKeepMonthly,
-        availableHosts = uiState.availableForgetHosts,
-        areRepoSnapshotsLoaded = uiState.areRepoSnapshotsLoaded,
-        isLoadingHosts = uiState.isLoadingForgetHosts,
-        hostsError = uiState.forgetHostsError,
+        availableHosts = editor.availableForgetHosts,
+        areRepoSnapshotsLoaded = editor.areRepoSnapshotsLoaded,
+        isLoadingHosts = editor.isLoadingForgetHosts,
+        hostsError = editor.forgetHostsError,
         onToggleAllHosts = viewModel::toggleAllForgetHosts,
         onToggleHost = viewModel::toggleForgetHost,
         onAddHost = viewModel::addCustomForgetHost,
@@ -288,7 +293,7 @@ fun CheckConfigScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     io.github.hddq.restoid.ui.shared.CheckConfigScreen(
-        maintenance = uiState.maintenance,
+        maintenance = uiState.editor.maintenance,
         onReadDataChange = viewModel::setReadData,
         modifier = modifier
     )
@@ -300,12 +305,13 @@ fun CustomDirectoriesConfigScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val editor = uiState.editor
     io.github.hddq.restoid.ui.shared.CustomDirectoriesConfigScreen(
-        customDirectories = uiState.customDirectories,
+        customDirectories = editor.customDirectories,
         onAddDirectory = viewModel::addCustomDirectory,
         onToggleDirectory = viewModel::toggleCustomDirectory,
         onRemoveDirectory = viewModel::removeCustomDirectory,
-        excludedDirectories = uiState.excludedCustomDirectories,
+        excludedDirectories = editor.excludedCustomDirectories,
         onAddExcludedDirectory = viewModel::addExcludedCustomDirectory,
         onToggleExcludedDirectory = viewModel::toggleExcludedCustomDirectory,
         onRemoveExcludedDirectory = viewModel::removeExcludedCustomDirectory,
@@ -319,18 +325,19 @@ fun DeviceDataConfigScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val editor = uiState.editor
     io.github.hddq.restoid.ui.shared.DeviceDataConfigScreen(
-        contactsEnabled = uiState.contactsBackupEnabled,
-        selectAllContactAccounts = uiState.selectAllContactAccounts,
-        selectedContactAccountKeys = uiState.selectedContactAccountKeys,
-        availableContactAccounts = uiState.availableContactAccounts,
-        isLoadingContactAccounts = uiState.isLoadingContactAccounts,
-        callLogsEnabled = uiState.callLogsBackupEnabled,
-        calendarEnabled = uiState.calendarBackupEnabled,
-        selectAllCalendars = uiState.selectAllCalendars,
-        selectedCalendarKeys = uiState.selectedCalendarKeys,
-        availableCalendars = uiState.availableCalendars,
-        isLoadingCalendars = uiState.isLoadingCalendars,
+        contactsEnabled = editor.contactsBackupEnabled,
+        selectAllContactAccounts = editor.selectAllContactAccounts,
+        selectedContactAccountKeys = editor.selectedContactAccountKeys,
+        availableContactAccounts = editor.availableContactAccounts,
+        isLoadingContactAccounts = editor.isLoadingContactAccounts,
+        callLogsEnabled = editor.callLogsBackupEnabled,
+        calendarEnabled = editor.calendarBackupEnabled,
+        selectAllCalendars = editor.selectAllCalendars,
+        selectedCalendarKeys = editor.selectedCalendarKeys,
+        availableCalendars = editor.availableCalendars,
+        isLoadingCalendars = editor.isLoadingCalendars,
         onContactsEnabledChange = viewModel::setContactsBackupEnabled,
         onToggleAllContactAccounts = viewModel::toggleAllContactAccounts,
         onToggleContactAccount = viewModel::toggleContactAccount,
