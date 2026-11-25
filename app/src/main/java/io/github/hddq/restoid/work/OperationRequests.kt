@@ -104,22 +104,22 @@ data class MaintenanceWorkRequest(
 
 @Serializable
 data class RunTasksConfig(
-    val backupEnabled: Boolean,
-    val backupTypes: BackupTypeSelection,
-    val selectedPackageNames: List<String>,
+    val backupEnabled: Boolean = false,
+    val backupTypes: BackupTypeSelection = BackupTypeSelection(),
+    val selectedPackageNames: List<String> = emptyList(),
     val appBackupTypes: Map<String, BackupTypeSelection> = emptyMap(),
     val customDirectories: List<String> = emptyList(),
     val excludedCustomDirectories: List<String> = emptyList(),
     val deviceData: DeviceDataBackupSelection = DeviceDataBackupSelection(),
-    val unlockRepo: Boolean,
-    val forgetSnapshots: Boolean,
-    val pruneRepo: Boolean,
-    val checkRepo: Boolean,
-    val readData: Boolean,
-    val keepLast: Int,
-    val keepDaily: Int,
-    val keepWeekly: Int,
-    val keepMonthly: Int,
+    val unlockRepo: Boolean = false,
+    val forgetSnapshots: Boolean = false,
+    val pruneRepo: Boolean = false,
+    val checkRepo: Boolean = false,
+    val readData: Boolean = false,
+    val keepLast: Int = 0,
+    val keepDaily: Int = 0,
+    val keepWeekly: Int = 0,
+    val keepMonthly: Int = 0,
     val forgetAllHosts: Boolean = true,
     val forgetHosts: List<String> = emptyList()
 )
@@ -148,3 +148,42 @@ data class RunTasksWorkRequest(
     val scheduleName: String? = null,
     val requireUnmeteredNetwork: Boolean = false
 )
+
+fun RunTasksConfig.toWorkRequest(
+    repositoryKey: String,
+    hasRoot: Boolean,
+    scheduleName: String? = null,
+    requireUnmeteredNetwork: Boolean = false
+): RunTasksWorkRequest {
+    val backupAppsEnabled = backupEnabled && hasRoot
+    val hasCustomDirectories = customDirectories.isNotEmpty()
+    val hasDeviceData = deviceData.anyEnabled()
+    val normalizedForgetHosts = if (forgetAllHosts) {
+        emptyList()
+    } else {
+        forgetHosts.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+    }
+    return RunTasksWorkRequest(
+        repositoryKey = repositoryKey,
+        backupEnabled = backupAppsEnabled || hasCustomDirectories || hasDeviceData,
+        backupTypes = backupTypes,
+        selectedPackageNames = if (backupAppsEnabled) selectedPackageNames else emptyList(),
+        appBackupTypes = if (backupAppsEnabled) appBackupTypes else emptyMap(),
+        customDirectories = customDirectories,
+        excludedCustomDirectories = excludedCustomDirectories,
+        deviceData = deviceData,
+        unlockRepo = unlockRepo,
+        forgetSnapshots = forgetSnapshots,
+        pruneRepo = pruneRepo,
+        checkRepo = checkRepo,
+        readData = readData,
+        keepLast = keepLast,
+        keepDaily = keepDaily,
+        keepWeekly = keepWeekly,
+        keepMonthly = keepMonthly,
+        forgetAllHosts = forgetAllHosts,
+        forgetHosts = normalizedForgetHosts,
+        scheduleName = scheduleName,
+        requireUnmeteredNetwork = requireUnmeteredNetwork
+    )
+}

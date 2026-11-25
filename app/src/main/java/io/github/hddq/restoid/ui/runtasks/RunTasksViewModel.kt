@@ -5,34 +5,23 @@ import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.hddq.restoid.R
-import io.github.hddq.restoid.data.CalendarBackupRepository
-import io.github.hddq.restoid.data.ContactsBackupRepository
+import io.github.hddq.restoid.data.AppInfoRepository
 import io.github.hddq.restoid.data.OperationType
+import io.github.hddq.restoid.data.PreferencesRepository
 import io.github.hddq.restoid.data.RepositoriesRepository
-import io.github.hddq.restoid.data.RepositoryBackendType
 import io.github.hddq.restoid.data.ResticBinaryManager
 import io.github.hddq.restoid.data.ResticRepository
-import io.github.hddq.restoid.model.AppInfo
-import io.github.hddq.restoid.model.CalendarInfo
-import io.github.hddq.restoid.model.ContactAccountInfo
+import io.github.hddq.restoid.data.RootRepository
+import io.github.hddq.restoid.model.CustomDirectory
 import io.github.hddq.restoid.ui.shared.AppSortOrder
 import io.github.hddq.restoid.ui.shared.BackupTypes
-import io.github.hddq.restoid.ui.shared.ForgetHostOption
-import io.github.hddq.restoid.ui.shared.ForgetHostsController
-import io.github.hddq.restoid.ui.shared.ForgetHostsSlice
 import io.github.hddq.restoid.ui.shared.OperationProgress
-import io.github.hddq.restoid.ui.shared.normalizeForgetHosts
-import io.github.hddq.restoid.ui.shared.sortApps
-import io.github.hddq.restoid.util.StorageUtils
-import io.github.hddq.restoid.work.BackupWorkRequest
-import io.github.hddq.restoid.work.DeviceDataBackupSelection
-import io.github.hddq.restoid.work.ExclusionConflict
+import io.github.hddq.restoid.ui.shared.TaskConfigEditorController
+import io.github.hddq.restoid.ui.shared.TaskConfigEditorState
+import io.github.hddq.restoid.ui.shared.toRunTasksConfig
 import io.github.hddq.restoid.work.OperationWorkRepository
-import io.github.hddq.restoid.work.RunTasksWorkRequest
-import io.github.hddq.restoid.work.findConflictingExclusions
-import io.github.hddq.restoid.work.resolveExclusionPaths
+import io.github.hddq.restoid.work.toWorkRequest
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -40,40 +29,11 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import io.github.hddq.restoid.model.MaintenanceConfig
-
-import io.github.hddq.restoid.model.CustomDirectory
 
 data class RunTasksUiState(
-    val apps: List<AppInfo> = emptyList(),
-    val isLoadingApps: Boolean = true,
-    val appSortOrder: AppSortOrder = AppSortOrder.NAME_ASCENDING,
-    val backupEnabled: Boolean = true,
-    val backupTypes: BackupTypes = BackupTypes(),
-    val appBackupTypes: Map<String, BackupTypes> = emptyMap(),
-    val maintenance: MaintenanceConfig = MaintenanceConfig(),
+    val editor: TaskConfigEditorState = TaskConfigEditorState(isLoadingApps = true),
     val isRunning: Boolean = false,
-    val progress: OperationProgress = OperationProgress(),
-    val customDirectoriesBackupEnabled: Boolean = false,
-    val deviceDataBackupEnabled: Boolean = false,
-    val contactsBackupEnabled: Boolean = true,
-    val selectAllContactAccounts: Boolean = true,
-    val selectedContactAccountKeys: Set<String> = emptySet(),
-    val availableContactAccounts: List<ContactAccountInfo> = emptyList(),
-    val isLoadingContactAccounts: Boolean = false,
-    val callLogsBackupEnabled: Boolean = false,
-    val calendarBackupEnabled: Boolean = false,
-    val selectAllCalendars: Boolean = true,
-    val selectedCalendarKeys: Set<String> = emptySet(),
-    val availableCalendars: List<CalendarInfo> = emptyList(),
-    val isLoadingCalendars: Boolean = false,
-    val customDirectories: List<CustomDirectory> = emptyList(),
-    val excludedCustomDirectories: List<CustomDirectory> = emptyList(),
-    val exclusionConflicts: List<ExclusionConflict> = emptyList(),
-    val availableForgetHosts: List<ForgetHostOption> = emptyList(),
-    val areRepoSnapshotsLoaded: Boolean = false,
-    val isLoadingForgetHosts: Boolean = false,
-    val forgetHostsError: String? = null
+    val progress: OperationProgress = OperationProgress()
 )
 
 sealed interface RunTasksUiEvent {
@@ -82,22 +42,59 @@ sealed interface RunTasksUiEvent {
 
 class RunTasksViewModel(
     private val application: Application,
-    private val rootRepository: io.github.hddq.restoid.data.RootRepository,
+    private val rootRepository: RootRepository,
     private val repositoriesRepository: RepositoriesRepository,
     private val resticBinaryManager: ResticBinaryManager,
     private val resticRepository: ResticRepository,
-    private val appInfoRepository: io.github.hddq.restoid.data.AppInfoRepository,
-    private val preferencesRepository: io.github.hddq.restoid.data.PreferencesRepository,
+    private val appInfoRepository: AppInfoRepository,
+    private val preferencesRepository: PreferencesRepository,
     private val operationWorkRepository: OperationWorkRepository
 ) : ViewModel() {
-
-    private val contactsBackupRepository = ContactsBackupRepository(application)
-    private val calendarBackupRepository = CalendarBackupRepository(application)
 
     val hasRoot = rootRepository.hasRoot
 
     private val _uiState = MutableStateFlow(
         RunTasksUiState(
+            editor = buildInitialCustomEditorState()
+        )
+    )
+    val uiState = _uiState.asStateFlow()
+
+    private val _operationBlocked = MutableStateFlow(false)
+    val operationBlocked = _operationBlocked.asStateFlow()
+
+    private val _uiEvents = MutableSharedFlow<RunTasksUiEvent>(extraBufferCapacity = 1)
+    val uiEvents: SharedFlow<RunTasksUiEvent> = _uiEvents.asSharedFlow()
+
+    private val editorController = TaskConfigEditorController(
+        application = application,
+        scope = viewModelScope,
+        rootRepository = rootRepository,
+        repositoriesRepository = repositoriesRepository,
+        resticBinaryManager = resticBinaryManager,
+        resticRepository = resticRepository,
+        appInfoRepository = appInfoRepository,
+        preferencesRepository = preferencesRepository,
+        readState = { _uiState.value.editor },
+        updateState = { transform ->
+            _uiState.update { state -> state.copy(editor = transform(state.editor)) }
+        },
+        onConfigMutated = { mutatedEditor ->
+            persistCustomEditorToPreferences(mutatedEditor)
+        }
+    )
+
+    init {
+        loadInitialCustomApps()
+        observeOperationState()
+        editorController.triggerInitialExclusionResolutionIfNeeded()
+    }
+
+    private fun buildInitialCustomEditorState(): TaskConfigEditorState {
+        val selectedCustomDirs = preferencesRepository.loadCustomDirectoriesSelected()
+        val selectedExcludedDirs = preferencesRepository.loadExcludedCustomDirectoriesSelected()
+        return TaskConfigEditorState(
+            isLoadingApps = true,
             backupEnabled = preferencesRepository.loadRunTasksBackupEnabled(),
             backupTypes = preferencesRepository.loadBackupTypes(),
             maintenance = preferencesRepository.loadMaintenanceState(),
@@ -111,128 +108,58 @@ class RunTasksViewModel(
             selectAllCalendars = preferencesRepository.loadDeviceDataSelectAllCalendars(),
             selectedCalendarKeys = preferencesRepository.loadDeviceDataSelectedCalendarKeys(),
             customDirectories = preferencesRepository.loadCustomDirectoriesAll().map { uri ->
-                CustomDirectory(
-                    uri = uri,
-                    isSelected = preferencesRepository.loadCustomDirectoriesSelected().contains(uri)
-                )
+                CustomDirectory(uri = uri, isSelected = selectedCustomDirs.contains(uri))
             },
             excludedCustomDirectories = preferencesRepository.loadExcludedCustomDirectoriesAll().map { uri ->
-                CustomDirectory(
-                    uri = uri,
-                    isSelected = preferencesRepository.loadExcludedCustomDirectoriesSelected().contains(uri)
-                )
+                CustomDirectory(uri = uri, isSelected = selectedExcludedDirs.contains(uri))
             }
         )
-    )
-    val uiState = _uiState.asStateFlow()
-
-    private val _operationBlocked = MutableStateFlow(false)
-    val operationBlocked = _operationBlocked.asStateFlow()
-
-    private val _uiEvents = MutableSharedFlow<RunTasksUiEvent>(extraBufferCapacity = 1)
-    val uiEvents: SharedFlow<RunTasksUiEvent> = _uiEvents.asSharedFlow()
-
-    private var cachedRawExclusions: List<String> = emptyList()
-    private var cachedResolvedExclusions: List<String> = emptyList()
-    private var conflictResolutionJob: Job? = null
-    private var contactAccountsRefreshRequestId: Long = 0L
-    private var calendarRefreshRequestId: Long = 0L
-
-    private val forgetHostsController = ForgetHostsController(
-        context = application,
-        scope = viewModelScope,
-        repositoriesRepository = repositoriesRepository,
-        resticBinaryManager = resticBinaryManager,
-        resticRepository = resticRepository,
-        preferencesRepository = preferencesRepository,
-        initialManualHosts = _uiState.value.maintenance.forgetHosts,
-        readSlice = {
-            val state = _uiState.value
-            ForgetHostsSlice(
-                maintenance = state.maintenance,
-                availableForgetHosts = state.availableForgetHosts,
-                areRepoSnapshotsLoaded = state.areRepoSnapshotsLoaded,
-                isLoadingForgetHosts = state.isLoadingForgetHosts,
-                forgetHostsError = state.forgetHostsError
-            )
-        },
-        updateSlice = { transform ->
-            _uiState.update { state ->
-                val updated = transform(
-                    ForgetHostsSlice(
-                        maintenance = state.maintenance,
-                        availableForgetHosts = state.availableForgetHosts,
-                        areRepoSnapshotsLoaded = state.areRepoSnapshotsLoaded,
-                        isLoadingForgetHosts = state.isLoadingForgetHosts,
-                        forgetHostsError = state.forgetHostsError
-                    )
-                )
-                state.copy(
-                    maintenance = updated.maintenance,
-                    availableForgetHosts = updated.availableForgetHosts,
-                    areRepoSnapshotsLoaded = updated.areRepoSnapshotsLoaded,
-                    isLoadingForgetHosts = updated.isLoadingForgetHosts,
-                    forgetHostsError = updated.forgetHostsError
-                )
-            }
-        }
-    )
-
-    init {
-        loadInstalledApps()
-        observeOperationState()
-        observeRootState()
-        val initialExcluded = if (_uiState.value.customDirectoriesBackupEnabled) {
-            _uiState.value.excludedCustomDirectories.filter { it.isSelected }.map { it.uri }
-        } else {
-            emptyList()
-        }
-        if (initialExcluded.isNotEmpty()) {
-            triggerBackgroundExclusionResolution(initialExcluded)
-        }
     }
 
-    private fun observeRootState() {
-        viewModelScope.launch {
-            rootRepository.hasRoot.collect {
-                _uiState.update { recomputeConflicts(it) }
-            }
-        }
+    private fun loadInitialCustomApps() {
+        val selectAll = preferencesRepository.loadRunTasksSelectAllApps()
+        val selectedPackages = if (selectAll) null else preferencesRepository.loadRunTasksSelectedPackages().toList()
+        val savedAppBackupTypes = preferencesRepository.loadRunTasksAppBackupTypes()
+        editorController.loadInstalledApps(
+            selectedPackageNames = selectedPackages,
+            selectAllDefault = if (selectAll) true else null,
+            savedAppBackupTypes = savedAppBackupTypes
+        )
     }
 
-    fun refreshAppsList() {
-        loadInstalledApps()
-    }
+    private fun persistCustomEditorToPreferences(editor: TaskConfigEditorState) {
+        preferencesRepository.saveBackupTypes(editor.backupTypes)
+        preferencesRepository.saveMaintenanceState(editor.maintenance)
+        preferencesRepository.saveRunTasksBackupEnabled(editor.backupEnabled)
 
-    private fun loadInstalledApps() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoadingApps = true) }
-            val selectAll = preferencesRepository.loadRunTasksSelectAllApps()
-            val selectedPackages = preferencesRepository.loadRunTasksSelectedPackages()
-            val savedAppBackupTypes = preferencesRepository.loadRunTasksAppBackupTypes()
-            val currentSelection = _uiState.value.apps.associate { it.packageName to it.isSelected }
-            val currentBackupTypes = _uiState.value.appBackupTypes
-            val defaultBackupTypes = _uiState.value.backupTypes
-            val apps = appInfoRepository.getInstalledUserApps().map { app ->
-                val selected = if (_uiState.value.apps.isEmpty()) {
-                    // Initial load: restore from preferences
-                    if (selectAll) true else selectedPackages.contains(app.packageName)
-                } else {
-                    // Refresh: keep current selection, fallback to default (true)
-                    currentSelection[app.packageName] ?: app.isSelected
-                }
-                app.copy(isSelected = selected)
-            }
-            val sortedApps = sortApps(apps, _uiState.value.appSortOrder)
-            val appBackupTypes = sortedApps.associate { app ->
-                app.packageName to (
-                        currentBackupTypes[app.packageName]
-                            ?: savedAppBackupTypes[app.packageName]
-                            ?: defaultBackupTypes
-                        )
-            }
-            _uiState.update { recomputeConflicts(it.copy(apps = sortedApps, appBackupTypes = appBackupTypes, isLoadingApps = false)) }
+        if (editor.apps.isNotEmpty()) {
+            preferencesRepository.saveRunTasksAppBackupTypes(editor.appBackupTypes)
+            val allAppsSelected = editor.apps.all { it.isSelected }
+            val selectedPackages = editor.apps.filter { it.isSelected }.map { it.packageName }.toSet()
+            preferencesRepository.saveRunTasksSelectedApps(allAppsSelected, selectedPackages)
         }
+
+        preferencesRepository.saveCustomDirectoriesBackupEnabled(editor.customDirectoriesBackupEnabled)
+        preferencesRepository.saveDeviceDataBackupEnabled(editor.deviceDataBackupEnabled)
+        preferencesRepository.saveDeviceDataContactsEnabled(editor.contactsBackupEnabled)
+        preferencesRepository.saveDeviceDataContactAccountSelection(
+            editor.selectAllContactAccounts,
+            editor.selectedContactAccountKeys
+        )
+        preferencesRepository.saveDeviceDataCallLogsEnabled(editor.callLogsBackupEnabled)
+        preferencesRepository.saveDeviceDataCalendarEnabled(editor.calendarBackupEnabled)
+        preferencesRepository.saveDeviceDataCalendarSelection(
+            editor.selectAllCalendars,
+            editor.selectedCalendarKeys
+        )
+
+        val allCustomDirs = editor.customDirectories.map { it.uri }.toSet()
+        val selectedCustomDirs = editor.customDirectories.filter { it.isSelected }.map { it.uri }.toSet()
+        preferencesRepository.saveCustomDirectories(allCustomDirs, selectedCustomDirs)
+
+        val allExcludedDirs = editor.excludedCustomDirectories.map { it.uri }.toSet()
+        val selectedExcludedDirs = editor.excludedCustomDirectories.filter { it.isSelected }.map { it.uri }.toSet()
+        preferencesRepository.saveExcludedCustomDirectories(allExcludedDirs, selectedExcludedDirs)
     }
 
     private fun observeOperationState() {
@@ -248,37 +175,13 @@ class RunTasksViewModel(
     }
 
     fun run() {
-        if (_uiState.value.isRunning) return
+        val state = _uiState.value
+        if (state.isRunning) return
 
-        preferencesRepository.saveBackupTypes(_uiState.value.backupTypes)
-        preferencesRepository.saveRunTasksAppBackupTypes(_uiState.value.appBackupTypes)
-        preferencesRepository.saveMaintenanceState(_uiState.value.maintenance)
-        preferencesRepository.saveRunTasksBackupEnabled(_uiState.value.backupEnabled)
-        
-        val allAppsSelected = _uiState.value.apps.isNotEmpty() && _uiState.value.apps.all { it.isSelected }
-        val selectedPackages = _uiState.value.apps.filter { it.isSelected }.map { it.packageName }.toSet()
-        preferencesRepository.saveRunTasksSelectedApps(allAppsSelected, selectedPackages)
+        persistCustomEditorToPreferences(state.editor)
 
-        preferencesRepository.saveCustomDirectoriesBackupEnabled(_uiState.value.customDirectoriesBackupEnabled)
-        preferencesRepository.saveDeviceDataBackupEnabled(_uiState.value.deviceDataBackupEnabled)
-        preferencesRepository.saveDeviceDataContactsEnabled(_uiState.value.contactsBackupEnabled)
-        preferencesRepository.saveDeviceDataContactAccountSelection(
-            _uiState.value.selectAllContactAccounts,
-            _uiState.value.selectedContactAccountKeys
-        )
-        preferencesRepository.saveDeviceDataCallLogsEnabled(_uiState.value.callLogsBackupEnabled)
-        preferencesRepository.saveDeviceDataCalendarEnabled(_uiState.value.calendarBackupEnabled)
-        preferencesRepository.saveDeviceDataCalendarSelection(
-            _uiState.value.selectAllCalendars,
-            _uiState.value.selectedCalendarKeys
-        )
-        val allCustomDirs = _uiState.value.customDirectories.map { it.uri }.toSet()
-        val selectedCustomDirs = _uiState.value.customDirectories.filter { it.isSelected }.map { it.uri }.toSet()
-        preferencesRepository.saveCustomDirectories(allCustomDirs, selectedCustomDirs)
-        val selectedExcludedCustomDirs = _uiState.value.excludedCustomDirectories.filter { it.isSelected }.map { it.uri }.toSet()
-        persistExcludedCustomDirectories()
-
-        val errorState = preflightChecks()
+        val config = state.editor.toRunTasksConfig(hasRoot.value)
+        val errorState = editorController.validateForExecution(config, hasRoot.value)
         if (errorState != null) {
             errorState.error?.let { Toast.makeText(application, it, Toast.LENGTH_LONG).show() }
             _uiState.update { it.copy(isRunning = false, progress = errorState) }
@@ -299,42 +202,9 @@ class RunTasksViewModel(
             return
         }
 
-        val maintenance = _uiState.value.maintenance
-        val hasCustomDirs = _uiState.value.customDirectoriesBackupEnabled && selectedCustomDirs.isNotEmpty()
-        val hasContactsBackup = _uiState.value.deviceDataBackupEnabled && _uiState.value.contactsBackupEnabled
-        val hasCallLogsBackup = _uiState.value.deviceDataBackupEnabled && _uiState.value.callLogsBackupEnabled
-        val hasCalendarBackup = _uiState.value.deviceDataBackupEnabled && _uiState.value.calendarBackupEnabled
-        val hasDeviceData = hasContactsBackup || hasCallLogsBackup || hasCalendarBackup
-        val backupAppsEnabled = _uiState.value.backupEnabled && hasRoot.value
-        
-        val request = RunTasksWorkRequest(
+        val request = config.toWorkRequest(
             repositoryKey = selectedRepoKey,
-            backupEnabled = backupAppsEnabled || hasCustomDirs || hasDeviceData,
-            backupTypes = _uiState.value.backupTypes.toSelection(),
-            selectedPackageNames = if (backupAppsEnabled) _uiState.value.apps.filter { it.isSelected }.map { it.packageName } else emptyList(),
-            appBackupTypes = if (backupAppsEnabled) selectedAppBackupTypes().mapValues { it.value.toSelection() } else emptyMap(),
-            customDirectories = if (hasCustomDirs) selectedCustomDirs.toList() else emptyList(),
-            excludedCustomDirectories = if (_uiState.value.customDirectoriesBackupEnabled) selectedExcludedCustomDirs.toList() else emptyList(),
-            deviceData = DeviceDataBackupSelection(
-                contacts = hasContactsBackup,
-                selectAllContactAccounts = _uiState.value.selectAllContactAccounts,
-                selectedContactAccountKeys = _uiState.value.selectedContactAccountKeys,
-                callLogs = hasCallLogsBackup,
-                calendar = hasCalendarBackup,
-                selectAllCalendars = _uiState.value.selectAllCalendars,
-                selectedCalendarKeys = _uiState.value.selectedCalendarKeys
-            ),
-            unlockRepo = maintenance.unlockRepo,
-            forgetSnapshots = maintenance.forgetSnapshots,
-            pruneRepo = maintenance.pruneRepo,
-            checkRepo = maintenance.checkRepo,
-            readData = maintenance.readData,
-            keepLast = maintenance.keepLast,
-            keepDaily = maintenance.keepDaily,
-            keepWeekly = maintenance.keepWeekly,
-            keepMonthly = maintenance.keepMonthly,
-            forgetAllHosts = maintenance.forgetAllHosts,
-            forgetHosts = if (maintenance.forgetAllHosts) emptyList() else normalizeForgetHosts(maintenance.forgetHosts)
+            hasRoot = hasRoot.value
         )
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -357,541 +227,55 @@ class RunTasksViewModel(
         }
     }
 
-    private fun preflightChecks(): OperationProgress? {
-        val state = _uiState.value
-        val maintenance = state.maintenance
-        val hasMaintenanceTask = maintenance.unlockRepo || maintenance.forgetSnapshots || maintenance.pruneRepo || maintenance.checkRepo
-        val hasCustomDirs = state.customDirectoriesBackupEnabled && state.customDirectories.any { it.isSelected }
-        val hasContactsBackup = state.deviceDataBackupEnabled && state.contactsBackupEnabled
-        val hasCallLogsBackup = state.deviceDataBackupEnabled && state.callLogsBackupEnabled
-        val hasCalendarBackup = state.deviceDataBackupEnabled && state.calendarBackupEnabled
-        val hasDeviceData = hasContactsBackup || hasCallLogsBackup || hasCalendarBackup
-        val backupAppsEnabled = state.backupEnabled && hasRoot.value
-        
-        if (!backupAppsEnabled && !hasCustomDirs && !hasDeviceData && !hasMaintenanceTask) {
-            return OperationProgress(
-                isFinished = true,
-                error = application.getString(R.string.maintenance_error_no_tasks),
-                finalSummary = application.getString(R.string.maintenance_summary_no_tasks)
-            )
-        }
-
-        if (hasContactsBackup && !contactsBackupRepository.hasReadContactsPermission()) {
-            return OperationProgress(
-                isFinished = true,
-                error = application.getString(R.string.error_contacts_read_permission_required),
-                finalSummary = application.getString(R.string.summary_contacts_read_permission_required)
-            )
-        }
-
-        if (hasContactsBackup && !state.selectAllContactAccounts && state.selectedContactAccountKeys.isEmpty()) {
-            return OperationProgress(
-                isFinished = true,
-                error = application.getString(R.string.error_contacts_none_selected),
-                finalSummary = application.getString(R.string.summary_contacts_none_selected)
-            )
-        }
-
-        if (hasCallLogsBackup && !io.github.hddq.restoid.data.CallLogsBackupRepository(application).hasReadCallLogPermission()) {
-            return OperationProgress(
-                isFinished = true,
-                error = application.getString(R.string.error_call_logs_read_permission_required),
-                finalSummary = application.getString(R.string.summary_call_logs_read_permission_required)
-            )
-        }
-
-        if (hasCalendarBackup && !calendarBackupRepository.hasReadCalendarPermission()) {
-            return OperationProgress(
-                isFinished = true,
-                error = application.getString(R.string.error_calendar_read_permission_required),
-                finalSummary = application.getString(R.string.summary_calendar_read_permission_required)
-            )
-        }
-
-        if (hasCalendarBackup && !state.selectAllCalendars && state.selectedCalendarKeys.isEmpty()) {
-            return OperationProgress(
-                isFinished = true,
-                error = application.getString(R.string.error_calendar_none_selected),
-                finalSummary = application.getString(R.string.summary_calendar_none_selected)
-            )
-        }
-
-        if (maintenance.forgetSnapshots && !maintenance.forgetAllHosts && normalizeForgetHosts(maintenance.forgetHosts).isEmpty()) {
-            return OperationProgress(
-                isFinished = true,
-                error = application.getString(R.string.error_no_forget_hosts_selected),
-                finalSummary = application.getString(R.string.summary_no_forget_hosts_selected)
-            )
-        }
-
-        if (backupAppsEnabled) {
-            if (state.apps.none { it.isSelected } && !hasCustomDirs && !hasDeviceData) {
-                return OperationProgress(
-                    isFinished = true,
-                    error = application.getString(R.string.error_no_items_selected),
-                    finalSummary = application.getString(R.string.summary_no_items_selected)
-                )
-            }
-            val hasSelectedBackupType = state.apps
-                .filter { it.isSelected }
-                .any { app -> effectiveBackupTypes(state, app.packageName).anyEnabled() } || hasCustomDirs || hasDeviceData
-            if (!hasSelectedBackupType) {
-                return OperationProgress(
-                    isFinished = true,
-                    error = application.getString(R.string.error_no_backup_types_selected),
-                    finalSummary = application.getString(R.string.summary_no_backup_types_selected)
-                )
-            }
-        }
-
-        if (!resticBinaryManager.isInstalled) {
-            return OperationProgress(
-                isFinished = true,
-                error = application.getString(R.string.error_restic_not_installed),
-                finalSummary = application.getString(R.string.summary_restic_binary_not_installed)
-            )
-        }
-
-        val selectedRepoKey = repositoriesRepository.selectedRepository.value
-        val repository = selectedRepoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
-        if (selectedRepoKey == null || repository == null) {
-            return OperationProgress(
-                isFinished = true,
-                error = application.getString(R.string.error_no_backup_repository_selected),
-                finalSummary = application.getString(R.string.summary_no_backup_repository_selected)
-            )
-        }
-
-        if (repositoriesRepository.getRepositoryPassword(selectedRepoKey) == null) {
-            return OperationProgress(
-                isFinished = true,
-                error = application.getString(R.string.error_password_not_found_for_repository),
-                finalSummary = application.getString(R.string.summary_password_not_found)
-            )
-        }
-
-        if (repository.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpCredentials(selectedRepoKey)) {
-            return OperationProgress(
-                isFinished = true,
-                error = application.getString(R.string.error_sftp_password_not_found_for_repository),
-                finalSummary = application.getString(R.string.summary_sftp_password_not_found)
-            )
-        }
-
-        if (
-            repository.backendType == RepositoryBackendType.REST &&
-            repository.restAuthRequired &&
-            !repositoriesRepository.hasRestCredentials(selectedRepoKey)
-        ) {
-            return OperationProgress(
-                isFinished = true,
-                error = application.getString(R.string.error_rest_credentials_not_found_for_repository),
-                finalSummary = application.getString(R.string.summary_rest_credentials_not_found)
-            )
-        }
-
-        if (
-            repository.backendType == RepositoryBackendType.S3 &&
-            repository.s3AuthRequired &&
-            !repositoriesRepository.hasS3Credentials(selectedRepoKey)
-        ) {
-            return OperationProgress(
-                isFinished = true,
-                error = application.getString(R.string.error_s3_credentials_not_found_for_repository),
-                finalSummary = application.getString(R.string.summary_s3_credentials_not_found)
-            )
-        }
-
-        return null
-    }
-
     fun consumeOperationBlocked() {
         _operationBlocked.value = false
     }
 
-    fun setBackupEnabled(enabled: Boolean) {
-        _uiState.update { recomputeConflicts(it.copy(backupEnabled = enabled)) }
-    }
-
-    fun setCustomDirectoriesBackupEnabled(enabled: Boolean) {
-        _uiState.update { recomputeConflicts(it.copy(customDirectoriesBackupEnabled = enabled)) }
-        preferencesRepository.saveCustomDirectoriesBackupEnabled(enabled)
-    }
-
-    fun setDeviceDataBackupEnabled(enabled: Boolean) {
-        _uiState.update { it.copy(deviceDataBackupEnabled = enabled) }
-        preferencesRepository.saveDeviceDataBackupEnabled(enabled)
-    }
-
-    fun setContactsBackupEnabled(enabled: Boolean) {
-        _uiState.update { it.copy(contactsBackupEnabled = enabled) }
-        preferencesRepository.saveDeviceDataContactsEnabled(enabled)
-        if (enabled) {
-            refreshContactAccounts()
-        }
-    }
-
-    fun refreshContactAccounts() {
-        val requestId = ++contactAccountsRefreshRequestId
-        if (!contactsBackupRepository.hasReadContactsPermission()) {
-            _uiState.update { it.copy(availableContactAccounts = emptyList(), isLoadingContactAccounts = false) }
-            return
-        }
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoadingContactAccounts = true) }
-            try {
-                val accounts = contactsBackupRepository.queryDeviceContactAccounts()
-                if (contactAccountsRefreshRequestId == requestId) {
-                    _uiState.update { it.copy(availableContactAccounts = accounts) }
-                }
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                android.util.Log.w("RunTasksViewModel", "Failed to load device contact accounts", e)
-                if (contactAccountsRefreshRequestId == requestId) {
-                    _uiState.update { it.copy(availableContactAccounts = emptyList()) }
-                }
-            } finally {
-                if (contactAccountsRefreshRequestId == requestId) {
-                    _uiState.update { it.copy(isLoadingContactAccounts = false) }
-                }
-            }
-        }
-    }
-
-    fun toggleAllContactAccounts() {
-        _uiState.update { state ->
-            val allSelected = state.selectAllContactAccounts ||
-                (state.availableContactAccounts.isNotEmpty() && state.availableContactAccounts.all { it.selectionKey in state.selectedContactAccountKeys })
-            val newSelectAll = !allSelected
-            val newKeys = emptySet<String>()
-            preferencesRepository.saveDeviceDataContactAccountSelection(newSelectAll, newKeys)
-            state.copy(selectAllContactAccounts = newSelectAll, selectedContactAccountKeys = newKeys)
-        }
-    }
-
-    fun toggleContactAccount(selectionKey: String) {
-        _uiState.update { state ->
-            val allKeys = state.availableContactAccounts.map { it.selectionKey }.toSet()
-            val currentKeys = if (state.selectAllContactAccounts) allKeys else state.selectedContactAccountKeys
-            val updatedKeys = if (selectionKey in currentKeys) currentKeys - selectionKey else currentKeys + selectionKey
-            val newSelectAll = allKeys.isNotEmpty() && allKeys.all { it in updatedKeys }
-            val persistedKeys = if (newSelectAll) emptySet() else updatedKeys
-            preferencesRepository.saveDeviceDataContactAccountSelection(newSelectAll, persistedKeys)
-            state.copy(selectAllContactAccounts = newSelectAll, selectedContactAccountKeys = persistedKeys)
-        }
-    }
-
-    fun setCallLogsBackupEnabled(enabled: Boolean) {
-        _uiState.update { it.copy(callLogsBackupEnabled = enabled) }
-        preferencesRepository.saveDeviceDataCallLogsEnabled(enabled)
-    }
-
-    fun setCalendarBackupEnabled(enabled: Boolean) {
-        _uiState.update { it.copy(calendarBackupEnabled = enabled) }
-        preferencesRepository.saveDeviceDataCalendarEnabled(enabled)
-        if (enabled) {
-            refreshCalendars()
-        }
-    }
-
-    fun refreshCalendars() {
-        val requestId = ++calendarRefreshRequestId
-        if (!calendarBackupRepository.hasReadCalendarPermission()) {
-            _uiState.update { it.copy(availableCalendars = emptyList(), isLoadingCalendars = false) }
-            return
-        }
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoadingCalendars = true) }
-            try {
-                val calendars = calendarBackupRepository.queryDeviceCalendars()
-                if (calendarRefreshRequestId == requestId) {
-                    _uiState.update { it.copy(availableCalendars = calendars) }
-                }
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                android.util.Log.w("RunTasksViewModel", "Failed to load device calendars", e)
-                if (calendarRefreshRequestId == requestId) {
-                    _uiState.update { it.copy(availableCalendars = emptyList()) }
-                }
-            } finally {
-                if (calendarRefreshRequestId == requestId) {
-                    _uiState.update { it.copy(isLoadingCalendars = false) }
-                }
-            }
-        }
-    }
-
-    fun toggleAllCalendars() {
-        _uiState.update { state ->
-            val allSelected = state.selectAllCalendars ||
-                (state.availableCalendars.isNotEmpty() && state.availableCalendars.all { it.selectionKey in state.selectedCalendarKeys })
-            val newSelectAll = !allSelected
-            val newKeys = emptySet<String>()
-            preferencesRepository.saveDeviceDataCalendarSelection(newSelectAll, newKeys)
-            state.copy(selectAllCalendars = newSelectAll, selectedCalendarKeys = newKeys)
-        }
-    }
-
-    fun toggleCalendar(selectionKey: String) {
-        _uiState.update { state ->
-            val allKeys = state.availableCalendars.map { it.selectionKey }.toSet()
-            val currentKeys = if (state.selectAllCalendars) allKeys else state.selectedCalendarKeys
-            val updatedKeys = if (selectionKey in currentKeys) currentKeys - selectionKey else currentKeys + selectionKey
-            val newSelectAll = allKeys.isNotEmpty() && allKeys.all { it in updatedKeys }
-            val persistedKeys = if (newSelectAll) emptySet() else updatedKeys
-            preferencesRepository.saveDeviceDataCalendarSelection(newSelectAll, persistedKeys)
-            state.copy(selectAllCalendars = newSelectAll, selectedCalendarKeys = persistedKeys)
-        }
-    }
-
-    fun addCustomDirectory(uriString: String) {
-        val newKey = StorageUtils.resolveCustomDirectoryKey(uriString)
-        if (_uiState.value.customDirectories.any { StorageUtils.resolveCustomDirectoryKey(it.uri) == newKey }) {
-            Toast.makeText(
-                application,
-                application.getString(R.string.custom_directories_already_added),
-                Toast.LENGTH_LONG
-            ).show()
-            return
-        }
-
-        val repoKey = repositoriesRepository.selectedRepository.value
-        val repository = repoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
-
-        if (repository != null && repository.backendType == RepositoryBackendType.LOCAL) {
-            val repoCanonicalKey = StorageUtils.resolveCustomDirectoryKey(repository.path)
-            if (repoCanonicalKey == newKey) {
-                Toast.makeText(
-                    application,
-                    application.getString(R.string.error_cannot_backup_repo_to_itself),
-                    Toast.LENGTH_LONG
-                ).show()
-                return
-            }
-        }
-
-        _uiState.update { state ->
-            state.copy(customDirectories = state.customDirectories + CustomDirectory(uriString))
-        }
-        persistCustomDirectories()
-    }
-
-    fun toggleCustomDirectory(uriString: String) {
-        _uiState.update { state ->
-            state.copy(
-                customDirectories = state.customDirectories.map {
-                    if (it.uri == uriString) it.copy(isSelected = !it.isSelected) else it
-                }
-            )
-        }
-        persistCustomDirectories()
-    }
-
-    fun removeCustomDirectory(uriString: String) {
-        _uiState.update { state ->
-            state.copy(customDirectories = state.customDirectories.filter { it.uri != uriString })
-        }
-        persistCustomDirectories()
-    }
-
-    private fun persistCustomDirectories() {
-        val current = _uiState.value.customDirectories
-        val allCustomDirs = current.map { it.uri }.toSet()
-        val selectedCustomDirs = current.filter { it.isSelected }.map { it.uri }.toSet()
-        preferencesRepository.saveCustomDirectories(allCustomDirs, selectedCustomDirs)
-    }
-
-    fun addExcludedCustomDirectory(uriString: String) {
-        val newKey = StorageUtils.resolveCustomDirectoryKey(uriString)
-        if (_uiState.value.excludedCustomDirectories.any { StorageUtils.resolveCustomDirectoryKey(it.uri) == newKey }) {
-            Toast.makeText(
-                application,
-                application.getString(R.string.custom_directories_already_added),
-                Toast.LENGTH_LONG
-            ).show()
-            return
-        }
-
-        _uiState.update { state ->
-            recomputeConflicts(state.copy(excludedCustomDirectories = state.excludedCustomDirectories + CustomDirectory(uriString)))
-        }
-        persistExcludedCustomDirectories()
-    }
-
-    fun toggleExcludedCustomDirectory(uriString: String) {
-        _uiState.update { state ->
-            recomputeConflicts(
-                state.copy(
-                    excludedCustomDirectories = state.excludedCustomDirectories.map {
-                        if (it.uri == uriString) it.copy(isSelected = !it.isSelected) else it
-                    }
-                )
-            )
-        }
-        persistExcludedCustomDirectories()
-    }
-
-    fun removeExcludedCustomDirectory(uriString: String) {
-        _uiState.update { state ->
-            recomputeConflicts(state.copy(excludedCustomDirectories = state.excludedCustomDirectories.filter { it.uri != uriString }))
-        }
-        persistExcludedCustomDirectories()
-    }
-
-    private fun persistExcludedCustomDirectories() {
-        val current = _uiState.value.excludedCustomDirectories
-        val allDirs = current.map { it.uri }.toSet()
-        val selectedDirs = current.filter { it.isSelected }.map { it.uri }.toSet()
-        preferencesRepository.saveExcludedCustomDirectories(allDirs, selectedDirs)
-    }
-
-    fun setUnlockRepo(value: Boolean) = _uiState.update { it.copy(maintenance = it.maintenance.copy(unlockRepo = value)) }
-    fun setForgetSnapshots(value: Boolean) = _uiState.update { it.copy(maintenance = it.maintenance.copy(forgetSnapshots = value)) }
-    fun setPruneRepo(value: Boolean) = _uiState.update { it.copy(maintenance = it.maintenance.copy(pruneRepo = value)) }
-    fun setCheckRepo(value: Boolean) = _uiState.update { it.copy(maintenance = it.maintenance.copy(checkRepo = value)) }
-    fun setReadData(value: Boolean) = _uiState.update { it.copy(maintenance = it.maintenance.copy(readData = value)) }
-    fun setKeepLast(value: Int) = _uiState.update { it.copy(maintenance = it.maintenance.copy(keepLast = value)) }
-    fun setKeepDaily(value: Int) = _uiState.update { it.copy(maintenance = it.maintenance.copy(keepDaily = value)) }
-    fun setKeepWeekly(value: Int) = _uiState.update { it.copy(maintenance = it.maintenance.copy(keepWeekly = value)) }
-    fun setKeepMonthly(value: Int) = _uiState.update { it.copy(maintenance = it.maintenance.copy(keepMonthly = value)) }
-
-    fun toggleAllForgetHosts() = forgetHostsController.toggleAll()
-    fun toggleForgetHost(hostname: String) = forgetHostsController.toggleHost(hostname)
-    fun addCustomForgetHost(hostname: String) = forgetHostsController.addCustomHost(hostname)
-    fun removeCustomForgetHost(hostname: String) = forgetHostsController.removeCustomHost(hostname)
-    fun refreshForgetHosts(userInitiated: Boolean = true) = forgetHostsController.refreshHosts(userInitiated = userInitiated)
-    fun setAppSortOrder(order: AppSortOrder) {
-        if (_uiState.value.appSortOrder == order) return
-        _uiState.update { state ->
-            state.copy(
-                appSortOrder = order,
-                apps = sortApps(state.apps, order)
-            )
-        }
-    }
-
-    fun toggleAppSelection(packageName: String) {
-        _uiState.update { state ->
-            recomputeConflicts(
-                state.copy(
-                    apps = state.apps.map { app ->
-                        if (app.packageName == packageName) app.copy(isSelected = !app.isSelected) else app
-                    },
-                    appBackupTypes = state.appBackupTypes.ensurePackage(packageName, state.backupTypes)
-                )
-            )
-        }
-    }
-
-    fun toggleAllApps() {
-        _uiState.update { state ->
-            val shouldSelectAll = state.apps.any { !it.isSelected }
-            val apps = state.apps.map { it.copy(isSelected = shouldSelectAll) }
-            recomputeConflicts(
-                state.copy(
-                    apps = apps,
-                    appBackupTypes = apps.fold(state.appBackupTypes) { acc, app ->
-                        acc.ensurePackage(app.packageName, state.backupTypes)
-                    }
-                )
-            )
-        }
-    }
-
-    fun setAppBackupTypes(packageName: String, backupTypes: BackupTypes) {
-        _uiState.update { state ->
-            recomputeConflicts(
-                state.copy(appBackupTypes = state.appBackupTypes + (packageName to backupTypes))
-            )
-        }
-    }
-
-    fun setSelectedAppsBackupTypes(backupTypes: BackupTypes) {
-        _uiState.update { state ->
-            val selectedPackageNames = state.apps.filter { it.isSelected }.map { it.packageName }
-            recomputeConflicts(
-                state.copy(
-                    backupTypes = backupTypes,
-                    appBackupTypes = state.appBackupTypes + selectedPackageNames.associateWith { backupTypes }
-                )
-            )
-        }
-    }
-
-    fun setBackupApk(value: Boolean) = _uiState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(apk = value))) }
-    fun setBackupData(value: Boolean) = _uiState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(data = value))) }
-    fun setBackupDeviceProtectedData(value: Boolean) = _uiState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(deviceProtectedData = value))) }
-    fun setBackupExternalData(value: Boolean) = _uiState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(externalData = value))) }
-    fun setBackupObb(value: Boolean) = _uiState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(obb = value))) }
-    fun setBackupMedia(value: Boolean) = _uiState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(media = value))) }
-    fun setBackupPermissions(value: Boolean) = _uiState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(permissions = value))) }
-    fun setBackupSpecialAccess(value: Boolean) = _uiState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(specialAccess = value))) }
-    fun setBackupAccessibility(value: Boolean) = _uiState.update { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(accessibility = value))) }
-
-    private fun recomputeConflicts(state: RunTasksUiState): RunTasksUiState {
-        val selectedApps = if (state.backupEnabled && hasRoot.value) state.apps.filter { it.isSelected } else emptyList()
-        val selectedExcluded = if (state.customDirectoriesBackupEnabled) {
-            state.excludedCustomDirectories.filter { it.isSelected }.map { it.uri }
-        } else {
-            emptyList()
-        }
-
-        if (selectedApps.isEmpty() || selectedExcluded.isEmpty()) {
-            return if (state.exclusionConflicts.isEmpty()) state else state.copy(exclusionConflicts = emptyList())
-        }
-
-        if (selectedExcluded != cachedRawExclusions) {
-            triggerBackgroundExclusionResolution(selectedExcluded)
-        }
-
-        val effectiveBackupTypes = state.backupTypes.toSelection()
-        val appBackupTypes = state.appBackupTypes.mapValues { it.value.toSelection() }
-        val currentUserId = runCatching {
-            android.os.UserHandle::class.java.getMethod("myUserId").invoke(null) as Int
-        }.getOrElse { android.os.Process.myUid() / 100000 }
-
-        val dummyRequest = BackupWorkRequest(
-            repositoryKey = "",
-            backupTypes = effectiveBackupTypes,
-            selectedPackageNames = selectedApps.map { it.packageName },
-            appBackupTypes = appBackupTypes,
-            excludedCustomDirectories = selectedExcluded
-        )
-        val resolved = if (selectedExcluded == cachedRawExclusions) {
-            cachedResolvedExclusions
-        } else {
-            selectedExcluded.mapNotNull { uri ->
-                (StorageUtils.resolveCustomDirectoryPath(uri) ?: uri).trimEnd('/')
-            }
-        }
-        val conflicts = findConflictingExclusions(selectedApps, dummyRequest, currentUserId, resolved)
-        return state.copy(exclusionConflicts = conflicts)
-    }
-
-    private fun triggerBackgroundExclusionResolution(selectedExcluded: List<String>) {
-        conflictResolutionJob?.cancel()
-        conflictResolutionJob = viewModelScope.launch {
-            val resolved = resolveExclusionPaths(selectedExcluded)
-            cachedRawExclusions = selectedExcluded
-            cachedResolvedExclusions = resolved
-            _uiState.update { recomputeConflicts(it) }
-        }
-    }
-
-    private fun selectedAppBackupTypes(): Map<String, BackupTypes> {
-        val state = _uiState.value
-        return state.apps
-            .filter { it.isSelected }
-            .associate { app -> app.packageName to effectiveBackupTypes(state, app.packageName) }
-    }
-
-    private fun effectiveBackupTypes(state: RunTasksUiState, packageName: String): BackupTypes {
-        return state.appBackupTypes[packageName] ?: state.backupTypes
-    }
-
-    private fun Map<String, BackupTypes>.ensurePackage(packageName: String, defaultTypes: BackupTypes): Map<String, BackupTypes> {
-        return if (containsKey(packageName)) this else this + (packageName to defaultTypes)
-    }
+    fun refreshAppsList() = editorController.refreshAppsList()
+    fun setBackupEnabled(enabled: Boolean) = editorController.setBackupEnabled(enabled)
+    fun setCustomDirectoriesBackupEnabled(enabled: Boolean) = editorController.setCustomDirectoriesBackupEnabled(enabled)
+    fun setDeviceDataBackupEnabled(enabled: Boolean) = editorController.setDeviceDataBackupEnabled(enabled)
+    fun setContactsBackupEnabled(enabled: Boolean) = editorController.setContactsBackupEnabled(enabled)
+    fun refreshContactAccounts() = editorController.refreshContactAccounts()
+    fun toggleAllContactAccounts() = editorController.toggleAllContactAccounts()
+    fun toggleContactAccount(selectionKey: String) = editorController.toggleContactAccount(selectionKey)
+    fun setCallLogsBackupEnabled(enabled: Boolean) = editorController.setCallLogsBackupEnabled(enabled)
+    fun setCalendarBackupEnabled(enabled: Boolean) = editorController.setCalendarBackupEnabled(enabled)
+    fun refreshCalendars() = editorController.refreshCalendars()
+    fun toggleAllCalendars() = editorController.toggleAllCalendars()
+    fun toggleCalendar(selectionKey: String) = editorController.toggleCalendar(selectionKey)
+    fun addCustomDirectory(uriString: String) = editorController.addCustomDirectory(uriString)
+    fun toggleCustomDirectory(uriString: String) = editorController.toggleCustomDirectory(uriString)
+    fun removeCustomDirectory(uriString: String) = editorController.removeCustomDirectory(uriString)
+    fun addExcludedCustomDirectory(uriString: String) = editorController.addExcludedCustomDirectory(uriString)
+    fun toggleExcludedCustomDirectory(uriString: String) = editorController.toggleExcludedCustomDirectory(uriString)
+    fun removeExcludedCustomDirectory(uriString: String) = editorController.removeExcludedCustomDirectory(uriString)
+    fun setUnlockRepo(value: Boolean) = editorController.setUnlockRepo(value)
+    fun setForgetSnapshots(value: Boolean) = editorController.setForgetSnapshots(value)
+    fun setPruneRepo(value: Boolean) = editorController.setPruneRepo(value)
+    fun setCheckRepo(value: Boolean) = editorController.setCheckRepo(value)
+    fun setReadData(value: Boolean) = editorController.setReadData(value)
+    fun setKeepLast(value: Int) = editorController.setKeepLast(value)
+    fun setKeepDaily(value: Int) = editorController.setKeepDaily(value)
+    fun setKeepWeekly(value: Int) = editorController.setKeepWeekly(value)
+    fun setKeepMonthly(value: Int) = editorController.setKeepMonthly(value)
+    fun toggleAllForgetHosts() = editorController.toggleAllForgetHosts()
+    fun toggleForgetHost(hostname: String) = editorController.toggleForgetHost(hostname)
+    fun addCustomForgetHost(hostname: String) = editorController.addCustomForgetHost(hostname)
+    fun removeCustomForgetHost(hostname: String) = editorController.removeCustomForgetHost(hostname)
+    fun refreshForgetHosts(userInitiated: Boolean = true) = editorController.refreshForgetHosts(userInitiated)
+    fun setAppSortOrder(order: AppSortOrder) = editorController.setAppSortOrder(order)
+    fun toggleAppSelection(packageName: String) = editorController.toggleAppSelection(packageName)
+    fun toggleAllApps() = editorController.toggleAllApps()
+    fun setAppBackupTypes(packageName: String, backupTypes: BackupTypes) = editorController.setAppBackupTypes(packageName, backupTypes)
+    fun setSelectedAppsBackupTypes(backupTypes: BackupTypes) = editorController.setSelectedAppsBackupTypes(backupTypes)
+    fun setBackupApk(value: Boolean) = editorController.setBackupApk(value)
+    fun setBackupData(value: Boolean) = editorController.setBackupData(value)
+    fun setBackupDeviceProtectedData(value: Boolean) = editorController.setBackupDeviceProtectedData(value)
+    fun setBackupExternalData(value: Boolean) = editorController.setBackupExternalData(value)
+    fun setBackupObb(value: Boolean) = editorController.setBackupObb(value)
+    fun setBackupMedia(value: Boolean) = editorController.setBackupMedia(value)
+    fun setBackupPermissions(value: Boolean) = editorController.setBackupPermissions(value)
+    fun setBackupSpecialAccess(value: Boolean) = editorController.setBackupSpecialAccess(value)
+    fun setBackupAccessibility(value: Boolean) = editorController.setBackupAccessibility(value)
 }

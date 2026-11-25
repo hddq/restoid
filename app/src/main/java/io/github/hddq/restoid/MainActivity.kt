@@ -859,9 +859,9 @@ class MainActivity : FragmentActivity() {
                                         isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() },
                                         actions = {
-                                            if (hasRoot && !uiState.isLoadingApps && uiState.apps.isNotEmpty()) {
+                                            if (hasRoot && !uiState.editor.isLoadingApps && uiState.editor.apps.isNotEmpty()) {
                                                 AppSortMenuButton(
-                                                    sortOrder = uiState.appSortOrder,
+                                                    sortOrder = uiState.editor.appSortOrder,
                                                     onSortOrderChange = vm::setAppSortOrder,
                                                     showSizeSort = false
                                                 )
