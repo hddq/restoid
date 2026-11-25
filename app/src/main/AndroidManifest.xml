@@ -47,6 +47,14 @@
             </intent-filter>
         </activity>
 
+        <receiver
+            android:name=".work.PresetIntentReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="io.github.hddq.restoid.action.RUN_PRESET" />
+            </intent-filter>
+        </receiver>
+
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:foregroundServiceType="dataSync"

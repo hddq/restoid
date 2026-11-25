@@ -63,7 +63,9 @@ import io.github.hddq.restoid.ui.screens.settings.dialogs.SaveSftpCredentialsDia
 import io.github.hddq.restoid.ui.settings.SettingsViewModel
 
 @Composable
-fun AppUnlockOnStartRow(
+fun SettingsToggleRow(
+    title: String,
+    icon: ImageVector,
     enabled: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
@@ -80,12 +82,12 @@ fun AppUnlockOnStartRow(
             modifier = Modifier.weight(1f)
         ) {
             Icon(
-                imageVector = Icons.Outlined.Lock,
+                imageVector = icon,
                 contentDescription = null,
                 tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(end = 16.dp)
             )
-            Text(text = stringResource(R.string.require_app_unlock_on_start))
+            Text(text = title)
         }
         Switch(
             checked = enabled,
@@ -103,6 +105,19 @@ fun AppUnlockOnStartRow(
             }
         )
     }
+}
+
+@Composable
+fun AppUnlockOnStartRow(
+    enabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    SettingsToggleRow(
+        title = stringResource(R.string.require_app_unlock_on_start),
+        icon = Icons.Outlined.Lock,
+        enabled = enabled,
+        onCheckedChange = onCheckedChange
+    )
 }
 
 @Composable

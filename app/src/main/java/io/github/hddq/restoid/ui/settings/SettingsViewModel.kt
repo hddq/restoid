@@ -169,6 +169,9 @@ class SettingsViewModel(
     private val _requireAppUnlock = MutableStateFlow(preferencesRepository.loadRequireAppUnlock())
     val requireAppUnlock = _requireAppUnlock.asStateFlow()
 
+    private val _allowExternalIntents = MutableStateFlow(preferencesRepository.loadAllowExternalIntents())
+    val allowExternalIntents = _allowExternalIntents.asStateFlow()
+
     private val _deviceHostname = MutableStateFlow(preferencesRepository.getDeviceHostname())
     val deviceHostname = _deviceHostname.asStateFlow()
 
@@ -364,6 +367,11 @@ class SettingsViewModel(
     fun onRequireAppUnlockChanged(required: Boolean) {
         _requireAppUnlock.value = required
         preferencesRepository.saveRequireAppUnlock(required)
+    }
+
+    fun onAllowExternalIntentsChanged(allowed: Boolean) {
+        _allowExternalIntents.value = allowed
+        preferencesRepository.saveAllowExternalIntents(allowed)
     }
 
     fun onDeviceHostnameChanged(hostname: String?) {
