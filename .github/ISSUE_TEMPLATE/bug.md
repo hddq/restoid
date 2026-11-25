@@ -1,7 +1,7 @@
 ---
 name: Bug Report
 about: Something is broken in Restoid and needs fixing.
-title: '[BUG] '
+title: ''
 labels: 'bug'
 assignees: ''
 ---
