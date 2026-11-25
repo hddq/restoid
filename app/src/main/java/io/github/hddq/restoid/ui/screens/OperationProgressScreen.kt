@@ -3,8 +3,9 @@ package io.github.hddq.restoid.ui.screens
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.activity.compose.BackHandler
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.HourglassEmpty
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -22,6 +23,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.RestoidApplication
 import io.github.hddq.restoid.data.OperationType
+import io.github.hddq.restoid.ui.components.ExpressiveEmptyState
 import io.github.hddq.restoid.ui.operation.OperationProgressUiEvent
 import io.github.hddq.restoid.ui.operation.OperationProgressViewModel
 import io.github.hddq.restoid.ui.operation.OperationProgressViewModelFactory
@@ -99,10 +101,9 @@ fun OperationProgressScreen(
             modifier = modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = stringResource(R.string.operation_progress_no_active_operation),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+            ExpressiveEmptyState(
+                icon = Icons.Outlined.HourglassEmpty,
+                title = stringResource(R.string.operation_progress_no_active_operation)
             )
         }
     }
