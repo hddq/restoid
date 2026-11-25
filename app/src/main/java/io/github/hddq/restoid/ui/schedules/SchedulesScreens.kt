@@ -103,6 +103,7 @@ import io.github.hddq.restoid.model.Schedule
 import io.github.hddq.restoid.model.TaskPreset
 import io.github.hddq.restoid.model.TriggerConditions
 import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
+import io.github.hddq.restoid.ui.components.ExpressiveEmptyState
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
 import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
 import io.github.hddq.restoid.ui.shared.TaskRow
@@ -139,13 +140,12 @@ fun SchedulesScreen(
         if (uiState.isLoading) {
             LoadingIndicator(modifier = Modifier.align(Alignment.Center))
         } else if (uiState.schedules.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = stringResource(R.string.no_schedules_configured),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            ExpressiveEmptyState(
+                icon = Icons.Outlined.EventRepeat,
+                title = stringResource(R.string.no_schedules_configured),
+                subtitle = stringResource(R.string.no_schedules_configured_hint),
+                modifier = Modifier.align(Alignment.Center)
+            )
         } else {
             Column(
                 modifier = Modifier

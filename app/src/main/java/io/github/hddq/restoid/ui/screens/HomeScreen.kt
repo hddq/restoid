@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,7 +31,11 @@ import androidx.compose.material.icons.outlined.Call
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Contacts
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Restore
+import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.AlertDialog
@@ -59,6 +64,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -70,6 +77,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.hddq.restoid.R
@@ -77,6 +85,7 @@ import io.github.hddq.restoid.data.OperationRuntimeState
 import io.github.hddq.restoid.data.OperationType
 import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.model.AppInfo
+import io.github.hddq.restoid.ui.components.ExpressiveEmptyState
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
 import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
 import io.github.hddq.restoid.ui.components.PasswordDialog
@@ -90,6 +99,33 @@ import io.github.hddq.restoid.ui.home.SnapshotWithMetadata
 
 private fun homeCredentialsSaveLabel(prompt: HomeCredentialPrompt): Int {
     return if (prompt == HomeCredentialPrompt.S3_CREDENTIALS) R.string.action_save_passwords else R.string.save_credentials
+}
+
+@Composable
+private fun HomeCenteredStatus(
+    minHeight: Dp,
+    icon: ImageVector,
+    title: String,
+    subtitle: String? = null,
+    iconTint: Color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
+    titleColor: Color = MaterialTheme.colorScheme.onSurface,
+    action: (@Composable () -> Unit)? = null
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = minHeight),
+        contentAlignment = Alignment.Center
+    ) {
+        ExpressiveEmptyState(
+            icon = icon,
+            title = title,
+            subtitle = subtitle,
+            iconTint = iconTint,
+            titleColor = titleColor,
+            action = action
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -144,6 +180,7 @@ fun HomeScreen(
         }
 
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            val emptyStateMinHeight = (maxHeight - 96.dp).coerceAtLeast(0.dp)
             val maxIconsPossible = remember(maxWidth) {
                 val contentWidth = (maxWidth - 64.dp).coerceAtLeast(32.dp)
                 val iconSize = 32.dp
@@ -163,19 +200,21 @@ fun HomeScreen(
                     when {
                     uiState.selectedRepo == null -> {
                         item(key = "no_repo_selected") {
-                            Text(
-                                text = stringResource(R.string.no_repository_selected),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            HomeCenteredStatus(
+                                minHeight = emptyStateMinHeight,
+                                icon = Icons.Outlined.Storage,
+                                title = stringResource(R.string.no_repository_selected)
                             )
                         }
                     }
                     uiState.resticState !is ResticState.Installed -> {
                         item(key = "restic_not_available") {
-                            Text(
-                                text = stringResource(R.string.restic_not_available_check_settings),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.error
+                            HomeCenteredStatus(
+                                minHeight = emptyStateMinHeight,
+                                icon = Icons.Outlined.ErrorOutline,
+                                title = stringResource(R.string.restic_not_available_check_settings),
+                                iconTint = MaterialTheme.colorScheme.error.copy(alpha = 0.75f),
+                                titleColor = MaterialTheme.colorScheme.error
                             )
                         }
                     }
@@ -192,83 +231,63 @@ fun HomeScreen(
                 uiState.error != null -> {
                     val errorMessage = uiState.error
                     item(key = "error_content") {
-                        Column {
-                            Text(
-                                text = stringResource(R.string.error_with_message, errorMessage),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.error
-                            )
-
-                            when (uiState.authFailure) {
-                                HomeAuthFailure.REPOSITORY_PASSWORD -> {
-                                    Spacer(Modifier.height(12.dp))
-                                    Button(onClick = onRetryRepositoryPasswordEntry) {
-                                        Text(stringResource(R.string.action_enter_password_again))
+                        HomeCenteredStatus(
+                            minHeight = emptyStateMinHeight,
+                            icon = Icons.Outlined.ErrorOutline,
+                            title = stringResource(R.string.error_with_message, errorMessage),
+                            iconTint = MaterialTheme.colorScheme.error.copy(alpha = 0.75f),
+                            titleColor = MaterialTheme.colorScheme.error,
+                            action = uiState.authFailure?.let { authFailure ->
+                                val (labelRes, onClick) = when (authFailure) {
+                                    HomeAuthFailure.REPOSITORY_PASSWORD ->
+                                        R.string.action_enter_password_again to onRetryRepositoryPasswordEntry
+                                    HomeAuthFailure.SFTP_PASSWORD ->
+                                        R.string.action_enter_sftp_password_again to onRetrySftpPasswordEntry
+                                    HomeAuthFailure.REST_CREDENTIALS ->
+                                        R.string.action_enter_rest_credentials_again to onRetryRestCredentialsEntry
+                                    HomeAuthFailure.S3_CREDENTIALS ->
+                                        R.string.action_enter_s3_credentials_again to onRetryS3CredentialsEntry
+                                }
+                                {
+                                    Button(onClick = onClick) {
+                                        Text(stringResource(labelRes))
                                     }
                                 }
-                                HomeAuthFailure.SFTP_PASSWORD -> {
-                                    Spacer(Modifier.height(12.dp))
-                                    Button(onClick = onRetrySftpPasswordEntry) {
-                                        Text(stringResource(R.string.action_enter_sftp_password_again))
-                                    }
-                                }
-                                HomeAuthFailure.REST_CREDENTIALS -> {
-                                    Spacer(Modifier.height(12.dp))
-                                    Button(onClick = onRetryRestCredentialsEntry) {
-                                        Text(stringResource(R.string.action_enter_rest_credentials_again))
-                                    }
-                                }
-                                HomeAuthFailure.S3_CREDENTIALS -> {
-                                    Spacer(Modifier.height(12.dp))
-                                    Button(onClick = onRetryS3CredentialsEntry) {
-                                        Text(stringResource(R.string.action_enter_s3_credentials_again))
-                                    }
-                                }
-                                null -> Unit
                             }
-                        }
+                        )
                     }
                 }
                 uiState.openPrompt != null -> {
                     item(key = "open_prompt") {
-                        Column {
-                            Text(
-                                text = stringResource(R.string.home_open_needed_message),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(Modifier.height(12.dp))
-                            when (uiState.openPrompt) {
-                                HomeCredentialPrompt.REPOSITORY_PASSWORD -> {
-                                    Button(onClick = onRetryRepositoryPasswordEntry) {
-                                        Text(stringResource(R.string.action_open_repository))
-                                    }
-                                }
-                                HomeCredentialPrompt.SFTP_PASSWORD -> {
-                                    Button(onClick = onRetrySftpPasswordEntry) {
-                                        Text(stringResource(R.string.action_open_sftp))
-                                    }
-                                }
-                                HomeCredentialPrompt.REST_CREDENTIALS -> {
-                                    Button(onClick = onRetryRestCredentialsEntry) {
-                                        Text(stringResource(R.string.action_open_rest))
-                                    }
-                                }
-                                HomeCredentialPrompt.S3_CREDENTIALS -> {
-                                    Button(onClick = onRetryS3CredentialsEntry) {
-                                        Text(stringResource(R.string.action_open_s3))
-                                    }
+                        val (labelRes, onClick) = when (uiState.openPrompt) {
+                            HomeCredentialPrompt.REPOSITORY_PASSWORD ->
+                                R.string.action_open_repository to onRetryRepositoryPasswordEntry
+                            HomeCredentialPrompt.SFTP_PASSWORD ->
+                                R.string.action_open_sftp to onRetrySftpPasswordEntry
+                            HomeCredentialPrompt.REST_CREDENTIALS ->
+                                R.string.action_open_rest to onRetryRestCredentialsEntry
+                            HomeCredentialPrompt.S3_CREDENTIALS ->
+                                R.string.action_open_s3 to onRetryS3CredentialsEntry
+                        }
+                        HomeCenteredStatus(
+                            minHeight = emptyStateMinHeight,
+                            icon = Icons.Outlined.Lock,
+                            title = stringResource(R.string.home_open_needed_message),
+                            action = {
+                                Button(onClick = onClick) {
+                                    Text(stringResource(labelRes))
                                 }
                             }
-                        }
+                        )
                     }
                 }
                 uiState.snapshotsWithMetadata.isEmpty() -> {
                     item(key = "empty_snapshots") {
-                        Text(
-                            text = stringResource(R.string.no_snapshots_found_for_repository),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        HomeCenteredStatus(
+                            minHeight = emptyStateMinHeight,
+                            icon = Icons.Outlined.History,
+                            title = stringResource(R.string.no_snapshots_found_for_repository),
+                            subtitle = stringResource(R.string.no_snapshots_found_hint)
                         )
                     }
                 }

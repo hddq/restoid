@@ -73,7 +73,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -85,6 +84,7 @@ import io.github.hddq.restoid.R
 import io.github.hddq.restoid.model.Schedule
 import io.github.hddq.restoid.model.TaskPreset
 import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
+import io.github.hddq.restoid.ui.components.ExpressiveEmptyState
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
 import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
 import io.github.hddq.restoid.ui.components.TasksGuideBottomSheet
@@ -139,32 +139,12 @@ fun PresetsScreen(
         if (uiState.isLoading) {
             LoadingIndicator(modifier = Modifier.align(Alignment.Center))
         } else if (uiState.presets.isEmpty()) {
-            Column(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .padding(horizontal = 32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Bookmarks,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
-                    modifier = Modifier.size(48.dp)
-                )
-                Text(
-                    text = stringResource(R.string.no_presets_configured),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    textAlign = TextAlign.Center
-                )
-                Text(
-                    text = stringResource(R.string.no_presets_configured_hint),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-            }
+            ExpressiveEmptyState(
+                icon = Icons.Outlined.Bookmarks,
+                title = stringResource(R.string.no_presets_configured),
+                subtitle = stringResource(R.string.no_presets_configured_hint),
+                modifier = Modifier.align(Alignment.Center)
+            )
         } else {
             Column(
                 modifier = Modifier
