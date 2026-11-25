@@ -81,6 +81,7 @@ class RunTasksViewModel(
     private var loadedPresetBaseline: TaskConfigEditorState? = null
     private var isInitialCustomAppsLoaded = false
     private var persistCustomJob: Job? = null
+    private var refreshPresetsJob: Job? = null
 
     private val editorController = TaskConfigEditorController(
         application = application,
@@ -165,6 +166,7 @@ class RunTasksViewModel(
     }
 
     fun refreshPresets() {
+        refreshPresetsJob?.cancel()
         val repoKey = repositoriesRepository.selectedRepository.value
         val repoId = repoKey?.let { repositoriesRepository.getRepositoryByKey(it)?.id }
         if (repoId == null) {
@@ -175,8 +177,9 @@ class RunTasksViewModel(
             return
         }
 
-        viewModelScope.launch {
+        refreshPresetsJob = viewModelScope.launch {
             val presets = taskPresetRepository.getPresets(repoId)
+            if (repositoriesRepository.selectedRepository.value != repoKey) return@launch
             val currentSelectedId = _uiState.value.selectedPresetId
             _uiState.update { it.copy(availablePresets = presets) }
             if (currentSelectedId != null && presets.none { it.id == currentSelectedId }) {
@@ -297,6 +300,7 @@ class RunTasksViewModel(
         }
 
         val currentEditor = _uiState.value.editor
+        if (currentEditor.isLoadingApps) return
         if (
             currentEditor.maintenance.forgetSnapshots &&
             !currentEditor.maintenance.forgetAllHosts &&

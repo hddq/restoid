@@ -277,7 +277,7 @@ class PresetsViewModel(
             }
             loadPresets()
             _addEditState.update { it.copy(id = saved.id, isSaving = false) }
-            initialState = _addEditState.value
+            initialState = state.copy(id = saved.id, isSaving = false)
             _uiEvents.emit(PresetsUiEvent.NavigateBack(savedPresetId = saved.id))
         }
     }
@@ -445,7 +445,7 @@ class PresetsViewModel(
                     _addEditState.update { current ->
                         if (addEditSessionId == sessionId) current.copy(id = saved.id, isSaving = false) else current
                     }
-                    initialState = _addEditState.value
+                    initialState = state.copy(id = saved.id, isSaving = false)
                 }
                 saved
             } else {
