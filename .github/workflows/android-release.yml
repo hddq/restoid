@@ -276,16 +276,6 @@ jobs:
             release-assets/SHA256SUMS.txt
             release-assets/mapping.txt.gz
 
-      - name: Trigger central F-Droid repo update
-        if: success()
-        env:
-          GH_TOKEN: ${{ secrets.FDROID_REPO_DISPATCH_TOKEN }}
-        run: |
-          gh api repos/hddq/fdroid-repo/dispatches \
-            -f event_type=app-released \
-            -f "client_payload[repo]=${{ github.repository }}" \
-            -f "client_payload[tag]=${{ github.ref_name }}"
-
       - name: Build F-Droid repo index (DEPRECATED)
         env:
           FDROID_REPO_KEYSTORE_BASE64: ${{ secrets.FDROID_REPO_KEYSTORE_BASE64 }}
@@ -312,7 +302,7 @@ jobs:
           cat > fdroid/config.yml <<EOF
           repo_url: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/fdroid/repo
           repo_name: ${{ github.event.repository.name }} (DEPRECATED)
-          repo_description: ⚠️ DEPRECATED: This repository is deprecated. Please migrate to the central F-Droid repository at https://fdroid.hddq.org/repo
+          repo_description: "⚠️ DEPRECATED: This repository is deprecated. Please migrate to the central F-Droid repository at https://fdroid.hddq.org/repo"
           keystore: keystore.jks
           keystorepass: ${FDROID_REPO_KEYSTORE_PASSWORD}
           keypass: ${FDROID_REPO_KEY_PASSWORD}
@@ -460,6 +450,16 @@ jobs:
           destination_dir: fdroid/repo
           keep_files: false
           force_orphan: true
+
+      - name: Trigger central F-Droid repo update
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.FDROID_REPO_DISPATCH_TOKEN }}
+        run: |
+          gh api repos/hddq/fdroid-repo/dispatches \
+            -f event_type=app-released \
+            -f "client_payload[repo]=${{ github.repository }}" \
+            -f "client_payload[tag]=${{ github.ref_name }}"
 
       - name: Remove signing keystore
         if: always()
