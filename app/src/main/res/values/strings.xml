@@ -224,6 +224,8 @@
     <string name="run_tasks_check_metadata_only">Metadata only</string>
     <string name="run_tasks_check_read_all_data_description">Verify repository data packs in addition to metadata.</string>
     <string name="no_repository_selected">No repository selected. Go to settings to add one.</string>
+    <string name="no_repository_selected_title">No repository selected.</string>
+    <string name="no_repository_selected_hint">Go to settings to add one.</string>
     <string name="restic_not_available_check_settings">Restic not available. Check settings.</string>
     <string name="no_schedules_configured">No schedules configured for this repository.</string>
     <string name="no_schedules_configured_hint">Create a schedule to automatically run a task preset at set intervals.</string>

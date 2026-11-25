@@ -203,7 +203,8 @@ fun HomeScreen(
                             HomeCenteredStatus(
                                 minHeight = emptyStateMinHeight,
                                 icon = Icons.Outlined.Storage,
-                                title = stringResource(R.string.no_repository_selected)
+                                title = stringResource(R.string.no_repository_selected_title),
+                                subtitle = stringResource(R.string.no_repository_selected_hint)
                             )
                         }
                     }
