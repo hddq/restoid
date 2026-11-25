@@ -144,6 +144,7 @@ import io.github.hddq.restoid.ui.screens.OperationProgressScreen
 import io.github.hddq.restoid.ui.screens.RestoreScreen
 import io.github.hddq.restoid.ui.screens.SettingsScreen
 import io.github.hddq.restoid.ui.screens.SnapshotDetailsScreen
+import io.github.hddq.restoid.ui.screens.WelcomeScreen
 import io.github.hddq.restoid.ui.settings.SettingsViewModel
 import io.github.hddq.restoid.ui.settings.SettingsViewModelFactory
 import io.github.hddq.restoid.ui.theme.RestoidTheme
@@ -339,6 +340,16 @@ class MainActivity : FragmentActivity() {
                         return@Surface
                     }
 
+                    val startDestination = remember {
+                        if (app.preferencesRepository.loadOnboardingCompleted()) {
+                            TOP_LEVEL_ROUTE
+                        } else if (app.repositoriesRepository.hasAnyConfiguredRepositories()) {
+                            app.preferencesRepository.saveOnboardingCompleted(true)
+                            TOP_LEVEL_ROUTE
+                        } else {
+                            Screen.Welcome.route
+                        }
+                    }
                     val navController = key(TOP_LEVEL_ROUTE) { rememberNavController() }
                     val topLevelTabOrder = remember {
                         mapOf(
@@ -350,7 +361,8 @@ class MainActivity : FragmentActivity() {
                     }
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
                     val currentRoute = navBackStackEntry?.destination?.route
-                    val showBottomBar = currentRoute == null || currentRoute == TOP_LEVEL_ROUTE
+                    val showBottomBar = currentRoute == TOP_LEVEL_ROUTE ||
+                        (currentRoute == null && startDestination == TOP_LEVEL_ROUTE)
                     var selectedTabRoute by rememberSaveable { mutableStateOf(Screen.Home.route) }
                     var selectCreatedPresetInSchedule by rememberSaveable { mutableStateOf(false) }
                     val selectedTopLevelScreen = when (selectedTabRoute) {
@@ -414,7 +426,7 @@ class MainActivity : FragmentActivity() {
                     Box(modifier = Modifier.fillMaxSize()) {
                         NavHost(
                             navController = navController,
-                            startDestination = TOP_LEVEL_ROUTE,
+                            startDestination = startDestination,
                             modifier = Modifier.fillMaxSize(),
                             enterTransition = {
                                 slideIntoContainer(
@@ -499,6 +511,33 @@ class MainActivity : FragmentActivity() {
                                 )
                             }
                         ) {
+                        composable(Screen.Welcome.route) { welcomeEntry ->
+                            val vm: SettingsViewModel = viewModel(
+                                viewModelStoreOwner = welcomeEntry,
+                                factory = SettingsViewModelFactory(
+                                    applicationContext,
+                                    app.rootRepository,
+                                    app.resticBinaryManager,
+                                    app.resticRepository,
+                                    app.repositoriesRepository,
+                                    app.scheduleRepository,
+                                    app.notificationRepository,
+                                    app.preferencesRepository,
+                                    app.storagePermissionRepository,
+                                    app.localNetworkPermissionRepository
+                                )
+                            )
+                            WelcomeScreen(
+                                viewModel = vm,
+                                onFinish = {
+                                    app.preferencesRepository.saveOnboardingCompleted(true)
+                                    navController.navigate(TOP_LEVEL_ROUTE) {
+                                        popUpTo(Screen.Welcome.route) { inclusive = true }
+                                        launchSingleTop = true
+                                    }
+                                }
+                            )
+                        }
                         composable(TOP_LEVEL_ROUTE) { topLevelEntry ->
                             val isNavDestinationExiting = transition.targetState == EnterExitState.PostExit
                             BackHandler(enabled = selectedTopLevelScreen != Screen.Home && currentRoute == TOP_LEVEL_ROUTE) {

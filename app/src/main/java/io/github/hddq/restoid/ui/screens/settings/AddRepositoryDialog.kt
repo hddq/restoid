@@ -132,7 +132,7 @@ fun AddRepositoryDialog(
     }
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!isBusy) onDismiss() },
         title = { Text(stringResource(R.string.dialog_add_repository_title)) },
         text = {
             Column(

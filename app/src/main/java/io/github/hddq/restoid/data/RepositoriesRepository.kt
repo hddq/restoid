@@ -74,22 +74,34 @@ class RepositoriesRepository(
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    fun loadRepositories() {
+    private fun readStoredRepositoryJsonSet(): Pair<Set<String>?, Set<String>> {
         val reposV2 = prefs.getStringSet(REPOS_KEY, null)
         val reposV1 = prefs.getStringSet(LEGACY_REPOS_KEY, emptySet()) ?: emptySet()
-
-        val repoJsonSet = mutableSetOf<String>().apply {
+        val combined = mutableSetOf<String>().apply {
             if (reposV2 != null) addAll(reposV2)
             addAll(reposV1)
         }
+        return reposV2 to combined
+    }
 
-        _repositories.value = repoJsonSet.mapNotNull { jsonString ->
+    private fun decodeRepositories(repoJsonSet: Set<String>): List<LocalRepository> {
+        return repoJsonSet.mapNotNull { jsonString ->
             try {
                 json.decodeFromString<LocalRepository>(jsonString)
             } catch (_: Exception) {
                 null
             }
         }.sortedBy { it.name }
+    }
+
+    fun hasAnyConfiguredRepositories(): Boolean {
+        val (_, repoJsonSet) = readStoredRepositoryJsonSet()
+        return decodeRepositories(repoJsonSet).isNotEmpty()
+    }
+
+    fun loadRepositories() {
+        val (reposV2, repoJsonSet) = readStoredRepositoryJsonSet()
+        _repositories.value = decodeRepositories(repoJsonSet)
 
         if (reposV2 == null && repoJsonSet.isNotEmpty()) {
             prefs.edit().putStringSet(REPOS_KEY, repoJsonSet).apply()

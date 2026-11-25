@@ -17,6 +17,7 @@ class PreferencesRepository(private val context: Context) {
         const val KEY_ALLOW_EXTERNAL_INTENTS = "allow_external_intents"
         const val KEY_DEVICE_HOSTNAME = "device_hostname"
         const val KEY_HAS_ROOT = "has_root"
+        const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
     }
 
     // Maintenance Preferences
@@ -321,6 +322,14 @@ class PreferencesRepository(private val context: Context) {
 
     fun saveHasRoot(granted: Boolean) {
         prefs.edit().putBoolean(KEY_HAS_ROOT, granted).apply()
+    }
+
+    fun loadOnboardingCompleted(): Boolean {
+        return prefs.getBoolean(KEY_ONBOARDING_COMPLETED, false)
+    }
+
+    fun saveOnboardingCompleted(completed: Boolean) {
+        prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETED, completed).apply()
     }
 
     fun getCustomDeviceHostname(): String? {

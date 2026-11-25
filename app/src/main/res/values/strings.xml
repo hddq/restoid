@@ -945,4 +945,18 @@
     <string name="condition_chip_wifi">Unmetered</string>
     <string name="condition_chip_charging">Charging</string>
     <string name="condition_chip_battery">Battery OK</string>
+
+    <string name="welcome_title">Welcome to Restoid</string>
+    <string name="welcome_subtitle">Encrypted, deduplicated backups for your device, powered by Restic.</string>
+    <string name="welcome_access_mode_hint">You can check for root access now or anytime later in Settings.</string>
+    <string name="welcome_permissions_title">Choose permissions</string>
+    <string name="welcome_permissions_subtitle">None of these are required to continue. Grant only what you need for the things you want to back up.</string>
+    <string name="welcome_repo_title">Backup repository</string>
+    <string name="welcome_repo_subtitle">A backup repository is the encrypted destination where your backups are stored — such as a folder on this device, an SFTP or REST server, S3 storage, or cloud storage via rclone.</string>
+    <string name="welcome_repo_ready_title">Repository ready</string>
+    <string name="welcome_repo_ready_subtitle">You can add more repositories or switch between them anytime in Settings.</string>
+    <string name="welcome_action_back">Back</string>
+    <string name="welcome_action_next">Next</string>
+    <string name="welcome_action_skip">Skip for now</string>
+    <string name="welcome_action_finish">Get started</string>
 </resources>
