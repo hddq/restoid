@@ -384,20 +384,12 @@ private fun WelcomeIntroStep(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Surface(
-            shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.primaryContainer,
+        Icon(
+            painter = painterResource(id = R.drawable.ic_launcher_foreground),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(88.dp)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(64.dp)
-                )
-            }
-        }
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -531,20 +523,12 @@ private fun WelcomeRepositoryStep(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Surface(
-            shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.tertiaryContainer,
+        Icon(
+            imageVector = Icons.Outlined.Storage,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.tertiary,
             modifier = Modifier.size(72.dp)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = Icons.Outlined.Storage,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onTertiaryContainer,
-                    modifier = Modifier.size(36.dp)
-                )
-            }
-        }
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
 
