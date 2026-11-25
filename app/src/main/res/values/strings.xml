@@ -446,6 +446,38 @@
     <string name="root_access_denied">Root access denied</string>
     <string name="root_access_granted">Root access granted</string>
 
+    <string name="permissions_and_access_title">Permissions &amp; access</string>
+    <string name="permissions_summary_root_all_ready">Root active • Core permissions granted</string>
+    <string name="permissions_summary_standard_all_ready">Standard mode • Core permissions granted</string>
+    <plurals name="permissions_summary_root_recommended">
+        <item quantity="one">Root active • %1$d recommended</item>
+        <item quantity="other">Root active • %1$d recommended</item>
+    </plurals>
+    <plurals name="permissions_summary_standard_recommended">
+        <item quantity="one">Standard mode • %1$d recommended</item>
+        <item quantity="other">Standard mode • %1$d recommended</item>
+    </plurals>
+    <string name="permissions_mode_root_title">Root access active</string>
+    <string name="permissions_mode_root_desc">Full access enabled for apps, app data, and storage.</string>
+    <string name="permissions_mode_standard_title">Standard mode (No root)</string>
+    <string name="permissions_mode_standard_desc">Folders, contacts, call logs, and calendar work without root. Grant root to also back up apps and app data.</string>
+    <string name="permissions_section_device_data">Device data</string>
+    <string name="permissions_status_granted">Granted</string>
+    <string name="permissions_status_covered_by_root">Covered by root access</string>
+    <string name="permissions_storage_title">All files access</string>
+    <string name="permissions_notifications_title">Notifications</string>
+    <string name="permissions_notifications_description">Shows backup progress and completion alerts.</string>
+    <string name="permissions_battery_title">Unrestricted battery</string>
+    <string name="permissions_local_network_description">Needed to reach repositories on your local network.</string>
+    <string name="permissions_contacts_title">Contacts</string>
+    <string name="permissions_contacts_description">Optional. Needed to back up and restore contacts.</string>
+    <string name="permissions_call_logs_title">Call logs</string>
+    <string name="permissions_call_logs_description">Optional. Needed to back up and restore call logs.</string>
+    <string name="permissions_calendar_title">Calendar</string>
+    <string name="permissions_calendar_description">Optional. Needed to back up and restore calendars.</string>
+    <string name="action_check_again">Check again</string>
+    <string name="action_allow">Allow</string>
+
     <string name="storage_permission_enabled">All files access granted</string>
     <string name="storage_permission_disabled">All files access required</string>
     <string name="storage_permission_description">Required to back up custom directories without root access.</string>

@@ -1,10 +1,13 @@
 package io.github.hddq.restoid.ui.screens
 
 import android.Manifest
+import android.app.Activity
 import android.content.Intent
+import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.ActivityCompat
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
@@ -77,6 +80,29 @@ fun SettingsScreen(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { viewModel.updateLocalNetworkPermissionStatus() }
     )
+
+    var pendingDeviceDataPermissionCheck by remember { mutableStateOf<Pair<Array<String>, Boolean>?>(null) }
+    val activity = context as? Activity
+    val deviceDataPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        viewModel.refreshDeviceDataPermissions()
+        val allGranted = results.isNotEmpty() && results.values.all { it }
+        val pending = pendingDeviceDataPermissionCheck
+        pendingDeviceDataPermissionCheck = null
+        if (!allGranted && pending != null && activity != null) {
+            val (requestedPermissions, hadRationaleBefore) = pending
+            val hasRationaleAfter = requestedPermissions.any { permission ->
+                ActivityCompat.shouldShowRequestPermissionRationale(activity, permission)
+            }
+            if (!hadRationaleBefore && !hasRationaleAfter) {
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.parse("package:${context.packageName}")
+                }
+                runCatching { context.startActivity(intent) }
+            }
+        }
+    }
 
     if (showMetadataWarning != null) {
         AlertDialog(
@@ -157,8 +183,15 @@ fun SettingsScreen(
         item {
             SystemSettings(
                 viewModel = viewModel,
-                notificationPermissionLauncher = { notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS) },
+                notificationPermissionLauncher = { notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) },
                 localNetworkPermissionLauncher = { localNetworkPermissionLauncher.launch("android.permission.ACCESS_LOCAL_NETWORK") },
+                onRequestDeviceDataPermissions = { permissions ->
+                    val hadRationaleBefore = activity != null && permissions.any { permission ->
+                        ActivityCompat.shouldShowRequestPermissionRationale(activity, permission)
+                    }
+                    pendingDeviceDataPermissionCheck = permissions to hadRationaleBefore
+                    deviceDataPermissionLauncher.launch(permissions)
+                },
                 onOpenSettings = {
                     val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
                         putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)

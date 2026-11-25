@@ -24,10 +24,7 @@ import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LockReset
 import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Restore
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -56,7 +53,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.LocalRepository
-import io.github.hddq.restoid.data.NotificationPermissionState
 import io.github.hddq.restoid.data.RepositoryBackendType
 import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.ui.screens.settings.dialogs.ChangePasswordDialog
@@ -65,62 +61,6 @@ import io.github.hddq.restoid.ui.screens.settings.dialogs.SaveRestCredentialsDia
 import io.github.hddq.restoid.ui.screens.settings.dialogs.SaveS3CredentialsDialog
 import io.github.hddq.restoid.ui.screens.settings.dialogs.SaveSftpCredentialsDialog
 import io.github.hddq.restoid.ui.settings.SettingsViewModel
-
-@Composable
-fun NotificationPermissionRow(
-    state: NotificationPermissionState,
-    onRequestPermission: () -> Unit,
-    onOpenSettings: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1f)
-        ) {
-            val icon = when (state) {
-                NotificationPermissionState.Granted -> Icons.Outlined.CheckCircle
-                NotificationPermissionState.Denied -> Icons.Outlined.ErrorOutline
-                NotificationPermissionState.NotRequested -> Icons.Outlined.Notifications
-            }
-            val iconColor = when (state) {
-                NotificationPermissionState.Granted -> MaterialTheme.colorScheme.primary
-                NotificationPermissionState.Denied -> MaterialTheme.colorScheme.error
-                NotificationPermissionState.NotRequested -> MaterialTheme.colorScheme.onSurfaceVariant
-            }
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.padding(end = 16.dp),
-                tint = iconColor
-            )
-            Text(
-                text = when (state) {
-                    NotificationPermissionState.Granted -> stringResource(R.string.notifications_enabled)
-                    NotificationPermissionState.Denied -> stringResource(R.string.notifications_disabled)
-                    NotificationPermissionState.NotRequested -> stringResource(R.string.notification_permission)
-                }
-            )
-        }
-        if (state != NotificationPermissionState.Granted) {
-            Button(onClick = if (state == NotificationPermissionState.NotRequested) onRequestPermission else onOpenSettings) {
-                Text(if (state == NotificationPermissionState.Denied) stringResource(R.string.action_settings) else stringResource(R.string.action_grant))
-            }
-        } else {
-            IconButton(onClick = onOpenSettings) {
-                Icon(
-                    imageVector = Icons.Outlined.Settings,
-                    contentDescription = stringResource(R.string.action_settings)
-                )
-            }
-        }
-    }
-}
 
 @Composable
 fun AppUnlockOnStartRow(

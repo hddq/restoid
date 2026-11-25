@@ -1,6 +1,9 @@
 package io.github.hddq.restoid.ui.settings
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.PowerManager
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.hddq.restoid.data.*
@@ -45,6 +48,12 @@ data class AddRepoUiState(
 )
 
 enum class ChangePasswordState { Idle, InProgress, Success, Error }
+
+data class DeviceDataPermissionsState(
+    val contactsGranted: Boolean = false,
+    val callLogsGranted: Boolean = false,
+    val calendarGranted: Boolean = false
+)
 
 private data class AddRepositoryInput(
     val path: String,
@@ -172,6 +181,9 @@ class SettingsViewModel(
     private val _isIgnoringBatteryOptimizations = MutableStateFlow(false)
     val isIgnoringBatteryOptimizations = _isIgnoringBatteryOptimizations.asStateFlow()
 
+    private val _deviceDataPermissions = MutableStateFlow(readDeviceDataPermissions())
+    val deviceDataPermissions = _deviceDataPermissions.asStateFlow()
+
     private var pendingSftpTrustRequest: PendingSftpTrustRequest? = null
 
     init {
@@ -205,8 +217,25 @@ class SettingsViewModel(
             refreshBatteryOptimizationStatus()
             checkNotificationPermission()
             checkStoragePermission()
+            updateLocalNetworkPermissionStatus()
+            refreshDeviceDataPermissions()
             refreshDeviceHostnameState()
         }
+    }
+
+    fun refreshDeviceDataPermissions() {
+        _deviceDataPermissions.value = readDeviceDataPermissions()
+    }
+
+    private fun readDeviceDataPermissions(): DeviceDataPermissionsState {
+        fun hasAll(vararg permissions: String): Boolean = permissions.all { permission ->
+            ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+        }
+        return DeviceDataPermissionsState(
+            contactsGranted = hasAll(Manifest.permission.READ_CONTACTS, Manifest.permission.WRITE_CONTACTS),
+            callLogsGranted = hasAll(Manifest.permission.READ_CALL_LOG, Manifest.permission.WRITE_CALL_LOG),
+            calendarGranted = hasAll(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR)
+        )
     }
 
     fun repositoryKey(repository: LocalRepository): String = repositoriesRepository.repositoryKey(repository)
