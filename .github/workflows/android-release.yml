@@ -263,6 +263,7 @@ jobs:
           echo "path=$RELEASE_BODY_FILE" >> "$GITHUB_OUTPUT"
 
       - name: Publish GitHub Release
+        id: publish_release
         uses: softprops/action-gh-release@v3
         with:
           name: Restoid ${{ github.ref_name }}
@@ -276,7 +277,19 @@ jobs:
             release-assets/SHA256SUMS.txt
             release-assets/mapping.txt.gz
 
+      - name: Trigger central F-Droid repo update
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.FDROID_REPO_DISPATCH_TOKEN }}
+        run: |
+          gh api repos/hddq/fdroid-repo/dispatches \
+            -f event_type=app-released \
+            -f "client_payload[repo]=${{ github.repository }}" \
+            -f "client_payload[tag]=${{ github.ref_name }}"
+
       - name: Build F-Droid repo index (DEPRECATED)
+        id: build_fdroid_index
+        if: steps.publish_release.outcome == 'success'
         env:
           FDROID_REPO_KEYSTORE_BASE64: ${{ secrets.FDROID_REPO_KEYSTORE_BASE64 }}
           FDROID_REPO_KEY_ALIAS: ${{ secrets.FDROID_REPO_KEY_ALIAS }}
@@ -443,6 +456,7 @@ jobs:
           rm -f fdroid/keystore.jks fdroid/config.yml
 
       - name: Publish F-Droid repo to GitHub Pages
+        if: steps.build_fdroid_index.outcome == 'success'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -450,16 +464,6 @@ jobs:
           destination_dir: fdroid/repo
           keep_files: false
           force_orphan: true
-
-      - name: Trigger central F-Droid repo update
-        if: success()
-        env:
-          GH_TOKEN: ${{ secrets.FDROID_REPO_DISPATCH_TOKEN }}
-        run: |
-          gh api repos/hddq/fdroid-repo/dispatches \
-            -f event_type=app-released \
-            -f "client_payload[repo]=${{ github.repository }}" \
-            -f "client_payload[tag]=${{ github.ref_name }}"
 
       - name: Remove signing keystore
         if: always()
