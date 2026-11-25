@@ -4,13 +4,17 @@ import android.Manifest
 import android.text.format.DateUtils
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,13 +29,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.FactCheck
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.automirrored.outlined.Label
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.AutoDelete
 import androidx.compose.material.icons.outlined.Bookmarks
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.EventRepeat
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.PlayArrow
@@ -49,6 +56,8 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -61,6 +70,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -72,6 +82,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.hddq.restoid.LocalAppBarActions
 import io.github.hddq.restoid.R
+import io.github.hddq.restoid.model.Schedule
 import io.github.hddq.restoid.model.TaskPreset
 import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
@@ -164,12 +175,14 @@ fun PresetsScreen(
                 val presets = uiState.presets
                 ExpressiveCardGroup {
                     presets.forEachIndexed { index, preset ->
+                        val linkedCount = uiState.schedulesByPresetId[preset.id]?.size ?: 0
                         ExpressiveSegmentedSurface(
                             index = index,
                             count = presets.size
                         ) {
                             PresetItem(
                                 preset = preset,
+                                linkedScheduleCount = linkedCount,
                                 hasRoot = hasRoot,
                                 canRunNow = !uiState.isOperationRunning,
                                 onEdit = { onEditPreset(preset) },
@@ -203,11 +216,22 @@ fun PresetsScreen(
     }
 
     presetToDelete?.let { preset ->
+        val linkedCount = uiState.schedulesByPresetId[preset.id]?.size ?: 0
         AlertDialog(
             onDismissRequest = { presetToDelete = null },
             title = { Text(stringResource(R.string.dialog_delete_preset_title)) },
             text = {
-                Text(stringResource(R.string.dialog_delete_preset_message))
+                Text(
+                    if (linkedCount > 0) {
+                        pluralStringResource(
+                            R.plurals.dialog_delete_preset_message_with_schedules,
+                            linkedCount,
+                            linkedCount
+                        )
+                    } else {
+                        stringResource(R.string.dialog_delete_preset_message)
+                    }
+                )
             },
             confirmButton = {
                 TextButton(
@@ -233,6 +257,7 @@ fun PresetsScreen(
 @Composable
 private fun PresetItem(
     preset: TaskPreset,
+    linkedScheduleCount: Int,
     hasRoot: Boolean,
     canRunNow: Boolean,
     onEdit: () -> Unit,
@@ -246,6 +271,11 @@ private fun PresetItem(
 
     val taskSummary = remember(preset.config, hasRoot) {
         summarizeTaskConfig(context, preset.config, hasRoot)
+    }
+    val scheduleMeta = if (linkedScheduleCount > 0) {
+        pluralStringResource(R.plurals.preset_schedule_count, linkedScheduleCount, linkedScheduleCount)
+    } else {
+        stringResource(R.string.preset_manual_only)
     }
     val lastRunMeta = preset.lastRunTimestamp?.let { ts ->
         val relative = DateUtils.getRelativeTimeSpanString(
@@ -293,7 +323,7 @@ private fun PresetItem(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = lastRunMeta,
+                    text = "$scheduleMeta · $lastRunMeta",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -369,6 +399,8 @@ fun AddEditPresetScreen(
     onNavigateToDeviceDataConfig: () -> Unit,
     onNavigateToForgetConfig: () -> Unit,
     onNavigateToCheckConfig: () -> Unit,
+    onAddScheduleForPreset: ((presetId: String) -> Unit)? = null,
+    onEditSchedule: ((Schedule) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.addEditState.collectAsStateWithLifecycle()
@@ -376,6 +408,7 @@ fun AddEditPresetScreen(
     val context = LocalContext.current
     val appBarActions = LocalAppBarActions.current
     var showGuideSheet by remember { mutableStateOf(false) }
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     val (deviceDataPermissions, requestDeviceDataPermissions) = rememberPermissionsMap(
         Manifest.permission.READ_CONTACTS,
@@ -390,6 +423,18 @@ fun AddEditPresetScreen(
 
     BackHandler(enabled = hasUnsavedChanges) {
         viewModel.onBackPress()
+    }
+
+    DisposableEffect(lifecycleOwner, state.id) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshLinkedSchedules()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     DisposableEffect(state.id) {
@@ -589,14 +634,95 @@ fun AddEditPresetScreen(
                 }
             }
         }
+
+        if (onAddScheduleForPreset != null && onEditSchedule != null) {
+            item(key = "linked_schedules") {
+                val presetId = state.id
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    ExpressiveSectionHeader(title = stringResource(R.string.section_schedules))
+                    if (presetId == null) {
+                        ExpressiveCardGroup {
+                            ExpressiveSegmentedSurface(index = 0, count = 1) {
+                                Text(
+                                    text = stringResource(R.string.preset_schedules_save_first_hint),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)
+                                )
+                            }
+                        }
+                    } else {
+                        val linked = state.linkedSchedules
+                        val totalRows = (if (linked.isEmpty()) 1 else linked.size) + 1
+                        ExpressiveCardGroup {
+                            if (linked.isEmpty()) {
+                                ExpressiveSegmentedSurface(index = 0, count = totalRows) {
+                                    Text(
+                                        text = stringResource(R.string.preset_schedules_empty),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)
+                                    )
+                                }
+                            } else {
+                                linked.forEachIndexed { idx, schedule ->
+                                    ExpressiveSegmentedSurface(index = idx, count = totalRows) {
+                                        LinkedScheduleRow(
+                                            schedule = schedule,
+                                            fallbackName = state.name.ifBlank { stringResource(R.string.preset_default_name) },
+                                            onClick = { onEditSchedule(schedule) },
+                                            onToggleEnabled = { viewModel.toggleLinkedScheduleEnabled(schedule) }
+                                        )
+                                    }
+                                }
+                            }
+
+                            ExpressiveSegmentedSurface(index = totalRows - 1, count = totalRows) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { onAddScheduleForPreset(presetId) }
+                                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Add,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.padding(end = 16.dp)
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.action_add_schedule),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     if (state.showConfirmDeleteDialog) {
+        val linkedCount = state.linkedSchedules.size
         AlertDialog(
             onDismissRequest = { viewModel.onCancelDeletePreset() },
             title = { Text(stringResource(R.string.dialog_delete_preset_title)) },
             text = {
-                Text(stringResource(R.string.dialog_delete_preset_message))
+                Text(
+                    if (linkedCount > 0) {
+                        pluralStringResource(
+                            R.plurals.dialog_delete_preset_message_with_schedules,
+                            linkedCount,
+                            linkedCount
+                        )
+                    } else {
+                        stringResource(R.string.dialog_delete_preset_message)
+                    }
+                )
             },
             confirmButton = {
                 TextButton(
@@ -637,6 +763,89 @@ fun AddEditPresetScreen(
 
     if (showGuideSheet) {
         TasksGuideBottomSheet(onDismissRequest = { showGuideSheet = false })
+    }
+}
+
+@Composable
+private fun LinkedScheduleRow(
+    schedule: Schedule,
+    fallbackName: String,
+    onClick: () -> Unit,
+    onToggleEnabled: () -> Unit
+) {
+    val conditionChips = buildList {
+        if (schedule.triggerConditions.requireUnmeteredNetwork) add(stringResource(R.string.condition_chip_wifi))
+        if (schedule.triggerConditions.requireCharging) add(stringResource(R.string.condition_chip_charging))
+        if (schedule.triggerConditions.requireBatteryNotLow) add(stringResource(R.string.condition_chip_battery))
+    }
+    val intervalText = when (schedule.intervalHours) {
+        168 -> stringResource(R.string.preset_1_week)
+        720 -> stringResource(R.string.preset_1_month)
+        else -> stringResource(R.string.preset_hours, schedule.intervalHours)
+    }
+    val subtitle = buildList {
+        add(intervalText)
+        if (conditionChips.isNotEmpty()) add(conditionChips.joinToString(" · "))
+    }.joinToString(" · ")
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.EventRepeat,
+            contentDescription = null,
+            tint = if (schedule.isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(end = 16.dp)
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = schedule.name?.takeIf { it.isNotBlank() } ?: fallbackName,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Icon(
+            imageVector = Icons.Outlined.ChevronRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.width(12.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxHeight(0.5f)
+                .width(1.dp)
+                .background(MaterialTheme.colorScheme.outlineVariant)
+        )
+        Spacer(Modifier.width(16.dp))
+        Switch(
+            checked = schedule.isEnabled,
+            onCheckedChange = { onToggleEnabled() },
+            thumbContent = if (schedule.isEnabled) {
+                {
+                    Icon(
+                        imageVector = Icons.Filled.Check,
+                        contentDescription = null,
+                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                    )
+                }
+            } else {
+                null
+            }
+        )
     }
 }
 

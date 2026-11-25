@@ -1,13 +1,14 @@
 package io.github.hddq.restoid.ui.schedules
 
-import android.Manifest
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
@@ -26,47 +27,48 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Apps
-import androidx.compose.material.icons.outlined.AutoDelete
 import androidx.compose.material.icons.outlined.Battery5Bar
 import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.Bookmarks
 import androidx.compose.material.icons.outlined.Cancel
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.ChevronRight
-import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.EventRepeat
-import androidx.compose.material.icons.outlined.FactCheck
-import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.automirrored.outlined.HelpOutline
-import androidx.compose.material.icons.outlined.Label
-import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material.icons.outlined.PlayArrow
-import androidx.compose.material.icons.outlined.Smartphone
+import androidx.compose.material.icons.outlined.UnfoldMore
 import androidx.compose.material.icons.outlined.Update
 import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -94,19 +96,13 @@ import io.github.hddq.restoid.data.NetworkConditionStatus
 import io.github.hddq.restoid.data.NetworkTransport
 import io.github.hddq.restoid.data.TriggerConditionStatusSnapshot
 import io.github.hddq.restoid.model.Schedule
+import io.github.hddq.restoid.model.TaskPreset
 import io.github.hddq.restoid.model.TriggerConditions
 import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
 import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
-import io.github.hddq.restoid.ui.components.TasksGuideBottomSheet
-import io.github.hddq.restoid.ui.shared.ExclusionConflictWarningCard
 import io.github.hddq.restoid.ui.shared.TaskRow
-import io.github.hddq.restoid.ui.shared.buildBackupSubtitle
-import io.github.hddq.restoid.ui.shared.buildCheckSubtitle
-import io.github.hddq.restoid.ui.shared.buildCustomDirectoriesSubtitle
-import io.github.hddq.restoid.ui.shared.buildDeviceDataSubtitle
-import io.github.hddq.restoid.ui.shared.buildForgetSubtitle
-import io.github.hddq.restoid.ui.shared.rememberPermissionsMap
+import io.github.hddq.restoid.ui.shared.summarizeTaskConfig
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -119,7 +115,7 @@ fun SchedulesScreen(
     onEditSchedule: (Schedule) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var scheduleToDelete by remember { mutableStateOf<Schedule?>(null) }
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -162,6 +158,7 @@ fun SchedulesScreen(
                         ) {
                             ScheduleItem(
                                 schedule = schedule,
+                                preset = uiState.presetsById[schedule.presetId],
                                 onEdit = { onEditSchedule(schedule) },
                                 onDelete = { scheduleToDelete = schedule },
                                 onToggleEnabled = { viewModel.toggleScheduleEnabled(schedule) },
@@ -203,7 +200,8 @@ fun SchedulesScreen(
                     onClick = {
                         viewModel.deleteSchedule(schedule.id)
                         scheduleToDelete = null
-                    }
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
                     Text(stringResource(R.string.action_delete))
                 }
@@ -217,32 +215,27 @@ fun SchedulesScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AddEditScheduleScreen(
     viewModel: SchedulesViewModel,
     onNavigateBack: () -> Unit,
-    onNavigateToBackupConfig: () -> Unit,
-    onNavigateToCustomDirectoriesConfig: () -> Unit,
-    onNavigateToDeviceDataConfig: () -> Unit,
-    onNavigateToForgetConfig: () -> Unit,
-    onNavigateToCheckConfig: () -> Unit,
+    onCreatePreset: (() -> Unit)? = null,
+    onEditPreset: ((TaskPreset) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.addEditState.collectAsStateWithLifecycle()
     val conditionStatus by viewModel.conditionStatus.collectAsStateWithLifecycle()
+    val hasRoot by viewModel.hasRoot.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var intervalText by remember(state.intervalHours) { mutableStateOf(state.intervalHours.toString()) }
+    var showPresetPickerSheet by remember { mutableStateOf(false) }
     val appBarActions = LocalAppBarActions.current
-    var showGuideSheet by remember { mutableStateOf(false) }
+    val lifecycleOwner = LocalLifecycleOwner.current
 
-    val (deviceDataPermissions, requestDeviceDataPermissions) = rememberPermissionsMap(
-        Manifest.permission.READ_CONTACTS,
-        Manifest.permission.READ_CALL_LOG,
-        Manifest.permission.READ_CALENDAR
-    )
-    val hasReadContactsPermission = deviceDataPermissions[Manifest.permission.READ_CONTACTS] == true
-    val hasReadCallLogPermission = deviceDataPermissions[Manifest.permission.READ_CALL_LOG] == true
-    val hasReadCalendarPermission = deviceDataPermissions[Manifest.permission.READ_CALENDAR] == true
+    val selectedPreset = remember(state.presetId, state.availablePresets) {
+        state.availablePresets.find { it.id == state.presetId }
+    }
 
     val hasUnsavedChanges = remember(state) { viewModel.hasChanges(state) }
 
@@ -250,14 +243,20 @@ fun AddEditScheduleScreen(
         viewModel.onBackPress()
     }
 
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshPresets()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     DisposableEffect(state.id) {
         appBarActions.value = {
-            IconButton(onClick = { showGuideSheet = true }) {
-                Icon(
-                    Icons.AutoMirrored.Outlined.HelpOutline,
-                    contentDescription = stringResource(R.string.cd_help)
-                )
-            }
             if (state.id != null) {
                 IconButton(onClick = { viewModel.runCurrentScheduleNow() }) {
                     Icon(
@@ -293,16 +292,160 @@ fun AddEditScheduleScreen(
     ) {
         item {
             Column(modifier = Modifier.fillMaxWidth()) {
-                ExpressiveSectionHeader(title = stringResource(R.string.section_general))
+                ExpressiveSectionHeader(title = stringResource(R.string.section_task_preset))
+                if (state.availablePresets.isEmpty()) {
+                    ExpressiveCardGroup {
+                        ExpressiveSegmentedSurface(index = 0, count = 1) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 16.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Bookmarks,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Column {
+                                        Text(
+                                            text = stringResource(R.string.schedule_no_presets_title),
+                                            style = MaterialTheme.typography.titleSmall,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.schedule_no_presets_desc),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                                if (onCreatePreset != null) {
+                                    FilledTonalButton(
+                                        onClick = onCreatePreset,
+                                        modifier = Modifier.padding(top = 4.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Add,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(stringResource(R.string.action_create_new_preset))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    val showPresetActions = (selectedPreset != null && onEditPreset != null) || onCreatePreset != null
+                    val cardCount = if (showPresetActions) 2 else 1
+                    ExpressiveCardGroup {
+                        ExpressiveSegmentedSurface(index = 0, count = cardCount) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { showPresetPickerSheet = true }
+                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Bookmarks,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(end = 16.dp)
+                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = selectedPreset?.name ?: stringResource(R.string.schedule_select_preset),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = if (selectedPreset != null) {
+                                            MaterialTheme.colorScheme.onSurface
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        },
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    if (selectedPreset != null) {
+                                        Text(
+                                            text = summarizeTaskConfig(context, selectedPreset.config, hasRoot),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                                Icon(
+                                    imageVector = Icons.Outlined.UnfoldMore,
+                                    contentDescription = stringResource(R.string.schedule_select_preset),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        if (showPresetActions) {
+                            ExpressiveSegmentedSurface(index = 1, count = 2) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    if (selectedPreset != null && onEditPreset != null) {
+                                        TextButton(onClick = { onEditPreset(selectedPreset) }) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.Edit,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(Modifier.width(6.dp))
+                                            Text(stringResource(R.string.action_edit_preset))
+                                        }
+                                    }
+                                    if (onCreatePreset != null) {
+                                        TextButton(onClick = onCreatePreset) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.Add,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(Modifier.width(6.dp))
+                                            Text(stringResource(R.string.action_create_new_preset))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                ExpressiveSectionHeader(title = stringResource(R.string.section_schedule))
                 ExpressiveCardGroup {
                     ExpressiveSegmentedSurface(index = 0, count = 2) {
                         OutlinedTextField(
                             value = state.name,
                             onValueChange = viewModel::setName,
-                            label = { Text(stringResource(R.string.schedule_name_label)) },
+                            label = { Text(stringResource(R.string.schedule_label_optional)) },
+                            placeholder = {
+                                Text(
+                                    text = selectedPreset?.name ?: stringResource(R.string.schedule_label_placeholder),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            },
                             leadingIcon = {
                                 Icon(
-                                    imageVector = Icons.Outlined.Label,
+                                    imageVector = Icons.AutoMirrored.Outlined.Label,
                                     contentDescription = null
                                 )
                             },
@@ -402,114 +545,84 @@ fun AddEditScheduleScreen(
                 onRequireUnmeteredNetworkChange = viewModel::setRequireUnmeteredNetwork
             )
         }
+    }
 
-        item {
-            val hasRoot by viewModel.hasRoot.collectAsState()
-
-            Column(modifier = Modifier.fillMaxWidth()) {
-                ExclusionConflictWarningCard(conflicts = state.exclusionConflicts)
-                ExpressiveSectionHeader(title = stringResource(R.string.operation_backup))
-                ExpressiveCardGroup {
-                    ExpressiveSegmentedSurface(index = 0, count = 3) {
-                        TaskRow(
-                            title = stringResource(R.string.run_tasks_applications),
-                            subtitle = if (hasRoot) buildBackupSubtitle(state.apps, state.appBackupTypes, state.backupTypes, context) else stringResource(R.string.root_access_denied),
-                            icon = Icons.Outlined.Apps,
-                            checked = if (hasRoot) state.backupEnabled else false,
-                            onCheckedChange = viewModel::setBackupEnabled,
-                            onNavigate = if (hasRoot) onNavigateToBackupConfig else null,
-                            enabled = hasRoot
+    if (showPresetPickerSheet) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { showPresetPickerSheet = false },
+            sheetState = sheetState
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = 24.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.schedule_select_preset),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
+                )
+                state.availablePresets.forEach { preset ->
+                    val isSelected = preset.id == state.presetId
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                viewModel.setPresetId(preset.id)
+                                showPresetPickerSheet = false
+                            }
+                            .padding(horizontal = 20.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = isSelected,
+                            onClick = {
+                                viewModel.setPresetId(preset.id)
+                                showPresetPickerSheet = false
+                            }
                         )
-                    }
-                    ExpressiveSegmentedSurface(index = 1, count = 3) {
-                        TaskRow(
-                            title = stringResource(R.string.run_tasks_custom_directories),
-                            subtitle = buildCustomDirectoriesSubtitle(state.customDirectories, state.excludedCustomDirectories, context),
-                            icon = Icons.Outlined.Folder,
-                            checked = state.customDirectoriesBackupEnabled,
-                            onCheckedChange = viewModel::setCustomDirectoriesBackupEnabled,
-                            onNavigate = onNavigateToCustomDirectoriesConfig
-                        )
-                    }
-                    ExpressiveSegmentedSurface(index = 2, count = 3) {
-                        TaskRow(
-                            title = stringResource(R.string.run_tasks_device_data),
-                            subtitle = buildDeviceDataSubtitle(
-                                contactsEnabled = state.contactsBackupEnabled,
-                                callLogsEnabled = state.callLogsBackupEnabled,
-                                calendarEnabled = state.calendarBackupEnabled,
-                                deviceDataBackupEnabled = state.deviceDataBackupEnabled,
-                                hasReadContactsPermission = hasReadContactsPermission,
-                                hasReadCallLogPermission = hasReadCallLogPermission,
-                                hasReadCalendarPermission = hasReadCalendarPermission,
-                                context = context
-                            ),
-                            icon = Icons.Outlined.Smartphone,
-                            checked = state.deviceDataBackupEnabled,
-                            onCheckedChange = { enabled ->
-                                viewModel.setDeviceDataBackupEnabled(enabled)
-                                if (enabled) {
-                                    val missing = buildList {
-                                        if (state.contactsBackupEnabled && !hasReadContactsPermission) {
-                                            add(Manifest.permission.READ_CONTACTS)
-                                        }
-                                        if (state.callLogsBackupEnabled && !hasReadCallLogPermission) {
-                                            add(Manifest.permission.READ_CALL_LOG)
-                                        }
-                                        if (state.calendarBackupEnabled && !hasReadCalendarPermission) {
-                                            add(Manifest.permission.READ_CALENDAR)
-                                        }
-                                    }
-                                    if (missing.isNotEmpty()) {
-                                        requestDeviceDataPermissions(missing.toTypedArray())
-                                    }
-                                }
-                            },
-                            onNavigate = onNavigateToDeviceDataConfig
-                        )
+                        Spacer(Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = preset.name,
+                                style = MaterialTheme.typography.bodyLarge,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = summarizeTaskConfig(context, preset.config, hasRoot),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
-            }
-        }
-
-        item {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                ExpressiveSectionHeader(title = stringResource(R.string.operation_maintenance))
-                ExpressiveCardGroup {
-                    ExpressiveSegmentedSurface(index = 0, count = 4) {
-                        TaskRow(
-                            title = stringResource(R.string.maintenance_task_unlock_repository),
-                            icon = Icons.Outlined.LockOpen,
-                            checked = state.maintenance.unlockRepo,
-                            onCheckedChange = viewModel::setUnlockRepo
+                if (onCreatePreset != null) {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                showPresetPickerSheet = false
+                                onCreatePreset()
+                            }
+                            .padding(horizontal = 24.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Add,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
                         )
-                    }
-                    ExpressiveSegmentedSurface(index = 1, count = 4) {
-                        TaskRow(
-                            title = stringResource(R.string.run_tasks_forget_snapshots),
-                            subtitle = buildForgetSubtitle(state.maintenance, context),
-                            icon = Icons.Outlined.AutoDelete,
-                            checked = state.maintenance.forgetSnapshots,
-                            onCheckedChange = viewModel::setForgetSnapshots,
-                            onNavigate = onNavigateToForgetConfig
-                        )
-                    }
-                    ExpressiveSegmentedSurface(index = 2, count = 4) {
-                        TaskRow(
-                            title = stringResource(R.string.maintenance_task_prune_repository),
-                            icon = Icons.Outlined.CleaningServices,
-                            checked = state.maintenance.pruneRepo,
-                            onCheckedChange = viewModel::setPruneRepo
-                        )
-                    }
-                    ExpressiveSegmentedSurface(index = 3, count = 4) {
-                        TaskRow(
-                            title = stringResource(R.string.run_tasks_check_integrity),
-                            subtitle = buildCheckSubtitle(state.maintenance, context),
-                            icon = Icons.Outlined.FactCheck,
-                            checked = state.maintenance.checkRepo,
-                            onCheckedChange = viewModel::setCheckRepo,
-                            onNavigate = onNavigateToCheckConfig
+                        Text(
+                            text = stringResource(R.string.action_create_new_preset),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
@@ -523,7 +636,10 @@ fun AddEditScheduleScreen(
             title = { Text(stringResource(R.string.dialog_delete_schedule_title)) },
             text = { Text(stringResource(R.string.dialog_delete_schedule_message)) },
             confirmButton = {
-                TextButton(onClick = { viewModel.confirmDeleteSchedule() }) {
+                TextButton(
+                    onClick = { viewModel.confirmDeleteSchedule() },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
                     Text(stringResource(R.string.action_delete))
                 }
             },
@@ -555,69 +671,13 @@ fun AddEditScheduleScreen(
             }
         )
     }
-
-    if (showGuideSheet) {
-        TasksGuideBottomSheet(onDismissRequest = { showGuideSheet = false })
-    }
 }
 
-@Composable
-fun ScheduleBackupConfigScreen(
-    viewModel: SchedulesViewModel,
-    modifier: Modifier = Modifier
-) {
-    val state by viewModel.addEditState.collectAsState()
-    io.github.hddq.restoid.ui.shared.BackupConfigScreen(
-        isLoadingApps = state.isLoadingApps,
-        apps = state.apps,
-        appBackupTypes = state.appBackupTypes,
-        backupTypes = state.backupTypes,
-        onRefreshApps = viewModel::refreshAppsList,
-        onToggleAllApps = viewModel::toggleAllApps,
-        onToggleAppSelection = viewModel::toggleAppSelection,
-        onSetSelectedAppsBackupTypes = viewModel::setSelectedAppsBackupTypes,
-        onSetAppBackupTypes = viewModel::setAppBackupTypes,
-        modifier = modifier
-    )
-}
-
-@Composable
-fun ScheduleForgetConfigScreen(viewModel: SchedulesViewModel, modifier: Modifier = Modifier) {
-    val state by viewModel.addEditState.collectAsStateWithLifecycle()
-    io.github.hddq.restoid.ui.shared.ForgetConfigScreen(
-        maintenance = state.maintenance,
-        onKeepLastChange = viewModel::setKeepLast,
-        onKeepDailyChange = viewModel::setKeepDaily,
-        onKeepWeeklyChange = viewModel::setKeepWeekly,
-        onKeepMonthlyChange = viewModel::setKeepMonthly,
-        availableHosts = state.availableForgetHosts,
-        areRepoSnapshotsLoaded = state.areRepoSnapshotsLoaded,
-        isLoadingHosts = state.isLoadingForgetHosts,
-        hostsError = state.forgetHostsError,
-        onToggleAllHosts = viewModel::toggleAllForgetHosts,
-        onToggleHost = viewModel::toggleForgetHost,
-        onAddHost = viewModel::addCustomForgetHost,
-        onRemoveHost = viewModel::removeCustomForgetHost,
-        onRefreshHosts = { viewModel.refreshForgetHosts(userInitiated = true) },
-        onAutoLoadHosts = { viewModel.refreshForgetHosts(userInitiated = false) },
-        modifier = modifier
-    )
-}
-
-@Composable
-fun ScheduleCheckConfigScreen(viewModel: SchedulesViewModel, modifier: Modifier = Modifier) {
-    val state by viewModel.addEditState.collectAsState()
-    io.github.hddq.restoid.ui.shared.CheckConfigScreen(
-        maintenance = state.maintenance,
-        onReadDataChange = viewModel::setReadData,
-        modifier = modifier
-    )
-}
-
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 private fun ScheduleItem(
     schedule: Schedule,
+    preset: TaskPreset?,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onToggleEnabled: () -> Unit,
@@ -625,6 +685,14 @@ private fun ScheduleItem(
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
+
+    val customLabel = schedule.name?.takeIf { it.isNotBlank() }
+    val displayTitle = customLabel ?: preset?.name ?: stringResource(R.string.schedule_missing_preset)
+    val intervalText = when (schedule.intervalHours) {
+        168 -> stringResource(R.string.preset_1_week)
+        720 -> stringResource(R.string.preset_1_month)
+        else -> stringResource(R.string.preset_hours, schedule.intervalHours)
+    }
 
     Box(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -644,11 +712,64 @@ private fun ScheduleItem(
                 tint = if (schedule.isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(end = 16.dp)
             )
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
                 Text(
-                    text = schedule.name,
-                    style = MaterialTheme.typography.bodyLarge
+                    text = displayTitle,
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
+
+                val metaLine = buildList {
+                    if (customLabel != null && preset != null && !customLabel.equals(preset.name, ignoreCase = true)) {
+                        add(preset.name)
+                    }
+                    add("${stringResource(R.string.schedule_interval_label)}: $intervalText")
+                }.joinToString(" · ")
+
+                Text(
+                    text = metaLine,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                val conditions = buildList {
+                    if (schedule.triggerConditions.requireUnmeteredNetwork) {
+                        add(stringResource(R.string.condition_chip_wifi))
+                    }
+                    if (schedule.triggerConditions.requireCharging) {
+                        add(stringResource(R.string.condition_chip_charging))
+                    }
+                    if (schedule.triggerConditions.requireBatteryNotLow) {
+                        add(stringResource(R.string.condition_chip_battery))
+                    }
+                }
+                if (conditions.isNotEmpty()) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.padding(top = 2.dp)
+                    ) {
+                        conditions.forEach { label ->
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainerHighest
+                            ) {
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
+                }
 
                 val lastRunText = if (schedule.lastRunTimestamp != null) {
                     val relativeTime = android.text.format.DateUtils.getRelativeTimeSpanString(
@@ -663,10 +784,10 @@ private fun ScheduleItem(
                 }
 
                 Text(
-                    text = stringResource(R.string.schedule_interval_label) + ": ${schedule.intervalHours}h\n" + lastRunText,
+                    text = lastRunText,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
@@ -744,56 +865,6 @@ private fun ScheduleItem(
             )
         }
     }
-}
-
-@Composable
-fun ScheduleCustomDirectoriesConfigScreen(
-    viewModel: SchedulesViewModel,
-    modifier: Modifier = Modifier
-) {
-    val state by viewModel.addEditState.collectAsState()
-    io.github.hddq.restoid.ui.shared.CustomDirectoriesConfigScreen(
-        customDirectories = state.customDirectories,
-        onAddDirectory = viewModel::addCustomDirectory,
-        onToggleDirectory = viewModel::toggleCustomDirectory,
-        onRemoveDirectory = viewModel::removeCustomDirectory,
-        excludedDirectories = state.excludedCustomDirectories,
-        onAddExcludedDirectory = viewModel::addExcludedCustomDirectory,
-        onToggleExcludedDirectory = viewModel::toggleExcludedCustomDirectory,
-        onRemoveExcludedDirectory = viewModel::removeExcludedCustomDirectory,
-        modifier = modifier
-    )
-}
-
-@Composable
-fun ScheduleDeviceDataConfigScreen(
-    viewModel: SchedulesViewModel,
-    modifier: Modifier = Modifier
-) {
-    val state by viewModel.addEditState.collectAsStateWithLifecycle()
-    io.github.hddq.restoid.ui.shared.DeviceDataConfigScreen(
-        contactsEnabled = state.contactsBackupEnabled,
-        selectAllContactAccounts = state.selectAllContactAccounts,
-        selectedContactAccountKeys = state.selectedContactAccountKeys,
-        availableContactAccounts = state.availableContactAccounts,
-        isLoadingContactAccounts = state.isLoadingContactAccounts,
-        callLogsEnabled = state.callLogsBackupEnabled,
-        calendarEnabled = state.calendarBackupEnabled,
-        selectAllCalendars = state.selectAllCalendars,
-        selectedCalendarKeys = state.selectedCalendarKeys,
-        availableCalendars = state.availableCalendars,
-        isLoadingCalendars = state.isLoadingCalendars,
-        onContactsEnabledChange = viewModel::setContactsBackupEnabled,
-        onToggleAllContactAccounts = viewModel::toggleAllContactAccounts,
-        onToggleContactAccount = viewModel::toggleContactAccount,
-        onRefreshContactAccounts = viewModel::refreshContactAccounts,
-        onCallLogsEnabledChange = viewModel::setCallLogsBackupEnabled,
-        onCalendarEnabledChange = viewModel::setCalendarBackupEnabled,
-        onToggleAllCalendars = viewModel::toggleAllCalendars,
-        onToggleCalendar = viewModel::toggleCalendar,
-        onRefreshCalendars = viewModel::refreshCalendars,
-        modifier = modifier
-    )
 }
 
 @Composable
@@ -994,4 +1065,3 @@ private fun networkStateText(network: NetworkConditionStatus): String {
         NetworkTransport.NONE -> stringResource(R.string.condition_state_network_none)
     }
 }
-

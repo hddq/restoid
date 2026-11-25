@@ -5,6 +5,8 @@ import io.github.hddq.restoid.model.RestoidMetadata
 import io.github.hddq.restoid.model.Schedule
 import io.github.hddq.restoid.model.TaskPreset
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -13,6 +15,7 @@ import java.io.FileOutputStream
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
+import java.util.concurrent.ConcurrentHashMap
 
 class MetadataRepository internal constructor(
     private val metadataRoot: File
@@ -20,6 +23,9 @@ class MetadataRepository internal constructor(
     constructor(context: Context) : this(File(context.filesDir, "metadata"))
 
     private val json = Json { ignoreUnknownKeys = true }
+
+    // LEGACY_SCHEDULE_MIGRATION: per-repo lock to serialize lazy migration checks.
+    private val migrationMutexes = ConcurrentHashMap<String, Mutex>()
 
     internal fun writeTextAtomically(targetFile: File, content: String) {
         val parentDir = targetFile.parentFile
@@ -53,9 +59,25 @@ class MetadataRepository internal constructor(
         }
     }
 
+    // LEGACY_SCHEDULE_MIGRATION: single lazy hook invoked before reading schedules or presets.
+    private suspend fun ensureLegacySchedulesMigrated(repoId: String) {
+        val repoDir = File(metadataRoot, repoId)
+        val schedulesFile = File(repoDir, SCHEDULES_FILE_NAME)
+        if (!schedulesFile.exists()) return
+        val mutex = migrationMutexes.computeIfAbsent(repoId) { Mutex() }
+        mutex.withLock {
+            LegacyScheduleMigration.migrateIfNeeded(
+                repoDir = repoDir,
+                json = json,
+                writeTextAtomically = ::writeTextAtomically
+            )
+        }
+    }
+
     suspend fun getTaskPresets(repoId: String): List<TaskPreset> {
         return withContext(Dispatchers.IO) {
             try {
+                ensureLegacySchedulesMigrated(repoId)
                 val repoDir = File(metadataRoot, repoId)
                 val presetsFile = File(repoDir, PRESETS_FILE_NAME)
                 if (presetsFile.exists()) {
@@ -88,6 +110,7 @@ class MetadataRepository internal constructor(
     suspend fun getSchedules(repoId: String): List<Schedule> {
         return withContext(Dispatchers.IO) {
             try {
+                ensureLegacySchedulesMigrated(repoId)
                 val repoDir = File(metadataRoot, repoId)
                 val schedulesFile = File(repoDir, SCHEDULES_FILE_NAME)
                 if (schedulesFile.exists()) {

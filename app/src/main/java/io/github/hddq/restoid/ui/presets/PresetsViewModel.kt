@@ -11,7 +11,9 @@ import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.ResticBinaryManager
 import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.data.RootRepository
+import io.github.hddq.restoid.data.ScheduleRepository
 import io.github.hddq.restoid.data.TaskPresetRepository
+import io.github.hddq.restoid.model.Schedule
 import io.github.hddq.restoid.model.TaskPreset
 import io.github.hddq.restoid.ui.shared.AppSortOrder
 import io.github.hddq.restoid.ui.shared.BackupTypes
@@ -35,6 +37,7 @@ import java.util.UUID
 
 data class PresetsUiState(
     val presets: List<TaskPreset> = emptyList(),
+    val schedulesByPresetId: Map<String, List<Schedule>> = emptyMap(),
     val selectedRepoKey: String? = null,
     val isLoading: Boolean = false,
     val isOperationRunning: Boolean = false
@@ -45,6 +48,7 @@ data class AddEditPresetUiState(
     val name: String = "",
     val lastRunTimestamp: Long? = null,
     val editor: TaskConfigEditorState = TaskConfigEditorState(),
+    val linkedSchedules: List<Schedule> = emptyList(),
     val isSaving: Boolean = false,
     val showConfirmDeleteDialog: Boolean = false,
     val showDiscardChangesDialog: Boolean = false
@@ -58,6 +62,7 @@ sealed interface PresetsUiEvent {
 class PresetsViewModel(
     private val application: Application,
     private val taskPresetRepository: TaskPresetRepository,
+    private val scheduleRepository: ScheduleRepository,
     private val repositoriesRepository: RepositoriesRepository,
     private val appInfoRepository: AppInfoRepository,
     private val rootRepository: RootRepository,
@@ -119,6 +124,7 @@ class PresetsViewModel(
             _uiState.update {
                 it.copy(
                     presets = emptyList(),
+                    schedulesByPresetId = emptyMap(),
                     isLoading = false
                 )
             }
@@ -130,10 +136,13 @@ class PresetsViewModel(
         loadPresetsJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             val presets = taskPresetRepository.getPresets(repoId)
+            val schedules = scheduleRepository.getSchedules(repoId)
             if (_uiState.value.selectedRepoKey != repoKey) return@launch
+            val grouped = schedules.groupBy { it.presetId }
             _uiState.update {
                 it.copy(
                     presets = presets,
+                    schedulesByPresetId = grouped,
                     isLoading = false
                 )
             }
@@ -142,9 +151,22 @@ class PresetsViewModel(
                 val updatedPreset = presets.find { it.id == currentEditId }
                 _addEditState.update {
                     it.copy(
+                        linkedSchedules = grouped[currentEditId].orEmpty(),
                         lastRunTimestamp = updatedPreset?.lastRunTimestamp ?: it.lastRunTimestamp
                     )
                 }
+            }
+        }
+    }
+
+    fun refreshLinkedSchedules() {
+        val presetId = _addEditState.value.id ?: return
+        val repoKey = _uiState.value.selectedRepoKey ?: return
+        val repoId = repositoriesRepository.getRepositoryByKey(repoKey)?.id ?: return
+        viewModelScope.launch {
+            val linked = scheduleRepository.getSchedulesForPreset(repoId, presetId)
+            _addEditState.update { state ->
+                if (state.id == presetId) state.copy(linkedSchedules = linked) else state
             }
         }
     }
@@ -177,10 +199,12 @@ class PresetsViewModel(
 
     fun startEditPreset(preset: TaskPreset) {
         val sessionId = ++addEditSessionId
+        val linkedSchedules = _uiState.value.schedulesByPresetId[preset.id].orEmpty()
         _addEditState.value = AddEditPresetUiState(
             id = preset.id,
             name = preset.name,
-            lastRunTimestamp = preset.lastRunTimestamp
+            lastRunTimestamp = preset.lastRunTimestamp,
+            linkedSchedules = linkedSchedules
         )
         editorController.applyRunTasksConfig(
             config = preset.config,
@@ -205,6 +229,7 @@ class PresetsViewModel(
             }
         )
         initialState = _addEditState.value
+        refreshLinkedSchedules()
     }
 
     fun hasChanges(current: AddEditPresetUiState = _addEditState.value): Boolean {
@@ -311,8 +336,8 @@ class PresetsViewModel(
         val repoId = repositoriesRepository.getRepositoryByKey(repoKey)?.id ?: return
 
         viewModelScope.launch {
-            val deleted = taskPresetRepository.deletePreset(repoId, presetId)
-            if (deleted) {
+            val deletedCount = taskPresetRepository.deletePreset(repoId, presetId)
+            if (deletedCount != null) {
                 loadPresets()
             } else {
                 Toast.makeText(
@@ -334,8 +359,8 @@ class PresetsViewModel(
         val repoId = repositoriesRepository.getRepositoryByKey(repoKey)?.id ?: return
 
         viewModelScope.launch {
-            val deleted = taskPresetRepository.deletePreset(repoId, presetId)
-            if (!deleted) {
+            val deletedCount = taskPresetRepository.deletePreset(repoId, presetId)
+            if (deletedCount == null) {
                 Toast.makeText(
                     application,
                     application.getString(R.string.toast_preset_delete_failed),
@@ -345,6 +370,17 @@ class PresetsViewModel(
             }
             loadPresets()
             _uiEvents.emit(PresetsUiEvent.NavigateBack(savedPresetId = null))
+        }
+    }
+
+    fun toggleLinkedScheduleEnabled(schedule: Schedule) {
+        val repoKey = _uiState.value.selectedRepoKey ?: return
+        val repoId = repositoriesRepository.getRepositoryByKey(repoKey)?.id ?: return
+
+        viewModelScope.launch {
+            scheduleRepository.toggleSchedule(repoKey, repoId, schedule.id, !schedule.isEnabled)
+            refreshLinkedSchedules()
+            loadPresets()
         }
     }
 

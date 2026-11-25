@@ -9,12 +9,14 @@ import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.ResticBinaryManager
 import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.data.RootRepository
+import io.github.hddq.restoid.data.ScheduleRepository
 import io.github.hddq.restoid.data.TaskPresetRepository
 import io.github.hddq.restoid.work.OperationWorkRepository
 
 class PresetsViewModelFactory(
     private val application: Application,
     private val taskPresetRepository: TaskPresetRepository,
+    private val scheduleRepository: ScheduleRepository,
     private val repositoriesRepository: RepositoriesRepository,
     private val appInfoRepository: AppInfoRepository,
     private val rootRepository: RootRepository,
@@ -29,6 +31,7 @@ class PresetsViewModelFactory(
             return PresetsViewModel(
                 application = application,
                 taskPresetRepository = taskPresetRepository,
+                scheduleRepository = scheduleRepository,
                 repositoriesRepository = repositoriesRepository,
                 appInfoRepository = appInfoRepository,
                 rootRepository = rootRepository,

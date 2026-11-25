@@ -841,7 +841,7 @@
     <string name="action_copy_log">Copy Log</string>
     <string name="action_clear">Clear</string>
 
-    <!-- Task Presets -->
+    <!-- Task Presets & Unlimited Schedules -->
     <string name="screen_presets">Presets</string>
     <string name="topbar_presets">Task Presets</string>
     <string name="topbar_add_preset">New Preset</string>
@@ -854,6 +854,11 @@
     <string name="preset_copy_name_format">%1$s (Copy)</string>
     <string name="no_presets_configured">No task presets configured for this repository.</string>
     <string name="no_presets_configured_hint">Create a reusable task preset to run on demand or attach to schedules.</string>
+    <string name="preset_manual_only">Manual only</string>
+    <plurals name="preset_schedule_count">
+        <item quantity="one">%1$d schedule</item>
+        <item quantity="other">%1$d schedules</item>
+    </plurals>
     <plurals name="preset_summary_apps_count">
         <item quantity="one">%1$d app</item>
         <item quantity="other">%1$d apps</item>
@@ -867,10 +872,28 @@
     <string name="task_check">Check</string>
     <string name="action_duplicate">Duplicate</string>
     <string name="action_save_as_preset">Save as preset</string>
+    <string name="action_edit_preset">Edit preset</string>
+    <string name="action_create_new_preset">Create new preset</string>
+    <string name="action_add_schedule">Add schedule</string>
     <string name="section_task_preset">Task Preset</string>
+    <string name="section_schedule">Schedule</string>
+    <string name="section_schedules">Schedules</string>
+    <string name="schedule_label_optional">Label (optional)</string>
+    <string name="schedule_label_placeholder">Optional — defaults to preset name</string>
+    <string name="schedule_select_preset">Select task preset</string>
+    <string name="schedule_no_presets_title">No task presets yet</string>
+    <string name="schedule_no_presets_desc">Create a task preset first to choose what this schedule will run.</string>
+    <string name="schedule_missing_preset">Missing preset</string>
+    <string name="schedule_error_preset_required">Select a task preset before saving.</string>
+    <string name="preset_schedules_empty">No schedules attached yet. This preset runs manually until you add a schedule.</string>
+    <string name="preset_schedules_save_first_hint">Save this preset first to attach schedules to it.</string>
     <string name="preset_error_name_empty">Enter a name for this preset.</string>
     <string name="dialog_delete_preset_title">Delete Preset?</string>
     <string name="dialog_delete_preset_message">Are you sure you want to delete this preset?</string>
+    <plurals name="dialog_delete_preset_message_with_schedules">
+        <item quantity="one">Deleting this preset will also delete %1$d linked schedule. Are you sure?</item>
+        <item quantity="other">Deleting this preset will also delete %1$d linked schedules. Are you sure?</item>
+    </plurals>
     <string name="run_tasks_preset_custom">Custom</string>
     <string name="run_tasks_preset_modified_hint">Modified (won\'t change preset)</string>
     <string name="dialog_save_as_preset_title">Save as Preset</string>
@@ -879,4 +902,8 @@
     <string name="toast_preset_duplicated">Preset duplicated</string>
     <string name="toast_preset_save_failed">Failed to save preset</string>
     <string name="toast_preset_delete_failed">Failed to delete preset</string>
+    <string name="toast_schedule_triggered">Schedule triggered</string>
+    <string name="condition_chip_wifi">Unmetered</string>
+    <string name="condition_chip_charging">Charging</string>
+    <string name="condition_chip_battery">Battery OK</string>
 </resources>

@@ -73,6 +73,7 @@ class SettingsViewModel(
     private val resticBinaryManager: ResticBinaryManager, // Injected Manager
     private val resticRepository: ResticRepository,
     private val repositoriesRepository: RepositoriesRepository,
+    private val scheduleRepository: ScheduleRepository,
     private val notificationRepository: NotificationRepository,
     private val preferencesRepository: PreferencesRepository,
     private val storagePermissionRepository: StoragePermissionRepository,
@@ -294,6 +295,7 @@ class SettingsViewModel(
                 _showMetadataWarning.value = restoreResult.exceptionOrNull()?.message
                     ?: context.getString(R.string.repo_warning_metadata_restore_failed)
             } else {
+                scheduleRepository.reconcileAllSchedules()
                 _metadataRestoreSuccess.value = context.getString(R.string.metadata_restore_success)
             }
         }
@@ -689,6 +691,7 @@ class SettingsViewModel(
         _addRepoUiState.update { it.copy(state = result, sftpServerTrustInfo = null) }
 
         if (result is AddRepositoryState.Success || result is AddRepositoryState.SuccessWithMetadataWarning) {
+            scheduleRepository.reconcileAllSchedules()
             delay(1000)
             if (result is AddRepositoryState.SuccessWithMetadataWarning) {
                 _showMetadataWarning.value = result.warning

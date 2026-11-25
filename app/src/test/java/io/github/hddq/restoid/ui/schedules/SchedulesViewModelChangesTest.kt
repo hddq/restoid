@@ -5,8 +5,13 @@ import android.graphics.ColorFilter
 import android.graphics.PixelFormat
 import android.graphics.drawable.Drawable
 import io.github.hddq.restoid.model.AppInfo
+import io.github.hddq.restoid.model.TaskPreset
+import io.github.hddq.restoid.model.TriggerConditions
 import io.github.hddq.restoid.ui.shared.AppSortOrder
+import io.github.hddq.restoid.ui.shared.TaskConfigEditorState
+import io.github.hddq.restoid.ui.shared.hasTaskConfigChanges
 import io.github.hddq.restoid.ui.shared.sortApps
+import io.github.hddq.restoid.work.RunTasksConfig
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -36,11 +41,10 @@ class SchedulesViewModelChangesTest {
     )
 
     @Test
-    fun hasScheduleChanges_ignoresAppSortOrderChanges() {
+    fun hasTaskConfigChanges_ignoresAppSortOrderChanges() {
         val alpha = app("Alpha", "com.example.alpha", isSelected = true, firstInstallTime = 100L)
         val beta = app("Beta", "com.example.beta", isSelected = false, firstInstallTime = 200L)
-        val initial = AddEditScheduleUiState(
-            name = "Nightly",
+        val initial = TaskConfigEditorState(
             apps = listOf(alpha, beta),
             appSortOrder = AppSortOrder.NAME_ASCENDING
         )
@@ -50,15 +54,14 @@ class SchedulesViewModelChangesTest {
             apps = sortApps(initial.apps, AppSortOrder.NAME_DESCENDING)
         )
 
-        assertFalse(hasScheduleChanges(reordered, initial))
+        assertFalse(hasTaskConfigChanges(reordered, initial))
     }
 
     @Test
-    fun hasScheduleChanges_detectsSelectionChangeAfterReordering() {
+    fun hasTaskConfigChanges_detectsSelectionChangeAfterReordering() {
         val alpha = app("Alpha", "com.example.alpha", isSelected = true, firstInstallTime = 100L)
         val beta = app("Beta", "com.example.beta", isSelected = false, firstInstallTime = 200L)
-        val initial = AddEditScheduleUiState(
-            name = "Nightly",
+        val initial = TaskConfigEditorState(
             apps = listOf(alpha, beta),
             appSortOrder = AppSortOrder.NAME_ASCENDING
         )
@@ -70,6 +73,39 @@ class SchedulesViewModelChangesTest {
             }
         )
 
-        assertTrue(hasScheduleChanges(toggled, initial))
+        assertTrue(hasTaskConfigChanges(toggled, initial))
+    }
+
+    @Test
+    fun hasScheduleChanges_detectsPresetTimingLabelAndConditionsChanges() {
+        val initial = AddEditScheduleUiState(
+            id = "s-1",
+            presetId = "p-1",
+            name = "Nightly",
+            intervalHours = 24,
+            isEnabled = true,
+            triggerConditions = TriggerConditions(requireUnmeteredNetwork = true)
+        )
+
+        assertFalse(
+            hasScheduleChanges(
+                initial.copy(
+                    availablePresets = listOf(TaskPreset(id = "p-1", name = "A", config = RunTasksConfig())),
+                    isSaving = true,
+                    showConfirmDeleteDialog = true
+                ),
+                initial
+            )
+        )
+        assertTrue(hasScheduleChanges(initial.copy(presetId = "p-2"), initial))
+        assertTrue(hasScheduleChanges(initial.copy(name = "Morning"), initial))
+        assertTrue(hasScheduleChanges(initial.copy(intervalHours = 12), initial))
+        assertTrue(hasScheduleChanges(initial.copy(isEnabled = false), initial))
+        assertTrue(
+            hasScheduleChanges(
+                initial.copy(triggerConditions = TriggerConditions(requireCharging = true)),
+                initial
+            )
+        )
     }
 }

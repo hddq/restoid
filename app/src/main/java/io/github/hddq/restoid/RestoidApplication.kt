@@ -100,6 +100,7 @@ class RestoidApplication : Application() {
         )
         taskPresetRepository = TaskPresetRepository(
             metadataRepository = metadataRepository,
+            scheduleRepository = scheduleRepository,
             operationWorkRepository = operationWorkRepository
         )
 

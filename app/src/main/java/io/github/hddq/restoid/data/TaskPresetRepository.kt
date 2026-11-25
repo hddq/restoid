@@ -10,15 +10,18 @@ import java.util.UUID
 
 class TaskPresetRepository internal constructor(
     private val metadataRepository: MetadataRepository,
+    private val scheduleRepository: ScheduleRepository,
     private val enqueueRunTasks: suspend (RunTasksWorkRequest) -> Boolean
 ) {
     private val mutationMutex = Mutex()
 
     constructor(
         metadataRepository: MetadataRepository,
+        scheduleRepository: ScheduleRepository,
         operationWorkRepository: OperationWorkRepository
     ) : this(
         metadataRepository = metadataRepository,
+        scheduleRepository = scheduleRepository,
         enqueueRunTasks = operationWorkRepository::enqueueRunTasks
     )
 
@@ -65,9 +68,12 @@ class TaskPresetRepository internal constructor(
         savePresetLocked(repoId, duplicated)
     }
 
-    suspend fun deletePreset(repoId: String, presetId: String): Boolean = mutationMutex.withLock {
+    suspend fun deletePreset(repoId: String, presetId: String): Int? = mutationMutex.withLock {
         val remaining = getPresets(repoId).filterNot { it.id == presetId }
-        metadataRepository.saveTaskPresets(repoId, remaining)
+        if (!metadataRepository.saveTaskPresets(repoId, remaining)) {
+            return@withLock null
+        }
+        scheduleRepository.deleteSchedulesForPreset(repoId, presetId) ?: 0
     }
 
     suspend fun updateLastRunTimestamp(

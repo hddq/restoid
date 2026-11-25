@@ -131,10 +131,6 @@ import androidx.compose.foundation.layout.Box
 import io.github.hddq.restoid.ui.runtasks.RunTasksViewModel
 import io.github.hddq.restoid.ui.runtasks.RunTasksViewModelFactory
 import io.github.hddq.restoid.ui.schedules.AddEditScheduleScreen
-import io.github.hddq.restoid.ui.schedules.ScheduleBackupConfigScreen
-import io.github.hddq.restoid.ui.schedules.ScheduleCustomDirectoriesConfigScreen
-import io.github.hddq.restoid.ui.schedules.ScheduleCheckConfigScreen
-import io.github.hddq.restoid.ui.schedules.ScheduleForgetConfigScreen
 import io.github.hddq.restoid.ui.schedules.SchedulesRoutes
 import io.github.hddq.restoid.ui.schedules.SchedulesScreen
 import io.github.hddq.restoid.ui.schedules.SchedulesViewModel
@@ -356,6 +352,7 @@ class MainActivity : FragmentActivity() {
                     val currentRoute = navBackStackEntry?.destination?.route
                     val showBottomBar = currentRoute == null || currentRoute == TOP_LEVEL_ROUTE
                     var selectedTabRoute by rememberSaveable { mutableStateOf(Screen.Home.route) }
+                    var selectCreatedPresetInSchedule by rememberSaveable { mutableStateOf(false) }
                     val selectedTopLevelScreen = when (selectedTabRoute) {
                         Screen.Presets.route -> Screen.Presets
                         Screen.Schedules.route -> Screen.Schedules
@@ -604,6 +601,7 @@ class MainActivity : FragmentActivity() {
                                                     factory = PresetsViewModelFactory(
                                                         app,
                                                         app.taskPresetRepository,
+                                                        app.scheduleRepository,
                                                         app.repositoriesRepository,
                                                         app.appInfoRepository,
                                                         app.rootRepository,
@@ -623,19 +621,23 @@ class MainActivity : FragmentActivity() {
                                                         viewModel = vm,
                                                         onAddPreset = {
                                                             navigateFromTab(Screen.Presets) {
+                                                                selectCreatedPresetInSchedule = false
                                                                 vm.startAddPreset()
                                                                 navController.navigate(PresetsRoutes.AddEdit)
                                                             }
                                                         },
                                                         onEditPreset = { preset ->
                                                             navigateFromTab(Screen.Presets) {
+                                                                selectCreatedPresetInSchedule = false
                                                                 vm.startEditPreset(preset)
                                                                 navController.navigate(PresetsRoutes.AddEdit)
                                                             }
                                                         },
                                                         onNavigateToOperationProgress = {
-                                                            navController.navigate(Screen.OperationProgress.route) {
-                                                                launchSingleTop = true
+                                                            navigateFromTab(Screen.Presets) {
+                                                                navController.navigate(Screen.OperationProgress.route) {
+                                                                    launchSingleTop = true
+                                                                }
                                                             }
                                                         }
                                                     )
@@ -644,7 +646,13 @@ class MainActivity : FragmentActivity() {
                                             Screen.Schedules -> {
                                                 val vm: SchedulesViewModel = viewModel(
                                                     viewModelStoreOwner = topLevelEntry,
-                                                    factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository, app.resticBinaryManager, app.resticRepository, app.preferencesRepository)
+                                                    factory = SchedulesViewModelFactory(
+                                                        app,
+                                                        app.scheduleRepository,
+                                                        app.taskPresetRepository,
+                                                        app.repositoriesRepository,
+                                                        app.rootRepository
+                                                    )
                                                 )
                                                 DestinationScaffold(
                                                     titleRes = R.string.topbar_schedules,
@@ -678,6 +686,7 @@ class MainActivity : FragmentActivity() {
                                                         app.resticBinaryManager,
                                                         app.resticRepository,
                                                         app.repositoriesRepository,
+                                                        app.scheduleRepository,
                                                         app.notificationRepository,
                                                         app.preferencesRepository,
                                                         app.storagePermissionRepository,
@@ -708,201 +717,244 @@ class MainActivity : FragmentActivity() {
                             startDestination = PresetsRoutes.AddEdit,
                             route = Screen.Presets.route
                         ) {
-                            composable(PresetsRoutes.AddEdit) { backStackEntry ->
-                                val parentEntry = remember(backStackEntry) {
-                                    navController.getBackStackEntry(TOP_LEVEL_ROUTE)
-                                }
-                                val vm: PresetsViewModel = viewModel(
-                                    viewModelStoreOwner = parentEntry,
-                                    factory = PresetsViewModelFactory(
-                                        app,
-                                        app.taskPresetRepository,
-                                        app.repositoriesRepository,
-                                        app.appInfoRepository,
-                                        app.rootRepository,
-                                        app.resticBinaryManager,
-                                        app.resticRepository,
-                                        app.preferencesRepository,
-                                        app.operationWorkRepository
-                                    )
-                                )
-                                val state by vm.addEditState.collectAsStateWithLifecycle()
-                                DestinationScaffold(
-                                    titleRes = if (state.id == null) R.string.topbar_add_preset else R.string.topbar_edit_preset,
-                                    isTopLevel = false,
-                                    isExiting = transition.targetState == EnterExitState.PostExit,
-                                    onBack = { vm.onBackPress() },
-                                    floatingActionButton = {
-                                        if (!state.isSaving && !state.editor.isLoadingApps) {
-                                            ExtendedFloatingActionButton(
-                                                onClick = { vm.savePreset() },
-                                                shape = RoundedCornerShape(20.dp),
-                                                icon = { Icon(Icons.Outlined.Check, contentDescription = stringResource(R.string.action_save)) },
-                                                text = { Text(stringResource(R.string.action_save)) }
-                                            )
-                                        }
+                                composable(PresetsRoutes.AddEdit) { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry(TOP_LEVEL_ROUTE)
                                     }
-                                ) {
-                                    AddEditPresetScreen(
-                                        viewModel = vm,
-                                        onNavigateBack = { navController.navigateUp() },
-                                        onNavigateToOperationProgress = {
-                                            navController.navigate(Screen.OperationProgress.route) { launchSingleTop = true }
-                                        },
-                                        onNavigateToBackupConfig = { navController.navigate(PresetsRoutes.BackupConfig) },
-                                        onNavigateToCustomDirectoriesConfig = { navController.navigate(PresetsRoutes.CustomDirectoriesConfig) },
-                                        onNavigateToDeviceDataConfig = { navController.navigate(PresetsRoutes.DeviceDataConfig) },
-                                        onNavigateToForgetConfig = { navController.navigate(PresetsRoutes.ForgetConfig) },
-                                        onNavigateToCheckConfig = { navController.navigate(PresetsRoutes.CheckConfig) }
+                                    val vm: PresetsViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = PresetsViewModelFactory(
+                                            app,
+                                            app.taskPresetRepository,
+                                            app.scheduleRepository,
+                                            app.repositoriesRepository,
+                                            app.appInfoRepository,
+                                            app.rootRepository,
+                                            app.resticBinaryManager,
+                                            app.resticRepository,
+                                            app.preferencesRepository,
+                                            app.operationWorkRepository
+                                        )
                                     )
-                                }
-                            }
-                            composable(PresetsRoutes.BackupConfig) { backStackEntry ->
-                                val parentEntry = remember(backStackEntry) {
-                                    navController.getBackStackEntry(TOP_LEVEL_ROUTE)
-                                }
-                                val vm: PresetsViewModel = viewModel(
-                                    viewModelStoreOwner = parentEntry,
-                                    factory = PresetsViewModelFactory(
-                                        app,
-                                        app.taskPresetRepository,
-                                        app.repositoriesRepository,
-                                        app.appInfoRepository,
-                                        app.rootRepository,
-                                        app.resticBinaryManager,
-                                        app.resticRepository,
-                                        app.preferencesRepository,
-                                        app.operationWorkRepository
+                                    val schedulesVm: SchedulesViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = SchedulesViewModelFactory(
+                                            app,
+                                            app.scheduleRepository,
+                                            app.taskPresetRepository,
+                                            app.repositoriesRepository,
+                                            app.rootRepository
+                                        )
                                     )
-                                )
-                                val state by vm.addEditState.collectAsStateWithLifecycle()
-                                DestinationScaffold(
-                                    titleRes = R.string.topbar_backup_config,
-                                    isTopLevel = false,
-                                    isExiting = transition.targetState == EnterExitState.PostExit,
-                                    onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() },
-                                    actions = {
-                                        if (!state.editor.isLoadingApps && state.editor.apps.isNotEmpty()) {
-                                            AppSortMenuButton(
-                                                sortOrder = state.editor.appSortOrder,
-                                                onSortOrderChange = vm::setAppSortOrder,
-                                                showSizeSort = false
-                                            )
-                                        }
+                                    val cameFromScheduleEditor = remember(backStackEntry) {
+                                        navController.previousBackStackEntry?.destination?.route == SchedulesRoutes.AddEdit
                                     }
-                                ) {
-                                    PresetBackupConfigScreen(viewModel = vm)
+                                    val state by vm.addEditState.collectAsStateWithLifecycle()
+                                    DestinationScaffold(
+                                        titleRes = if (state.id == null) R.string.topbar_add_preset else R.string.topbar_edit_preset,
+                                        isTopLevel = false,
+                                        isExiting = transition.targetState == EnterExitState.PostExit,
+                                        onBack = { vm.onBackPress() },
+                                        floatingActionButton = {
+                                            if (!state.isSaving && !state.editor.isLoadingApps) {
+                                                ExtendedFloatingActionButton(
+                                                    onClick = { vm.savePreset() },
+                                                    shape = RoundedCornerShape(20.dp),
+                                                    icon = { Icon(Icons.Outlined.Check, contentDescription = stringResource(R.string.action_save)) },
+                                                    text = { Text(stringResource(R.string.action_save)) }
+                                                )
+                                            }
+                                        }
+                                    ) {
+                                        AddEditPresetScreen(
+                                            viewModel = vm,
+                                            onNavigateBack = { savedPresetId ->
+                                                if (savedPresetId != null && selectCreatedPresetInSchedule) {
+                                                    schedulesVm.refreshPresets(selectPresetId = savedPresetId)
+                                                } else {
+                                                    schedulesVm.refreshPresets()
+                                                }
+                                                selectCreatedPresetInSchedule = false
+                                                navController.navigateUp()
+                                            },
+                                            onNavigateToOperationProgress = {
+                                                navController.navigate(Screen.OperationProgress.route) { launchSingleTop = true }
+                                            },
+                                            onNavigateToBackupConfig = { navController.navigate(PresetsRoutes.BackupConfig) },
+                                            onNavigateToCustomDirectoriesConfig = { navController.navigate(PresetsRoutes.CustomDirectoriesConfig) },
+                                            onNavigateToDeviceDataConfig = { navController.navigate(PresetsRoutes.DeviceDataConfig) },
+                                            onNavigateToForgetConfig = { navController.navigate(PresetsRoutes.ForgetConfig) },
+                                            onNavigateToCheckConfig = { navController.navigate(PresetsRoutes.CheckConfig) },
+                                            onAddScheduleForPreset = if (cameFromScheduleEditor) {
+                                                null
+                                            } else {
+                                                { presetId ->
+                                                    schedulesVm.startAddSchedule(preselectedPresetId = presetId)
+                                                    navController.navigate(SchedulesRoutes.AddEdit)
+                                                }
+                                            },
+                                            onEditSchedule = if (cameFromScheduleEditor) {
+                                                null
+                                            } else {
+                                                { schedule ->
+                                                    schedulesVm.startEditSchedule(schedule)
+                                                    navController.navigate(SchedulesRoutes.AddEdit)
+                                                }
+                                            }
+                                        )
+                                    }
                                 }
-                            }
-                            composable(PresetsRoutes.ForgetConfig) { backStackEntry ->
-                                val parentEntry = remember(backStackEntry) {
-                                    navController.getBackStackEntry(TOP_LEVEL_ROUTE)
-                                }
-                                val vm: PresetsViewModel = viewModel(
-                                    viewModelStoreOwner = parentEntry,
-                                    factory = PresetsViewModelFactory(
-                                        app,
-                                        app.taskPresetRepository,
-                                        app.repositoriesRepository,
-                                        app.appInfoRepository,
-                                        app.rootRepository,
-                                        app.resticBinaryManager,
-                                        app.resticRepository,
-                                        app.preferencesRepository,
-                                        app.operationWorkRepository
+                                composable(PresetsRoutes.BackupConfig) { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry(TOP_LEVEL_ROUTE)
+                                    }
+                                    val vm: PresetsViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = PresetsViewModelFactory(
+                                            app,
+                                            app.taskPresetRepository,
+                                            app.scheduleRepository,
+                                            app.repositoriesRepository,
+                                            app.appInfoRepository,
+                                            app.rootRepository,
+                                            app.resticBinaryManager,
+                                            app.resticRepository,
+                                            app.preferencesRepository,
+                                            app.operationWorkRepository
+                                        )
                                     )
-                                )
-                                DestinationScaffold(
-                                    titleRes = R.string.topbar_forget_config,
-                                    isTopLevel = false,
-                                    isExiting = transition.targetState == EnterExitState.PostExit,
-                                    onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
-                                ) {
-                                    PresetForgetConfigScreen(viewModel = vm)
+                                    val state by vm.addEditState.collectAsStateWithLifecycle()
+                                    DestinationScaffold(
+                                        titleRes = R.string.topbar_backup_config,
+                                        isTopLevel = false,
+                                        isExiting = transition.targetState == EnterExitState.PostExit,
+                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() },
+                                        actions = {
+                                            if (!state.editor.isLoadingApps && state.editor.apps.isNotEmpty()) {
+                                                AppSortMenuButton(
+                                                    sortOrder = state.editor.appSortOrder,
+                                                    onSortOrderChange = vm::setAppSortOrder,
+                                                    showSizeSort = false
+                                                )
+                                            }
+                                        }
+                                    ) {
+                                        PresetBackupConfigScreen(viewModel = vm)
+                                    }
                                 }
-                            }
-                            composable(PresetsRoutes.CheckConfig) { backStackEntry ->
-                                val parentEntry = remember(backStackEntry) {
-                                    navController.getBackStackEntry(TOP_LEVEL_ROUTE)
-                                }
-                                val vm: PresetsViewModel = viewModel(
-                                    viewModelStoreOwner = parentEntry,
-                                    factory = PresetsViewModelFactory(
-                                        app,
-                                        app.taskPresetRepository,
-                                        app.repositoriesRepository,
-                                        app.appInfoRepository,
-                                        app.rootRepository,
-                                        app.resticBinaryManager,
-                                        app.resticRepository,
-                                        app.preferencesRepository,
-                                        app.operationWorkRepository
+                                composable(PresetsRoutes.ForgetConfig) { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry(TOP_LEVEL_ROUTE)
+                                    }
+                                    val vm: PresetsViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = PresetsViewModelFactory(
+                                            app,
+                                            app.taskPresetRepository,
+                                            app.scheduleRepository,
+                                            app.repositoriesRepository,
+                                            app.appInfoRepository,
+                                            app.rootRepository,
+                                            app.resticBinaryManager,
+                                            app.resticRepository,
+                                            app.preferencesRepository,
+                                            app.operationWorkRepository
+                                        )
                                     )
-                                )
-                                DestinationScaffold(
-                                    titleRes = R.string.topbar_check_config,
-                                    isTopLevel = false,
-                                    isExiting = transition.targetState == EnterExitState.PostExit,
-                                    onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
-                                ) {
-                                    PresetCheckConfigScreen(viewModel = vm)
+                                    DestinationScaffold(
+                                        titleRes = R.string.topbar_forget_config,
+                                        isTopLevel = false,
+                                        isExiting = transition.targetState == EnterExitState.PostExit,
+                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
+                                    ) {
+                                        PresetForgetConfigScreen(viewModel = vm)
+                                    }
                                 }
-                            }
-                            composable(PresetsRoutes.CustomDirectoriesConfig) { backStackEntry ->
-                                val parentEntry = remember(backStackEntry) {
-                                    navController.getBackStackEntry(TOP_LEVEL_ROUTE)
-                                }
-                                val vm: PresetsViewModel = viewModel(
-                                    viewModelStoreOwner = parentEntry,
-                                    factory = PresetsViewModelFactory(
-                                        app,
-                                        app.taskPresetRepository,
-                                        app.repositoriesRepository,
-                                        app.appInfoRepository,
-                                        app.rootRepository,
-                                        app.resticBinaryManager,
-                                        app.resticRepository,
-                                        app.preferencesRepository,
-                                        app.operationWorkRepository
+                                composable(PresetsRoutes.CheckConfig) { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry(TOP_LEVEL_ROUTE)
+                                    }
+                                    val vm: PresetsViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = PresetsViewModelFactory(
+                                            app,
+                                            app.taskPresetRepository,
+                                            app.scheduleRepository,
+                                            app.repositoriesRepository,
+                                            app.appInfoRepository,
+                                            app.rootRepository,
+                                            app.resticBinaryManager,
+                                            app.resticRepository,
+                                            app.preferencesRepository,
+                                            app.operationWorkRepository
+                                        )
                                     )
-                                )
-                                DestinationScaffold(
-                                    titleRes = R.string.title_custom_directories,
-                                    isTopLevel = false,
-                                    isExiting = transition.targetState == EnterExitState.PostExit,
-                                    onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
-                                ) {
-                                    PresetCustomDirectoriesConfigScreen(viewModel = vm)
+                                    DestinationScaffold(
+                                        titleRes = R.string.topbar_check_config,
+                                        isTopLevel = false,
+                                        isExiting = transition.targetState == EnterExitState.PostExit,
+                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
+                                    ) {
+                                        PresetCheckConfigScreen(viewModel = vm)
+                                    }
                                 }
-                            }
-                            composable(PresetsRoutes.DeviceDataConfig) { backStackEntry ->
-                                val parentEntry = remember(backStackEntry) {
-                                    navController.getBackStackEntry(TOP_LEVEL_ROUTE)
-                                }
-                                val vm: PresetsViewModel = viewModel(
-                                    viewModelStoreOwner = parentEntry,
-                                    factory = PresetsViewModelFactory(
-                                        app,
-                                        app.taskPresetRepository,
-                                        app.repositoriesRepository,
-                                        app.appInfoRepository,
-                                        app.rootRepository,
-                                        app.resticBinaryManager,
-                                        app.resticRepository,
-                                        app.preferencesRepository,
-                                        app.operationWorkRepository
+                                composable(PresetsRoutes.CustomDirectoriesConfig) { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry(TOP_LEVEL_ROUTE)
+                                    }
+                                    val vm: PresetsViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = PresetsViewModelFactory(
+                                            app,
+                                            app.taskPresetRepository,
+                                            app.scheduleRepository,
+                                            app.repositoriesRepository,
+                                            app.appInfoRepository,
+                                            app.rootRepository,
+                                            app.resticBinaryManager,
+                                            app.resticRepository,
+                                            app.preferencesRepository,
+                                            app.operationWorkRepository
+                                        )
                                     )
-                                )
-                                DestinationScaffold(
-                                    titleRes = R.string.title_device_data,
-                                    isTopLevel = false,
-                                    isExiting = transition.targetState == EnterExitState.PostExit,
-                                    onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
-                                ) {
-                                    PresetDeviceDataConfigScreen(viewModel = vm)
+                                    DestinationScaffold(
+                                        titleRes = R.string.title_custom_directories,
+                                        isTopLevel = false,
+                                        isExiting = transition.targetState == EnterExitState.PostExit,
+                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
+                                    ) {
+                                        PresetCustomDirectoriesConfigScreen(viewModel = vm)
+                                    }
+                                }
+                                composable(PresetsRoutes.DeviceDataConfig) { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry(TOP_LEVEL_ROUTE)
+                                    }
+                                    val vm: PresetsViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = PresetsViewModelFactory(
+                                            app,
+                                            app.taskPresetRepository,
+                                            app.scheduleRepository,
+                                            app.repositoriesRepository,
+                                            app.appInfoRepository,
+                                            app.rootRepository,
+                                            app.resticBinaryManager,
+                                            app.resticRepository,
+                                            app.preferencesRepository,
+                                            app.operationWorkRepository
+                                        )
+                                    )
+                                    DestinationScaffold(
+                                        titleRes = R.string.title_device_data,
+                                        isTopLevel = false,
+                                        isExiting = transition.targetState == EnterExitState.PostExit,
+                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
+                                    ) {
+                                        PresetDeviceDataConfigScreen(viewModel = vm)
+                                    }
                                 }
                             }
-                        }
                         navigation(
                             startDestination = SchedulesRoutes.AddEdit,
                             route = Screen.Schedules.route
@@ -913,9 +965,33 @@ class MainActivity : FragmentActivity() {
                                     }
                                     val vm: SchedulesViewModel = viewModel(
                                         viewModelStoreOwner = parentEntry,
-                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository, app.resticBinaryManager, app.resticRepository, app.preferencesRepository)
+                                        factory = SchedulesViewModelFactory(
+                                            app,
+                                            app.scheduleRepository,
+                                            app.taskPresetRepository,
+                                            app.repositoriesRepository,
+                                            app.rootRepository
+                                        )
                                     )
-                                    val state by vm.addEditState.collectAsState()
+                                    val presetsVm: PresetsViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = PresetsViewModelFactory(
+                                            app,
+                                            app.taskPresetRepository,
+                                            app.scheduleRepository,
+                                            app.repositoriesRepository,
+                                            app.appInfoRepository,
+                                            app.rootRepository,
+                                            app.resticBinaryManager,
+                                            app.resticRepository,
+                                            app.preferencesRepository,
+                                            app.operationWorkRepository
+                                        )
+                                    )
+                                    val cameFromPresetEditor = remember(backStackEntry) {
+                                        navController.previousBackStackEntry?.destination?.route == PresetsRoutes.AddEdit
+                                    }
+                                    val state by vm.addEditState.collectAsStateWithLifecycle()
                                     DestinationScaffold(
                                         titleRes = if (state.id == null) R.string.topbar_add_schedule else R.string.topbar_edit_schedule,
                                         isTopLevel = false,
@@ -934,108 +1010,30 @@ class MainActivity : FragmentActivity() {
                                     ) {
                                         AddEditScheduleScreen(
                                             viewModel = vm,
-                                            onNavigateBack = { navController.navigateUp() },
-                                            onNavigateToBackupConfig = { navController.navigate(SchedulesRoutes.BackupConfig) },
-                                            onNavigateToCustomDirectoriesConfig = { navController.navigate(SchedulesRoutes.CustomDirectoriesConfig) },
-                                            onNavigateToDeviceDataConfig = { navController.navigate(SchedulesRoutes.DeviceDataConfig) },
-                                            onNavigateToForgetConfig = { navController.navigate(SchedulesRoutes.ForgetConfig) },
-                                            onNavigateToCheckConfig = { navController.navigate(SchedulesRoutes.CheckConfig) }
-                                        )
-                                    }
-                                }
-                                composable(SchedulesRoutes.BackupConfig) { backStackEntry ->
-                                    val parentEntry = remember(backStackEntry) {
-                                        navController.getBackStackEntry(TOP_LEVEL_ROUTE)
-                                    }
-                                    val vm: SchedulesViewModel = viewModel(
-                                        viewModelStoreOwner = parentEntry,
-                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository, app.resticBinaryManager, app.resticRepository, app.preferencesRepository)
-                                    )
-                                    val state by vm.addEditState.collectAsStateWithLifecycle()
-                                    DestinationScaffold(
-                                        titleRes = R.string.topbar_backup_config,
-                                        isTopLevel = false,
-                                        isExiting = transition.targetState == EnterExitState.PostExit,
-                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() },
-                                        actions = {
-                                            if (!state.isLoadingApps && state.apps.isNotEmpty()) {
-                                                AppSortMenuButton(
-                                                    sortOrder = state.appSortOrder,
-                                                    onSortOrderChange = vm::setAppSortOrder,
-                                                    showSizeSort = false
-                                                )
+                                            onNavigateBack = {
+                                                if (navController.currentDestination?.route == SchedulesRoutes.AddEdit) {
+                                                    navController.navigateUp()
+                                                }
+                                            },
+                                            onCreatePreset = if (cameFromPresetEditor) {
+                                                null
+                                            } else {
+                                                {
+                                                    selectCreatedPresetInSchedule = true
+                                                    presetsVm.startAddPreset()
+                                                    navController.navigate(PresetsRoutes.AddEdit)
+                                                }
+                                            },
+                                            onEditPreset = if (cameFromPresetEditor) {
+                                                null
+                                            } else {
+                                                { preset ->
+                                                    selectCreatedPresetInSchedule = false
+                                                    presetsVm.startEditPreset(preset)
+                                                    navController.navigate(PresetsRoutes.AddEdit)
+                                                }
                                             }
-                                        }
-                                    ) {
-                                        ScheduleBackupConfigScreen(viewModel = vm)
-                                    }
-                                }
-                                composable(SchedulesRoutes.ForgetConfig) { backStackEntry ->
-                                    val parentEntry = remember(backStackEntry) {
-                                        navController.getBackStackEntry(TOP_LEVEL_ROUTE)
-                                    }
-                                    val vm: SchedulesViewModel = viewModel(
-                                        viewModelStoreOwner = parentEntry,
-                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository, app.resticBinaryManager, app.resticRepository, app.preferencesRepository)
-                                    )
-                                    DestinationScaffold(
-                                        titleRes = R.string.topbar_forget_config,
-                                        isTopLevel = false,
-                                        isExiting = transition.targetState == EnterExitState.PostExit,
-                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
-                                    ) {
-                                        ScheduleForgetConfigScreen(viewModel = vm)
-                                    }
-                                }
-                                composable(SchedulesRoutes.CheckConfig) { backStackEntry ->
-                                    val parentEntry = remember(backStackEntry) {
-                                        navController.getBackStackEntry(TOP_LEVEL_ROUTE)
-                                    }
-                                    val vm: SchedulesViewModel = viewModel(
-                                        viewModelStoreOwner = parentEntry,
-                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository, app.resticBinaryManager, app.resticRepository, app.preferencesRepository)
-                                    )
-                                    DestinationScaffold(
-                                        titleRes = R.string.topbar_check_config,
-                                        isTopLevel = false,
-                                        isExiting = transition.targetState == EnterExitState.PostExit,
-                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
-                                    ) {
-                                        ScheduleCheckConfigScreen(viewModel = vm)
-                                    }
-                                }
-                                composable(SchedulesRoutes.CustomDirectoriesConfig) { backStackEntry ->
-                                    val parentEntry = remember(backStackEntry) {
-                                        navController.getBackStackEntry(TOP_LEVEL_ROUTE)
-                                    }
-                                    val vm: SchedulesViewModel = viewModel(
-                                        viewModelStoreOwner = parentEntry,
-                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository, app.resticBinaryManager, app.resticRepository, app.preferencesRepository)
-                                    )
-                                    DestinationScaffold(
-                                        titleRes = R.string.title_custom_directories,
-                                        isTopLevel = false,
-                                        isExiting = transition.targetState == EnterExitState.PostExit,
-                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
-                                    ) {
-                                        ScheduleCustomDirectoriesConfigScreen(viewModel = vm)
-                                    }
-                                }
-                                composable(SchedulesRoutes.DeviceDataConfig) { backStackEntry ->
-                                    val parentEntry = remember(backStackEntry) {
-                                        navController.getBackStackEntry(TOP_LEVEL_ROUTE)
-                                    }
-                                    val vm: SchedulesViewModel = viewModel(
-                                        viewModelStoreOwner = parentEntry,
-                                        factory = SchedulesViewModelFactory(app, app.scheduleRepository, app.repositoriesRepository, app.appInfoRepository, app.rootRepository, app.resticBinaryManager, app.resticRepository, app.preferencesRepository)
-                                    )
-                                    DestinationScaffold(
-                                        titleRes = R.string.title_device_data,
-                                        isTopLevel = false,
-                                        isExiting = transition.targetState == EnterExitState.PostExit,
-                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
-                                    ) {
-                                        io.github.hddq.restoid.ui.schedules.ScheduleDeviceDataConfigScreen(viewModel = vm)
+                                        )
                                     }
                                 }
                             }

@@ -9,6 +9,7 @@ import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.ResticBinaryManager
 import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.data.RootRepository
+import io.github.hddq.restoid.data.ScheduleRepository
 import io.github.hddq.restoid.data.StoragePermissionRepository
 import io.github.hddq.restoid.data.LocalNetworkPermissionRepository
 
@@ -18,6 +19,7 @@ class SettingsViewModelFactory(
     private val resticBinaryManager: ResticBinaryManager, // New dependency
     private val resticRepository: ResticRepository,
     private val repositoriesRepository: RepositoriesRepository,
+    private val scheduleRepository: ScheduleRepository,
     private val notificationRepository: NotificationRepository,
     private val preferencesRepository: PreferencesRepository,
     private val storagePermissionRepository: StoragePermissionRepository,
@@ -32,6 +34,7 @@ class SettingsViewModelFactory(
                 resticBinaryManager,
                 resticRepository,
                 repositoriesRepository,
+                scheduleRepository,
                 notificationRepository,
                 preferencesRepository,
                 storagePermissionRepository,
