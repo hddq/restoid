@@ -224,8 +224,11 @@
     <string name="run_tasks_check_metadata_only">Metadata only</string>
     <string name="run_tasks_check_read_all_data_description">Verify repository data packs in addition to metadata.</string>
     <string name="no_repository_selected">No repository selected. Go to settings to add one.</string>
+    <string name="no_repository_selected_title">No repository selected.</string>
+    <string name="no_repository_selected_hint">Go to settings to add one.</string>
     <string name="restic_not_available_check_settings">Restic not available. Check settings.</string>
     <string name="no_schedules_configured">No schedules configured for this repository.</string>
+    <string name="no_schedules_configured_hint">Create a schedule to automatically run a task preset at set intervals.</string>
     <string name="schedule_interval_label">Interval (Hours)</string>
     <string name="schedule_name_label">Name</string>
     <string name="schedule_last_run">Last run: %1$s (%2$s)</string>
@@ -238,6 +241,7 @@
     <string name="error_with_message">Error: %1$s</string>
     <string name="error_cannot_backup_repo_to_itself">Cannot add the repository itself as a custom directory to backup.</string>
     <string name="no_snapshots_found_for_repository">No snapshots found for the selected repository.</string>
+    <string name="no_snapshots_found_hint">Run a backup task or pull down to refresh snapshots.</string>
     <plurals name="snapshots_count">
         <item quantity="one">Snapshot (%1$d)</item>
         <item quantity="other">Snapshots (%1$d)</item>

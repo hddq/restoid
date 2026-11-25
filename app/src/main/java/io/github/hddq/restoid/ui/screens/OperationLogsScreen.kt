@@ -62,12 +62,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.hddq.restoid.LocalAppBarActions
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.OperationLogEntry
 import io.github.hddq.restoid.data.OperationType
+import io.github.hddq.restoid.ui.components.ExpressiveEmptyState
 import io.github.hddq.restoid.ui.operation.OperationLogsViewModel
 import java.text.DateFormat
 import java.util.Date
@@ -147,33 +147,11 @@ fun OperationLogsScreen(
             modifier = modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(32.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.ReceiptLong,
-                    contentDescription = null,
-                    modifier = Modifier.size(64.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                )
-                Spacer(Modifier.height(16.dp))
-                Text(
-                    text = stringResource(R.string.operation_logs_empty),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = stringResource(R.string.operation_logs_empty_desc),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-            }
+            ExpressiveEmptyState(
+                icon = Icons.AutoMirrored.Outlined.ReceiptLong,
+                title = stringResource(R.string.operation_logs_empty),
+                subtitle = stringResource(R.string.operation_logs_empty_desc)
+            )
         }
     } else {
         LazyColumn(
