@@ -77,7 +77,19 @@ declare -A ABI_TO_CC=(
 # Exclude rclone's web GUI (cmd/gui embeds a prebuilt dist.zip, which is deleted for F-Droid).
 # A Go build overlay drops the blank import from cmd/all/all.go without touching the submodule.
 RCLONE_ALL_GO="$RCLONE_DIR/cmd/all/all.go"
+RCLONE_VERSION_FILE="$RCLONE_DIR/VERSION"
 RCLONE_GUI_IMPORT_RE='^[[:space:]]*_[[:space:]]*"github\.com/rclone/rclone/cmd/gui"[[:space:]]*$'
+
+if [ ! -f "$RCLONE_VERSION_FILE" ]; then
+    echo "Error: $RCLONE_VERSION_FILE not found"
+    exit 1
+fi
+
+RCLONE_VERSION=$(tr -d '[:space:]' < "$RCLONE_VERSION_FILE")
+if [ -z "$RCLONE_VERSION" ]; then
+    echo "Error: $RCLONE_VERSION_FILE is empty"
+    exit 1
+fi
 
 if ! grep -q "$RCLONE_GUI_IMPORT_RE" "$RCLONE_ALL_GO"; then
     echo "Error: cmd/gui import not found in $RCLONE_ALL_GO; update build_rclone.sh"
@@ -125,7 +137,7 @@ for abi in "${!ABI_TO_GOARCH[@]}"; do
             -C "$RCLONE_DIR" \
             -buildvcs=false \
             -tags "noselfupdate" \
-            -ldflags="-s -w -buildid=" \
+            -ldflags="-s -w -buildid= -X github.com/rclone/rclone/fs.Version=$RCLONE_VERSION" \
             -trimpath \
             -overlay "$OVERLAY_DIR/overlay.json" \
             -o "$out_file" \
