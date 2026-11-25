@@ -19,14 +19,18 @@ import io.github.hddq.restoid.R
 import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
 import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Bolt
 import io.github.hddq.restoid.ui.screens.settings.components.AppUnlockOnStartRow
 import io.github.hddq.restoid.ui.screens.settings.components.DeviceHostnameRow
+import io.github.hddq.restoid.ui.screens.settings.components.SettingsToggleRow
 import io.github.hddq.restoid.ui.screens.settings.dialogs.EditHostnameDialog
 import io.github.hddq.restoid.ui.settings.SettingsViewModel
 
 @Composable
 fun OptionsSettings(viewModel: SettingsViewModel) {
     val requireAppUnlock by viewModel.requireAppUnlock.collectAsStateWithLifecycle()
+    val allowExternalIntents by viewModel.allowExternalIntents.collectAsStateWithLifecycle()
     val deviceHostname by viewModel.deviceHostname.collectAsStateWithLifecycle()
     val customDeviceHostname by viewModel.customDeviceHostname.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -47,7 +51,7 @@ fun OptionsSettings(viewModel: SettingsViewModel) {
     Column(modifier = Modifier.fillMaxWidth()) {
         ExpressiveSectionHeader(title = stringResource(R.string.options_title))
         ExpressiveCardGroup {
-            ExpressiveSegmentedSurface(index = 0, count = 2) {
+            ExpressiveSegmentedSurface(index = 0, count = 3) {
                 AppUnlockOnStartRow(
                     enabled = requireAppUnlock,
                     onCheckedChange = { required ->
@@ -87,7 +91,15 @@ fun OptionsSettings(viewModel: SettingsViewModel) {
                     }
                 )
             }
-            ExpressiveSegmentedSurface(index = 1, count = 2) {
+            ExpressiveSegmentedSurface(index = 1, count = 3) {
+                SettingsToggleRow(
+                    title = stringResource(R.string.allow_external_intents),
+                    icon = Icons.Outlined.Bolt,
+                    enabled = allowExternalIntents,
+                    onCheckedChange = viewModel::onAllowExternalIntentsChanged
+                )
+            }
+            ExpressiveSegmentedSurface(index = 2, count = 3) {
                 DeviceHostnameRow(
                     hostname = deviceHostname,
                     onClick = { showEditHostnameDialog = true }
