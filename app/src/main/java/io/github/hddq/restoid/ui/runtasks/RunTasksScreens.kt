@@ -146,48 +146,24 @@ fun RunTasksScreen(
     ) {
         if (uiState.availablePresets.isNotEmpty()) {
             item(key = "preset_chips_strip") {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        item(key = "preset_chip_custom") {
-                            FilterChip(
-                                selected = uiState.selectedPresetId == null,
-                                onClick = { viewModel.selectCustom() },
-                                label = {
-                                    Text(
-                                        text = stringResource(R.string.run_tasks_preset_custom),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                            )
-                        }
-                        items(
-                            items = uiState.availablePresets,
-                            key = { it.id }
-                        ) { preset ->
-                            FilterChip(
-                                selected = uiState.selectedPresetId == preset.id,
-                                onClick = { viewModel.selectPreset(preset.id) },
-                                label = {
-                                    Text(
-                                        text = preset.name,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                            )
-                        }
-                    }
-
-                    if (uiState.isModifiedFromPreset && uiState.selectedPresetId != null) {
-                        Text(
-                            text = stringResource(R.string.run_tasks_preset_modified_hint),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 6.dp, start = 4.dp)
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(
+                        items = uiState.availablePresets,
+                        key = { it.id }
+                    ) { preset ->
+                        FilterChip(
+                            selected = uiState.selectedPresetId == preset.id,
+                            onClick = { viewModel.selectPreset(preset.id) },
+                            label = {
+                                Text(
+                                    text = preset.name,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         )
                     }
                 }

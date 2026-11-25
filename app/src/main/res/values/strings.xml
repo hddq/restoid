@@ -894,8 +894,6 @@
         <item quantity="one">Deleting this preset will also delete %1$d linked schedule. Are you sure?</item>
         <item quantity="other">Deleting this preset will also delete %1$d linked schedules. Are you sure?</item>
     </plurals>
-    <string name="run_tasks_preset_custom">Custom</string>
-    <string name="run_tasks_preset_modified_hint">Modified (won\'t change preset)</string>
     <string name="dialog_save_as_preset_title">Save as Preset</string>
     <string name="dialog_save_as_preset_desc">Save the current task configuration as a reusable preset for this repository.</string>
     <string name="toast_preset_saved">Preset saved</string>
