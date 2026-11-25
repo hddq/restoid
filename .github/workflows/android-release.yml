@@ -276,6 +276,16 @@ jobs:
             release-assets/SHA256SUMS.txt
             release-assets/mapping.txt.gz
 
+      - name: Trigger central F-Droid repo update
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.FDROID_REPO_DISPATCH_TOKEN }}
+        run: |
+          gh api repos/hddq/fdroid-repo/dispatches \
+            -f event_type=app-released \
+            -f "client_payload[repo]=${{ github.repository }}" \
+            -f "client_payload[tag]=${{ github.ref_name }}"
+
       - name: Build F-Droid repo index
         env:
           FDROID_REPO_KEYSTORE_BASE64: ${{ secrets.FDROID_REPO_KEYSTORE_BASE64 }}
