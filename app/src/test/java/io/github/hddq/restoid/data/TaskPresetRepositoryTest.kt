@@ -162,4 +162,29 @@ class TaskPresetRepositoryTest {
         assertNull(capturedRequests.last().scheduleName)
         assertNotNull(presetRepo.getPresetById(repoId, preset.id)?.lastRunTimestamp)
     }
+
+    @Test
+    fun `savePreset load and duplicatePreset preserve backupTags`() = runTest {
+        val (presetRepo, _, _) = createFixture()
+        val repoId = "repo-1"
+
+        val original = TaskPreset(
+            id = "p-tags",
+            name = "Tagged Backup",
+            config = RunTasksConfig(
+                backupEnabled = true,
+                backupTags = listOf("weekly", "photos")
+            )
+        )
+        val saved = presetRepo.savePreset(repoId, original)
+        assertNotNull(saved)
+        assertEquals(listOf("weekly", "photos"), saved!!.config.backupTags)
+
+        val loaded = presetRepo.getPresetById(repoId, "p-tags")
+        assertEquals(listOf("weekly", "photos"), loaded?.config?.backupTags)
+
+        val duplicated = presetRepo.duplicatePreset(repoId, "p-tags", "Tagged Backup (Copy)")
+        assertNotNull(duplicated)
+        assertEquals(listOf("weekly", "photos"), duplicated!!.config.backupTags)
+    }
 }

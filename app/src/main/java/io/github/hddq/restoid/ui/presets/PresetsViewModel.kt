@@ -12,7 +12,9 @@ import io.github.hddq.restoid.data.ResticBinaryManager
 import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.data.RootRepository
 import io.github.hddq.restoid.data.ScheduleRepository
+import io.github.hddq.restoid.data.TagRepository
 import io.github.hddq.restoid.data.TaskPresetRepository
+import io.github.hddq.restoid.model.BackupTag
 import io.github.hddq.restoid.model.Schedule
 import io.github.hddq.restoid.model.TaskPreset
 import io.github.hddq.restoid.ui.shared.AppSortOrder
@@ -69,7 +71,8 @@ class PresetsViewModel(
     private val resticBinaryManager: ResticBinaryManager,
     private val resticRepository: ResticRepository,
     private val preferencesRepository: PreferencesRepository,
-    private val operationWorkRepository: OperationWorkRepository
+    private val operationWorkRepository: OperationWorkRepository,
+    private val tagRepository: TagRepository
 ) : ViewModel() {
 
     val hasRoot = rootRepository.hasRoot
@@ -100,7 +103,8 @@ class PresetsViewModel(
         updateState = { transform ->
             _addEditState.update { state -> state.copy(editor = transform(state.editor)) }
         },
-        selectedRepoKeyProvider = { _uiState.value.selectedRepoKey }
+        selectedRepoKeyProvider = { _uiState.value.selectedRepoKey },
+        tagRepository = tagRepository
     )
 
     init {
@@ -121,6 +125,7 @@ class PresetsViewModel(
         loadPresetsJob?.cancel()
         val repoKey = _uiState.value.selectedRepoKey
         if (repoKey == null) {
+            editorController.loadAvailableTags(null)
             _uiState.update {
                 it.copy(
                     presets = emptyList(),
@@ -132,6 +137,7 @@ class PresetsViewModel(
         }
         val repository = repositoriesRepository.getRepositoryByKey(repoKey) ?: return
         val repoId = repository.id ?: return
+        editorController.loadAvailableTags(repoId)
 
         loadPresetsJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
@@ -195,6 +201,7 @@ class PresetsViewModel(
             }
         )
         initialState = _addEditState.value
+        editorController.loadAvailableTags(currentSelectedRepoId())
     }
 
     fun startEditPreset(preset: TaskPreset) {
@@ -229,6 +236,7 @@ class PresetsViewModel(
             }
         )
         initialState = _addEditState.value
+        editorController.loadAvailableTags(currentSelectedRepoId())
         refreshLinkedSchedules()
     }
 
@@ -548,6 +556,34 @@ class PresetsViewModel(
     fun setAppBackupTypes(packageName: String, backupTypes: BackupTypes) = editorController.setAppBackupTypes(packageName, backupTypes)
     fun setSelectedAppsBackupTypes(backupTypes: BackupTypes) = editorController.setSelectedAppsBackupTypes(backupTypes)
     fun refreshAppsList() = editorController.refreshAppsList()
+    fun toggleBackupTag(tagName: String) = editorController.toggleBackupTag(tagName)
+
+    suspend fun createTag(name: String, colorArgb: Int): Result<BackupTag> {
+        val repoId = currentSelectedRepoId()
+            ?: return Result.failure(IllegalStateException("No repository selected"))
+        return editorController.createTag(repoId, name, colorArgb)
+    }
+
+    suspend fun updateTagColor(name: String, colorArgb: Int): Result<BackupTag> {
+        val repoId = currentSelectedRepoId()
+            ?: return Result.failure(IllegalStateException("No repository selected"))
+        return editorController.updateTagColor(repoId, name, colorArgb)
+    }
+
+    suspend fun deleteTag(name: String): Result<Unit> {
+        val repoId = currentSelectedRepoId()
+            ?: return Result.failure(IllegalStateException("No repository selected"))
+        val result = editorController.deleteTag(repoId, name)
+        if (result.isSuccess) {
+            loadPresets()
+        }
+        return result
+    }
+
+    private fun currentSelectedRepoId(): String? {
+        val repoKey = _uiState.value.selectedRepoKey ?: repositoriesRepository.selectedRepository.value ?: return null
+        return repositoriesRepository.getRepositoryByKey(repoKey)?.id
+    }
 }
 
 internal fun hasPresetChanges(

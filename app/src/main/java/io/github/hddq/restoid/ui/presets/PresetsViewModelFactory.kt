@@ -10,6 +10,7 @@ import io.github.hddq.restoid.data.ResticBinaryManager
 import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.data.RootRepository
 import io.github.hddq.restoid.data.ScheduleRepository
+import io.github.hddq.restoid.data.TagRepository
 import io.github.hddq.restoid.data.TaskPresetRepository
 import io.github.hddq.restoid.work.OperationWorkRepository
 
@@ -23,7 +24,8 @@ class PresetsViewModelFactory(
     private val resticBinaryManager: ResticBinaryManager,
     private val resticRepository: ResticRepository,
     private val preferencesRepository: PreferencesRepository,
-    private val operationWorkRepository: OperationWorkRepository
+    private val operationWorkRepository: OperationWorkRepository,
+    private val tagRepository: TagRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(PresetsViewModel::class.java)) {
@@ -38,7 +40,8 @@ class PresetsViewModelFactory(
                 resticBinaryManager = resticBinaryManager,
                 resticRepository = resticRepository,
                 preferencesRepository = preferencesRepository,
-                operationWorkRepository = operationWorkRepository
+                operationWorkRepository = operationWorkRepository,
+                tagRepository = tagRepository
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

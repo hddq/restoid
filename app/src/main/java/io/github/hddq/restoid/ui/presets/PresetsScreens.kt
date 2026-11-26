@@ -83,6 +83,8 @@ import io.github.hddq.restoid.LocalAppBarActions
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.model.Schedule
 import io.github.hddq.restoid.model.TaskPreset
+import io.github.hddq.restoid.ui.components.BackupTagPickerSheet
+import io.github.hddq.restoid.ui.components.BackupTagsRow
 import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
 import io.github.hddq.restoid.ui.components.ExpressiveEmptyState
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
@@ -388,6 +390,7 @@ fun AddEditPresetScreen(
     val context = LocalContext.current
     val appBarActions = LocalAppBarActions.current
     var showGuideSheet by remember { mutableStateOf(false) }
+    var showTagPickerSheet by remember { mutableStateOf(false) }
     val lifecycleOwner = LocalLifecycleOwner.current
 
     val (deviceDataPermissions, requestDeviceDataPermissions) = rememberPermissionsMap(
@@ -508,8 +511,11 @@ fun AddEditPresetScreen(
             Column(modifier = Modifier.fillMaxWidth()) {
                 ExclusionConflictWarningCard(conflicts = editor.exclusionConflicts)
                 ExpressiveSectionHeader(title = stringResource(R.string.operation_backup))
+                val hasBackupTaskEnabled = (hasRoot && editor.backupEnabled) ||
+                    editor.customDirectoriesBackupEnabled ||
+                    editor.deviceDataBackupEnabled
                 ExpressiveCardGroup {
-                    ExpressiveSegmentedSurface(index = 0, count = 3) {
+                    ExpressiveSegmentedSurface(index = 0, count = 4) {
                         TaskRow(
                             title = stringResource(R.string.run_tasks_applications),
                             subtitle = if (hasRoot) buildBackupSubtitle(editor.apps, editor.appBackupTypes, editor.backupTypes, context) else stringResource(R.string.root_access_denied),
@@ -520,7 +526,7 @@ fun AddEditPresetScreen(
                             enabled = hasRoot
                         )
                     }
-                    ExpressiveSegmentedSurface(index = 1, count = 3) {
+                    ExpressiveSegmentedSurface(index = 1, count = 4) {
                         TaskRow(
                             title = stringResource(R.string.run_tasks_custom_directories),
                             subtitle = buildCustomDirectoriesSubtitle(editor.customDirectories, editor.excludedCustomDirectories, context),
@@ -530,7 +536,7 @@ fun AddEditPresetScreen(
                             onNavigate = onNavigateToCustomDirectoriesConfig
                         )
                     }
-                    ExpressiveSegmentedSurface(index = 2, count = 3) {
+                    ExpressiveSegmentedSurface(index = 2, count = 4) {
                         TaskRow(
                             title = stringResource(R.string.run_tasks_device_data),
                             subtitle = buildDeviceDataSubtitle(
@@ -565,6 +571,14 @@ fun AddEditPresetScreen(
                                 }
                             },
                             onNavigate = onNavigateToDeviceDataConfig
+                        )
+                    }
+                    ExpressiveSegmentedSurface(index = 3, count = 4) {
+                        BackupTagsRow(
+                            selectedTags = editor.backupTags,
+                            availableTags = editor.availableTags,
+                            enabled = hasBackupTaskEnabled,
+                            onClick = { showTagPickerSheet = true }
                         )
                     }
                 }
@@ -743,6 +757,18 @@ fun AddEditPresetScreen(
 
     if (showGuideSheet) {
         TasksGuideBottomSheet(onDismissRequest = { showGuideSheet = false })
+    }
+
+    if (showTagPickerSheet) {
+        BackupTagPickerSheet(
+            availableTags = editor.availableTags,
+            selectedTags = editor.backupTags,
+            onToggleTag = viewModel::toggleBackupTag,
+            onCreateTag = viewModel::createTag,
+            onUpdateTagColor = viewModel::updateTagColor,
+            onDeleteTag = viewModel::deleteTag,
+            onDismissRequest = { showTagPickerSheet = false }
+        )
     }
 }
 
