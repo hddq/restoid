@@ -61,6 +61,7 @@ data class HomeUiState(
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     val error: String? = null,
+    val isMissingLocalPermissions: Boolean = false,
     val authFailure: HomeAuthFailure? = null,
     val openPrompt: HomeCredentialPrompt? = null,
     val selectedRepo: String? = null,
@@ -208,6 +209,7 @@ class HomeViewModel(
                         isLoading = canLoadSelectedRepo,
                         isRefreshing = false,
                         error = null,
+                        isMissingLocalPermissions = false,
                         authFailure = null,
                         openPrompt = null,
                         showPasswordDialogFor = null,
@@ -257,7 +259,7 @@ class HomeViewModel(
 
             if (snapshots == null) {
                 if (!_uiState.value.isRefreshing) {
-                    _uiState.update { it.copy(isLoading = true, error = null, openPrompt = null) }
+                    _uiState.update { it.copy(isLoading = true, error = null, isMissingLocalPermissions = false, openPrompt = null) }
                 }
                 loadSnapshots(repoPath, env, resticOptions, repoKey, restic)
                 return@combine
@@ -267,6 +269,7 @@ class HomeViewModel(
                 it.copy(
                     isLoading = false,
                     error = null,
+                    isMissingLocalPermissions = false,
                     authFailure = null,
                     openPrompt = null,
                     showPasswordDialogFor = null,
@@ -427,6 +430,10 @@ class HomeViewModel(
             val result = resticRepository.getSnapshots(repoPath, password, environmentVariables, resticOptions)
             if (result.isFailure) {
                 if (repositoriesRepository.selectedRepository.value != repoKey) return@launch
+                if (repository.backendType == RepositoryBackendType.LOCAL && !hasLocalRepositoryAccess()) {
+                    showMissingLocalPermissionsError()
+                    return@launch
+                }
                 val rawMessage = result.exceptionOrNull()?.message ?: context.getString(R.string.error_unknown)
                 val authFailure = classifyAuthenticationFailure(repository, rawMessage)
                 _uiState.update {
@@ -438,6 +445,7 @@ class HomeViewModel(
                             HomeAuthFailure.S3_CREDENTIALS -> context.getString(R.string.home_error_s3_credentials_incorrect)
                             null -> rawMessage
                         },
+                        isMissingLocalPermissions = false,
                         authFailure = authFailure,
                         openPrompt = null,
                         isLoading = false,
@@ -561,6 +569,10 @@ class HomeViewModel(
                 }
                 val result = resticRepository.getSnapshots(repoPath, password, environmentVariables, resticOptions)
                 if (result.isFailure) {
+                    if (repository.backendType == RepositoryBackendType.LOCAL && !hasLocalRepositoryAccess()) {
+                        showMissingLocalPermissionsError()
+                        return@launch
+                    }
                     val rawMessage = result.exceptionOrNull()?.message ?: context.getString(R.string.error_unknown)
                     val authFailure = classifyAuthenticationFailure(repository, rawMessage)
                     _uiState.update {
@@ -572,6 +584,7 @@ class HomeViewModel(
                                 HomeAuthFailure.S3_CREDENTIALS -> context.getString(R.string.home_error_s3_credentials_incorrect)
                                 null -> rawMessage
                             },
+                            isMissingLocalPermissions = false,
                             authFailure = authFailure,
                             openPrompt = null
                         )
@@ -903,6 +916,10 @@ class HomeViewModel(
         }
     }
 
+    fun checkStoragePermission() {
+        storagePermissionRepository.checkPermissionStatus()
+    }
+
     private suspend fun hasLocalRepositoryAccess(): Boolean {
         if (storagePermissionRepository.hasStoragePermission()) return true
         rootRepository.checkRootAccess()
@@ -917,6 +934,7 @@ class HomeViewModel(
                 isLoading = false,
                 isRefreshing = false,
                 error = context.getString(R.string.storage_permission_disabled),
+                isMissingLocalPermissions = true,
                 authFailure = null,
                 openPrompt = null,
                 showPasswordDialogFor = null,

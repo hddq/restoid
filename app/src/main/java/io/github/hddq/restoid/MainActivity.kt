@@ -619,6 +619,7 @@ class MainActivity : FragmentActivity() {
                                                         onDismissForgetErrorDialog = { homeViewModel.dismissForgetErrorDialog() },
                                                         uiState = homeUiState,
                                                         onRefresh = { homeViewModel.refreshSnapshots() },
+                                                        onCheckStoragePermission = { homeViewModel.checkStoragePermission() },
                                                         onPasswordEntered = { p, s -> homeViewModel.onPasswordEntered(p, s) },
                                                         onSftpPasswordEntered = { keyOrPassword, passphrase, save ->
                                                             homeViewModel.onSftpPasswordEntered(keyOrPassword, passphrase, save)

@@ -57,6 +57,11 @@ import androidx.compose.material3.TextButton
 import io.github.hddq.restoid.ui.components.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -67,8 +72,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -134,6 +143,7 @@ fun HomeScreen(
     onSnapshotClick: (String) -> Unit,
     uiState: HomeUiState,
     onRefresh: () -> Unit,
+    onCheckStoragePermission: () -> Unit = {},
     onPasswordEntered: (String, Boolean) -> Unit,
     onSftpPasswordEntered: (String, String, Boolean) -> Unit,
     onRestCredentialsEntered: (String, String, Boolean) -> Unit,
@@ -156,6 +166,20 @@ fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
     var showForceStopDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                onCheckStoragePermission()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
     val activeOp = uiState.activeOperation
     val isOperationActive = activeOp.isRunning || activeOp.stopRequested
 
@@ -238,22 +262,45 @@ fun HomeScreen(
                             title = stringResource(R.string.error_with_message, errorMessage),
                             iconTint = MaterialTheme.colorScheme.error.copy(alpha = 0.75f),
                             titleColor = MaterialTheme.colorScheme.error,
-                            action = uiState.authFailure?.let { authFailure ->
-                                val (labelRes, onClick) = when (authFailure) {
-                                    HomeAuthFailure.REPOSITORY_PASSWORD ->
-                                        R.string.action_enter_password_again to onRetryRepositoryPasswordEntry
-                                    HomeAuthFailure.SFTP_PASSWORD ->
-                                        R.string.action_enter_sftp_password_again to onRetrySftpPasswordEntry
-                                    HomeAuthFailure.REST_CREDENTIALS ->
-                                        R.string.action_enter_rest_credentials_again to onRetryRestCredentialsEntry
-                                    HomeAuthFailure.S3_CREDENTIALS ->
-                                        R.string.action_enter_s3_credentials_again to onRetryS3CredentialsEntry
-                                }
-                                {
-                                    Button(onClick = onClick) {
-                                        Text(stringResource(labelRes))
+                            action = when {
+                                uiState.isMissingLocalPermissions -> {
+                                    {
+                                        Button(
+                                            onClick = {
+                                                val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                                    Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                                                        data = Uri.parse("package:${context.packageName}")
+                                                    }
+                                                } else {
+                                                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                                        data = Uri.parse("package:${context.packageName}")
+                                                    }
+                                                }
+                                                runCatching { context.startActivity(intent) }
+                                            }
+                                        ) {
+                                            Text(stringResource(R.string.action_grant))
+                                        }
                                     }
                                 }
+                                uiState.authFailure != null -> {
+                                    val (labelRes, onClick) = when (uiState.authFailure) {
+                                        HomeAuthFailure.REPOSITORY_PASSWORD ->
+                                            R.string.action_enter_password_again to onRetryRepositoryPasswordEntry
+                                        HomeAuthFailure.SFTP_PASSWORD ->
+                                            R.string.action_enter_sftp_password_again to onRetrySftpPasswordEntry
+                                        HomeAuthFailure.REST_CREDENTIALS ->
+                                            R.string.action_enter_rest_credentials_again to onRetryRestCredentialsEntry
+                                        HomeAuthFailure.S3_CREDENTIALS ->
+                                            R.string.action_enter_s3_credentials_again to onRetryS3CredentialsEntry
+                                    }
+                                    {
+                                        Button(onClick = onClick) {
+                                            Text(stringResource(labelRes))
+                                        }
+                                    }
+                                }
+                                else -> null
                             }
                         )
                     }
