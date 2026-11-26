@@ -12,7 +12,10 @@ import io.github.hddq.restoid.data.RepositoryBackendType
 import io.github.hddq.restoid.data.ResticBinaryManager
 import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.data.ResticState
+import io.github.hddq.restoid.data.RootRepository
 import io.github.hddq.restoid.data.SnapshotInfo
+import io.github.hddq.restoid.data.StoragePermissionRepository
+import io.github.hddq.restoid.data.StoragePermissionState
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.RestoidMetadata
 import io.github.hddq.restoid.work.OperationWorkRepository
@@ -58,6 +61,7 @@ data class HomeUiState(
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     val error: String? = null,
+    val isMissingLocalPermissions: Boolean = false,
     val authFailure: HomeAuthFailure? = null,
     val openPrompt: HomeCredentialPrompt? = null,
     val selectedRepo: String? = null,
@@ -82,7 +86,9 @@ class HomeViewModel(
     private val resticRepository: ResticRepository,
     private val appInfoRepository: AppInfoRepository,
     private val metadataRepository: MetadataRepository,
-    private val operationWorkRepository: OperationWorkRepository
+    private val operationWorkRepository: OperationWorkRepository,
+    private val rootRepository: RootRepository,
+    private val storagePermissionRepository: StoragePermissionRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -94,6 +100,9 @@ class HomeViewModel(
         viewModelScope.launch {
             repositoriesRepository.loadRepositories()
             resticBinaryManager.checkResticStatus()
+            if (!storagePermissionRepository.hasStoragePermission()) {
+                rootRepository.checkRootAccess()
+            }
         }
 
         viewModelScope.launch {
@@ -119,11 +128,19 @@ class HomeViewModel(
             )
         }.distinctUntilChanged()
 
+        val localAccessState = combine(
+            rootRepository.hasRoot,
+            storagePermissionRepository.permissionState
+        ) { hasRoot, storageState ->
+            hasRoot || storageState is StoragePermissionState.Granted || storagePermissionRepository.hasStoragePermission()
+        }.distinctUntilChanged()
+
         combine(
             selectedRepoSnapshotState,
             resticBinaryManager.resticState, // Observe state from Manager
-            refreshTrigger
-        ) { (repoKey, repos, snapshots), restic, _ ->
+            refreshTrigger,
+            localAccessState
+        ) { (repoKey, repos, snapshots), restic, _, hasLocalRepoAccess ->
 
             val selectedRepository = repoKey?.let { key ->
                 repos.find { repositoriesRepository.repositoryKey(it) == key }
@@ -134,6 +151,7 @@ class HomeViewModel(
             val resticOptions = repoKey?.let { repositoriesRepository.getExecutionResticOptions(it) }.orEmpty()
             val isRepoSwitch = repoKey != lastObservedRepoKey
 
+            val hasLocalAccess = selectedRepository?.backendType != RepositoryBackendType.LOCAL || hasLocalRepoAccess
             val hasRepositoryPassword = repoKey?.let { repositoriesRepository.hasRepositoryPassword(it) } ?: false
             val hasSftpCredentials = if (selectedRepository?.backendType == RepositoryBackendType.SFTP) {
                 repositoriesRepository.hasSftpCredentials(repositoriesRepository.repositoryKey(selectedRepository))
@@ -160,6 +178,7 @@ class HomeViewModel(
             val isRepoReady =
                 repoKey != null &&
                     restic is ResticState.Installed &&
+                    hasLocalAccess &&
                     hasRepositoryPassword &&
                     hasSftpCredentials &&
                     hasRestCredentials &&
@@ -181,6 +200,11 @@ class HomeViewModel(
                     resticRepository.clearSnapshots(repoPath)
                 }
 
+                if (canLoadSelectedRepo && !hasLocalAccess) {
+                    showMissingLocalPermissionsError()
+                    return@combine
+                }
+
                 _uiState.update {
                     it.copy(
                         snapshotsWithMetadata = emptyList(),
@@ -188,6 +212,7 @@ class HomeViewModel(
                         isLoading = canLoadSelectedRepo,
                         isRefreshing = false,
                         error = null,
+                        isMissingLocalPermissions = false,
                         authFailure = null,
                         openPrompt = null,
                         showPasswordDialogFor = null,
@@ -229,9 +254,15 @@ class HomeViewModel(
                 return@combine
             }
 
+            if (!hasLocalAccess) {
+                resticRepository.clearSnapshots(repoPath)
+                showMissingLocalPermissionsError()
+                return@combine
+            }
+
             if (snapshots == null) {
                 if (!_uiState.value.isRefreshing) {
-                    _uiState.update { it.copy(isLoading = true, error = null, openPrompt = null) }
+                    _uiState.update { it.copy(isLoading = true, error = null, isMissingLocalPermissions = false, openPrompt = null) }
                 }
                 loadSnapshots(repoPath, env, resticOptions, repoKey, restic)
                 return@combine
@@ -241,6 +272,7 @@ class HomeViewModel(
                 it.copy(
                     isLoading = false,
                     error = null,
+                    isMissingLocalPermissions = false,
                     authFailure = null,
                     openPrompt = null,
                     showPasswordDialogFor = null,
@@ -314,6 +346,12 @@ class HomeViewModel(
             }
 
         viewModelScope.launch {
+            if (repository.backendType == RepositoryBackendType.LOCAL && !hasLocalRepositoryAccess()) {
+                if (repositoriesRepository.selectedRepository.value != repoKey) return@launch
+                showMissingLocalPermissionsError()
+                return@launch
+            }
+
             if (repository.backendType == RepositoryBackendType.SFTP && !repositoriesRepository.hasSftpCredentials(repoKey)) {
                 if (repositoriesRepository.selectedRepository.value != repoKey) return@launch
                 _uiState.update {
@@ -395,6 +433,10 @@ class HomeViewModel(
             val result = resticRepository.getSnapshots(repoPath, password, environmentVariables, resticOptions)
             if (result.isFailure) {
                 if (repositoriesRepository.selectedRepository.value != repoKey) return@launch
+                if (repository.backendType == RepositoryBackendType.LOCAL && !hasLocalRepositoryAccess()) {
+                    showMissingLocalPermissionsError()
+                    return@launch
+                }
                 val rawMessage = result.exceptionOrNull()?.message ?: context.getString(R.string.error_unknown)
                 val authFailure = classifyAuthenticationFailure(repository, rawMessage)
                 _uiState.update {
@@ -406,6 +448,7 @@ class HomeViewModel(
                             HomeAuthFailure.S3_CREDENTIALS -> context.getString(R.string.home_error_s3_credentials_incorrect)
                             null -> rawMessage
                         },
+                        isMissingLocalPermissions = false,
                         authFailure = authFailure,
                         openPrompt = null,
                         isLoading = false,
@@ -487,28 +530,36 @@ class HomeViewModel(
             return
         }
 
-        val initialPassword = repositoriesRepository.getRepositoryPassword(repoKey)
-        if (initialPassword == null) {
-            _uiState.update {
-                it.copy(
-                    isRefreshing = false,
-                    error = null,
-                    authFailure = null,
-                    openPrompt = null,
-                    showPasswordDialogFor = repoKey,
-                    showSftpPasswordDialogFor = null,
-                    showRestCredentialsDialogFor = null,
-                    showS3CredentialsDialogFor = null
-                )
+        if (repository.backendType != RepositoryBackendType.LOCAL) {
+            val initialPassword = repositoriesRepository.getRepositoryPassword(repoKey)
+            if (initialPassword == null) {
+                _uiState.update {
+                    it.copy(
+                        isRefreshing = false,
+                        error = null,
+                        authFailure = null,
+                        openPrompt = null,
+                        showPasswordDialogFor = repoKey,
+                        showSftpPasswordDialogFor = null,
+                        showRestCredentialsDialogFor = null,
+                        showS3CredentialsDialogFor = null
+                    )
+                }
+                return
             }
-            return
         }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isRefreshing = true, error = null, authFailure = null, openPrompt = null) }
+            _uiState.update { it.copy(isRefreshing = true, error = null, isMissingLocalPermissions = false, authFailure = null, openPrompt = null) }
             try {
+                if (repository.backendType == RepositoryBackendType.LOCAL && !hasLocalRepositoryAccess()) {
+                    if (repositoriesRepository.selectedRepository.value != repoKey) return@launch
+                    showMissingLocalPermissionsError()
+                    return@launch
+                }
                 val password = repositoriesRepository.getRepositoryPassword(repoKey)
                 if (password == null) {
+                    if (repositoriesRepository.selectedRepository.value != repoKey) return@launch
                     _uiState.update {
                         it.copy(
                             isRefreshing = false,
@@ -525,6 +576,13 @@ class HomeViewModel(
                 }
                 val result = resticRepository.getSnapshots(repoPath, password, environmentVariables, resticOptions)
                 if (result.isFailure) {
+                    if (repositoriesRepository.selectedRepository.value != repoKey) return@launch
+                    if (repository.backendType == RepositoryBackendType.LOCAL && !hasLocalRepositoryAccess()) {
+                        if (repositoriesRepository.selectedRepository.value != repoKey) return@launch
+                        showMissingLocalPermissionsError()
+                        return@launch
+                    }
+                    if (repositoriesRepository.selectedRepository.value != repoKey) return@launch
                     val rawMessage = result.exceptionOrNull()?.message ?: context.getString(R.string.error_unknown)
                     val authFailure = classifyAuthenticationFailure(repository, rawMessage)
                     _uiState.update {
@@ -536,6 +594,7 @@ class HomeViewModel(
                                 HomeAuthFailure.S3_CREDENTIALS -> context.getString(R.string.home_error_s3_credentials_incorrect)
                                 null -> rawMessage
                             },
+                            isMissingLocalPermissions = false,
                             authFailure = authFailure,
                             openPrompt = null
                         )
@@ -844,16 +903,55 @@ class HomeViewModel(
 
     fun onRetryRepositoryPasswordEntry() {
         val repoKey = _uiState.value.selectedRepo ?: return
+        val repository = repositoriesRepository.getRepositoryByKey(repoKey)
+        viewModelScope.launch {
+            if (repository?.backendType == RepositoryBackendType.LOCAL && !hasLocalRepositoryAccess()) {
+                if (repositoriesRepository.selectedRepository.value != repoKey) return@launch
+                showMissingLocalPermissionsError()
+                return@launch
+            }
+            if (repositoriesRepository.selectedRepository.value != repoKey) return@launch
+            _uiState.update {
+                it.copy(
+                    showPasswordDialogFor = repoKey,
+                    showSftpPasswordDialogFor = null,
+                    showRestCredentialsDialogFor = null,
+                    showS3CredentialsDialogFor = null,
+                    isLoading = false,
+                    error = null,
+                    authFailure = null,
+                    openPrompt = null
+                )
+            }
+        }
+    }
+
+    fun checkStoragePermission() {
+        storagePermissionRepository.checkPermissionStatus()
+    }
+
+    private suspend fun hasLocalRepositoryAccess(): Boolean {
+        if (storagePermissionRepository.hasStoragePermission()) return true
+        rootRepository.checkRootAccess()
+        return rootRepository.hasRoot.value
+    }
+
+    private fun showMissingLocalPermissionsError() {
         _uiState.update {
             it.copy(
-                showPasswordDialogFor = repoKey,
+                snapshotsWithMetadata = emptyList(),
+                appInfoMap = emptyMap(),
+                isLoading = false,
+                isRefreshing = false,
+                error = context.getString(R.string.storage_permission_disabled),
+                isMissingLocalPermissions = true,
+                authFailure = null,
+                openPrompt = null,
+                showPasswordDialogFor = null,
                 showSftpPasswordDialogFor = null,
                 showRestCredentialsDialogFor = null,
                 showS3CredentialsDialogFor = null,
-                isLoading = false,
-                error = null,
-                authFailure = null,
-                openPrompt = null
+                isRepoReady = false
             )
         }
     }
