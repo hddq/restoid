@@ -16,7 +16,10 @@ import io.github.hddq.restoid.data.RootRepository
 import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.data.StoragePermissionRepository
 import io.github.hddq.restoid.data.StoragePermissionState
+import io.github.hddq.restoid.data.TagRepository
 import io.github.hddq.restoid.model.AppInfo
+import io.github.hddq.restoid.model.BackupTag
+import io.github.hddq.restoid.model.BackupTagRules
 import io.github.hddq.restoid.model.RestoidMetadata
 import io.github.hddq.restoid.work.OperationWorkRepository
 import kotlinx.coroutines.Dispatchers
@@ -76,8 +79,30 @@ data class HomeUiState(
     val activeOperation: OperationRuntimeState = OperationRuntimeState(),
     val snapshotPendingForget: String? = null,
     val isForgettingSnapshot: Boolean = false,
-    val forgetSnapshotError: String? = null
+    val forgetSnapshotError: String? = null,
+    val repoTagsByName: Map<String, BackupTag> = emptyMap(),
+    val selectedFilterTags: Set<String> = emptySet()
 )
+
+internal fun extractAvailableFilterTags(snapshots: List<SnapshotWithMetadata>): List<String> {
+    return snapshots
+        .asSequence()
+        .flatMap { BackupTagRules.filterUserTags(it.snapshotInfo.tags).asSequence() }
+        .distinct()
+        .sortedWith(String.CASE_INSENSITIVE_ORDER)
+        .toList()
+}
+
+internal fun filterSnapshotsByTags(
+    snapshots: List<SnapshotWithMetadata>,
+    selectedTags: Set<String>
+): List<SnapshotWithMetadata> {
+    if (selectedTags.isEmpty()) return snapshots
+    return snapshots.filter { item ->
+        val userTags = BackupTagRules.filterUserTags(item.snapshotInfo.tags)
+        selectedTags.all { it in userTags }
+    }
+}
 
 class HomeViewModel(
     private val context: android.content.Context,
@@ -88,13 +113,15 @@ class HomeViewModel(
     private val metadataRepository: MetadataRepository,
     private val operationWorkRepository: OperationWorkRepository,
     private val rootRepository: RootRepository,
-    private val storagePermissionRepository: StoragePermissionRepository
+    private val storagePermissionRepository: StoragePermissionRepository,
+    private val tagRepository: TagRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState = _uiState.asStateFlow()
     private val refreshTrigger = MutableStateFlow(0)
     private var lastObservedRepoKey: String? = null
+    private var tagReadSequence = 0L
 
     init {
         viewModelScope.launch {
@@ -201,6 +228,7 @@ class HomeViewModel(
                 }
 
                 if (canLoadSelectedRepo && !hasLocalAccess) {
+                    _uiState.update { it.copy(repoTagsByName = emptyMap(), selectedFilterTags = emptySet()) }
                     showMissingLocalPermissionsError()
                     return@combine
                 }
@@ -221,7 +249,9 @@ class HomeViewModel(
                         showS3CredentialsDialogFor = null,
                         snapshotPendingForget = null,
                         isForgettingSnapshot = false,
-                        forgetSnapshotError = null
+                        forgetSnapshotError = null,
+                        repoTagsByName = emptyMap(),
+                        selectedFilterTags = emptySet()
                     )
                 }
 
@@ -248,7 +278,9 @@ class HomeViewModel(
                         showS3CredentialsDialogFor = null,
                         snapshotPendingForget = null,
                         isForgettingSnapshot = false,
-                        forgetSnapshotError = null
+                        forgetSnapshotError = null,
+                        repoTagsByName = emptyMap(),
+                        selectedFilterTags = emptySet()
                     )
                 }
                 return@combine
@@ -292,7 +324,9 @@ class HomeViewModel(
                         appInfoMap = emptyMap(),
                         error = errorMsg,
                         authFailure = null,
-                        openPrompt = null
+                        openPrompt = null,
+                        repoTagsByName = emptyMap(),
+                        selectedFilterTags = emptySet()
                     )
                 }
                 return@combine
@@ -304,8 +338,17 @@ class HomeViewModel(
                 val metadata = metadataRepository.getMetadataForSnapshot(repo.id, snapshot.id)
                 SnapshotWithMetadata(snapshot, metadata)
             }
+            val tagSeq = ++tagReadSequence
+            val repoTagsByName = tagRepository.getTags(repo.id).associateBy { it.name }
+            val availableTags = extractAvailableFilterTags(snapshotsWithMetadata).toSet()
 
-            _uiState.update { it.copy(snapshotsWithMetadata = snapshotsWithMetadata) }
+            _uiState.update {
+                it.copy(
+                    snapshotsWithMetadata = snapshotsWithMetadata,
+                    repoTagsByName = if (tagSeq == tagReadSequence) repoTagsByName else it.repoTagsByName,
+                    selectedFilterTags = it.selectedFilterTags.filterTo(mutableSetOf()) { tag -> tag in availableTags }
+                )
+            }
             loadAppInfoForSnapshots(snapshotsWithMetadata)
 
         }.launchIn(viewModelScope)
@@ -1012,6 +1055,37 @@ class HomeViewModel(
                 authFailure = null,
                 openPrompt = null
             )
+        }
+    }
+
+    fun toggleFilterTag(tagName: String) {
+        _uiState.update { state ->
+            val updated = if (tagName in state.selectedFilterTags) {
+                state.selectedFilterTags - tagName
+            } else {
+                state.selectedFilterTags + tagName
+            }
+            state.copy(selectedFilterTags = updated)
+        }
+    }
+
+    fun clearFilterTags() {
+        _uiState.update { it.copy(selectedFilterTags = emptySet()) }
+    }
+
+    fun refreshRepoTags() {
+        val repoKey = _uiState.value.selectedRepo ?: return
+        val repoId = repositoriesRepository.getRepositoryByKey(repoKey)?.id ?: return
+        val tagSeq = ++tagReadSequence
+        viewModelScope.launch {
+            val tagsByName = tagRepository.getTags(repoId).associateBy { it.name }
+            _uiState.update { state ->
+                if (state.selectedRepo == repoKey && tagSeq == tagReadSequence) {
+                    state.copy(repoTagsByName = tagsByName)
+                } else {
+                    state
+                }
+            }
         }
     }
 
