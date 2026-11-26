@@ -10,6 +10,7 @@ import io.github.hddq.restoid.data.ResticBinaryManager
 import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.data.RootRepository
 import io.github.hddq.restoid.data.StoragePermissionRepository
+import io.github.hddq.restoid.data.TagRepository
 import io.github.hddq.restoid.work.OperationWorkRepository
 
 class HomeViewModelFactory(
@@ -21,7 +22,8 @@ class HomeViewModelFactory(
     private val metadataRepository: MetadataRepository,
     private val operationWorkRepository: OperationWorkRepository,
     private val rootRepository: RootRepository,
-    private val storagePermissionRepository: StoragePermissionRepository
+    private val storagePermissionRepository: StoragePermissionRepository,
+    private val tagRepository: TagRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(HomeViewModel::class.java)) {
@@ -35,7 +37,8 @@ class HomeViewModelFactory(
                 metadataRepository,
                 operationWorkRepository,
                 rootRepository,
-                storagePermissionRepository
+                storagePermissionRepository,
+                tagRepository
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")

@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,6 +34,7 @@ import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Contacts
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material.icons.outlined.FilterAltOff
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Restore
@@ -46,6 +49,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -56,6 +60,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import io.github.hddq.restoid.ui.components.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import android.content.Intent
 import android.net.Uri
@@ -65,11 +70,13 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalContext
@@ -94,17 +101,21 @@ import io.github.hddq.restoid.data.OperationRuntimeState
 import io.github.hddq.restoid.data.OperationType
 import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.model.AppInfo
+import io.github.hddq.restoid.model.BackupTagRules
 import io.github.hddq.restoid.ui.components.ExpressiveEmptyState
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
 import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
 import io.github.hddq.restoid.ui.components.PasswordDialog
 import io.github.hddq.restoid.ui.components.SshPrivateKeyField
+import io.github.hddq.restoid.ui.components.TagColorDot
 import io.github.hddq.restoid.ui.components.UsernamePasswordDialog
 import coil.compose.AsyncImage
 import io.github.hddq.restoid.ui.home.HomeAuthFailure
 import io.github.hddq.restoid.ui.home.HomeCredentialPrompt
 import io.github.hddq.restoid.ui.home.HomeUiState
 import io.github.hddq.restoid.ui.home.SnapshotWithMetadata
+import io.github.hddq.restoid.ui.home.extractAvailableFilterTags
+import io.github.hddq.restoid.ui.home.filterSnapshotsByTags
 
 private fun homeCredentialsSaveLabel(prompt: HomeCredentialPrompt): Int {
     return if (prompt == HomeCredentialPrompt.S3_CREDENTIALS) R.string.action_save_passwords else R.string.save_credentials
@@ -163,16 +174,22 @@ fun HomeScreen(
     onDismissForgetErrorDialog: () -> Unit = {},
     onOpenOperationProgress: () -> Unit = {},
     onForceStopOperation: () -> Unit = {},
+    onToggleFilterTag: (String) -> Unit = {},
+    onClearFilterTags: () -> Unit = {},
+    onRefreshRepoTags: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showForceStopDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val currentOnCheckStoragePermission by rememberUpdatedState(onCheckStoragePermission)
+    val currentOnRefreshRepoTags by rememberUpdatedState(onRefreshRepoTags)
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                onCheckStoragePermission()
+                currentOnCheckStoragePermission()
+                currentOnRefreshRepoTags()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -202,6 +219,13 @@ fun HomeScreen(
         val sortedSnapshots = remember(uiState.snapshotsWithMetadata) {
             uiState.snapshotsWithMetadata.sortedByDescending { it.snapshotInfo.time }
         }
+        val availableFilterTags = remember(uiState.snapshotsWithMetadata) {
+            extractAvailableFilterTags(uiState.snapshotsWithMetadata)
+        }
+        val filteredSnapshots = remember(sortedSnapshots, uiState.selectedFilterTags) {
+            filterSnapshotsByTags(sortedSnapshots, uiState.selectedFilterTags)
+        }
+        val fallbackColorArgb = MaterialTheme.colorScheme.outline.toArgb()
 
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             val emptyStateMinHeight = (maxHeight - 96.dp).coerceAtLeast(0.dp)
@@ -340,33 +364,85 @@ fun HomeScreen(
                     }
                 }
                 else -> {
-                    item(key = "snapshots_header", contentType = "snapshots_header") {
-                        ExpressiveSectionHeader(
-                            title = pluralStringResource(
-                                R.plurals.snapshots_count,
-                                sortedSnapshots.size,
-                                sortedSnapshots.size
-                            )
-                        )
+                    if (availableFilterTags.isNotEmpty()) {
+                        item(key = "tag_filter_bar", contentType = "tag_filter_bar") {
+                            LazyRow(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(
+                                    items = availableFilterTags,
+                                    key = { it }
+                                ) { tagName ->
+                                    val dotColorArgb = uiState.repoTagsByName[tagName]?.colorArgb ?: fallbackColorArgb
+                                    FilterChip(
+                                        selected = tagName in uiState.selectedFilterTags,
+                                        onClick = { onToggleFilterTag(tagName) },
+                                        leadingIcon = {
+                                            TagColorDot(colorArgb = dotColorArgb, size = 10.dp)
+                                        },
+                                        label = {
+                                            Text(
+                                                text = tagName,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                        }
                     }
-                    itemsIndexed(
-                        items = sortedSnapshots,
-                        key = { _, item -> item.snapshotInfo.id },
-                        contentType = { _, _ -> "snapshot_item" }
-                    ) { index, item ->
-                        ExpressiveSegmentedSurface(
-                            index = index,
-                            count = sortedSnapshots.size,
-                            modifier = Modifier.padding(bottom = if (index < sortedSnapshots.size - 1) 2.dp else 0.dp)
-                        ) {
-                            SnapshotItem(
-                                snapshotWithMetadata = item,
-                                apps = uiState.appInfoMap[item.snapshotInfo.id],
-                                maxIconsPossible = maxIconsPossible,
-                                onClick = { onSnapshotClick(item.snapshotInfo.id) },
-                                onRestoreClick = { onRestoreSnapshotClick(item.snapshotInfo.id) },
-                                onForgetClick = { onRequestForgetSnapshot(item.snapshotInfo.id) }
+                    if (filteredSnapshots.isEmpty()) {
+                        item(key = "empty_filtered_snapshots") {
+                            HomeCenteredStatus(
+                                minHeight = emptyStateMinHeight,
+                                icon = Icons.Outlined.FilterAltOff,
+                                title = stringResource(R.string.home_no_matching_snapshots_title),
+                                action = {
+                                    Button(onClick = onClearFilterTags) {
+                                        Text(stringResource(R.string.action_clear_filters))
+                                    }
+                                }
                             )
+                        }
+                    } else {
+                        item(key = "snapshots_header", contentType = "snapshots_header") {
+                            ExpressiveSectionHeader(
+                                title = pluralStringResource(
+                                    R.plurals.snapshots_count,
+                                    filteredSnapshots.size,
+                                    filteredSnapshots.size
+                                )
+                            )
+                        }
+                        itemsIndexed(
+                            items = filteredSnapshots,
+                            key = { _, item -> item.snapshotInfo.id },
+                            contentType = { _, _ -> "snapshot_item" }
+                        ) { index, item ->
+                            val userTagColors = remember(item.snapshotInfo.tags, uiState.repoTagsByName, fallbackColorArgb) {
+                                BackupTagRules.filterUserTags(item.snapshotInfo.tags).map { tagName ->
+                                    uiState.repoTagsByName[tagName]?.colorArgb ?: fallbackColorArgb
+                                }
+                            }
+                            ExpressiveSegmentedSurface(
+                                index = index,
+                                count = filteredSnapshots.size,
+                                modifier = Modifier.padding(bottom = if (index < filteredSnapshots.size - 1) 2.dp else 0.dp)
+                            ) {
+                                SnapshotItem(
+                                    snapshotWithMetadata = item,
+                                    apps = uiState.appInfoMap[item.snapshotInfo.id],
+                                    tagColors = userTagColors,
+                                    maxIconsPossible = maxIconsPossible,
+                                    onClick = { onSnapshotClick(item.snapshotInfo.id) },
+                                    onRestoreClick = { onRestoreSnapshotClick(item.snapshotInfo.id) },
+                                    onForgetClick = { onRequestForgetSnapshot(item.snapshotInfo.id) }
+                                )
+                            }
                         }
                     }
                 }
@@ -632,6 +708,7 @@ private fun ActiveOperationBanner(
 private fun SnapshotItem(
     snapshotWithMetadata: SnapshotWithMetadata,
     apps: List<AppInfo>?,
+    tagColors: List<Int> = emptyList(),
     maxIconsPossible: Int,
     onClick: () -> Unit,
     onRestoreClick: () -> Unit,
@@ -670,7 +747,7 @@ private fun SnapshotItem(
                     context.resources.getQuantityString(R.plurals.time_years_ago, years, years)
                 }
             }
-            "$relativeTime (${snapshot.time.take(10)})"
+            relativeTime
         } catch (e: Exception) {
             snapshot.time.take(10)
         }
@@ -690,7 +767,8 @@ private fun SnapshotItem(
             SnapshotHeader(
                 snapshotId = snapshot.id,
                 hostname = snapshot.hostname,
-                timeText = timeText
+                timeText = timeText,
+                tagColors = tagColors
             )
 
             val appCount = snapshotWithMetadata.metadata?.apps?.size ?: 0
@@ -954,6 +1032,7 @@ internal fun SnapshotHeader(
     snapshotId: String,
     hostname: String?,
     timeText: String,
+    tagColors: List<Int> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     val density = LocalDensity.current
@@ -994,6 +1073,24 @@ internal fun SnapshotHeader(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
+                    }
+                }
+                if (tagColors.isNotEmpty()) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        tagColors.take(4).forEach { color ->
+                            TagColorDot(colorArgb = color, size = 9.dp)
+                        }
+                        if (tagColors.size > 4) {
+                            Text(
+                                text = "+${tagColors.size - 4}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }

@@ -984,4 +984,6 @@
     <string name="tag_error_name_comma">Tag names cannot contain commas.</string>
     <string name="tag_error_name_reserved">This tag name is reserved by Restoid.</string>
     <string name="tag_error_name_duplicate">A tag with this name already exists.</string>
+    <string name="home_no_matching_snapshots_title">No snapshots match the selected tags</string>
+    <string name="action_clear_filters">Clear filters</string>
 </resources>

@@ -382,7 +382,8 @@ class MainActivity : FragmentActivity() {
                             app.metadataRepository,
                             app.operationWorkRepository,
                             app.rootRepository,
-                            app.storagePermissionRepository
+                            app.storagePermissionRepository,
+                            app.tagRepository
                         )
                     )
                     val homeUiState by homeViewModel.uiState.collectAsStateWithLifecycle()
@@ -641,7 +642,10 @@ class MainActivity : FragmentActivity() {
                                                                 }
                                                             }
                                                         },
-                                                        onForceStopOperation = { homeViewModel.forceStopOperation() }
+                                                        onForceStopOperation = { homeViewModel.forceStopOperation() },
+                                                        onToggleFilterTag = { homeViewModel.toggleFilterTag(it) },
+                                                        onClearFilterTags = { homeViewModel.clearFilterTags() },
+                                                        onRefreshRepoTags = { homeViewModel.refreshRepoTags() }
                                                     )
                                                 }
                                             }
