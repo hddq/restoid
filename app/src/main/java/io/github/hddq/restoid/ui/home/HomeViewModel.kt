@@ -100,6 +100,9 @@ class HomeViewModel(
         viewModelScope.launch {
             repositoriesRepository.loadRepositories()
             resticBinaryManager.checkResticStatus()
+            if (!storagePermissionRepository.hasStoragePermission()) {
+                rootRepository.checkRootAccess()
+            }
         }
 
         viewModelScope.launch {
@@ -579,6 +582,7 @@ class HomeViewModel(
                         showMissingLocalPermissionsError()
                         return@launch
                     }
+                    if (repositoriesRepository.selectedRepository.value != repoKey) return@launch
                     val rawMessage = result.exceptionOrNull()?.message ?: context.getString(R.string.error_unknown)
                     val authFailure = classifyAuthenticationFailure(repository, rawMessage)
                     _uiState.update {
