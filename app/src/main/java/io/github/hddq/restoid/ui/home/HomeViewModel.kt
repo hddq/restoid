@@ -228,6 +228,7 @@ class HomeViewModel(
                 }
 
                 if (canLoadSelectedRepo && !hasLocalAccess) {
+                    _uiState.update { it.copy(repoTagsByName = emptyMap(), selectedFilterTags = emptySet()) }
                     showMissingLocalPermissionsError()
                     return@combine
                 }

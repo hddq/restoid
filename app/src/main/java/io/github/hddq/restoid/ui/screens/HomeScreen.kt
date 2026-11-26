@@ -744,7 +744,7 @@ private fun ExpressiveTagFilterChip(
     val targetContentColor = if (tagColorArgb != null) {
         val tagColor = Color(tagColorArgb)
         if (selected) {
-            if (tagColor.luminance() > 0.5f) Color.Black else Color.White
+            if (tagColor.luminance() > 0.179f) Color.Black else Color.White
         } else {
             MaterialTheme.colorScheme.onSurface
         }
@@ -769,6 +769,7 @@ private fun ExpressiveTagFilterChip(
     )
 
     Surface(
+        selected = selected,
         onClick = onClick,
         modifier = modifier.height(32.dp),
         shape = RoundedCornerShape(cornerRadius),
@@ -823,6 +824,7 @@ private fun SnapshotItem(
             val duration = java.time.Duration.between(instant, now)
 
             val relativeTime = when {
+                duration.isNegative -> snapshot.time.take(10)
                 duration.toMinutes() < 1 -> context.getString(R.string.time_just_now)
                 duration.toHours() < 1 -> {
                     val mins = duration.toMinutes().toInt()
