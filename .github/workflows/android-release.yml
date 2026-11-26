@@ -263,6 +263,7 @@ jobs:
           echo "path=$RELEASE_BODY_FILE" >> "$GITHUB_OUTPUT"
 
       - name: Publish GitHub Release
+        id: publish_release
         uses: softprops/action-gh-release@v3
         with:
           name: Restoid ${{ github.ref_name }}
@@ -276,7 +277,19 @@ jobs:
             release-assets/SHA256SUMS.txt
             release-assets/mapping.txt.gz
 
-      - name: Build F-Droid repo index
+      - name: Trigger central F-Droid repo update
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.FDROID_REPO_DISPATCH_TOKEN }}
+        run: |
+          gh api repos/hddq/fdroid-repo/dispatches \
+            -f event_type=app-released \
+            -f "client_payload[repo]=${{ github.repository }}" \
+            -f "client_payload[tag]=${{ github.ref_name }}"
+
+      - name: Build F-Droid repo index (DEPRECATED)
+        id: build_fdroid_index
+        if: steps.publish_release.outcome == 'success'
         env:
           FDROID_REPO_KEYSTORE_BASE64: ${{ secrets.FDROID_REPO_KEYSTORE_BASE64 }}
           FDROID_REPO_KEY_ALIAS: ${{ secrets.FDROID_REPO_KEY_ALIAS }}
@@ -301,8 +314,8 @@ jobs:
           # (current tag + last 2 stable releases), so fdroidserver must not archive any of them.
           cat > fdroid/config.yml <<EOF
           repo_url: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/fdroid/repo
-          repo_name: ${{ github.event.repository.name }}
-          repo_description: Releases published from GitHub tags for ${{ github.event.repository.name }}.
+          repo_name: ${{ github.event.repository.name }} (DEPRECATED)
+          repo_description: "⚠️ DEPRECATED: This repository is deprecated. Please migrate to the central F-Droid repository at https://fdroid.hddq.org/repo"
           keystore: keystore.jks
           keystorepass: ${FDROID_REPO_KEYSTORE_PASSWORD}
           keypass: ${FDROID_REPO_KEY_PASSWORD}
@@ -443,6 +456,7 @@ jobs:
           rm -f fdroid/keystore.jks fdroid/config.yml
 
       - name: Publish F-Droid repo to GitHub Pages
+        if: steps.build_fdroid_index.outcome == 'success'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
