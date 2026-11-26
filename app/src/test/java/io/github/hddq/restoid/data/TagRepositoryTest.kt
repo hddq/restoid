@@ -85,7 +85,7 @@ class TagRepositoryTest {
             TaskPreset(
                 id = "p-1",
                 name = "Daily",
-                config = RunTasksConfig(backupEnabled = true, backupTags = listOf("Work", "personal"))
+                config = RunTasksConfig(backupEnabled = true, backupTags = listOf(" Work ", "personal"))
             )
         )
         presetRepo.savePreset(

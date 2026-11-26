@@ -58,7 +58,9 @@ class TagRepository(
             if (remaining.size != existing.size && !metadataRepository.saveTags(repoId, remaining)) {
                 return@withLock Result.failure(IllegalStateException("Failed to save tags"))
             }
-            taskPresetRepository.removeTagFromAllPresets(repoId, normalizedName)
+            if (taskPresetRepository.removeTagFromAllPresets(repoId, normalizedName) == null) {
+                return@withLock Result.failure(IllegalStateException("Failed to remove tag from presets"))
+            }
             Result.success(Unit)
         }
 }
