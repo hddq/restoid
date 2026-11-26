@@ -1178,11 +1178,11 @@ internal fun SnapshotHeader(
                 if (tagColors.isNotEmpty()) {
                     Spacer(modifier = Modifier.width(6.dp))
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(5.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         tagColors.take(4).forEach { color ->
-                            TagColorDot(colorArgb = color, size = 9.dp)
+                            TagColorDot(colorArgb = color, size = 12.dp)
                         }
                         if (tagColors.size > 4) {
                             Text(
