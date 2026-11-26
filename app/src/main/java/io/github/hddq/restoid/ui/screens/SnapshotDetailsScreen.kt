@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.text.format.Formatter
 import android.widget.Toast
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -72,6 +73,7 @@ import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
@@ -97,6 +99,8 @@ import io.github.hddq.restoid.R
 import io.github.hddq.restoid.RestoidApplication
 import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.model.BackupDetail
+import io.github.hddq.restoid.model.BackupTag
+import io.github.hddq.restoid.model.BackupTagRules
 import io.github.hddq.restoid.model.CalendarBackupMetadata
 import io.github.hddq.restoid.model.CallLogsBackupMetadata
 import io.github.hddq.restoid.model.ContactsBackupMetadata
@@ -129,6 +133,7 @@ fun SnapshotDetailsScreen(
     val snapshot by viewModel.snapshot.collectAsStateWithLifecycle()
     val metadata by viewModel.metadata.collectAsStateWithLifecycle()
     val backupDetails by viewModel.backupDetails.collectAsStateWithLifecycle()
+    val availableTags by viewModel.availableTags.collectAsStateWithLifecycle()
     val sortOrder by viewModel.sortOrder.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val error by viewModel.error.collectAsStateWithLifecycle()
@@ -217,6 +222,7 @@ fun SnapshotDetailsScreen(
                     item(key = "header", contentType = "header") {
                         SnapshotDetailsHeader(
                             snapshot = snapshot!!,
+                            availableTags = availableTags,
                             modifier = Modifier.padding(bottom = 14.dp)
                         )
                     }
@@ -336,9 +342,11 @@ fun SnapshotDetailsScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SnapshotDetailsHeader(
     snapshot: SnapshotInfo,
+    availableTags: List<BackupTag> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -365,6 +373,10 @@ fun SnapshotDetailsHeader(
         parsedTime.instant?.let { formatRelativeSnapshotTime(it, now, context) }
     }
     val hostname = snapshot.hostname?.takeIf { it.isNotBlank() }
+    val userTags = remember(snapshot.tags) { BackupTagRules.filterUserTags(snapshot.tags) }
+    val tagColorsByName = remember(availableTags) {
+        availableTags.associate { it.name.lowercase() to it.colorArgb }
+    }
 
     val copySnapshotId: () -> Unit = {
         scope.launch {
@@ -497,6 +509,55 @@ fun SnapshotDetailsHeader(
                                 text = stringResource(R.string.snapshot_label_device),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        if (userTags.isNotEmpty()) {
+            FlowRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                userTags.forEach { tagName ->
+                    val tagColorArgb = tagColorsByName[tagName.lowercase()]
+                    val containerColor = if (tagColorArgb != null) {
+                        Color(tagColorArgb).copy(alpha = 0.16f)
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainerHigh
+                    }
+                    val borderColor = if (tagColorArgb != null) {
+                        Color(tagColorArgb).copy(alpha = 0.45f)
+                    } else {
+                        MaterialTheme.colorScheme.outlineVariant
+                    }
+                    val contentColor = if (tagColorArgb != null) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                    Surface(
+                        modifier = Modifier.height(32.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        color = containerColor,
+                        contentColor = contentColor,
+                        border = BorderStroke(1.dp, borderColor)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = tagName,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }

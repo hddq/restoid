@@ -11,6 +11,7 @@ import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.BackupDetail
+import io.github.hddq.restoid.model.BackupTag
 import io.github.hddq.restoid.model.RestoidMetadata
 import io.github.hddq.restoid.ui.shared.AppSortOrder
 import io.github.hddq.restoid.ui.shared.sortBackupDetails
@@ -53,6 +54,9 @@ class SnapshotDetailsViewModel(
     private val _backupDetails = MutableStateFlow<List<BackupDetail>>(emptyList())
     val backupDetails = _backupDetails.asStateFlow()
 
+    private val _availableTags = MutableStateFlow<List<BackupTag>>(emptyList())
+    val availableTags = _availableTags.asStateFlow()
+
     private val _sortOrder = MutableStateFlow(AppSortOrder.SIZE_DESCENDING)
     val sortOrder = _sortOrder.asStateFlow()
 
@@ -80,6 +84,7 @@ class SnapshotDetailsViewModel(
             _isLoading.value = true
             _error.value = null
             _backupDetails.value = emptyList() // Clear previous details
+            _availableTags.value = emptyList()
             try {
                 val selectedRepoKey = repositoriesRepository.selectedRepository.first()
                 val repo = selectedRepoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
@@ -89,6 +94,7 @@ class SnapshotDetailsViewModel(
 
 
                 if (repoPath != null && password != null && repoId != null) {
+                    _availableTags.value = metadataRepository.getTags(repoId)
                     val initialMetadata = metadataRepository.getMetadataForSnapshot(repoId, snapshotId)
                     var loadedMetadata = initialMetadata
                     
