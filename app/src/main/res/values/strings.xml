@@ -316,6 +316,10 @@
     <string name="snapshot_id">ID: %1$s</string>
     <string name="snapshot_hostname">Device: %1$s</string>
     <string name="snapshot_time">Time: %1$s</string>
+    <string name="snapshot_id_copied_to_clipboard">Snapshot ID copied to clipboard</string>
+    <string name="cd_copy_snapshot_id">Copy snapshot ID</string>
+    <string name="snapshot_label_id">Snapshot ID</string>
+    <string name="snapshot_label_device">Device</string>
     <string name="snapshot_version_size">Version: %1$s - Size: %2$s</string>
     <string name="cd_sort_apps">Sort apps</string>
     <string name="sort_by_name">Name</string>
