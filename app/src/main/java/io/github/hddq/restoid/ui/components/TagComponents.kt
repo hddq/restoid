@@ -54,6 +54,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -188,7 +189,12 @@ fun BackupTagPickerSheet(
                 }
             }
 
-            if (availableTags.isEmpty()) {
+            val orphanedSelectedTags = selectedTags.filter { selected ->
+                availableTags.none { it.name.equals(selected, ignoreCase = true) }
+            }
+            val fallbackColorArgb = MaterialTheme.colorScheme.outline.toArgb()
+
+            if (availableTags.isEmpty() && orphanedSelectedTags.isEmpty()) {
                 Text(
                     text = stringResource(R.string.tags_empty_hint),
                     style = MaterialTheme.typography.bodyMedium,
@@ -246,6 +252,34 @@ fun BackupTagPickerSheet(
                                     tint = MaterialTheme.colorScheme.error
                                 )
                             }
+                        }
+                    }
+                    items(items = orphanedSelectedTags, key = { "orphan_$it" }) { tagName ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable(enabled = !isMutating) { onToggleTag(tagName) }
+                                .padding(horizontal = 4.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = true,
+                                onCheckedChange = { onToggleTag(tagName) },
+                                enabled = !isMutating
+                            )
+                            TagColorDot(
+                                colorArgb = fallbackColorArgb,
+                                size = 12.dp
+                            )
+                            Spacer(Modifier.width(12.dp))
+                            Text(
+                                text = tagName,
+                                style = MaterialTheme.typography.bodyLarge,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
                         }
                     }
                 }
