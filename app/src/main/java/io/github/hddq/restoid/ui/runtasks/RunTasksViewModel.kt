@@ -12,7 +12,9 @@ import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.ResticBinaryManager
 import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.data.RootRepository
+import io.github.hddq.restoid.data.TagRepository
 import io.github.hddq.restoid.data.TaskPresetRepository
+import io.github.hddq.restoid.model.BackupTag
 import io.github.hddq.restoid.model.CustomDirectory
 import io.github.hddq.restoid.model.TaskPreset
 import io.github.hddq.restoid.ui.shared.AppSortOrder
@@ -57,7 +59,8 @@ class RunTasksViewModel(
     private val appInfoRepository: AppInfoRepository,
     private val preferencesRepository: PreferencesRepository,
     private val operationWorkRepository: OperationWorkRepository,
-    private val taskPresetRepository: TaskPresetRepository
+    private val taskPresetRepository: TaskPresetRepository,
+    private val tagRepository: TagRepository
 ) : ViewModel() {
 
     val hasRoot = rootRepository.hasRoot
@@ -99,7 +102,8 @@ class RunTasksViewModel(
                 _uiState.update { it.copy(selectedPresetId = null) }
             }
             schedulePersistCustomEditor(mutatedEditor)
-        }
+        },
+        tagRepository = tagRepository
     )
 
     init {
@@ -131,7 +135,8 @@ class RunTasksViewModel(
             },
             excludedCustomDirectories = preferencesRepository.loadExcludedCustomDirectoriesAll().map { uri ->
                 CustomDirectory(uri = uri, isSelected = selectedExcludedDirs.contains(uri))
-            }
+            },
+            backupTags = preferencesRepository.loadRunTasksBackupTags()
         )
     }
 
@@ -158,6 +163,7 @@ class RunTasksViewModel(
         refreshPresetsJob?.cancel()
         val repoKey = repositoriesRepository.selectedRepository.value
         val repoId = repoKey?.let { repositoriesRepository.getRepositoryByKey(it)?.id }
+        editorController.loadAvailableTags(repoId)
         if (repoId == null) {
             appliedInitialPresetRepoId = null
             _uiState.update { it.copy(availablePresets = emptyList(), selectedPresetId = null) }
@@ -221,6 +227,7 @@ class RunTasksViewModel(
 
         val repoKey = repositoriesRepository.selectedRepository.value
         val repoId = repoKey?.let { repositoriesRepository.getRepositoryByKey(it)?.id }
+        editorController.loadAvailableTags(repoId)
         if (repoId == null) {
             Toast.makeText(
                 application,
@@ -326,6 +333,7 @@ class RunTasksViewModel(
         val allExcludedDirs = editor.excludedCustomDirectories.map { it.uri }.toSet()
         val selectedExcludedDirs = editor.excludedCustomDirectories.filter { it.isSelected }.map { it.uri }.toSet()
         preferencesRepository.saveExcludedCustomDirectories(allExcludedDirs, selectedExcludedDirs)
+        preferencesRepository.saveRunTasksBackupTags(editor.backupTags)
     }
 
     private fun observeOperationState() {
@@ -459,4 +467,32 @@ class RunTasksViewModel(
     fun setBackupPermissions(value: Boolean) = editorController.setBackupPermissions(value)
     fun setBackupSpecialAccess(value: Boolean) = editorController.setBackupSpecialAccess(value)
     fun setBackupAccessibility(value: Boolean) = editorController.setBackupAccessibility(value)
+    fun toggleBackupTag(tagName: String) = editorController.toggleBackupTag(tagName)
+
+    suspend fun createTag(name: String, colorArgb: Int): Result<BackupTag> {
+        val repoId = currentSelectedRepoId()
+            ?: return Result.failure(IllegalStateException("No repository selected"))
+        return editorController.createTag(repoId, name, colorArgb)
+    }
+
+    suspend fun updateTagColor(name: String, colorArgb: Int): Result<BackupTag> {
+        val repoId = currentSelectedRepoId()
+            ?: return Result.failure(IllegalStateException("No repository selected"))
+        return editorController.updateTagColor(repoId, name, colorArgb)
+    }
+
+    suspend fun deleteTag(name: String): Result<Unit> {
+        val repoId = currentSelectedRepoId()
+            ?: return Result.failure(IllegalStateException("No repository selected"))
+        val result = editorController.deleteTag(repoId, name)
+        if (result.isSuccess) {
+            refreshPresets()
+        }
+        return result
+    }
+
+    private fun currentSelectedRepoId(): String? {
+        val repoKey = repositoriesRepository.selectedRepository.value ?: return null
+        return repositoriesRepository.getRepositoryByKey(repoKey)?.id
+    }
 }

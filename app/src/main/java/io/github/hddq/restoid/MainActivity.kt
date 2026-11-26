@@ -1106,7 +1106,8 @@ class MainActivity : FragmentActivity() {
                                             app.appInfoRepository,
                                             app.preferencesRepository,
                                             app.operationWorkRepository,
-                                            app.taskPresetRepository
+                                            app.taskPresetRepository,
+                                            app.tagRepository
                                         )
                                     )
                                     val uiState by vm.uiState.collectAsStateWithLifecycle()
@@ -1154,7 +1155,8 @@ class MainActivity : FragmentActivity() {
                                             app.appInfoRepository,
                                             app.preferencesRepository,
                                             app.operationWorkRepository,
-                                            app.taskPresetRepository
+                                            app.taskPresetRepository,
+                                            app.tagRepository
                                         )
                                     )
                                     val uiState by vm.uiState.collectAsStateWithLifecycle()
@@ -1192,7 +1194,8 @@ class MainActivity : FragmentActivity() {
                                             app.appInfoRepository,
                                             app.preferencesRepository,
                                             app.operationWorkRepository,
-                                            app.taskPresetRepository
+                                            app.taskPresetRepository,
+                                            app.tagRepository
                                         )
                                     )
                                     DestinationScaffold(
@@ -1219,7 +1222,8 @@ class MainActivity : FragmentActivity() {
                                             app.appInfoRepository,
                                             app.preferencesRepository,
                                             app.operationWorkRepository,
-                                            app.taskPresetRepository
+                                            app.taskPresetRepository,
+                                            app.tagRepository
                                         )
                                     )
                                     DestinationScaffold(
@@ -1246,7 +1250,8 @@ class MainActivity : FragmentActivity() {
                                             app.appInfoRepository,
                                             app.preferencesRepository,
                                             app.operationWorkRepository,
-                                            app.taskPresetRepository
+                                            app.taskPresetRepository,
+                                            app.tagRepository
                                         )
                                     )
                                     DestinationScaffold(
@@ -1273,7 +1278,8 @@ class MainActivity : FragmentActivity() {
                                             app.appInfoRepository,
                                             app.preferencesRepository,
                                             app.operationWorkRepository,
-                                            app.taskPresetRepository
+                                            app.taskPresetRepository,
+                                            app.tagRepository
                                         )
                                     )
                                     DestinationScaffold(

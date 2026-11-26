@@ -232,6 +232,17 @@ class PreferencesRepository(private val context: Context) {
         return prefs.getStringSet("runtasks_excluded_custom_directories_selected", emptySet()) ?: emptySet()
     }
 
+    fun saveRunTasksBackupTags(tags: List<String>) {
+        val sanitized = io.github.hddq.restoid.model.BackupTagRules.sanitizeBackupTags(tags)
+        prefs.edit().putString("runtasks_backup_tags", sanitized.joinToString(",")).apply()
+    }
+
+    fun loadRunTasksBackupTags(): List<String> {
+        val raw = prefs.getString("runtasks_backup_tags", null).orEmpty()
+        if (raw.isBlank()) return emptyList()
+        return io.github.hddq.restoid.model.BackupTagRules.sanitizeBackupTags(raw.split(","))
+    }
+
     // Backup Preferences
     fun saveBackupTypes(types: BackupTypes) {
         with(prefs.edit()) {
