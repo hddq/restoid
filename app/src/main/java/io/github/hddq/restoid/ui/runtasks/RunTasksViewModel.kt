@@ -135,7 +135,8 @@ class RunTasksViewModel(
             },
             excludedCustomDirectories = preferencesRepository.loadExcludedCustomDirectoriesAll().map { uri ->
                 CustomDirectory(uri = uri, isSelected = selectedExcludedDirs.contains(uri))
-            }
+            },
+            backupTags = preferencesRepository.loadRunTasksBackupTags()
         )
     }
 
@@ -332,6 +333,7 @@ class RunTasksViewModel(
         val allExcludedDirs = editor.excludedCustomDirectories.map { it.uri }.toSet()
         val selectedExcludedDirs = editor.excludedCustomDirectories.filter { it.isSelected }.map { it.uri }.toSet()
         preferencesRepository.saveExcludedCustomDirectories(allExcludedDirs, selectedExcludedDirs)
+        preferencesRepository.saveRunTasksBackupTags(editor.backupTags)
     }
 
     private fun observeOperationState() {
@@ -482,7 +484,11 @@ class RunTasksViewModel(
     suspend fun deleteTag(name: String): Result<Unit> {
         val repoId = currentSelectedRepoId()
             ?: return Result.failure(IllegalStateException("No repository selected"))
-        return editorController.deleteTag(repoId, name)
+        val result = editorController.deleteTag(repoId, name)
+        if (result.isSuccess) {
+            refreshPresets()
+        }
+        return result
     }
 
     private fun currentSelectedRepoId(): String? {

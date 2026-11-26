@@ -745,13 +745,16 @@ class TaskConfigEditorController(
     fun setBackupSpecialAccess(value: Boolean) = mutateConfig { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(specialAccess = value))) }
     fun setBackupAccessibility(value: Boolean) = mutateConfig { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(accessibility = value))) }
 
+    private var loadTagsJob: Job? = null
+
     fun loadAvailableTags(repoId: String?) {
+        loadTagsJob?.cancel()
         val repo = tagRepository
         if (repoId == null || repo == null) {
             updateState { it.copy(availableTags = emptyList()) }
             return
         }
-        scope.launch {
+        loadTagsJob = scope.launch {
             val tags = repo.getTags(repoId)
             updateState { it.copy(availableTags = tags) }
         }
@@ -773,6 +776,7 @@ class TaskConfigEditorController(
 
     suspend fun createTag(repoId: String, name: String, colorArgb: Int): Result<BackupTag> {
         val repo = tagRepository ?: return Result.failure(IllegalStateException("TagRepository not configured"))
+        loadTagsJob?.cancel()
         val result = repo.createTag(repoId, name, colorArgb)
         result.onSuccess { created ->
             val tags = repo.getTags(repoId)
@@ -793,6 +797,7 @@ class TaskConfigEditorController(
 
     suspend fun updateTagColor(repoId: String, name: String, colorArgb: Int): Result<BackupTag> {
         val repo = tagRepository ?: return Result.failure(IllegalStateException("TagRepository not configured"))
+        loadTagsJob?.cancel()
         val result = repo.updateTagColor(repoId, name, colorArgb)
         result.onSuccess {
             val tags = repo.getTags(repoId)
@@ -803,6 +808,7 @@ class TaskConfigEditorController(
 
     suspend fun deleteTag(repoId: String, name: String): Result<Unit> {
         val repo = tagRepository ?: return Result.failure(IllegalStateException("TagRepository not configured"))
+        loadTagsJob?.cancel()
         val result = repo.deleteTag(repoId, name)
         result.onSuccess {
             val tags = repo.getTags(repoId)

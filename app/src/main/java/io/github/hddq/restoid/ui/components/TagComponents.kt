@@ -253,18 +253,34 @@ fun BackupTagPickerSheet(
         }
     }
 
+    var createError by remember { mutableStateOf<String?>(null) }
+    var editError by remember { mutableStateOf<String?>(null) }
+    var deleteError by remember { mutableStateOf<String?>(null) }
+    val defaultErrorMessage = stringResource(R.string.error_unknown)
+
     if (showCreateDialog) {
         TagColorEditorDialog(
             initialTag = null,
             existingTagNames = availableTags.map { it.name },
-            onDismissRequest = { showCreateDialog = false },
+            isSaving = isMutating,
+            errorMessage = createError,
+            onDismissRequest = {
+                if (!isMutating) {
+                    createError = null
+                    showCreateDialog = false
+                }
+            },
             onConfirm = { name, colorArgb ->
                 isMutating = true
+                createError = null
                 scope.launch {
                     val result = onCreateTag(name, colorArgb)
                     isMutating = false
                     if (result.isSuccess) {
+                        createError = null
                         showCreateDialog = false
+                    } else {
+                        createError = result.exceptionOrNull()?.message?.takeIf { it.isNotBlank() } ?: defaultErrorMessage
                     }
                 }
             }
@@ -275,14 +291,25 @@ fun BackupTagPickerSheet(
         TagColorEditorDialog(
             initialTag = tag,
             existingTagNames = availableTags.map { it.name },
-            onDismissRequest = { editingTag = null },
+            isSaving = isMutating,
+            errorMessage = editError,
+            onDismissRequest = {
+                if (!isMutating) {
+                    editError = null
+                    editingTag = null
+                }
+            },
             onConfirm = { _, colorArgb ->
                 isMutating = true
+                editError = null
                 scope.launch {
                     val result = onUpdateTagColor(tag.name, colorArgb)
                     isMutating = false
                     if (result.isSuccess) {
+                        editError = null
                         editingTag = null
+                    } else {
+                        editError = result.exceptionOrNull()?.message?.takeIf { it.isNotBlank() } ?: defaultErrorMessage
                     }
                 }
             }
@@ -291,17 +318,39 @@ fun BackupTagPickerSheet(
 
     deletingTag?.let { tag ->
         AlertDialog(
-            onDismissRequest = { deletingTag = null },
+            onDismissRequest = {
+                if (!isMutating) {
+                    deleteError = null
+                    deletingTag = null
+                }
+            },
             title = { Text(stringResource(R.string.dialog_delete_tag_title, tag.name)) },
-            text = { Text(stringResource(R.string.dialog_delete_tag_message)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.dialog_delete_tag_message))
+                    if (deleteError != null) {
+                        Text(
+                            text = deleteError!!,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
                         isMutating = true
+                        deleteError = null
                         scope.launch {
-                            onDeleteTag(tag.name)
+                            val result = onDeleteTag(tag.name)
                             isMutating = false
-                            deletingTag = null
+                            if (result.isSuccess) {
+                                deleteError = null
+                                deletingTag = null
+                            } else {
+                                deleteError = result.exceptionOrNull()?.message?.takeIf { it.isNotBlank() } ?: defaultErrorMessage
+                            }
                         }
                     },
                     enabled = !isMutating
@@ -314,7 +363,10 @@ fun BackupTagPickerSheet(
             },
             dismissButton = {
                 TextButton(
-                    onClick = { deletingTag = null },
+                    onClick = {
+                        deleteError = null
+                        deletingTag = null
+                    },
                     enabled = !isMutating
                 ) {
                     Text(stringResource(R.string.action_cancel))
@@ -329,6 +381,8 @@ fun BackupTagPickerSheet(
 fun TagColorEditorDialog(
     initialTag: BackupTag?,
     existingTagNames: List<String>,
+    isSaving: Boolean = false,
+    errorMessage: String? = null,
     onDismissRequest: () -> Unit,
     onConfirm: (name: String, colorArgb: Int) -> Unit
 ) {
@@ -363,7 +417,8 @@ fun TagColorEditorDialog(
             }
         }
     }
-    val canConfirm = isEditMode || validationError == null
+    val isHexValid = parseRgbHex(hexText) != null
+    val canConfirm = !isSaving && isHexValid && (isEditMode || validationError == null)
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
@@ -481,9 +536,16 @@ fun TagColorEditorDialog(
                     },
                     label = { Text(stringResource(R.string.tag_color_hex_label)) },
                     singleLine = true,
-                    isError = parseRgbHex(hexText) == null,
+                    isError = !isHexValid,
                     modifier = Modifier.fillMaxWidth()
                 )
+                if (errorMessage != null) {
+                    Text(
+                        text = errorMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
             }
         },
         confirmButton = {
@@ -495,7 +557,10 @@ fun TagColorEditorDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismissRequest) {
+            TextButton(
+                onClick = onDismissRequest,
+                enabled = !isSaving
+            ) {
                 Text(stringResource(R.string.action_cancel))
             }
         }
