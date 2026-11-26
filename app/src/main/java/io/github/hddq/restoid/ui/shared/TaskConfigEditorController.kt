@@ -14,7 +14,10 @@ import io.github.hddq.restoid.data.RepositoryBackendType
 import io.github.hddq.restoid.data.ResticBinaryManager
 import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.data.RootRepository
+import io.github.hddq.restoid.data.TagRepository
 import io.github.hddq.restoid.model.AppInfo
+import io.github.hddq.restoid.model.BackupTag
+import io.github.hddq.restoid.model.BackupTagRules
 import io.github.hddq.restoid.model.CalendarInfo
 import io.github.hddq.restoid.model.ContactAccountInfo
 import io.github.hddq.restoid.model.CustomDirectory
@@ -58,7 +61,9 @@ data class TaskConfigEditorState(
     val availableForgetHosts: List<ForgetHostOption> = emptyList(),
     val areRepoSnapshotsLoaded: Boolean = false,
     val isLoadingForgetHosts: Boolean = false,
-    val forgetHostsError: String? = null
+    val forgetHostsError: String? = null,
+    val backupTags: List<String> = emptyList(),
+    val availableTags: List<BackupTag> = emptyList()
 )
 
 fun TaskConfigEditorState.toRunTasksConfig(hasRoot: Boolean): RunTasksConfig {
@@ -93,7 +98,8 @@ fun TaskConfigEditorState.toRunTasksConfig(hasRoot: Boolean): RunTasksConfig {
         keepWeekly = maintenance.keepWeekly,
         keepMonthly = maintenance.keepMonthly,
         forgetAllHosts = maintenance.forgetAllHosts,
-        forgetHosts = if (maintenance.forgetAllHosts) emptyList() else normalizeForgetHosts(maintenance.forgetHosts)
+        forgetHosts = if (maintenance.forgetAllHosts) emptyList() else normalizeForgetHosts(maintenance.forgetHosts),
+        backupTags = BackupTagRules.sanitizeBackupTags(backupTags)
     )
 }
 
@@ -148,7 +154,8 @@ fun TaskConfigEditorState.withAppliedRunTasksConfig(
         selectAllCalendars = config.deviceData.selectAllCalendars,
         selectedCalendarKeys = config.deviceData.selectedCalendarKeys,
         customDirectories = config.customDirectories.map { CustomDirectory(it, true) },
-        excludedCustomDirectories = config.excludedCustomDirectories.map { CustomDirectory(it, true) }
+        excludedCustomDirectories = config.excludedCustomDirectories.map { CustomDirectory(it, true) },
+        backupTags = BackupTagRules.sanitizeBackupTags(config.backupTags)
     )
 }
 
@@ -171,7 +178,8 @@ fun hasTaskConfigChanges(
         current.selectAllCalendars != initial.selectAllCalendars ||
         current.selectedCalendarKeys != initial.selectedCalendarKeys ||
         current.customDirectories != initial.customDirectories ||
-        current.excludedCustomDirectories != initial.excludedCustomDirectories
+        current.excludedCustomDirectories != initial.excludedCustomDirectories ||
+        current.backupTags != initial.backupTags
 }
 
 fun summarizeTaskConfig(
@@ -221,7 +229,8 @@ class TaskConfigEditorController(
     private val readState: () -> TaskConfigEditorState,
     private val updateState: ((TaskConfigEditorState) -> TaskConfigEditorState) -> Unit,
     private val onConfigMutated: (TaskConfigEditorState) -> Unit = {},
-    private val selectedRepoKeyProvider: () -> String? = { repositoriesRepository.selectedRepository.value }
+    private val selectedRepoKeyProvider: () -> String? = { repositoriesRepository.selectedRepository.value },
+    private val tagRepository: TagRepository? = null
 ) {
     private val contactsBackupRepository = ContactsBackupRepository(application)
     private val calendarBackupRepository = CalendarBackupRepository(application)
@@ -735,6 +744,83 @@ class TaskConfigEditorController(
     fun setBackupPermissions(value: Boolean) = mutateConfig { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(permissions = value))) }
     fun setBackupSpecialAccess(value: Boolean) = mutateConfig { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(specialAccess = value))) }
     fun setBackupAccessibility(value: Boolean) = mutateConfig { recomputeConflicts(it.copy(backupTypes = it.backupTypes.copy(accessibility = value))) }
+
+    fun loadAvailableTags(repoId: String?) {
+        val repo = tagRepository
+        if (repoId == null || repo == null) {
+            updateState { it.copy(availableTags = emptyList()) }
+            return
+        }
+        scope.launch {
+            val tags = repo.getTags(repoId)
+            updateState { it.copy(availableTags = tags) }
+        }
+    }
+
+    fun toggleBackupTag(tagName: String) {
+        val normalized = BackupTagRules.normalizeTagName(tagName)
+        if (normalized.isEmpty()) return
+        mutateConfig { state ->
+            val exists = state.backupTags.any { it.equals(normalized, ignoreCase = true) }
+            val updated = if (exists) {
+                state.backupTags.filterNot { it.equals(normalized, ignoreCase = true) }
+            } else {
+                state.backupTags + normalized
+            }
+            state.copy(backupTags = updated)
+        }
+    }
+
+    suspend fun createTag(repoId: String, name: String, colorArgb: Int): Result<BackupTag> {
+        val repo = tagRepository ?: return Result.failure(IllegalStateException("TagRepository not configured"))
+        val result = repo.createTag(repoId, name, colorArgb)
+        result.onSuccess { created ->
+            val tags = repo.getTags(repoId)
+            mutateConfig { state ->
+                val updatedSelection = if (state.backupTags.any { it.equals(created.name, ignoreCase = true) }) {
+                    state.backupTags
+                } else {
+                    state.backupTags + created.name
+                }
+                state.copy(
+                    availableTags = tags,
+                    backupTags = updatedSelection
+                )
+            }
+        }
+        return result
+    }
+
+    suspend fun updateTagColor(repoId: String, name: String, colorArgb: Int): Result<BackupTag> {
+        val repo = tagRepository ?: return Result.failure(IllegalStateException("TagRepository not configured"))
+        val result = repo.updateTagColor(repoId, name, colorArgb)
+        result.onSuccess {
+            val tags = repo.getTags(repoId)
+            updateState { it.copy(availableTags = tags) }
+        }
+        return result
+    }
+
+    suspend fun deleteTag(repoId: String, name: String): Result<Unit> {
+        val repo = tagRepository ?: return Result.failure(IllegalStateException("TagRepository not configured"))
+        val result = repo.deleteTag(repoId, name)
+        result.onSuccess {
+            val tags = repo.getTags(repoId)
+            val normalized = BackupTagRules.normalizeTagName(name)
+            val hadTagSelected = readState().backupTags.any { it.equals(normalized, ignoreCase = true) }
+            if (hadTagSelected) {
+                mutateConfig { state ->
+                    state.copy(
+                        availableTags = tags,
+                        backupTags = state.backupTags.filterNot { it.equals(normalized, ignoreCase = true) }
+                    )
+                }
+            } else {
+                updateState { it.copy(availableTags = tags) }
+            }
+        }
+        return result
+    }
 
     fun validateForExecution(
         config: RunTasksConfig,

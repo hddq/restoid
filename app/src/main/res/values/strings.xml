@@ -963,4 +963,25 @@
     <string name="welcome_action_next">Next</string>
     <string name="welcome_action_skip">Skip for now</string>
     <string name="welcome_action_finish">Get started</string>
+
+    <string name="run_tasks_tags">Tags</string>
+    <string name="tags_none">None</string>
+    <string name="action_new_tag">New tag</string>
+    <string name="action_edit_tag_color">Edit tag color</string>
+    <string name="action_delete_tag">Delete tag</string>
+    <string name="tags_empty_hint">No tags yet. Create your first tag to organize backup snapshots.</string>
+    <string name="dialog_new_tag_title">New Tag</string>
+    <string name="dialog_edit_tag_color_title">Edit Tag Color</string>
+    <string name="dialog_delete_tag_title">Delete \"%1$s\"?</string>
+    <string name="dialog_delete_tag_message">Existing snapshots will keep their tags, but saved presets using this tag will have it removed.</string>
+    <string name="tag_name_label">Tag name</string>
+    <string name="tag_preview_placeholder">Tag preview</string>
+    <string name="tag_color_red">Red</string>
+    <string name="tag_color_green">Green</string>
+    <string name="tag_color_blue">Blue</string>
+    <string name="tag_color_hex_label">Hex color (#RRGGBB)</string>
+    <string name="tag_error_name_empty">Enter a tag name.</string>
+    <string name="tag_error_name_comma">Tag names cannot contain commas.</string>
+    <string name="tag_error_name_reserved">This tag name is reserved by Restoid.</string>
+    <string name="tag_error_name_duplicate">A tag with this name already exists.</string>
 </resources>
