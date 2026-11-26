@@ -969,6 +969,7 @@
     <string name="action_new_tag">New tag</string>
     <string name="action_edit_tag_color">Edit tag color</string>
     <string name="action_delete_tag">Delete tag</string>
+    <string name="tags_empty_title">No tags yet</string>
     <string name="tags_empty_hint">No tags yet. Create your first tag to organize backup snapshots.</string>
     <string name="dialog_new_tag_title">New Tag</string>
     <string name="dialog_edit_tag_color_title">Edit Tag Color</string>

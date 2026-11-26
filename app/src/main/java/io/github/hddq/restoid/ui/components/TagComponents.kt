@@ -1,5 +1,9 @@
 package io.github.hddq.restoid.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,8 +20,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -29,8 +34,8 @@ import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -54,8 +59,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -78,6 +83,114 @@ fun TagColorDot(
             .background(Color(colorArgb), CircleShape)
     )
 }
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+fun ExpressiveTagChip(
+    label: String,
+    selected: Boolean,
+    tagColorArgb: Int?,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null
+) {
+    val motionScheme = MaterialTheme.motionScheme
+    val cornerRadius by animateDpAsState(
+        targetValue = if (selected) 10.dp else 16.dp,
+        animationSpec = motionScheme.fastSpatialSpec(),
+        label = "tag_chip_corner_radius"
+    )
+    val targetContainerColor = if (tagColorArgb != null) {
+        val tagColor = Color(tagColorArgb)
+        if (selected) tagColor else tagColor.copy(alpha = 0.16f)
+    } else {
+        if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh
+    }
+    val targetBorderColor = if (tagColorArgb != null) {
+        val tagColor = Color(tagColorArgb)
+        if (selected) tagColor else tagColor.copy(alpha = 0.45f)
+    } else {
+        if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.outlineVariant
+    }
+    val targetContentColor = if (tagColorArgb != null) {
+        val tagColor = Color(tagColorArgb)
+        if (selected) {
+            if (tagColor.luminance() > 0.179f) Color.Black else Color.White
+        } else {
+            MaterialTheme.colorScheme.onSurface
+        }
+    } else {
+        if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    val containerColor by animateColorAsState(
+        targetValue = targetContainerColor,
+        animationSpec = motionScheme.fastEffectsSpec(),
+        label = "tag_chip_container_color"
+    )
+    val borderColor by animateColorAsState(
+        targetValue = targetBorderColor,
+        animationSpec = motionScheme.fastEffectsSpec(),
+        label = "tag_chip_border_color"
+    )
+    val contentColor by animateColorAsState(
+        targetValue = targetContentColor,
+        animationSpec = motionScheme.fastEffectsSpec(),
+        label = "tag_chip_content_color"
+    )
+
+    val chipContent: @Composable () -> Unit = {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AnimatedVisibility(visible = selected) {
+                Icon(
+                    imageVector = Icons.Filled.Check,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .padding(end = 6.dp)
+                        .size(16.dp)
+                )
+            }
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+
+    if (onClick != null) {
+        Surface(
+            selected = selected,
+            onClick = onClick,
+            modifier = modifier.height(32.dp),
+            shape = RoundedCornerShape(cornerRadius),
+            color = containerColor,
+            contentColor = contentColor,
+            border = BorderStroke(1.dp, borderColor),
+            content = chipContent
+        )
+    } else {
+        Surface(
+            modifier = modifier.height(32.dp),
+            shape = RoundedCornerShape(cornerRadius),
+            color = containerColor,
+            contentColor = contentColor,
+            border = BorderStroke(1.dp, borderColor),
+            content = chipContent
+        )
+    }
+}
+
+private data class TagPickerEntry(
+    val key: String,
+    val name: String,
+    val tag: BackupTag?,
+    val isSelected: Boolean
+)
 
 @Composable
 fun BackupTagsRow(
@@ -191,94 +304,85 @@ fun BackupTagPickerSheet(
             val orphanedSelectedTags = selectedTags.filter { selected ->
                 availableTags.none { it.name.equals(selected, ignoreCase = true) }
             }
-            val fallbackColorArgb = MaterialTheme.colorScheme.outline.toArgb()
+            val entries = availableTags.map { tag ->
+                TagPickerEntry(
+                    key = tag.name,
+                    name = tag.name,
+                    tag = tag,
+                    isSelected = selectedTags.any { it.equals(tag.name, ignoreCase = true) }
+                )
+            } + orphanedSelectedTags.map { tagName ->
+                TagPickerEntry(
+                    key = "orphan_$tagName",
+                    name = tagName,
+                    tag = null,
+                    isSelected = true
+                )
+            }
 
-            if (availableTags.isEmpty() && orphanedSelectedTags.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.tags_empty_hint),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = 16.dp)
+            if (entries.isEmpty()) {
+                ExpressiveEmptyState(
+                    icon = Icons.AutoMirrored.Outlined.Label,
+                    title = stringResource(R.string.tags_empty_title),
+                    subtitle = stringResource(R.string.tags_empty_hint),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 24.dp)
                 )
             } else {
                 LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    items(items = availableTags, key = { it.name }) { tag ->
-                        val isSelected = selectedTags.any { it.equals(tag.name, ignoreCase = true) }
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .clickable(enabled = !isMutating) { onToggleTag(tag.name) }
-                                .padding(horizontal = 4.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                    itemsIndexed(items = entries, key = { _, entry -> entry.key }) { index, entry ->
+                        ExpressiveSegmentedSurface(
+                            index = index,
+                            count = entries.size
                         ) {
-                            Checkbox(
-                                checked = isSelected,
-                                onCheckedChange = { onToggleTag(tag.name) },
-                                enabled = !isMutating
-                            )
-                            TagColorDot(
-                                colorArgb = tag.colorArgb,
-                                size = 12.dp
-                            )
-                            Spacer(Modifier.width(12.dp))
-                            Text(
-                                text = tag.name,
-                                style = MaterialTheme.typography.bodyLarge,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f)
-                            )
-                            IconButton(
-                                onClick = { editingTag = tag },
-                                enabled = !isMutating
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .toggleable(
+                                        value = entry.isSelected,
+                                        enabled = !isMutating,
+                                        role = Role.Checkbox,
+                                        onValueChange = { onToggleTag(entry.name) }
+                                    )
+                                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Palette,
-                                    contentDescription = stringResource(R.string.action_edit_tag_color)
-                                )
+                                Box(
+                                    modifier = Modifier.weight(1f),
+                                    contentAlignment = Alignment.CenterStart
+                                ) {
+                                    ExpressiveTagChip(
+                                        label = entry.name,
+                                        selected = entry.isSelected,
+                                        tagColorArgb = entry.tag?.colorArgb
+                                    )
+                                }
+                                entry.tag?.let { trackedTag ->
+                                    IconButton(
+                                        onClick = { editingTag = trackedTag },
+                                        enabled = !isMutating
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Palette,
+                                            contentDescription = stringResource(R.string.action_edit_tag_color)
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = { deletingTag = trackedTag },
+                                        enabled = !isMutating
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Delete,
+                                            contentDescription = stringResource(R.string.action_delete_tag),
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                }
                             }
-                            IconButton(
-                                onClick = { deletingTag = tag },
-                                enabled = !isMutating
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.Delete,
-                                    contentDescription = stringResource(R.string.action_delete_tag),
-                                    tint = MaterialTheme.colorScheme.error
-                                )
-                            }
-                        }
-                    }
-                    items(items = orphanedSelectedTags, key = { "orphan_$it" }) { tagName ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .clickable(enabled = !isMutating) { onToggleTag(tagName) }
-                                .padding(horizontal = 4.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Checkbox(
-                                checked = true,
-                                onCheckedChange = { onToggleTag(tagName) },
-                                enabled = !isMutating
-                            )
-                            TagColorDot(
-                                colorArgb = fallbackColorArgb,
-                                size = 12.dp
-                            )
-                            Spacer(Modifier.width(12.dp))
-                            Text(
-                                text = tagName,
-                                style = MaterialTheme.typography.bodyLarge,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f)
-                            )
                         }
                     }
                 }
@@ -471,23 +575,21 @@ fun TagColorEditorDialog(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh
+                val previewLabel = normalizedName.ifEmpty { stringResource(R.string.tag_preview_placeholder) }
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        TagColorDot(colorArgb = colorArgb, size = 12.dp)
-                        Text(
-                            text = normalizedName.ifEmpty { stringResource(R.string.tag_preview_placeholder) },
-                            style = MaterialTheme.typography.labelLarge,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+                    ExpressiveTagChip(
+                        label = previewLabel,
+                        selected = false,
+                        tagColorArgb = colorArgb
+                    )
+                    ExpressiveTagChip(
+                        label = previewLabel,
+                        selected = true,
+                        tagColorArgb = colorArgb
+                    )
                 }
 
                 if (!isEditMode) {
