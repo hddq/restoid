@@ -1,5 +1,9 @@
 package io.github.hddq.restoid.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -27,6 +31,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Call
@@ -49,7 +54,6 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -66,8 +70,8 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -76,6 +80,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.Layout
@@ -85,6 +90,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.delay
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -184,10 +191,12 @@ fun HomeScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     val currentOnCheckStoragePermission by rememberUpdatedState(onCheckStoragePermission)
     val currentOnRefreshRepoTags by rememberUpdatedState(onRefreshRepoTags)
+    var nowEpochMinute by remember { mutableLongStateOf(System.currentTimeMillis() / 60_000L) }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
+                nowEpochMinute = System.currentTimeMillis() / 60_000L
                 currentOnCheckStoragePermission()
                 currentOnRefreshRepoTags()
             }
@@ -195,6 +204,16 @@ fun HomeScreen(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                nowEpochMinute = System.currentTimeMillis() / 60_000L
+                val millisIntoMinute = System.currentTimeMillis() % 60_000L
+                delay((60_000L - millisIntoMinute).coerceAtLeast(1_000L))
+            }
         }
     }
     val activeOp = uiState.activeOperation
@@ -376,20 +395,11 @@ fun HomeScreen(
                                     items = availableFilterTags,
                                     key = { it }
                                 ) { tagName ->
-                                    val dotColorArgb = uiState.repoTagsByName[tagName]?.colorArgb ?: fallbackColorArgb
-                                    FilterChip(
+                                    ExpressiveTagFilterChip(
+                                        label = tagName,
                                         selected = tagName in uiState.selectedFilterTags,
-                                        onClick = { onToggleFilterTag(tagName) },
-                                        leadingIcon = {
-                                            TagColorDot(colorArgb = dotColorArgb, size = 10.dp)
-                                        },
-                                        label = {
-                                            Text(
-                                                text = tagName,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        }
+                                        tagColorArgb = uiState.repoTagsByName[tagName]?.colorArgb,
+                                        onClick = { onToggleFilterTag(tagName) }
                                     )
                                 }
                             }
@@ -437,6 +447,7 @@ fun HomeScreen(
                                     snapshotWithMetadata = item,
                                     apps = uiState.appInfoMap[item.snapshotInfo.id],
                                     tagColors = userTagColors,
+                                    nowEpochMinute = nowEpochMinute,
                                     maxIconsPossible = maxIconsPossible,
                                     onClick = { onSnapshotClick(item.snapshotInfo.id) },
                                     onRestoreClick = { onRestoreSnapshotClick(item.snapshotInfo.id) },
@@ -703,12 +714,99 @@ private fun ActiveOperationBanner(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun ExpressiveTagFilterChip(
+    label: String,
+    selected: Boolean,
+    tagColorArgb: Int?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val motionScheme = MaterialTheme.motionScheme
+    val cornerRadius by animateDpAsState(
+        targetValue = if (selected) 10.dp else 16.dp,
+        animationSpec = motionScheme.fastSpatialSpec(),
+        label = "tag_chip_corner_radius"
+    )
+    val targetContainerColor = if (tagColorArgb != null) {
+        val tagColor = Color(tagColorArgb)
+        if (selected) tagColor else tagColor.copy(alpha = 0.16f)
+    } else {
+        if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh
+    }
+    val targetBorderColor = if (tagColorArgb != null) {
+        val tagColor = Color(tagColorArgb)
+        if (selected) tagColor else tagColor.copy(alpha = 0.45f)
+    } else {
+        if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.outlineVariant
+    }
+    val targetContentColor = if (tagColorArgb != null) {
+        val tagColor = Color(tagColorArgb)
+        if (selected) {
+            if (tagColor.luminance() > 0.5f) Color.Black else Color.White
+        } else {
+            MaterialTheme.colorScheme.onSurface
+        }
+    } else {
+        if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+    val containerColor by animateColorAsState(
+        targetValue = targetContainerColor,
+        animationSpec = motionScheme.fastEffectsSpec(),
+        label = "tag_chip_container_color"
+    )
+    val borderColor by animateColorAsState(
+        targetValue = targetBorderColor,
+        animationSpec = motionScheme.fastEffectsSpec(),
+        label = "tag_chip_border_color"
+    )
+    val contentColor by animateColorAsState(
+        targetValue = targetContentColor,
+        animationSpec = motionScheme.fastEffectsSpec(),
+        label = "tag_chip_content_color"
+    )
+
+    Surface(
+        onClick = onClick,
+        modifier = modifier.height(32.dp),
+        shape = RoundedCornerShape(cornerRadius),
+        color = containerColor,
+        contentColor = contentColor,
+        border = BorderStroke(1.dp, borderColor)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AnimatedVisibility(visible = selected) {
+                Icon(
+                    imageVector = Icons.Filled.Check,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .padding(end = 6.dp)
+                        .size(16.dp)
+                )
+            }
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SnapshotItem(
     snapshotWithMetadata: SnapshotWithMetadata,
     apps: List<AppInfo>?,
     tagColors: List<Int> = emptyList(),
+    nowEpochMinute: Long = System.currentTimeMillis() / 60_000L,
     maxIconsPossible: Int,
     onClick: () -> Unit,
     onRestoreClick: () -> Unit,
@@ -718,7 +816,7 @@ private fun SnapshotItem(
     val snapshot = snapshotWithMetadata.snapshotInfo
     val context = androidx.compose.ui.platform.LocalContext.current
 
-    val timeText = remember(snapshot.time, context) {
+    val timeText = remember(snapshot.time, nowEpochMinute, context) {
         try {
             val instant = java.time.Instant.parse(snapshot.time)
             val now = java.time.Instant.now()

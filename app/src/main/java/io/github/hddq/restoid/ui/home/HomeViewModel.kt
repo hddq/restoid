@@ -121,6 +121,7 @@ class HomeViewModel(
     val uiState = _uiState.asStateFlow()
     private val refreshTrigger = MutableStateFlow(0)
     private var lastObservedRepoKey: String? = null
+    private var tagReadSequence = 0L
 
     init {
         viewModelScope.launch {
@@ -336,13 +337,14 @@ class HomeViewModel(
                 val metadata = metadataRepository.getMetadataForSnapshot(repo.id, snapshot.id)
                 SnapshotWithMetadata(snapshot, metadata)
             }
+            val tagSeq = ++tagReadSequence
             val repoTagsByName = tagRepository.getTags(repo.id).associateBy { it.name }
             val availableTags = extractAvailableFilterTags(snapshotsWithMetadata).toSet()
 
             _uiState.update {
                 it.copy(
                     snapshotsWithMetadata = snapshotsWithMetadata,
-                    repoTagsByName = repoTagsByName,
+                    repoTagsByName = if (tagSeq == tagReadSequence) repoTagsByName else it.repoTagsByName,
                     selectedFilterTags = it.selectedFilterTags.filterTo(mutableSetOf()) { tag -> tag in availableTags }
                 )
             }
@@ -1073,10 +1075,11 @@ class HomeViewModel(
     fun refreshRepoTags() {
         val repoKey = _uiState.value.selectedRepo ?: return
         val repoId = repositoriesRepository.getRepositoryByKey(repoKey)?.id ?: return
+        val tagSeq = ++tagReadSequence
         viewModelScope.launch {
             val tagsByName = tagRepository.getTags(repoId).associateBy { it.name }
             _uiState.update { state ->
-                if (state.selectedRepo == repoKey) {
+                if (state.selectedRepo == repoKey && tagSeq == tagReadSequence) {
                     state.copy(repoTagsByName = tagsByName)
                 } else {
                     state
