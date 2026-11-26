@@ -1,5 +1,6 @@
 package io.github.hddq.restoid.data
 
+import io.github.hddq.restoid.model.BackupTag
 import io.github.hddq.restoid.model.RestoidMetadata
 import io.github.hddq.restoid.model.TaskPreset
 import io.github.hddq.restoid.work.RunTasksConfig
@@ -36,6 +37,7 @@ class MetadataRepositoryTest {
         repository.saveMetadataForSnapshot(repoId, staleId2, sampleMetadata)
         File(repoDir, MetadataRepository.SCHEDULES_FILE_NAME).writeText("[]")
         File(repoDir, MetadataRepository.PRESETS_FILE_NAME).writeText("[]")
+        File(repoDir, MetadataRepository.TAGS_FILE_NAME).writeText("[]")
         File(repoDir, "notes.json").writeText("{}")
 
         val deleted = repository.pruneOrphanedMetadata(repoId, setOf(activeId1, activeId2))
@@ -47,6 +49,7 @@ class MetadataRepositoryTest {
         assertFalse(File(repoDir, "$staleId2.json").exists())
         assertTrue(File(repoDir, MetadataRepository.SCHEDULES_FILE_NAME).exists())
         assertTrue(File(repoDir, MetadataRepository.PRESETS_FILE_NAME).exists())
+        assertTrue(File(repoDir, MetadataRepository.TAGS_FILE_NAME).exists())
         assertTrue(File(repoDir, "notes.json").exists())
     }
 
@@ -64,10 +67,30 @@ class MetadataRepositoryTest {
             listOf(TaskPreset(id = "p1", name = "Daily", config = RunTasksConfig(checkRepo = true)))
         )
         repository.saveSchedules(repoId, emptyList())
+        repository.saveTags(repoId, listOf(BackupTag(name = "work", colorArgb = 0xFF1E88E5.toInt())))
 
         val allMetadata = repository.getAllMetadata(repoId)
 
         assertEquals(setOf(snapshotId), allMetadata.keys)
+    }
+
+    @Test
+    fun `saveTags and getTags round-trip atomically without leaving temp files`() = runTest {
+        val metadataRoot = tempFolder.newFolder("metadata")
+        val repository = MetadataRepository(metadataRoot)
+        val repoId = "6102bcf8"
+
+        val tags = listOf(
+            BackupTag(name = "work", colorArgb = 0xFF1E88E5.toInt()),
+            BackupTag(name = "photos", colorArgb = 0xFF43A047.toInt())
+        )
+
+        assertTrue(repository.saveTags(repoId, tags))
+        assertEquals(tags, repository.getTags(repoId))
+
+        val repoDir = File(metadataRoot, repoId)
+        val files = repoDir.listFiles()?.map { it.name }?.sorted().orEmpty()
+        assertEquals(listOf(MetadataRepository.TAGS_FILE_NAME), files)
     }
 
     @Test

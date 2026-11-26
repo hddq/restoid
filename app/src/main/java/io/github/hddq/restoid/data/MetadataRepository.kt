@@ -1,6 +1,7 @@
 package io.github.hddq.restoid.data
 
 import android.content.Context
+import io.github.hddq.restoid.model.BackupTag
 import io.github.hddq.restoid.model.RestoidMetadata
 import io.github.hddq.restoid.model.Schedule
 import io.github.hddq.restoid.model.TaskPreset
@@ -140,6 +141,38 @@ class MetadataRepository internal constructor(
         }
     }
 
+    suspend fun getTags(repoId: String): List<BackupTag> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val repoDir = File(metadataRoot, repoId)
+                val tagsFile = File(repoDir, TAGS_FILE_NAME)
+                if (tagsFile.exists()) {
+                    json.decodeFromString<List<BackupTag>>(tagsFile.readText())
+                } else {
+                    emptyList()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                emptyList()
+            }
+        }
+    }
+
+    suspend fun saveTags(repoId: String, tags: List<BackupTag>): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                val repoDir = File(metadataRoot, repoId)
+                if (!repoDir.exists()) repoDir.mkdirs()
+                val tagsFile = File(repoDir, TAGS_FILE_NAME)
+                writeTextAtomically(tagsFile, json.encodeToString(tags))
+                true
+            } catch (e: Exception) {
+                e.printStackTrace()
+                false
+            }
+        }
+    }
+
     suspend fun getMetadataForSnapshot(repoId: String, snapshotId: String): RestoidMetadata? {
         return withContext(Dispatchers.IO) {
             try {
@@ -247,7 +280,8 @@ class MetadataRepository internal constructor(
     internal companion object {
         const val SCHEDULES_FILE_NAME = "schedules.json"
         const val PRESETS_FILE_NAME = "presets.json"
-        private val NON_SNAPSHOT_METADATA_FILES = setOf(SCHEDULES_FILE_NAME, PRESETS_FILE_NAME)
+        const val TAGS_FILE_NAME = "tags.json"
+        private val NON_SNAPSHOT_METADATA_FILES = setOf(SCHEDULES_FILE_NAME, PRESETS_FILE_NAME, TAGS_FILE_NAME)
         private val SNAPSHOT_ID_REGEX = Regex("^[0-9a-fA-F]{8,64}$")
     }
 }

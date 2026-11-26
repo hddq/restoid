@@ -40,6 +40,8 @@ class RestoidApplication : Application() {
         private set
     lateinit var taskPresetRepository: TaskPresetRepository
         private set
+    lateinit var tagRepository: TagRepository
+        private set
     lateinit var preferencesRepository: PreferencesRepository
         private set
     lateinit var operationCoordinator: OperationCoordinator
@@ -102,6 +104,10 @@ class RestoidApplication : Application() {
             metadataRepository = metadataRepository,
             scheduleRepository = scheduleRepository,
             operationWorkRepository = operationWorkRepository
+        )
+        tagRepository = TagRepository(
+            metadataRepository = metadataRepository,
+            taskPresetRepository = taskPresetRepository
         )
 
         passwordManager.clearTemporaryPasswords()

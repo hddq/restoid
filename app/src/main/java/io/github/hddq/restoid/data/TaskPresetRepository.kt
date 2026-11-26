@@ -1,5 +1,6 @@
 package io.github.hddq.restoid.data
 
+import io.github.hddq.restoid.model.BackupTagRules
 import io.github.hddq.restoid.model.TaskPreset
 import io.github.hddq.restoid.work.OperationWorkRepository
 import io.github.hddq.restoid.work.RunTasksWorkRequest
@@ -87,6 +88,27 @@ class TaskPresetRepository internal constructor(
             presets[index] = presets[index].copy(lastRunTimestamp = timestamp)
             metadataRepository.saveTaskPresets(repoId, presets)
         }
+    }
+
+    suspend fun removeTagFromAllPresets(repoId: String, tagName: String): Int? = mutationMutex.withLock {
+        val normalizedTagName = BackupTagRules.normalizeTagName(tagName)
+        val presets = getPresets(repoId)
+        var updatedCount = 0
+        val updatedPresets = presets.map { preset ->
+            val filteredTags = preset.config.backupTags.filterNot {
+                BackupTagRules.normalizeTagName(it).equals(normalizedTagName, ignoreCase = true)
+            }
+            if (filteredTags.size != preset.config.backupTags.size) {
+                updatedCount++
+                preset.copy(config = preset.config.copy(backupTags = filteredTags))
+            } else {
+                preset
+            }
+        }
+        if (updatedCount > 0 && !metadataRepository.saveTaskPresets(repoId, updatedPresets)) {
+            return@withLock null
+        }
+        updatedCount
     }
 
     suspend fun runPresetNow(

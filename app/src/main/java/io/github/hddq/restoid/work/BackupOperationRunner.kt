@@ -19,6 +19,7 @@ import io.github.hddq.restoid.data.ResticRepository
 import io.github.hddq.restoid.data.SpecialPermissionsManager
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.AppMetadata
+import io.github.hddq.restoid.model.BackupTagRules
 import io.github.hddq.restoid.model.CalendarBackupMetadata
 import io.github.hddq.restoid.model.CallLogsBackupMetadata
 import io.github.hddq.restoid.model.ContactsBackupMetadata
@@ -224,8 +225,8 @@ class BackupOperationRunner(
             passwordFile = File.createTempFile("restic-pass", ".tmp", context.cacheDir)
             passwordFile.writeText(password)
 
-            val tags = listOf("restoid", "backup")
-            val tagFlags = tags.joinToString(" ") { "--tag '$it'" }
+            val tags = (listOf("restoid", "backup") + BackupTagRules.sanitizeBackupTags(request.backupTags)).distinct()
+            val tagFlags = tags.joinToString(" ") { "--tag ${shellQuote(it)}" }
             val effectiveExcludePatterns = if (stagingRoot != null) {
                 excludePatterns.flatMap { pattern ->
                     val match = mediaRwRegex.matchEntire(pattern)
