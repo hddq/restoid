@@ -658,7 +658,8 @@ class MainActivity : FragmentActivity() {
                                                         app.resticBinaryManager,
                                                         app.resticRepository,
                                                         app.preferencesRepository,
-                                                        app.operationWorkRepository
+                                                        app.operationWorkRepository,
+                                                        app.tagRepository
                                                     )
                                                 )
                                                 DestinationScaffold(
@@ -783,7 +784,8 @@ class MainActivity : FragmentActivity() {
                                             app.resticBinaryManager,
                                             app.resticRepository,
                                             app.preferencesRepository,
-                                            app.operationWorkRepository
+                                            app.operationWorkRepository,
+                                            app.tagRepository
                                         )
                                     )
                                     val schedulesVm: SchedulesViewModel = viewModel(
@@ -870,7 +872,8 @@ class MainActivity : FragmentActivity() {
                                             app.resticBinaryManager,
                                             app.resticRepository,
                                             app.preferencesRepository,
-                                            app.operationWorkRepository
+                                            app.operationWorkRepository,
+                                            app.tagRepository
                                         )
                                     )
                                     val state by vm.addEditState.collectAsStateWithLifecycle()
@@ -908,7 +911,8 @@ class MainActivity : FragmentActivity() {
                                             app.resticBinaryManager,
                                             app.resticRepository,
                                             app.preferencesRepository,
-                                            app.operationWorkRepository
+                                            app.operationWorkRepository,
+                                            app.tagRepository
                                         )
                                     )
                                     DestinationScaffold(
@@ -936,7 +940,8 @@ class MainActivity : FragmentActivity() {
                                             app.resticBinaryManager,
                                             app.resticRepository,
                                             app.preferencesRepository,
-                                            app.operationWorkRepository
+                                            app.operationWorkRepository,
+                                            app.tagRepository
                                         )
                                     )
                                     DestinationScaffold(
@@ -964,7 +969,8 @@ class MainActivity : FragmentActivity() {
                                             app.resticBinaryManager,
                                             app.resticRepository,
                                             app.preferencesRepository,
-                                            app.operationWorkRepository
+                                            app.operationWorkRepository,
+                                            app.tagRepository
                                         )
                                     )
                                     DestinationScaffold(
@@ -992,7 +998,8 @@ class MainActivity : FragmentActivity() {
                                             app.resticBinaryManager,
                                             app.resticRepository,
                                             app.preferencesRepository,
-                                            app.operationWorkRepository
+                                            app.operationWorkRepository,
+                                            app.tagRepository
                                         )
                                     )
                                     DestinationScaffold(
@@ -1035,7 +1042,8 @@ class MainActivity : FragmentActivity() {
                                             app.resticBinaryManager,
                                             app.resticRepository,
                                             app.preferencesRepository,
-                                            app.operationWorkRepository
+                                            app.operationWorkRepository,
+                                            app.tagRepository
                                         )
                                     )
                                     val cameFromPresetEditor = remember(backStackEntry) {
