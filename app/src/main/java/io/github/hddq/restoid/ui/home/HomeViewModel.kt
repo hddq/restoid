@@ -527,32 +527,36 @@ class HomeViewModel(
             return
         }
 
-        val initialPassword = repositoriesRepository.getRepositoryPassword(repoKey)
-        if (initialPassword == null) {
-            _uiState.update {
-                it.copy(
-                    isRefreshing = false,
-                    error = null,
-                    authFailure = null,
-                    openPrompt = null,
-                    showPasswordDialogFor = repoKey,
-                    showSftpPasswordDialogFor = null,
-                    showRestCredentialsDialogFor = null,
-                    showS3CredentialsDialogFor = null
-                )
+        if (repository.backendType != RepositoryBackendType.LOCAL) {
+            val initialPassword = repositoriesRepository.getRepositoryPassword(repoKey)
+            if (initialPassword == null) {
+                _uiState.update {
+                    it.copy(
+                        isRefreshing = false,
+                        error = null,
+                        authFailure = null,
+                        openPrompt = null,
+                        showPasswordDialogFor = repoKey,
+                        showSftpPasswordDialogFor = null,
+                        showRestCredentialsDialogFor = null,
+                        showS3CredentialsDialogFor = null
+                    )
+                }
+                return
             }
-            return
         }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isRefreshing = true, error = null, authFailure = null, openPrompt = null) }
+            _uiState.update { it.copy(isRefreshing = true, error = null, isMissingLocalPermissions = false, authFailure = null, openPrompt = null) }
             try {
                 if (repository.backendType == RepositoryBackendType.LOCAL && !hasLocalRepositoryAccess()) {
+                    if (repositoriesRepository.selectedRepository.value != repoKey) return@launch
                     showMissingLocalPermissionsError()
                     return@launch
                 }
                 val password = repositoriesRepository.getRepositoryPassword(repoKey)
                 if (password == null) {
+                    if (repositoriesRepository.selectedRepository.value != repoKey) return@launch
                     _uiState.update {
                         it.copy(
                             isRefreshing = false,
@@ -569,7 +573,9 @@ class HomeViewModel(
                 }
                 val result = resticRepository.getSnapshots(repoPath, password, environmentVariables, resticOptions)
                 if (result.isFailure) {
+                    if (repositoriesRepository.selectedRepository.value != repoKey) return@launch
                     if (repository.backendType == RepositoryBackendType.LOCAL && !hasLocalRepositoryAccess()) {
+                        if (repositoriesRepository.selectedRepository.value != repoKey) return@launch
                         showMissingLocalPermissionsError()
                         return@launch
                     }
