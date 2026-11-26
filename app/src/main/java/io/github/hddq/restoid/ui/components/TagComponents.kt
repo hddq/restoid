@@ -22,7 +22,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -343,11 +343,11 @@ fun BackupTagPickerSheet(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .selectable(
-                                        selected = entry.isSelected,
+                                    .toggleable(
+                                        value = entry.isSelected,
                                         enabled = !isMutating,
                                         role = Role.Checkbox,
-                                        onClick = { onToggleTag(entry.name) }
+                                        onValueChange = { onToggleTag(entry.name) }
                                     )
                                     .padding(horizontal = 16.dp, vertical = 10.dp),
                                 verticalAlignment = Alignment.CenterVertically
@@ -577,9 +577,9 @@ fun TagColorEditorDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 val previewLabel = normalizedName.ifEmpty { stringResource(R.string.tag_preview_placeholder) }
-                Row(
+                FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     ExpressiveTagChip(
                         label = previewLabel,
