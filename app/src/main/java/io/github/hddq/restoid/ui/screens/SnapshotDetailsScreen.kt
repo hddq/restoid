@@ -66,6 +66,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
@@ -85,7 +86,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import io.github.hddq.restoid.LocalAppBarActions
@@ -342,8 +346,23 @@ fun SnapshotDetailsHeader(
     val scope = rememberCoroutineScope()
     val copiedText = stringResource(R.string.snapshot_id_copied_to_clipboard)
     val shortId = remember(snapshot.id) { snapshot.id.take(8) }
-    val formattedTime = remember(snapshot.time, context) {
-        formatSnapshotHeaderTime(snapshot.time, context)
+    val parsedTime = remember(snapshot.time) { parseSnapshotHeaderTime(snapshot.time) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val now by produceState(
+        initialValue = java.time.Instant.now(),
+        key1 = parsedTime.instant,
+        key2 = lifecycleOwner
+    ) {
+        if (parsedTime.instant == null) return@produceState
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                value = java.time.Instant.now()
+                delay(60_000L)
+            }
+        }
+    }
+    val relativeTime = remember(parsedTime.instant, now, context) {
+        parsedTime.instant?.let { formatRelativeSnapshotTime(it, now, context) }
     }
     val hostname = snapshot.hostname?.takeIf { it.isNotBlank() }
 
@@ -378,11 +397,11 @@ fun SnapshotDetailsHeader(
                 )
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = formattedTime.localDateTime,
+                        text = parsedTime.localDateTime,
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
-                    formattedTime.relativeTime?.let { relative ->
+                    relativeTime?.let { relative ->
                         Text(
                             text = relative,
                             style = MaterialTheme.typography.bodyMedium,
@@ -487,15 +506,12 @@ fun SnapshotDetailsHeader(
     }
 }
 
-private data class FormattedSnapshotTime(
-    val localDateTime: String,
-    val relativeTime: String?
+private data class ParsedSnapshotTime(
+    val instant: java.time.Instant?,
+    val localDateTime: String
 )
 
-private fun formatSnapshotHeaderTime(
-    rawTime: String,
-    context: android.content.Context
-): FormattedSnapshotTime {
+private fun parseSnapshotHeaderTime(rawTime: String): ParsedSnapshotTime {
     return try {
         val instant = try {
             java.time.OffsetDateTime.parse(rawTime).toInstant()
@@ -507,40 +523,41 @@ private fun formatSnapshotHeaderTime(
             java.time.format.FormatStyle.MEDIUM,
             java.time.format.FormatStyle.SHORT
         )
-        val localDateTime = formatter.format(localZoned)
-
-        val duration = java.time.Duration.between(instant, java.time.Instant.now())
-        val relativeTime = if (duration.isNegative) {
-            null
-        } else {
-            when {
-                duration.toMinutes() < 1 -> context.getString(R.string.time_just_now)
-                duration.toHours() < 1 -> {
-                    val mins = duration.toMinutes().toInt()
-                    context.resources.getQuantityString(R.plurals.time_mins_ago, mins, mins)
-                }
-                duration.toDays() < 1 -> {
-                    val hours = duration.toHours().toInt()
-                    context.resources.getQuantityString(R.plurals.time_hours_ago, hours, hours)
-                }
-                duration.toDays() < 30 -> {
-                    val days = duration.toDays().toInt()
-                    context.resources.getQuantityString(R.plurals.time_days_ago, days, days)
-                }
-                duration.toDays() < 365 -> {
-                    val months = (duration.toDays() / 30).toInt()
-                    context.resources.getQuantityString(R.plurals.time_months_ago, months, months)
-                }
-                else -> {
-                    val years = (duration.toDays() / 365).toInt()
-                    context.resources.getQuantityString(R.plurals.time_years_ago, years, years)
-                }
-            }
-        }
-
-        FormattedSnapshotTime(localDateTime = localDateTime, relativeTime = relativeTime)
+        ParsedSnapshotTime(instant = instant, localDateTime = formatter.format(localZoned))
     } catch (_: Exception) {
-        FormattedSnapshotTime(localDateTime = rawTime, relativeTime = null)
+        ParsedSnapshotTime(instant = null, localDateTime = rawTime)
+    }
+}
+
+private fun formatRelativeSnapshotTime(
+    instant: java.time.Instant,
+    now: java.time.Instant,
+    context: android.content.Context
+): String? {
+    val duration = java.time.Duration.between(instant, now)
+    if (duration.isNegative) return null
+    return when {
+        duration.toMinutes() < 1 -> context.getString(R.string.time_just_now)
+        duration.toHours() < 1 -> {
+            val mins = duration.toMinutes().toInt()
+            context.resources.getQuantityString(R.plurals.time_mins_ago, mins, mins)
+        }
+        duration.toDays() < 1 -> {
+            val hours = duration.toHours().toInt()
+            context.resources.getQuantityString(R.plurals.time_hours_ago, hours, hours)
+        }
+        duration.toDays() < 30 -> {
+            val days = duration.toDays().toInt()
+            context.resources.getQuantityString(R.plurals.time_days_ago, days, days)
+        }
+        duration.toDays() < 365 -> {
+            val months = (duration.toDays() / 30).toInt()
+            context.resources.getQuantityString(R.plurals.time_months_ago, months, months)
+        }
+        else -> {
+            val years = (duration.toDays() / 365).toInt()
+            context.resources.getQuantityString(R.plurals.time_years_ago, years, years)
+        }
     }
 }
 
