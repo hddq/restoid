@@ -1,5 +1,6 @@
 package io.github.hddq.restoid.work
 
+import io.github.hddq.restoid.model.BackupTagRules
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -71,6 +72,7 @@ data class BackupWorkRequest(
     val customDirectories: List<String> = emptyList(),
     val excludedCustomDirectories: List<String> = emptyList(),
     val deviceData: DeviceDataBackupSelection = DeviceDataBackupSelection(),
+    val backupTags: List<String> = emptyList(),
     val requireUnmeteredNetwork: Boolean = false
 )
 
@@ -111,6 +113,7 @@ data class RunTasksConfig(
     val customDirectories: List<String> = emptyList(),
     val excludedCustomDirectories: List<String> = emptyList(),
     val deviceData: DeviceDataBackupSelection = DeviceDataBackupSelection(),
+    val backupTags: List<String> = emptyList(),
     val unlockRepo: Boolean = false,
     val forgetSnapshots: Boolean = false,
     val pruneRepo: Boolean = false,
@@ -134,6 +137,7 @@ data class RunTasksWorkRequest(
     val customDirectories: List<String> = emptyList(),
     val excludedCustomDirectories: List<String> = emptyList(),
     val deviceData: DeviceDataBackupSelection = DeviceDataBackupSelection(),
+    val backupTags: List<String> = emptyList(),
     val unlockRepo: Boolean,
     val forgetSnapshots: Boolean,
     val pruneRepo: Boolean,
@@ -174,6 +178,7 @@ fun RunTasksConfig.toWorkRequest(
         customDirectories = customDirectories,
         excludedCustomDirectories = excludedCustomDirectories,
         deviceData = deviceData,
+        backupTags = BackupTagRules.sanitizeBackupTags(backupTags),
         unlockRepo = unlockRepo,
         forgetSnapshots = forgetSnapshots,
         pruneRepo = pruneRepo,

@@ -89,6 +89,24 @@ class TaskPresetRepository internal constructor(
         }
     }
 
+    suspend fun removeTagFromAllPresets(repoId: String, tagName: String): Int = mutationMutex.withLock {
+        val presets = getPresets(repoId)
+        var updatedCount = 0
+        val updatedPresets = presets.map { preset ->
+            val filteredTags = preset.config.backupTags.filterNot { it.equals(tagName, ignoreCase = true) }
+            if (filteredTags.size != preset.config.backupTags.size) {
+                updatedCount++
+                preset.copy(config = preset.config.copy(backupTags = filteredTags))
+            } else {
+                preset
+            }
+        }
+        if (updatedCount > 0) {
+            metadataRepository.saveTaskPresets(repoId, updatedPresets)
+        }
+        updatedCount
+    }
+
     suspend fun runPresetNow(
         repoKey: String,
         repoId: String,

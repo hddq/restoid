@@ -112,6 +112,7 @@ class RunTasksOperationRunner(
                     customDirectories = request.customDirectories,
                     excludedCustomDirectories = request.excludedCustomDirectories,
                     deviceData = request.deviceData,
+                    backupTags = request.backupTags,
                     requireUnmeteredNetwork = request.requireUnmeteredNetwork
                 )
 
