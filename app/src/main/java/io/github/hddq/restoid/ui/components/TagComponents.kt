@@ -69,14 +69,13 @@ import kotlin.math.roundToInt
 @Composable
 fun TagColorDot(
     colorArgb: Int,
-    size: Dp = 10.dp,
+    size: Dp = 12.dp,
     modifier: Modifier = Modifier
 ) {
     Box(
         modifier = modifier
             .size(size)
             .background(Color(colorArgb), CircleShape)
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
     )
 }
 
