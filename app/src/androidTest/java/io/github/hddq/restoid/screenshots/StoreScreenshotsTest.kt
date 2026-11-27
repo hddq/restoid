@@ -47,6 +47,7 @@ import io.github.hddq.restoid.DestinationScaffold
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.RestoidShortNavigationBar
 import io.github.hddq.restoid.Screen
+import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.ui.presets.PresetsContent
 import io.github.hddq.restoid.ui.runtasks.RunTasksContent
 import io.github.hddq.restoid.ui.schedules.AddEditScheduleContent
@@ -119,7 +120,8 @@ class StoreScreenshotsTest {
 
     @Test
     fun capture1_home() {
-        val state = ScreenshotFixtures.homeUiState(testContext)
+        val (resticState, _) = ScreenshotFixtures.bundledBinaryStates(targetContext)
+        val state = ScreenshotFixtures.homeUiState(testContext, resticState)
         setScreenshotContent {
             TopLevelScreenshotHost(
                 selectedScreen = Screen.Home,
@@ -365,16 +367,26 @@ class StoreScreenshotsTest {
 
     @Test
     fun capture8_settings() {
+        val (resticState, rcloneState) = ScreenshotFixtures.bundledBinaryStates(targetContext)
         setScreenshotContent {
-            SettingsScreenshotContent(showAddRepositoryDialog = false)
+            SettingsScreenshotContent(
+                resticState = resticState,
+                rcloneState = rcloneState,
+                showAddRepositoryDialog = false
+            )
         }
         saveScreenshot("8.png")
     }
 
     @Test
     fun capture9_addRepositoryDialog() {
+        val (resticState, rcloneState) = ScreenshotFixtures.bundledBinaryStates(targetContext)
         setScreenshotContent {
-            SettingsScreenshotContent(showAddRepositoryDialog = true)
+            SettingsScreenshotContent(
+                resticState = resticState,
+                rcloneState = rcloneState,
+                showAddRepositoryDialog = true
+            )
         }
         composeRule.waitForIdle()
         composeRule.onNodeWithText(enUsTargetContext.getString(R.string.repo_backend_local)).performClick()
@@ -382,7 +394,11 @@ class StoreScreenshotsTest {
     }
 
     @Composable
-    private fun SettingsScreenshotContent(showAddRepositoryDialog: Boolean) {
+    private fun SettingsScreenshotContent(
+        resticState: ResticState,
+        rcloneState: ResticState,
+        showAddRepositoryDialog: Boolean
+    ) {
         TopLevelScreenshotHost(
             selectedScreen = Screen.Settings,
             titleRes = Screen.Settings.titleRes
@@ -401,13 +417,13 @@ class StoreScreenshotsTest {
                 }
                 item {
                     DependencySettingsContent(
-                        resticState = ScreenshotFixtures.resticInstalledState,
-                        rcloneState = ScreenshotFixtures.rcloneInstalledState
+                        resticState = resticState,
+                        rcloneState = rcloneState
                     )
                 }
                 item {
                     RepositorySettingsContent(
-                        resticState = ScreenshotFixtures.resticInstalledState,
+                        resticState = resticState,
                         repositories = ScreenshotFixtures.repositories,
                         selectedRepositoryKey = ScreenshotFixtures.PRIMARY_REPO_KEY,
                         repositoryKey = { it.path }
