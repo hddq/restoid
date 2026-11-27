@@ -21,7 +21,7 @@ Flexible Storage Backends
 
 Full App & Data Backup (Root Required)
 • Selectively back up installed user applications.
-• Granular control: Choose whether to include APKs, app data, device-protected data, external files, or OBB caches.
+• Granular control: Choose whether to include APKs, app data, device-protected data, external files, or OBB caches, and exclude specific paths inside app data (such as large caches or re-downloadable media) while preserving core databases and settings.
 
 Custom Files & Media
 • Back up personal folders: DCIM, Documents, Downloads, or any directory on your device.
