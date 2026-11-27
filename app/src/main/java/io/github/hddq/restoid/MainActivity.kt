@@ -129,6 +129,7 @@ import io.github.hddq.restoid.ui.presets.PresetCheckConfigScreen
 import io.github.hddq.restoid.ui.presets.PresetCustomDirectoriesConfigScreen
 import io.github.hddq.restoid.ui.presets.PresetDeviceDataConfigScreen
 import io.github.hddq.restoid.ui.presets.PresetForgetConfigScreen
+import io.github.hddq.restoid.ui.presets.PresetForgetDryRunScreen
 import io.github.hddq.restoid.ui.presets.PresetsRoutes
 import io.github.hddq.restoid.ui.presets.PresetsScreen
 import io.github.hddq.restoid.ui.presets.PresetsViewModel
@@ -140,6 +141,7 @@ import io.github.hddq.restoid.ui.runtasks.CustomDirectoriesConfigScreen
 import io.github.hddq.restoid.ui.runtasks.CheckConfigScreen
 import io.github.hddq.restoid.ui.runtasks.DeviceDataConfigScreen
 import io.github.hddq.restoid.ui.runtasks.ForgetConfigScreen
+import io.github.hddq.restoid.ui.runtasks.ForgetDryRunScreen
 import io.github.hddq.restoid.ui.runtasks.RunTasksRoutes
 import io.github.hddq.restoid.ui.runtasks.RunTasksScreen
 import androidx.compose.foundation.layout.fillMaxSize
@@ -985,7 +987,47 @@ class MainActivity : FragmentActivity() {
                                         isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
                                     ) {
-                                        PresetForgetConfigScreen(viewModel = vm)
+                                        PresetForgetConfigScreen(
+                                            viewModel = vm,
+                                            onOpenDryRun = { navController.navigate(PresetsRoutes.ForgetDryRun) }
+                                        )
+                                    }
+                                }
+                                composable(PresetsRoutes.ForgetDryRun) { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry(TOP_LEVEL_ROUTE)
+                                    }
+                                    val vm: PresetsViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = PresetsViewModelFactory(
+                                            app,
+                                            app.taskPresetRepository,
+                                            app.scheduleRepository,
+                                            app.repositoriesRepository,
+                                            app.appInfoRepository,
+                                            app.rootRepository,
+                                            app.resticBinaryManager,
+                                            app.resticRepository,
+                                            app.preferencesRepository,
+                                            app.operationWorkRepository,
+                                            app.tagRepository
+                                        )
+                                    )
+                                    DestinationScaffold(
+                                        titleRes = R.string.forget_dry_run_sheet_title,
+                                        isTopLevel = false,
+                                        isExiting = transition.targetState == EnterExitState.PostExit,
+                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
+                                    ) {
+                                        PresetForgetDryRunScreen(
+                                            viewModel = vm,
+                                            snapshotsWithMetadata = homeUiState.snapshotsWithMetadata,
+                                            appInfoMap = homeUiState.appInfoMap,
+                                            repoTagsByName = homeUiState.repoTagsByName,
+                                            onSnapshotClick = { snapshotId ->
+                                                navController.navigate("${Screen.SnapshotDetails.route}/$snapshotId")
+                                            }
+                                        )
                                     }
                                 }
                                 composable(PresetsRoutes.CheckConfig) { backStackEntry ->
@@ -1332,7 +1374,46 @@ class MainActivity : FragmentActivity() {
                                         isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
                                     ) {
-                                        ForgetConfigScreen(viewModel = vm)
+                                        ForgetConfigScreen(
+                                            viewModel = vm,
+                                            onOpenDryRun = { navController.navigate(RunTasksRoutes.ForgetDryRun) }
+                                        )
+                                    }
+                                }
+                                composable(RunTasksRoutes.ForgetDryRun) { backStackEntry ->
+                                    val parentEntry = remember(backStackEntry) {
+                                        navController.getBackStackEntry(Screen.RunTasks.route)
+                                    }
+                                    val vm: RunTasksViewModel = viewModel(
+                                        viewModelStoreOwner = parentEntry,
+                                        factory = RunTasksViewModelFactory(
+                                            app,
+                                            app.rootRepository,
+                                            app.repositoriesRepository,
+                                            app.resticBinaryManager,
+                                            app.resticRepository,
+                                            app.appInfoRepository,
+                                            app.preferencesRepository,
+                                            app.operationWorkRepository,
+                                            app.taskPresetRepository,
+                                            app.tagRepository
+                                        )
+                                    )
+                                    DestinationScaffold(
+                                        titleRes = R.string.forget_dry_run_sheet_title,
+                                        isTopLevel = false,
+                                        isExiting = transition.targetState == EnterExitState.PostExit,
+                                        onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
+                                    ) {
+                                        ForgetDryRunScreen(
+                                            viewModel = vm,
+                                            snapshotsWithMetadata = homeUiState.snapshotsWithMetadata,
+                                            appInfoMap = homeUiState.appInfoMap,
+                                            repoTagsByName = homeUiState.repoTagsByName,
+                                            onSnapshotClick = { snapshotId ->
+                                                navController.navigate("${Screen.SnapshotDetails.route}/$snapshotId")
+                                            }
+                                        )
                                     }
                                 }
                                 composable(RunTasksRoutes.CheckConfig) { backStackEntry ->

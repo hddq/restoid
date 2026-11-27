@@ -49,12 +49,15 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.hddq.restoid.LocalAppBarActions
 import io.github.hddq.restoid.R
+import io.github.hddq.restoid.model.AppInfo
+import io.github.hddq.restoid.model.BackupTag
 import io.github.hddq.restoid.ui.components.BackupTagPickerSheet
 import io.github.hddq.restoid.ui.components.BackupTagsRow
 import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
 import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
 import io.github.hddq.restoid.ui.components.TasksGuideBottomSheet
+import io.github.hddq.restoid.ui.home.SnapshotWithMetadata
 import io.github.hddq.restoid.ui.shared.ExclusionConflictWarningCard
 import io.github.hddq.restoid.ui.shared.TaskRow
 import io.github.hddq.restoid.ui.shared.buildBackupSubtitle
@@ -392,6 +395,7 @@ fun BackupConfigScreen(
 @Composable
 fun ForgetConfigScreen(
     viewModel: RunTasksViewModel,
+    onOpenDryRun: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -417,11 +421,31 @@ fun ForgetConfigScreen(
         onCreateForgetTag = viewModel::createForgetTag,
         onUpdateTagColor = viewModel::updateTagColor,
         onDeleteTag = viewModel::deleteTag,
-        isRunningDryRun = editor.isRunningForgetDryRun,
-        dryRunResult = editor.forgetDryRunResult,
-        dryRunError = editor.forgetDryRunError,
+        onOpenDryRun = onOpenDryRun,
+        modifier = modifier
+    )
+}
+
+@Composable
+fun ForgetDryRunScreen(
+    viewModel: RunTasksViewModel,
+    snapshotsWithMetadata: List<SnapshotWithMetadata>,
+    appInfoMap: Map<String, List<AppInfo>>,
+    repoTagsByName: Map<String, BackupTag>,
+    onSnapshotClick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val editor = uiState.editor
+    io.github.hddq.restoid.ui.shared.ForgetDryRunScreen(
+        isRunning = editor.isRunningForgetDryRun,
+        result = editor.forgetDryRunResult,
+        error = editor.forgetDryRunError,
+        snapshotsWithMetadata = snapshotsWithMetadata,
+        appInfoMap = appInfoMap,
+        repoTagsByName = repoTagsByName,
         onRunDryRun = viewModel::runForgetDryRun,
-        onClearDryRun = viewModel::clearForgetDryRun,
+        onSnapshotClick = onSnapshotClick,
         modifier = modifier
     )
 }

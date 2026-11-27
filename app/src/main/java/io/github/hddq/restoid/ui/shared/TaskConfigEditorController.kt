@@ -663,27 +663,43 @@ class TaskConfigEditorController(
     fun setPruneRepo(value: Boolean) = mutateConfig { it.copy(maintenance = it.maintenance.copy(pruneRepo = value)) }
     fun setCheckRepo(value: Boolean) = mutateConfig { it.copy(maintenance = it.maintenance.copy(checkRepo = value)) }
     fun setReadData(value: Boolean) = mutateConfig { it.copy(maintenance = it.maintenance.copy(readData = value)) }
-    fun setKeepLast(value: Int) = mutateConfig { it.copy(maintenance = it.maintenance.copy(keepLast = value)) }
-    fun setKeepDaily(value: Int) = mutateConfig { it.copy(maintenance = it.maintenance.copy(keepDaily = value)) }
-    fun setKeepWeekly(value: Int) = mutateConfig { it.copy(maintenance = it.maintenance.copy(keepWeekly = value)) }
-    fun setKeepMonthly(value: Int) = mutateConfig { it.copy(maintenance = it.maintenance.copy(keepMonthly = value)) }
+    fun setKeepLast(value: Int) {
+        clearForgetDryRun()
+        mutateConfig { it.copy(maintenance = it.maintenance.copy(keepLast = value)) }
+    }
+    fun setKeepDaily(value: Int) {
+        clearForgetDryRun()
+        mutateConfig { it.copy(maintenance = it.maintenance.copy(keepDaily = value)) }
+    }
+    fun setKeepWeekly(value: Int) {
+        clearForgetDryRun()
+        mutateConfig { it.copy(maintenance = it.maintenance.copy(keepWeekly = value)) }
+    }
+    fun setKeepMonthly(value: Int) {
+        clearForgetDryRun()
+        mutateConfig { it.copy(maintenance = it.maintenance.copy(keepMonthly = value)) }
+    }
 
     fun toggleAllForgetHosts() {
+        clearForgetDryRun()
         forgetHostsController.toggleAll()
         onConfigMutated(readState())
     }
 
     fun toggleForgetHost(hostname: String) {
+        clearForgetDryRun()
         forgetHostsController.toggleHost(hostname)
         onConfigMutated(readState())
     }
 
     fun addCustomForgetHost(hostname: String) {
+        clearForgetDryRun()
         forgetHostsController.addCustomHost(hostname)
         onConfigMutated(readState())
     }
 
     fun removeCustomForgetHost(hostname: String) {
+        clearForgetDryRun()
         forgetHostsController.removeCustomHost(hostname)
         onConfigMutated(readState())
     }
@@ -934,6 +950,7 @@ class TaskConfigEditorController(
     fun toggleForgetTag(tagName: String) {
         val normalized = BackupTagRules.normalizeTagName(tagName)
         if (normalized.isEmpty()) return
+        clearForgetDryRun()
         mutateConfig { state ->
             val current = state.maintenance.forgetTags
             val exists = current.any { it.equals(normalized, ignoreCase = true) }
@@ -958,6 +975,9 @@ class TaskConfigEditorController(
         val result = repo.createTag(repoId, name, colorArgb)
         result.onSuccess { created ->
             val tags = repo.getTags(repoId)
+            if (selectInForget) {
+                clearForgetDryRun()
+            }
             mutateConfig { state ->
                 val updatedBackupTags = if (selectInBackup && state.backupTags.none { it.equals(created.name, ignoreCase = true) }) {
                     state.backupTags + created.name

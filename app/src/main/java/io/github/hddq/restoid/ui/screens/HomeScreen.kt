@@ -803,16 +803,20 @@ private fun ExpressiveTagFilterChip(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun SnapshotItem(
+internal fun SnapshotItem(
     snapshotWithMetadata: SnapshotWithMetadata,
     apps: List<AppInfo>?,
     tagColors: List<Int> = emptyList(),
     nowEpochMinute: Long = System.currentTimeMillis() / 60_000L,
     maxIconsPossible: Int,
     onClick: () -> Unit,
-    onRestoreClick: () -> Unit,
-    onForgetClick: () -> Unit
+    onRestoreClick: (() -> Unit)? = null,
+    onForgetClick: (() -> Unit)? = null,
+    showMetadataStatusWhenMissing: Boolean = true,
+    secondaryContentColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    statusContent: (@Composable () -> Unit)? = null
 ) {
+    val hasContextMenu = onRestoreClick != null || onForgetClick != null
     var menuExpanded by remember { mutableStateOf(false) }
     val snapshot = snapshotWithMetadata.snapshotInfo
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -853,14 +857,20 @@ private fun SnapshotItem(
         }
     }
 
+    val clickModifier = if (hasContextMenu) {
+        Modifier.combinedClickable(
+            onClick = onClick,
+            onLongClick = { menuExpanded = true }
+        )
+    } else {
+        Modifier.clickable(onClick = onClick)
+    }
+
     Box(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .combinedClickable(
-                    onClick = onClick,
-                    onLongClick = { menuExpanded = true }
-                )
+                .then(clickModifier)
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -868,8 +878,11 @@ private fun SnapshotItem(
                 snapshotId = snapshot.id,
                 hostname = snapshot.hostname,
                 timeText = timeText,
-                tagColors = tagColors
+                tagColors = tagColors,
+                secondaryContentColor = secondaryContentColor
             )
+
+            statusContent?.invoke()
 
             val appCount = snapshotWithMetadata.metadata?.apps?.size ?: 0
             val customDirCount = snapshotWithMetadata.metadata?.customDirectories?.size ?: 0
@@ -992,59 +1005,65 @@ private fun SnapshotItem(
                         }
                     }
                 }
-            } else if (snapshotWithMetadata.metadata == null) {
+            } else if (showMetadataStatusWhenMissing && snapshotWithMetadata.metadata == null) {
                 Text(
                     text = stringResource(R.string.metadata_missing_or_corrupted),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error
                 )
-            } else {
+            } else if (showMetadataStatusWhenMissing) {
                 Text(
                     text = stringResource(R.string.no_app_info_for_snapshot),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = secondaryContentColor
                 )
             }
         }
 
-        DropdownMenu(
-            expanded = menuExpanded,
-            onDismissRequest = { menuExpanded = false }
-        ) {
-            DropdownMenuItem(
-                text = {
-                    Text(text = stringResource(R.string.screen_restore))
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Outlined.Restore,
-                        contentDescription = null
+        if (hasContextMenu) {
+            DropdownMenu(
+                expanded = menuExpanded,
+                onDismissRequest = { menuExpanded = false }
+            ) {
+                if (onRestoreClick != null) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(text = stringResource(R.string.screen_restore))
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Outlined.Restore,
+                                contentDescription = null
+                            )
+                        },
+                        onClick = {
+                            menuExpanded = false
+                            onRestoreClick()
+                        }
                     )
-                },
-                onClick = {
-                    menuExpanded = false
-                    onRestoreClick()
                 }
-            )
-            DropdownMenuItem(
-                text = {
-                    Text(
-                        text = stringResource(R.string.action_forget),
-                        color = MaterialTheme.colorScheme.error
+                if (onForgetClick != null) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = stringResource(R.string.action_forget),
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Outlined.Delete,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        },
+                        onClick = {
+                            menuExpanded = false
+                            onForgetClick()
+                        }
                     )
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Outlined.Delete,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error
-                    )
-                },
-                onClick = {
-                    menuExpanded = false
-                    onForgetClick()
                 }
-            )
+            }
         }
     }
 }
@@ -1133,7 +1152,8 @@ internal fun SnapshotHeader(
     hostname: String?,
     timeText: String,
     tagColors: List<Int> = emptyList(),
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    secondaryContentColor: Color = MaterialTheme.colorScheme.onSurfaceVariant
 ) {
     val density = LocalDensity.current
     val minHorizontalGapPx = with(density) { 8.dp.roundToPx() }
@@ -1188,7 +1208,7 @@ internal fun SnapshotHeader(
                             Text(
                                 text = "+${tagColors.size - 4}",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = secondaryContentColor
                             )
                         }
                     }
@@ -1197,12 +1217,12 @@ internal fun SnapshotHeader(
             Text(
                 text = timeText,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = secondaryContentColor
             )
             Icon(
                 imageVector = Icons.Outlined.ChevronRight,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = secondaryContentColor,
                 modifier = Modifier
                     .size(18.dp)
                     .testTag(SNAPSHOT_HEADER_CHEVRON_TAG)
