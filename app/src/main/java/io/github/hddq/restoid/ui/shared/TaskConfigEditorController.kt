@@ -8,6 +8,7 @@ import io.github.hddq.restoid.data.AppInfoRepository
 import io.github.hddq.restoid.data.CalendarBackupRepository
 import io.github.hddq.restoid.data.CallLogsBackupRepository
 import io.github.hddq.restoid.data.ContactsBackupRepository
+import io.github.hddq.restoid.data.ForgetDryRunResult
 import io.github.hddq.restoid.data.PreferencesRepository
 import io.github.hddq.restoid.data.RepositoriesRepository
 import io.github.hddq.restoid.data.RepositoryBackendType
@@ -62,6 +63,9 @@ data class TaskConfigEditorState(
     val areRepoSnapshotsLoaded: Boolean = false,
     val isLoadingForgetHosts: Boolean = false,
     val forgetHostsError: String? = null,
+    val isRunningForgetDryRun: Boolean = false,
+    val forgetDryRunResult: ForgetDryRunResult? = null,
+    val forgetDryRunError: String? = null,
     val backupTags: List<String> = emptyList(),
     val availableTags: List<BackupTag> = emptyList()
 )
@@ -677,6 +681,135 @@ class TaskConfigEditorController(
             selectedRepoKeyOverride = selectedRepoKeyProvider(),
             userInitiated = userInitiated
         )
+    }
+
+    private var forgetDryRunJob: Job? = null
+
+    fun clearForgetDryRun() {
+        forgetDryRunJob?.cancel()
+        forgetDryRunJob = null
+        updateState {
+            it.copy(
+                isRunningForgetDryRun = false,
+                forgetDryRunResult = null,
+                forgetDryRunError = null
+            )
+        }
+    }
+
+    fun runForgetDryRun() {
+        val state = readState()
+        val maintenance = state.maintenance
+        if (maintenance.keepLast <= 0 &&
+            maintenance.keepDaily <= 0 &&
+            maintenance.keepWeekly <= 0 &&
+            maintenance.keepMonthly <= 0
+        ) {
+            updateState {
+                it.copy(
+                    isRunningForgetDryRun = false,
+                    forgetDryRunResult = null,
+                    forgetDryRunError = application.getString(R.string.restic_failure_no_forget_policy)
+                )
+            }
+            return
+        }
+        if (!maintenance.forgetAllHosts && normalizeForgetHosts(maintenance.forgetHosts).isEmpty()) {
+            updateState {
+                it.copy(
+                    isRunningForgetDryRun = false,
+                    forgetDryRunResult = null,
+                    forgetDryRunError = application.getString(R.string.error_no_forget_hosts_selected)
+                )
+            }
+            return
+        }
+        if (!resticBinaryManager.isInstalled) {
+            updateState {
+                it.copy(
+                    isRunningForgetDryRun = false,
+                    forgetDryRunResult = null,
+                    forgetDryRunError = application.getString(R.string.restic_not_available_check_settings)
+                )
+            }
+            return
+        }
+        val selectedRepoKey = selectedRepoKeyProvider()
+        val repository = selectedRepoKey?.let { repositoriesRepository.getRepositoryByKey(it) }
+        if (selectedRepoKey == null || repository == null) {
+            updateState {
+                it.copy(
+                    isRunningForgetDryRun = false,
+                    forgetDryRunResult = null,
+                    forgetDryRunError = application.getString(R.string.no_repository_selected)
+                )
+            }
+            return
+        }
+        val password = repositoriesRepository.getRepositoryPassword(selectedRepoKey)
+        val hasMissingBackendCreds = when (repository.backendType) {
+            RepositoryBackendType.SFTP -> !repositoriesRepository.hasSftpCredentials(selectedRepoKey)
+            RepositoryBackendType.REST -> repository.restAuthRequired && !repositoriesRepository.hasRestCredentials(selectedRepoKey)
+            RepositoryBackendType.S3 -> repository.s3AuthRequired && !repositoriesRepository.hasS3Credentials(selectedRepoKey)
+            else -> false
+        }
+        if (password == null || hasMissingBackendCreds) {
+            updateState {
+                it.copy(
+                    isRunningForgetDryRun = false,
+                    forgetDryRunResult = null,
+                    forgetDryRunError = application.getString(R.string.forget_hosts_credentials_required)
+                )
+            }
+            return
+        }
+
+        forgetDryRunJob?.cancel()
+        forgetDryRunJob = scope.launch {
+            updateState {
+                it.copy(
+                    isRunningForgetDryRun = true,
+                    forgetDryRunResult = null,
+                    forgetDryRunError = null
+                )
+            }
+            val env = repositoriesRepository.getExecutionEnvironmentVariables(selectedRepoKey)
+            val resticOptions = repositoriesRepository.getExecutionResticOptions(selectedRepoKey)
+            val result = resticRepository.forgetDryRun(
+                repoPath = repository.path,
+                password = password,
+                keepLast = maintenance.keepLast,
+                keepDaily = maintenance.keepDaily,
+                keepWeekly = maintenance.keepWeekly,
+                keepMonthly = maintenance.keepMonthly,
+                forgetAllHosts = maintenance.forgetAllHosts,
+                forgetHosts = maintenance.forgetHosts,
+                forgetTags = maintenance.forgetTags,
+                environmentVariables = env,
+                resticOptions = resticOptions
+            )
+            result.fold(
+                onSuccess = { dryRunResult ->
+                    updateState {
+                        it.copy(
+                            isRunningForgetDryRun = false,
+                            forgetDryRunResult = dryRunResult,
+                            forgetDryRunError = null
+                        )
+                    }
+                },
+                onFailure = { error ->
+                    updateState {
+                        it.copy(
+                            isRunningForgetDryRun = false,
+                            forgetDryRunResult = null,
+                            forgetDryRunError = error.message?.takeIf { msg -> msg.isNotBlank() }
+                                ?: application.getString(R.string.restic_failure_forget_snapshots)
+                        )
+                    }
+                }
+            )
+        }
     }
 
     fun setAppSortOrder(order: AppSortOrder) {

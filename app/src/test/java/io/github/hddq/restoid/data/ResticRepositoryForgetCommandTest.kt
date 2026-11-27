@@ -126,4 +126,68 @@ class ResticRepositoryForgetCommandTest {
         assertTrue(result.isFailure)
         assertEquals("no_forget_policy", result.exceptionOrNull()?.message)
     }
+
+    @Test
+    fun buildForgetCommand_dryRunJsonNoLock_appendsExpectedFlags() {
+        val repository = createRepository()
+
+        val result = repository.buildForgetCommand(
+            keepLast = 2,
+            keepDaily = 0,
+            keepWeekly = 0,
+            keepMonthly = 0,
+            forgetAllHosts = false,
+            forgetHosts = listOf("Pixel-8"),
+            forgetTags = listOf("daily"),
+            dryRun = true,
+            jsonOutput = true,
+            noLock = true
+        )
+
+        assertTrue(result.isSuccess)
+        assertEquals(
+            "forget --keep-last 2 --host 'Pixel-8' --group-by host --tag 'restoid,backup,daily' --dry-run --json --no-lock",
+            result.getOrNull()
+        )
+    }
+
+    @Test
+    fun parseForgetDryRunJson_parsesGroupsKeepRemoveAndReasons() {
+        val repository = createRepository()
+        val sampleJson = """
+            [
+              {
+                "host": "Pixel-8",
+                "tags": ["restoid", "backup", "daily"],
+                "keep": [
+                  {"id": "aaaa11112222", "short_id": "aaaa1111", "time": "2026-11-26T10:00:00Z", "hostname": "Pixel-8", "tags": ["restoid", "backup", "daily"]}
+                ],
+                "remove": [
+                  {"id": "bbbb33334444", "short_id": "bbbb3333", "time": "2026-11-25T10:00:00Z", "hostname": "Pixel-8", "tags": ["restoid", "backup", "daily"]}
+                ],
+                "reasons": [
+                  {"snapshot": {"id": "aaaa11112222", "short_id": "aaaa1111"}, "matches": ["last snapshot", "daily snapshot"]}
+                ]
+              }
+            ]
+        """.trimIndent()
+
+        val parsed = repository.parseForgetDryRunJson(sampleJson)
+        assertTrue(parsed.isSuccess)
+        val result = parsed.getOrThrow()
+        assertEquals(1, result.groups.size)
+        assertEquals(1, result.totalKeep)
+        assertEquals(1, result.totalRemove)
+        assertEquals("Pixel-8", result.groups[0].host)
+        assertEquals(listOf("last snapshot", "daily snapshot"), result.groups[0].keep[0].keepReasons)
+        assertEquals("bbbb3333", result.groups[0].remove[0].shortId)
+    }
+
+    @Test
+    fun parseForgetDryRunJson_emptyOutput_returnsEmptyGroups() {
+        val repository = createRepository()
+        val parsed = repository.parseForgetDryRunJson("   ")
+        assertTrue(parsed.isSuccess)
+        assertEquals(0, parsed.getOrThrow().groups.size)
+    }
 }

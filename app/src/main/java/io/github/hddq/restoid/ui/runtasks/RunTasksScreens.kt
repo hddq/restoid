@@ -417,6 +417,11 @@ fun ForgetConfigScreen(
         onCreateForgetTag = viewModel::createForgetTag,
         onUpdateTagColor = viewModel::updateTagColor,
         onDeleteTag = viewModel::deleteTag,
+        isRunningDryRun = editor.isRunningForgetDryRun,
+        dryRunResult = editor.forgetDryRunResult,
+        dryRunError = editor.forgetDryRunError,
+        onRunDryRun = viewModel::runForgetDryRun,
+        onClearDryRun = viewModel::clearForgetDryRun,
         modifier = modifier
     )
 }
