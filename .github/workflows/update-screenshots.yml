@@ -77,16 +77,6 @@ jobs:
           echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;$NDK_VER"
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/$NDK_VER" >> "$GITHUB_ENV"
 
-      - name: Build restic binaries
-        run: |
-          set -euo pipefail
-          ./scripts/build_restic.sh
-
-      - name: Build rclone binaries
-        run: |
-          set -euo pipefail
-          ./scripts/build_rclone.sh
-
       - name: Set up Gradle cache
         uses: gradle/actions/setup-gradle@v6
 
@@ -96,7 +86,7 @@ jobs:
           api-level: ${{ steps.emulator.outputs.api-level }}
           target: ${{ steps.emulator.outputs.target }}
           arch: x86_64
-          profile: pixel_7
+          profile: pixel_9
           cores: 4
           ram-size: 4096M
           heap-size: 512M

@@ -5,6 +5,7 @@ import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.Build
+import android.view.Choreographer
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
@@ -67,13 +68,18 @@ import io.github.hddq.restoid.ui.shared.ProgressScreenContent
 import io.github.hddq.restoid.ui.theme.RestoidTheme
 import org.junit.After
 import org.junit.Before
+import org.junit.FixMethodOrder
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.junit.runners.MethodSorters
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Locale
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 @RunWith(AndroidJUnit4::class)
 class StoreScreenshotsTest {
 
@@ -286,21 +292,25 @@ class StoreScreenshotsTest {
     @Test
     fun capture5_operationProgress() {
         composeRule.mainClock.autoAdvance = false
-        setScreenshotContent {
-            DestinationScaffold(
-                titleRes = R.string.topbar_operation_progress,
-                isTopLevel = false,
-                onBack = {}
-            ) {
-                ProgressScreenContent(
-                    progress = ScreenshotFixtures.operationProgress(),
-                    operationType = stringResource(R.string.operation_run_tasks),
-                    onDone = {}
-                )
+        try {
+            setScreenshotContent {
+                DestinationScaffold(
+                    titleRes = R.string.topbar_operation_progress,
+                    isTopLevel = false,
+                    onBack = {}
+                ) {
+                    ProgressScreenContent(
+                        progress = ScreenshotFixtures.operationProgress(),
+                        operationType = stringResource(R.string.operation_run_tasks),
+                        onDone = {}
+                    )
+                }
             }
+            composeRule.mainClock.advanceTimeBy(450L)
+            saveScreenshot("5.png", waitForComposeIdle = false, settleMillis = 350L)
+        } finally {
+            composeRule.mainClock.autoAdvance = true
         }
-        composeRule.mainClock.advanceTimeBy(450L)
-        saveScreenshot("5.png", waitForComposeIdle = false, settleMillis = 350L)
     }
 
     @Test
@@ -544,21 +554,72 @@ class StoreScreenshotsTest {
         }
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         instrumentation.waitForIdleSync()
+        waitForRenderedFrames()
         if (settleMillis > 0L) {
             Thread.sleep(settleMillis)
         }
 
-        val bitmap = instrumentation.uiAutomation.takeScreenshot()
-            ?: error("UiAutomation.takeScreenshot() returned null for $fileName")
+        var bitmap: Bitmap? = null
+        for (attempt in 0 until 10) {
+            val candidate = instrumentation.uiAutomation.takeScreenshot()
+                ?: error("UiAutomation.takeScreenshot() returned null for $fileName")
+            if (hasVisualContent(candidate)) {
+                bitmap = candidate
+                break
+            }
+            candidate.recycle()
+            if (attempt < 9) {
+                waitForRenderedFrames()
+                Thread.sleep(300L)
+            }
+        }
+
+        val finalBitmap = bitmap
+            ?: error("Captured screenshot for $fileName remained blank after retries")
         val outDir = File(targetContext.getExternalFilesDir(null), "screenshots").apply {
             mkdirs()
         }
         val outFile = File(outDir, fileName)
         FileOutputStream(outFile).use { stream ->
-            check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)) {
+            check(finalBitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)) {
                 "Failed to write screenshot to ${outFile.absolutePath}"
             }
         }
-        bitmap.recycle()
+        finalBitmap.recycle()
+    }
+
+    private fun waitForRenderedFrames(frameCount: Int = 2) {
+        repeat(frameCount) {
+            val latch = CountDownLatch(1)
+            composeRule.activityRule.scenario.onActivity { activity ->
+                activity.window.decorView.post {
+                    Choreographer.getInstance().postFrameCallback {
+                        latch.countDown()
+                    }
+                }
+            }
+            latch.await(2, TimeUnit.SECONDS)
+        }
+    }
+
+    private fun hasVisualContent(bitmap: Bitmap): Boolean {
+        val cols = 6
+        val rows = 8
+        var firstPixel: Int? = null
+        for (row in 0 until rows) {
+            val y = ((0.15f + 0.70f * row / (rows - 1)) * bitmap.height).toInt()
+                .coerceIn(0, bitmap.height - 1)
+            for (col in 0 until cols) {
+                val x = ((0.15f + 0.70f * col / (cols - 1)) * bitmap.width).toInt()
+                    .coerceIn(0, bitmap.width - 1)
+                val pixel = bitmap.getPixel(x, y)
+                if (firstPixel == null) {
+                    firstPixel = pixel
+                } else if (pixel != firstPixel) {
+                    return true
+                }
+            }
+        }
+        return false
     }
 }
