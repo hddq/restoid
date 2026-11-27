@@ -46,6 +46,30 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
 
+      - name: Resolve emulator system image
+        id: emulator
+        run: |
+          set -euo pipefail
+          TARGET_SDK=$(sed -n -E 's/^[[:space:]]*targetSdk[[:space:]]*=[[:space:]]*([0-9]+).*/\1/p' app/build.gradle.kts | head -n 1)
+          if [[ -z "$TARGET_SDK" ]]; then
+            echo "Error: targetSdk not found in app/build.gradle.kts" >&2
+            exit 1
+          fi
+          IMAGE=$("$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --list 2>/dev/null \
+            | awk '{print $1}' \
+            | grep -E "^system-images;android-${TARGET_SDK}(\.[0-9]+)?;(google_apis|google_apis_ps16k);x86_64$" \
+            | sort -t';' -k2,2V -k3,3r \
+            | tail -n 1 || true)
+          if [[ -z "$IMAGE" ]]; then
+            echo "Error: No x86_64 Google APIs system image found for targetSdk=${TARGET_SDK}" >&2
+            exit 1
+          fi
+          API_LEVEL=$(echo "$IMAGE" | cut -d';' -f2 | sed 's/^android-//')
+          TARGET=$(echo "$IMAGE" | cut -d';' -f3)
+          echo "Resolved emulator image: $IMAGE (api-level=$API_LEVEL, target=$TARGET)"
+          echo "api-level=$API_LEVEL" >> "$GITHUB_OUTPUT"
+          echo "target=$TARGET" >> "$GITHUB_OUTPUT"
+
       - name: Install Android NDK
         run: |
           set -euo pipefail
@@ -69,10 +93,14 @@ jobs:
       - name: Capture screenshots on emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 35
-          target: default
+          api-level: ${{ steps.emulator.outputs.api-level }}
+          target: ${{ steps.emulator.outputs.target }}
           arch: x86_64
           profile: pixel_7
+          cores: 4
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 6144M
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: bash scripts/capture_screenshots.sh
