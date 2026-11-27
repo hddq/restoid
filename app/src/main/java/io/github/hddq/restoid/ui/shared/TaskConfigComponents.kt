@@ -150,6 +150,7 @@ import io.github.hddq.restoid.ui.components.BackupTagPickerSheet
 import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
 import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
+import io.github.hddq.restoid.ui.components.PullToRefreshBox
 import coil.compose.AsyncImage
 import kotlin.math.roundToInt
 
@@ -1065,210 +1066,209 @@ fun ForgetDryRunScreen(
     onSnapshotClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val appBarActions = LocalAppBarActions.current
-    DisposableEffect(isRunning, onRunDryRun) {
-        appBarActions.value = {
-            IconButton(
-                onClick = onRunDryRun,
-                enabled = !isRunning
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Refresh,
-                    contentDescription = stringResource(R.string.forget_dry_run_refresh)
-                )
-            }
-        }
-        onDispose {
-            appBarActions.value = null
-        }
-    }
-
     LaunchedEffect(Unit) {
         if (!isRunning && result == null && error == null) {
             onRunDryRun()
         }
     }
 
-    when {
-        isRunning -> {
-            Box(
-                modifier = modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    LoadingIndicator()
-                    Text(
-                        text = stringResource(R.string.forget_dry_run_running),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+    val isRefreshing = isRunning && result != null
+    val snapshotsById = remember(snapshotsWithMetadata) {
+        snapshotsWithMetadata.associateBy { it.snapshotInfo.id }
+    }
+    val snapshotsByShortId = remember(snapshotsWithMetadata) {
+        snapshotsWithMetadata.associateBy { it.snapshotInfo.id.take(8) }
+    }
+    val nowEpochMinute = remember(result) { System.currentTimeMillis() / 60_000L }
+    val fallbackColorArgb = MaterialTheme.colorScheme.outline.toArgb()
+
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val maxIconsPossible = remember(maxWidth) {
+            val contentWidth = (maxWidth - 64.dp).coerceAtLeast(32.dp)
+            val iconSize = 32.dp
+            val spacing = 8.dp
+            ((contentWidth + spacing) / (iconSize + spacing)).toInt().coerceAtLeast(1)
         }
 
-        error != null -> {
-            Column(
-                modifier = modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                ForgetHostStatusCard(
-                    icon = Icons.Outlined.WarningAmber,
-                    text = error,
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                    contentColor = MaterialTheme.colorScheme.onErrorContainer
-                )
-                FilledTonalButton(
-                    onClick = onRunDryRun,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(stringResource(R.string.action_retry))
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                if (!isRunning) {
+                    onRunDryRun()
                 }
-            }
-        }
-
-        result == null || result.groups.isEmpty() -> {
-            Box(
-                modifier = modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+            },
+            modifier = Modifier.fillMaxSize()
+        ) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 24.dp)
             ) {
-                ExpressiveEmptyState(
-                    icon = Icons.Outlined.History,
-                    title = stringResource(R.string.forget_dry_run_empty)
-                )
-            }
-        }
-
-        else -> {
-            val snapshotsById = remember(snapshotsWithMetadata) {
-                snapshotsWithMetadata.associateBy { it.snapshotInfo.id }
-            }
-            val snapshotsByShortId = remember(snapshotsWithMetadata) {
-                snapshotsWithMetadata.associateBy { it.snapshotInfo.id.take(8) }
-            }
-            val nowEpochMinute = remember(result) { System.currentTimeMillis() / 60_000L }
-            val fallbackColorArgb = MaterialTheme.colorScheme.outline.toArgb()
-
-            BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-                val maxIconsPossible = remember(maxWidth) {
-                    val contentWidth = (maxWidth - 64.dp).coerceAtLeast(32.dp)
-                    val iconSize = 32.dp
-                    val spacing = 8.dp
-                    ((contentWidth + spacing) / (iconSize + spacing)).toInt().coerceAtLeast(1)
-                }
-
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 24.dp)
-                ) {
-                    item(key = "dry_run_summary", contentType = "dry_run_summary") {
-                        val summaryText = if (result.totalRemove == 0) {
-                            stringResource(R.string.forget_dry_run_no_removals, result.totalKeep)
-                        } else {
-                            stringResource(R.string.forget_dry_run_summary, result.totalKeep, result.totalRemove)
+                when {
+                    isRunning && result == null -> {
+                        item(key = "dry_run_loading", contentType = "dry_run_loading") {
+                            Box(
+                                modifier = Modifier.fillParentMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    LoadingIndicator()
+                                    Text(
+                                        text = stringResource(R.string.forget_dry_run_running),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
                         }
-                        Text(
-                            text = summaryText,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
-                            color = if (result.totalRemove > 0) {
-                                MaterialTheme.colorScheme.error
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                            modifier = Modifier.padding(bottom = 12.dp)
-                        )
                     }
 
-                    result.groups.forEachIndexed { groupIdx, group ->
-                        val userTags = BackupTagRules.filterUserTags(group.tags)
-                        val orderedRows = (group.remove.map { it to true } + group.keep.map { it to false })
-                            .sortedByDescending { parseSnapshotTimeInstant(it.first.time) ?: java.time.Instant.MIN }
-
-                        item(key = "group_header_$groupIdx", contentType = "dry_run_header") {
-                            val groupTitle = buildString {
-                                append(group.host.ifBlank { stringResource(R.string.restic_unknown) })
-                                if (userTags.isNotEmpty()) {
-                                    append(" · ")
-                                    append(userTags.joinToString(", "))
+                    error != null -> {
+                        item(key = "dry_run_error", contentType = "dry_run_error") {
+                            Column(
+                                modifier = Modifier
+                                    .fillParentMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                ForgetHostStatusCard(
+                                    icon = Icons.Outlined.WarningAmber,
+                                    text = error,
+                                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                                FilledTonalButton(
+                                    onClick = onRunDryRun,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(stringResource(R.string.action_retry))
                                 }
                             }
-                            ExpressiveSectionHeader(
-                                title = groupTitle,
-                                modifier = if (groupIdx > 0) Modifier.padding(top = 12.dp) else Modifier
+                        }
+                    }
+
+                    result == null || result.groups.isEmpty() -> {
+                        item(key = "dry_run_empty", contentType = "dry_run_empty") {
+                            Box(
+                                modifier = Modifier.fillParentMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                ExpressiveEmptyState(
+                                    icon = Icons.Outlined.History,
+                                    title = stringResource(R.string.forget_dry_run_empty)
+                                )
+                            }
+                        }
+                    }
+
+                    else -> {
+                        item(key = "dry_run_summary", contentType = "dry_run_summary") {
+                            val summaryText = if (result.totalRemove == 0) {
+                                stringResource(R.string.forget_dry_run_no_removals, result.totalKeep)
+                            } else {
+                                stringResource(R.string.forget_dry_run_summary, result.totalKeep, result.totalRemove)
+                            }
+                            Text(
+                                text = summaryText,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium,
+                                color = if (result.totalRemove > 0) {
+                                    MaterialTheme.colorScheme.error
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                                modifier = Modifier.padding(bottom = 12.dp)
                             )
                         }
 
-                        itemsIndexed(
-                            items = orderedRows,
-                            key = { idx, (snapshot, isRemove) ->
-                                "group_${groupIdx}_${if (isRemove) "rm" else "keep"}_${snapshot.id}_$idx"
-                            },
-                            contentType = { _, _ -> "dry_run_snapshot" }
-                        ) { idx, (snapshot, isRemove) ->
-                            val matched = snapshotsById[snapshot.id] ?: snapshotsByShortId[snapshot.shortId]
-                            val effectiveSnapshotWithMetadata = matched ?: SnapshotWithMetadata(
-                                snapshotInfo = SnapshotInfo(
-                                    id = snapshot.id,
-                                    time = snapshot.time,
-                                    paths = emptyList(),
-                                    tags = snapshot.tags,
-                                    hostname = snapshot.hostname ?: group.host.takeIf { it.isNotBlank() }
-                                ),
-                                metadata = null
-                            )
-                            val userTagColors = remember(
-                                effectiveSnapshotWithMetadata.snapshotInfo.tags,
-                                repoTagsByName,
-                                fallbackColorArgb
-                            ) {
-                                BackupTagRules.filterUserTags(effectiveSnapshotWithMetadata.snapshotInfo.tags).map { tagName ->
-                                    repoTagsByName[tagName]?.colorArgb ?: fallbackColorArgb
+                        result.groups.forEachIndexed { groupIdx, group ->
+                            val userTags = BackupTagRules.filterUserTags(group.tags)
+                            val orderedRows = (group.remove.map { it to true } + group.keep.map { it to false })
+                                .sortedByDescending { parseSnapshotTimeInstant(it.first.time) ?: java.time.Instant.MIN }
+
+                            item(key = "group_header_$groupIdx", contentType = "dry_run_header") {
+                                val groupTitle = buildString {
+                                    append(group.host.ifBlank { stringResource(R.string.restic_unknown) })
+                                    if (userTags.isNotEmpty()) {
+                                        append(" · ")
+                                        append(userTags.joinToString(", "))
+                                    }
                                 }
-                            }
-                            val containerColor = if (isRemove) {
-                                MaterialTheme.colorScheme.errorContainer
-                            } else {
-                                MaterialTheme.colorScheme.surfaceContainer
-                            }
-                            val contentColor = if (isRemove) {
-                                MaterialTheme.colorScheme.onErrorContainer
-                            } else {
-                                MaterialTheme.colorScheme.onSurface
-                            }
-                            val secondaryColor = if (isRemove) {
-                                MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
+                                ExpressiveSectionHeader(
+                                    title = groupTitle,
+                                    modifier = if (groupIdx > 0) Modifier.padding(top = 12.dp) else Modifier
+                                )
                             }
 
-                            ExpressiveSegmentedSurface(
-                                index = idx,
-                                count = orderedRows.size,
-                                containerColor = containerColor,
-                                contentColor = contentColor,
-                                modifier = Modifier.padding(bottom = if (idx < orderedRows.size - 1) 2.dp else 0.dp)
-                            ) {
-                                SnapshotItem(
-                                    snapshotWithMetadata = effectiveSnapshotWithMetadata,
-                                    apps = matched?.let { appInfoMap[it.snapshotInfo.id] },
-                                    tagColors = userTagColors,
-                                    nowEpochMinute = nowEpochMinute,
-                                    maxIconsPossible = maxIconsPossible,
-                                    onClick = { onSnapshotClick(matched?.snapshotInfo?.id ?: snapshot.id) },
-                                    showMetadataStatusWhenMissing = matched != null,
-                                    secondaryContentColor = secondaryColor,
-                                    statusContent = {
-                                        ForgetDryRunStatusRow(
-                                            isRemove = isRemove,
-                                            keepReasons = snapshot.keepReasons
-                                        )
-                                    }
+                            itemsIndexed(
+                                items = orderedRows,
+                                key = { idx, (snapshot, isRemove) ->
+                                    "group_${groupIdx}_${if (isRemove) "rm" else "keep"}_${snapshot.id}_$idx"
+                                },
+                                contentType = { _, _ -> "dry_run_snapshot" }
+                            ) { idx, (snapshot, isRemove) ->
+                                val matched = snapshotsById[snapshot.id] ?: snapshotsByShortId[snapshot.shortId]
+                                val effectiveSnapshotWithMetadata = matched ?: SnapshotWithMetadata(
+                                    snapshotInfo = SnapshotInfo(
+                                        id = snapshot.id,
+                                        time = snapshot.time,
+                                        paths = emptyList(),
+                                        tags = snapshot.tags,
+                                        hostname = snapshot.hostname ?: group.host.takeIf { it.isNotBlank() }
+                                    ),
+                                    metadata = null
                                 )
+                                val userTagColors = remember(
+                                    effectiveSnapshotWithMetadata.snapshotInfo.tags,
+                                    repoTagsByName,
+                                    fallbackColorArgb
+                                ) {
+                                    BackupTagRules.filterUserTags(effectiveSnapshotWithMetadata.snapshotInfo.tags).map { tagName ->
+                                        repoTagsByName[tagName]?.colorArgb ?: fallbackColorArgb
+                                    }
+                                }
+                                val containerColor = if (isRemove) {
+                                    MaterialTheme.colorScheme.errorContainer
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceContainer
+                                }
+                                val contentColor = if (isRemove) {
+                                    MaterialTheme.colorScheme.onErrorContainer
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                }
+                                val secondaryColor = if (isRemove) {
+                                    MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f)
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                }
+
+                                ExpressiveSegmentedSurface(
+                                    index = idx,
+                                    count = orderedRows.size,
+                                    containerColor = containerColor,
+                                    contentColor = contentColor,
+                                    modifier = Modifier.padding(bottom = if (idx < orderedRows.size - 1) 2.dp else 0.dp)
+                                ) {
+                                    SnapshotItem(
+                                        snapshotWithMetadata = effectiveSnapshotWithMetadata,
+                                        apps = matched?.let { appInfoMap[it.snapshotInfo.id] },
+                                        tagColors = userTagColors,
+                                        nowEpochMinute = nowEpochMinute,
+                                        maxIconsPossible = maxIconsPossible,
+                                        onClick = { onSnapshotClick(matched?.snapshotInfo?.id ?: snapshot.id) },
+                                        showMetadataStatusWhenMissing = matched != null,
+                                        secondaryContentColor = secondaryColor,
+                                        statusContent = {
+                                            ForgetDryRunStatusRow(
+                                                isRemove = isRemove,
+                                                keepReasons = snapshot.keepReasons
+                                            )
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
