@@ -143,161 +143,48 @@ fun RunTasksScreen(
         }
     }
 
+    RunTasksContent(
+        uiState = uiState,
+        hasRoot = hasRoot,
+        hasReadContactsPermission = hasReadContactsPermission,
+        hasReadCallLogPermission = hasReadCallLogPermission,
+        hasReadCalendarPermission = hasReadCalendarPermission,
+        onSelectPreset = viewModel::selectPreset,
+        onSetBackupEnabled = viewModel::setBackupEnabled,
+        onNavigateToBackupConfig = onNavigateToBackupConfig,
+        onSetCustomDirectoriesBackupEnabled = viewModel::setCustomDirectoriesBackupEnabled,
+        onNavigateToCustomDirectoriesConfig = onNavigateToCustomDirectoriesConfig,
+        onSetDeviceDataBackupEnabled = { enabled ->
+            viewModel.setDeviceDataBackupEnabled(enabled)
+            if (enabled) {
+                val missing = buildList {
+                    if (uiState.editor.contactsBackupEnabled && !hasReadContactsPermission) {
+                        add(Manifest.permission.READ_CONTACTS)
+                    }
+                    if (uiState.editor.callLogsBackupEnabled && !hasReadCallLogPermission) {
+                        add(Manifest.permission.READ_CALL_LOG)
+                    }
+                    if (uiState.editor.calendarBackupEnabled && !hasReadCalendarPermission) {
+                        add(Manifest.permission.READ_CALENDAR)
+                    }
+                }
+                if (missing.isNotEmpty()) {
+                    requestDeviceDataPermissions(missing.toTypedArray())
+                }
+            }
+        },
+        onNavigateToDeviceDataConfig = onNavigateToDeviceDataConfig,
+        onOpenTagPicker = { showTagPickerSheet = true },
+        onSetUnlockRepo = viewModel::setUnlockRepo,
+        onSetForgetSnapshots = viewModel::setForgetSnapshots,
+        onNavigateToForgetConfig = onNavigateToForgetConfig,
+        onSetPruneRepo = viewModel::setPruneRepo,
+        onSetCheckRepo = viewModel::setCheckRepo,
+        onNavigateToCheckConfig = onNavigateToCheckConfig,
+        modifier = modifier
+    )
+
     val editor = uiState.editor
-
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 88.dp, top = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        if (uiState.availablePresets.isNotEmpty()) {
-            item(key = "preset_chips_strip") {
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    items(
-                        items = uiState.availablePresets,
-                        key = { it.id }
-                    ) { preset ->
-                        FilterChip(
-                            selected = uiState.selectedPresetId == preset.id,
-                            onClick = { viewModel.selectPreset(preset.id) },
-                            label = {
-                                Text(
-                                    text = preset.name,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        )
-                    }
-                }
-            }
-        }
-
-        item {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                ExclusionConflictWarningCard(conflicts = editor.exclusionConflicts)
-                ExpressiveSectionHeader(title = context.getString(R.string.operation_backup))
-                val hasBackupTaskEnabled = (hasRoot && editor.backupEnabled) ||
-                    editor.customDirectoriesBackupEnabled ||
-                    editor.deviceDataBackupEnabled
-                ExpressiveCardGroup {
-                    ExpressiveSegmentedSurface(index = 0, count = 4) {
-                        TaskRow(
-                            title = context.getString(R.string.run_tasks_applications),
-                            subtitle = if (hasRoot) buildBackupSubtitle(editor.apps, editor.appBackupTypes, editor.backupTypes, context) else context.getString(R.string.root_access_denied),
-                            icon = Icons.Outlined.Apps,
-                            checked = if (hasRoot) editor.backupEnabled else false,
-                            onCheckedChange = viewModel::setBackupEnabled,
-                            onNavigate = if (hasRoot) onNavigateToBackupConfig else null,
-                            enabled = hasRoot
-                        )
-                    }
-                    ExpressiveSegmentedSurface(index = 1, count = 4) {
-                        TaskRow(
-                            title = context.getString(R.string.run_tasks_custom_directories),
-                            subtitle = buildCustomDirectoriesSubtitle(editor.customDirectories, editor.excludedCustomDirectories, context),
-                            icon = Icons.Outlined.Folder,
-                            checked = editor.customDirectoriesBackupEnabled,
-                            onCheckedChange = viewModel::setCustomDirectoriesBackupEnabled,
-                            onNavigate = onNavigateToCustomDirectoriesConfig
-                        )
-                    }
-                    ExpressiveSegmentedSurface(index = 2, count = 4) {
-                        TaskRow(
-                            title = stringResource(R.string.run_tasks_device_data),
-                            subtitle = buildDeviceDataSubtitle(
-                                contactsEnabled = editor.contactsBackupEnabled,
-                                callLogsEnabled = editor.callLogsBackupEnabled,
-                                calendarEnabled = editor.calendarBackupEnabled,
-                                deviceDataBackupEnabled = editor.deviceDataBackupEnabled,
-                                hasReadContactsPermission = hasReadContactsPermission,
-                                hasReadCallLogPermission = hasReadCallLogPermission,
-                                hasReadCalendarPermission = hasReadCalendarPermission,
-                                context = context
-                            ),
-                            icon = Icons.Outlined.Smartphone,
-                            checked = editor.deviceDataBackupEnabled,
-                            onCheckedChange = { enabled ->
-                                viewModel.setDeviceDataBackupEnabled(enabled)
-                                if (enabled) {
-                                    val missing = buildList {
-                                        if (editor.contactsBackupEnabled && !hasReadContactsPermission) {
-                                            add(Manifest.permission.READ_CONTACTS)
-                                        }
-                                        if (editor.callLogsBackupEnabled && !hasReadCallLogPermission) {
-                                            add(Manifest.permission.READ_CALL_LOG)
-                                        }
-                                        if (editor.calendarBackupEnabled && !hasReadCalendarPermission) {
-                                            add(Manifest.permission.READ_CALENDAR)
-                                        }
-                                    }
-                                    if (missing.isNotEmpty()) {
-                                        requestDeviceDataPermissions(missing.toTypedArray())
-                                    }
-                                }
-                            },
-                            onNavigate = onNavigateToDeviceDataConfig
-                        )
-                    }
-                    ExpressiveSegmentedSurface(index = 3, count = 4) {
-                        BackupTagsRow(
-                            selectedTags = editor.backupTags,
-                            availableTags = editor.availableTags,
-                            enabled = hasBackupTaskEnabled,
-                            onClick = { showTagPickerSheet = true }
-                        )
-                    }
-                }
-            }
-        }
-
-        item {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                ExpressiveSectionHeader(title = context.getString(R.string.operation_maintenance))
-                ExpressiveCardGroup {
-                    ExpressiveSegmentedSurface(index = 0, count = 4) {
-                        TaskRow(
-                            title = context.getString(R.string.maintenance_task_unlock_repository),
-                            icon = Icons.Outlined.LockOpen,
-                            checked = editor.maintenance.unlockRepo,
-                            onCheckedChange = viewModel::setUnlockRepo
-                        )
-                    }
-                    ExpressiveSegmentedSurface(index = 1, count = 4) {
-                        TaskRow(
-                            title = context.getString(R.string.run_tasks_forget_snapshots),
-                            subtitle = buildForgetSubtitle(editor.maintenance, context),
-                            icon = Icons.Outlined.AutoDelete,
-                            checked = editor.maintenance.forgetSnapshots,
-                            onCheckedChange = viewModel::setForgetSnapshots,
-                            onNavigate = onNavigateToForgetConfig
-                        )
-                    }
-                    ExpressiveSegmentedSurface(index = 2, count = 4) {
-                        TaskRow(
-                            title = context.getString(R.string.maintenance_task_prune_repository),
-                            icon = Icons.Outlined.CleaningServices,
-                            checked = editor.maintenance.pruneRepo,
-                            onCheckedChange = viewModel::setPruneRepo
-                        )
-                    }
-                    ExpressiveSegmentedSurface(index = 3, count = 4) {
-                        TaskRow(
-                            title = context.getString(R.string.run_tasks_check_integrity),
-                            subtitle = buildCheckSubtitle(editor.maintenance, context),
-                            icon = Icons.AutoMirrored.Outlined.FactCheck,
-                            checked = editor.maintenance.checkRepo,
-                            onCheckedChange = viewModel::setCheckRepo,
-                            onNavigate = onNavigateToCheckConfig
-                        )
-                    }
-                }
-            }
-        }
-    }
 
     if (uiState.showSavePresetDialog) {
         val selectedPreset = remember(uiState.selectedPresetId, uiState.availablePresets) {
@@ -360,6 +247,169 @@ fun RunTasksScreen(
             onDeleteTag = viewModel::deleteTag,
             onDismissRequest = { showTagPickerSheet = false }
         )
+    }
+}
+
+@Composable
+internal fun RunTasksContent(
+    uiState: RunTasksUiState,
+    hasRoot: Boolean,
+    hasReadContactsPermission: Boolean = true,
+    hasReadCallLogPermission: Boolean = true,
+    hasReadCalendarPermission: Boolean = true,
+    onSelectPreset: (String) -> Unit = {},
+    onSetBackupEnabled: (Boolean) -> Unit = {},
+    onNavigateToBackupConfig: () -> Unit = {},
+    onSetCustomDirectoriesBackupEnabled: (Boolean) -> Unit = {},
+    onNavigateToCustomDirectoriesConfig: () -> Unit = {},
+    onSetDeviceDataBackupEnabled: (Boolean) -> Unit = {},
+    onNavigateToDeviceDataConfig: () -> Unit = {},
+    onOpenTagPicker: () -> Unit = {},
+    onSetUnlockRepo: (Boolean) -> Unit = {},
+    onSetForgetSnapshots: (Boolean) -> Unit = {},
+    onNavigateToForgetConfig: () -> Unit = {},
+    onSetPruneRepo: (Boolean) -> Unit = {},
+    onSetCheckRepo: (Boolean) -> Unit = {},
+    onNavigateToCheckConfig: () -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val editor = uiState.editor
+
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 88.dp, top = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        if (uiState.availablePresets.isNotEmpty()) {
+            item(key = "preset_chips_strip") {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(
+                        items = uiState.availablePresets,
+                        key = { it.id }
+                    ) { preset ->
+                        FilterChip(
+                            selected = uiState.selectedPresetId == preset.id,
+                            onClick = { onSelectPreset(preset.id) },
+                            label = {
+                                Text(
+                                    text = preset.name,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
+        item {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                ExclusionConflictWarningCard(conflicts = editor.exclusionConflicts)
+                ExpressiveSectionHeader(title = context.getString(R.string.operation_backup))
+                val hasBackupTaskEnabled = (hasRoot && editor.backupEnabled) ||
+                    editor.customDirectoriesBackupEnabled ||
+                    editor.deviceDataBackupEnabled
+                ExpressiveCardGroup {
+                    ExpressiveSegmentedSurface(index = 0, count = 4) {
+                        TaskRow(
+                            title = context.getString(R.string.run_tasks_applications),
+                            subtitle = if (hasRoot) buildBackupSubtitle(editor.apps, editor.appBackupTypes, editor.backupTypes, context) else context.getString(R.string.root_access_denied),
+                            icon = Icons.Outlined.Apps,
+                            checked = if (hasRoot) editor.backupEnabled else false,
+                            onCheckedChange = onSetBackupEnabled,
+                            onNavigate = if (hasRoot) onNavigateToBackupConfig else null,
+                            enabled = hasRoot
+                        )
+                    }
+                    ExpressiveSegmentedSurface(index = 1, count = 4) {
+                        TaskRow(
+                            title = context.getString(R.string.run_tasks_custom_directories),
+                            subtitle = buildCustomDirectoriesSubtitle(editor.customDirectories, editor.excludedCustomDirectories, context),
+                            icon = Icons.Outlined.Folder,
+                            checked = editor.customDirectoriesBackupEnabled,
+                            onCheckedChange = onSetCustomDirectoriesBackupEnabled,
+                            onNavigate = onNavigateToCustomDirectoriesConfig
+                        )
+                    }
+                    ExpressiveSegmentedSurface(index = 2, count = 4) {
+                        TaskRow(
+                            title = stringResource(R.string.run_tasks_device_data),
+                            subtitle = buildDeviceDataSubtitle(
+                                contactsEnabled = editor.contactsBackupEnabled,
+                                callLogsEnabled = editor.callLogsBackupEnabled,
+                                calendarEnabled = editor.calendarBackupEnabled,
+                                deviceDataBackupEnabled = editor.deviceDataBackupEnabled,
+                                hasReadContactsPermission = hasReadContactsPermission,
+                                hasReadCallLogPermission = hasReadCallLogPermission,
+                                hasReadCalendarPermission = hasReadCalendarPermission,
+                                context = context
+                            ),
+                            icon = Icons.Outlined.Smartphone,
+                            checked = editor.deviceDataBackupEnabled,
+                            onCheckedChange = onSetDeviceDataBackupEnabled,
+                            onNavigate = onNavigateToDeviceDataConfig
+                        )
+                    }
+                    ExpressiveSegmentedSurface(index = 3, count = 4) {
+                        BackupTagsRow(
+                            selectedTags = editor.backupTags,
+                            availableTags = editor.availableTags,
+                            enabled = hasBackupTaskEnabled,
+                            onClick = onOpenTagPicker
+                        )
+                    }
+                }
+            }
+        }
+
+        item {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                ExpressiveSectionHeader(title = context.getString(R.string.operation_maintenance))
+                ExpressiveCardGroup {
+                    ExpressiveSegmentedSurface(index = 0, count = 4) {
+                        TaskRow(
+                            title = context.getString(R.string.maintenance_task_unlock_repository),
+                            icon = Icons.Outlined.LockOpen,
+                            checked = editor.maintenance.unlockRepo,
+                            onCheckedChange = onSetUnlockRepo
+                        )
+                    }
+                    ExpressiveSegmentedSurface(index = 1, count = 4) {
+                        TaskRow(
+                            title = context.getString(R.string.run_tasks_forget_snapshots),
+                            subtitle = buildForgetSubtitle(editor.maintenance, context),
+                            icon = Icons.Outlined.AutoDelete,
+                            checked = editor.maintenance.forgetSnapshots,
+                            onCheckedChange = onSetForgetSnapshots,
+                            onNavigate = onNavigateToForgetConfig
+                        )
+                    }
+                    ExpressiveSegmentedSurface(index = 2, count = 4) {
+                        TaskRow(
+                            title = context.getString(R.string.maintenance_task_prune_repository),
+                            icon = Icons.Outlined.CleaningServices,
+                            checked = editor.maintenance.pruneRepo,
+                            onCheckedChange = onSetPruneRepo
+                        )
+                    }
+                    ExpressiveSegmentedSurface(index = 3, count = 4) {
+                        TaskRow(
+                            title = context.getString(R.string.run_tasks_check_integrity),
+                            subtitle = buildCheckSubtitle(editor.maintenance, context),
+                            icon = Icons.AutoMirrored.Outlined.FactCheck,
+                            checked = editor.maintenance.checkRepo,
+                            onCheckedChange = onSetCheckRepo,
+                            onNavigate = onNavigateToCheckConfig
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

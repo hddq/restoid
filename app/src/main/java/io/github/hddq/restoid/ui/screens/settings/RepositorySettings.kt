@@ -30,11 +30,25 @@ import io.github.hddq.restoid.ui.screens.settings.components.SelectableRepositor
 import io.github.hddq.restoid.ui.settings.SettingsViewModel
 
 @Composable
-fun RepositorySettings(viewModel: SettingsViewModel) {
-    val resticState by viewModel.resticState.collectAsStateWithLifecycle()
-    val repositories by viewModel.repositories.collectAsStateWithLifecycle()
-    val selectedRepository by viewModel.selectedRepository.collectAsStateWithLifecycle()
-
+internal fun RepositorySettingsContent(
+    resticState: ResticState,
+    repositories: List<io.github.hddq.restoid.data.LocalRepository>,
+    selectedRepositoryKey: String?,
+    repositoryKey: (io.github.hddq.restoid.data.LocalRepository) -> String,
+    onSelectRepository: (String) -> Unit = {},
+    onAddRepository: () -> Unit = {},
+    rowContent: @Composable (
+        repo: io.github.hddq.restoid.data.LocalRepository,
+        isSelected: Boolean,
+        onSelected: () -> Unit
+    ) -> Unit = { repo, isSelected, onSelected ->
+        io.github.hddq.restoid.ui.screens.settings.components.SelectableRepositoryRowLayout(
+            repo = repo,
+            isSelected = isSelected,
+            onSelected = onSelected
+        )
+    }
+) {
     Column(modifier = Modifier.fillMaxWidth()) {
         ExpressiveSectionHeader(title = stringResource(R.string.backup_repositories_title))
 
@@ -50,17 +64,14 @@ fun RepositorySettings(viewModel: SettingsViewModel) {
             } else {
                 ExpressiveCardGroup {
                     repositories.forEachIndexed { index, repo ->
-                        val repoKey = viewModel.repositoryKey(repo)
+                        val repoKey = repositoryKey(repo)
                         ExpressiveSegmentedSurface(
                             index = index,
                             count = repositories.size
                         ) {
-                            SelectableRepositoryRow(
-                                repo = repo,
-                                isSelected = repoKey == selectedRepository,
-                                onSelected = { viewModel.selectRepository(repoKey) },
-                                viewModel = viewModel
-                            )
+                            rowContent(repo, repoKey == selectedRepositoryKey) {
+                                onSelectRepository(repoKey)
+                            }
                         }
                     }
                 }
@@ -87,7 +98,7 @@ fun RepositorySettings(viewModel: SettingsViewModel) {
 
         if (resticState is ResticState.Installed) {
             FilledTonalButton(
-                onClick = { viewModel.onShowAddRepoDialog() },
+                onClick = onAddRepository,
                 modifier = Modifier.padding(top = 12.dp),
                 shape = MaterialTheme.shapes.extraLarge
             ) {
@@ -100,4 +111,28 @@ fun RepositorySettings(viewModel: SettingsViewModel) {
             }
         }
     }
+}
+
+@Composable
+fun RepositorySettings(viewModel: SettingsViewModel) {
+    val resticState by viewModel.resticState.collectAsStateWithLifecycle()
+    val repositories by viewModel.repositories.collectAsStateWithLifecycle()
+    val selectedRepository by viewModel.selectedRepository.collectAsStateWithLifecycle()
+
+    RepositorySettingsContent(
+        resticState = resticState,
+        repositories = repositories,
+        selectedRepositoryKey = selectedRepository,
+        repositoryKey = viewModel::repositoryKey,
+        onSelectRepository = viewModel::selectRepository,
+        onAddRepository = viewModel::onShowAddRepoDialog,
+        rowContent = { repo, isSelected, onSelected ->
+            SelectableRepositoryRow(
+                repo = repo,
+                isSelected = isSelected,
+                onSelected = onSelected,
+                viewModel = viewModel
+            )
+        }
+    )
 }

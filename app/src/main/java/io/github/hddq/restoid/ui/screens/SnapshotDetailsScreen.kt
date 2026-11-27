@@ -198,6 +198,28 @@ fun SnapshotDetailsScreen(
         )
     }
 
+    SnapshotDetailsContent(
+        snapshot = snapshot,
+        metadata = metadata,
+        backupDetails = backupDetails,
+        availableTags = availableTags,
+        isLoading = isLoading,
+        error = error,
+        modifier = modifier
+    )
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+internal fun SnapshotDetailsContent(
+    snapshot: SnapshotInfo?,
+    metadata: io.github.hddq.restoid.model.RestoidMetadata?,
+    backupDetails: List<BackupDetail>,
+    availableTags: List<BackupTag> = emptyList(),
+    isLoading: Boolean = false,
+    error: String? = null,
+    modifier: Modifier = Modifier
+) {
     Column(
         modifier = modifier
             .fillMaxSize()

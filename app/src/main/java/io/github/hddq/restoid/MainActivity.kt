@@ -1724,7 +1724,7 @@ class MainActivity : FragmentActivity() {
     }
 }
 
-private enum class AdaptiveNavigationLayout {
+internal enum class AdaptiveNavigationLayout {
     BottomBarCompact,
     BottomBarMedium,
     RailCollapsed,
@@ -1765,7 +1765,7 @@ private fun rememberAdaptiveNavigationLayout(): AdaptiveNavigationLayout {
 }
 
 @Composable
-private fun RestoidShortNavigationBar(
+internal fun RestoidShortNavigationBar(
     layout: AdaptiveNavigationLayout,
     selectedScreen: Screen,
     interactionEnabled: Boolean = true,
@@ -2001,6 +2001,7 @@ internal fun DestinationScaffold(
     reserveBottomNavSpace: Boolean = false,
     isHome: Boolean = false,
     isExiting: Boolean = false,
+    titleOverride: String? = null,
     onBack: () -> Unit,
     actions: @Composable RowScope.() -> Unit = {},
     floatingActionButton: @Composable () -> Unit = {},
@@ -2021,7 +2022,7 @@ internal fun DestinationScaffold(
                     ),
                     title = {
                         Text(
-                            text = stringResource(titleRes),
+                            text = titleOverride ?: stringResource(titleRes),
                             style = if (isTopLevel) {
                                 MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold)
                             } else {

@@ -166,15 +166,16 @@ fun DeviceHostnameRow(
 }
 
 @Composable
-fun SelectableRepositoryRow(
+internal fun SelectableRepositoryRowLayout(
     repo: LocalRepository,
     isSelected: Boolean,
     onSelected: () -> Unit,
-    viewModel: SettingsViewModel
+    trailingContent: @Composable () -> Unit = {
+        IconButton(onClick = {}) {
+            Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.cd_more_options))
+        }
+    }
 ) {
-    var showMenu by remember { mutableStateOf(false) }
-    val repoKey = viewModel.repositoryKey(repo)
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -246,6 +247,25 @@ fun SelectableRepositoryRow(
                 )
             }
         }
+        trailingContent()
+    }
+}
+
+@Composable
+fun SelectableRepositoryRow(
+    repo: LocalRepository,
+    isSelected: Boolean,
+    onSelected: () -> Unit,
+    viewModel: SettingsViewModel
+) {
+    var showMenu by remember { mutableStateOf(false) }
+    val repoKey = viewModel.repositoryKey(repo)
+
+    SelectableRepositoryRowLayout(
+        repo = repo,
+        isSelected = isSelected,
+        onSelected = onSelected
+    ) {
         var showChangePasswordDialog by remember { mutableStateOf(false) }
         var showSavePasswordDialog by remember { mutableStateOf(false) }
         var showSaveSftpCredentialsDialog by remember { mutableStateOf(false) }
