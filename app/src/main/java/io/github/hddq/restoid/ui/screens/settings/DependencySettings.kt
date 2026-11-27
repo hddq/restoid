@@ -20,6 +20,17 @@ fun DependencySettings(viewModel: SettingsViewModel) {
     val resticState by viewModel.resticState.collectAsStateWithLifecycle()
     val rcloneState by viewModel.rcloneState.collectAsStateWithLifecycle()
 
+    DependencySettingsContent(
+        resticState = resticState,
+        rcloneState = rcloneState
+    )
+}
+
+@Composable
+internal fun DependencySettingsContent(
+    resticState: io.github.hddq.restoid.data.ResticState,
+    rcloneState: io.github.hddq.restoid.data.ResticState
+) {
     Column(modifier = Modifier.fillMaxWidth()) {
         ExpressiveSectionHeader(title = stringResource(R.string.dependencies_title))
         ExpressiveCardGroup {

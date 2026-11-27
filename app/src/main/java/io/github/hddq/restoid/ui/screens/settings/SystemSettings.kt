@@ -146,6 +146,21 @@ fun SystemSettings(
         )
     }
 
+    SystemSettingsCard(
+        hasRoot = hasRoot,
+        summaryText = summaryText,
+        onClick = { showPermissionsSheet = true },
+        modifier = modifier
+    )
+}
+
+@Composable
+internal fun SystemSettingsCard(
+    hasRoot: Boolean,
+    summaryText: String,
+    onClick: () -> Unit = {},
+    modifier: Modifier = Modifier
+) {
     Column(modifier = modifier.fillMaxWidth()) {
         ExpressiveSectionHeader(title = stringResource(R.string.system_title))
         ExpressiveCardGroup {
@@ -153,7 +168,7 @@ fun SystemSettings(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { showPermissionsSheet = true }
+                        .clickable(onClick = onClick)
                         .padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween

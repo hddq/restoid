@@ -231,15 +231,9 @@ fun AddEditScheduleScreen(
     val state by viewModel.addEditState.collectAsStateWithLifecycle()
     val conditionStatus by viewModel.conditionStatus.collectAsStateWithLifecycle()
     val hasRoot by viewModel.hasRoot.collectAsStateWithLifecycle()
-    val context = LocalContext.current
-    var intervalText by remember(state.intervalHours) { mutableStateOf(state.intervalHours.toString()) }
     var showPresetPickerSheet by remember { mutableStateOf(false) }
     val appBarActions = LocalAppBarActions.current
     val lifecycleOwner = LocalLifecycleOwner.current
-
-    val selectedPreset = remember(state.presetId, state.availablePresets) {
-        state.availablePresets.find { it.id == state.presetId }
-    }
 
     val hasUnsavedChanges = remember(state) { viewModel.hasChanges(state) }
 
@@ -287,6 +281,105 @@ fun AddEditScheduleScreen(
                 SchedulesUiEvent.NavigateBack -> onNavigateBack()
             }
         }
+    }
+
+    AddEditScheduleContent(
+        state = state,
+        conditionStatus = conditionStatus,
+        hasRoot = hasRoot,
+        onSelectPresetClick = { showPresetPickerSheet = true },
+        onCreatePreset = onCreatePreset,
+        onEditPreset = onEditPreset,
+        onNameChange = viewModel::setName,
+        onIntervalHoursChange = viewModel::setIntervalHours,
+        onRequireBatteryNotLowChange = viewModel::setRequireBatteryNotLow,
+        onRequireChargingChange = viewModel::setRequireCharging,
+        onRequireUnmeteredNetworkChange = viewModel::setRequireUnmeteredNetwork,
+        modifier = modifier
+    )
+
+    if (showPresetPickerSheet) {
+        TaskPresetPickerBottomSheet(
+            presets = state.availablePresets,
+            selectedPresetId = state.presetId,
+            hasRoot = hasRoot,
+            onSelectPreset = { presetId ->
+                viewModel.setPresetId(presetId)
+                showPresetPickerSheet = false
+            },
+            onCreatePreset = onCreatePreset?.let { create ->
+                {
+                    showPresetPickerSheet = false
+                    create()
+                }
+            },
+            onDismissRequest = { showPresetPickerSheet = false }
+        )
+    }
+
+    if (state.showConfirmDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.onCancelDeleteSchedule() },
+            title = { Text(stringResource(R.string.dialog_delete_schedule_title)) },
+            text = { Text(stringResource(R.string.dialog_delete_schedule_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = { viewModel.confirmDeleteSchedule() },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(stringResource(R.string.action_delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.onCancelDeleteSchedule() }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
+
+    if (state.showDiscardChangesDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.onDismissDiscard() },
+            title = { Text(stringResource(R.string.dialog_discard_changes_title)) },
+            text = { Text(stringResource(R.string.dialog_discard_changes_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = { viewModel.onConfirmDiscard() },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(stringResource(R.string.action_discard))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.onDismissDiscard() }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun AddEditScheduleContent(
+    state: AddEditScheduleUiState,
+    conditionStatus: TriggerConditionStatusSnapshot,
+    hasRoot: Boolean,
+    onSelectPresetClick: () -> Unit = {},
+    onCreatePreset: (() -> Unit)? = null,
+    onEditPreset: ((TaskPreset) -> Unit)? = null,
+    onNameChange: (String) -> Unit = {},
+    onIntervalHoursChange: (Int) -> Unit = {},
+    onRequireBatteryNotLowChange: (Boolean) -> Unit = {},
+    onRequireChargingChange: (Boolean) -> Unit = {},
+    onRequireUnmeteredNetworkChange: (Boolean) -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    var intervalText by remember(state.intervalHours) { mutableStateOf(state.intervalHours.toString()) }
+    val selectedPreset = remember(state.presetId, state.availablePresets) {
+        state.availablePresets.find { it.id == state.presetId }
     }
 
     LazyColumn(
@@ -353,7 +446,7 @@ fun AddEditScheduleScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable { showPresetPickerSheet = true }
+                                    .clickable(onClick = onSelectPresetClick)
                                     .padding(horizontal = 16.dp, vertical = 14.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -438,7 +531,7 @@ fun AddEditScheduleScreen(
                     ExpressiveSegmentedSurface(index = 0, count = 2) {
                         OutlinedTextField(
                             value = state.name,
-                            onValueChange = viewModel::setName,
+                            onValueChange = onNameChange,
                             label = { Text(stringResource(R.string.schedule_label_optional)) },
                             placeholder = {
                                 Text(
@@ -473,7 +566,7 @@ fun AddEditScheduleScreen(
                                 onValueChange = { input ->
                                     intervalText = input.filter { it.isDigit() }
                                     intervalText.toIntOrNull()?.let { parsed ->
-                                        if (parsed in 1..720) viewModel.setIntervalHours(parsed)
+                                        if (parsed in 1..720) onIntervalHoursChange(parsed)
                                     }
                                 },
                                 leadingIcon = {
@@ -497,7 +590,7 @@ fun AddEditScheduleScreen(
                                     FilterChip(
                                         selected = state.intervalHours == preset,
                                         onClick = {
-                                            viewModel.setIntervalHours(preset)
+                                            onIntervalHoursChange(preset)
                                             intervalText = preset.toString()
                                         },
                                         label = {
@@ -544,72 +637,11 @@ fun AddEditScheduleScreen(
             ScheduleConditionsSection(
                 triggerConditions = state.triggerConditions,
                 conditionStatus = conditionStatus,
-                onRequireBatteryNotLowChange = viewModel::setRequireBatteryNotLow,
-                onRequireChargingChange = viewModel::setRequireCharging,
-                onRequireUnmeteredNetworkChange = viewModel::setRequireUnmeteredNetwork
+                onRequireBatteryNotLowChange = onRequireBatteryNotLowChange,
+                onRequireChargingChange = onRequireChargingChange,
+                onRequireUnmeteredNetworkChange = onRequireUnmeteredNetworkChange
             )
         }
-    }
-
-    if (showPresetPickerSheet) {
-        TaskPresetPickerBottomSheet(
-            presets = state.availablePresets,
-            selectedPresetId = state.presetId,
-            hasRoot = hasRoot,
-            onSelectPreset = { presetId ->
-                viewModel.setPresetId(presetId)
-                showPresetPickerSheet = false
-            },
-            onCreatePreset = onCreatePreset?.let { create ->
-                {
-                    showPresetPickerSheet = false
-                    create()
-                }
-            },
-            onDismissRequest = { showPresetPickerSheet = false }
-        )
-    }
-
-    if (state.showConfirmDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = { viewModel.onCancelDeleteSchedule() },
-            title = { Text(stringResource(R.string.dialog_delete_schedule_title)) },
-            text = { Text(stringResource(R.string.dialog_delete_schedule_message)) },
-            confirmButton = {
-                TextButton(
-                    onClick = { viewModel.confirmDeleteSchedule() },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text(stringResource(R.string.action_delete))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.onCancelDeleteSchedule() }) {
-                    Text(stringResource(R.string.action_cancel))
-                }
-            }
-        )
-    }
-
-    if (state.showDiscardChangesDialog) {
-        AlertDialog(
-            onDismissRequest = { viewModel.onDismissDiscard() },
-            title = { Text(stringResource(R.string.dialog_discard_changes_title)) },
-            text = { Text(stringResource(R.string.dialog_discard_changes_message)) },
-            confirmButton = {
-                TextButton(
-                    onClick = { viewModel.onConfirmDiscard() },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text(stringResource(R.string.action_discard))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.onDismissDiscard() }) {
-                    Text(stringResource(R.string.action_cancel))
-                }
-            }
-        )
     }
 }
 

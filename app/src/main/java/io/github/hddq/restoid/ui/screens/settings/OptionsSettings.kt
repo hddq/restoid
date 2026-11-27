@@ -48,47 +48,66 @@ fun OptionsSettings(viewModel: SettingsViewModel) {
         )
     }
 
+    OptionsSettingsContent(
+        requireAppUnlock = requireAppUnlock,
+        allowExternalIntents = allowExternalIntents,
+        deviceHostname = deviceHostname,
+        onRequireAppUnlockChange = { required ->
+            if (required) {
+                val activity = context as? FragmentActivity
+                if (activity != null) {
+                    val authenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+                    val canAuthenticate = BiometricManager.from(activity).canAuthenticate(authenticators)
+
+                    if (canAuthenticate == BiometricManager.BIOMETRIC_SUCCESS) {
+                        val promptInfo = BiometricPrompt.PromptInfo.Builder()
+                            .setTitle(activity.getString(R.string.app_unlock_prompt_title))
+                            .setSubtitle(activity.getString(R.string.app_unlock_prompt_subtitle))
+                            .setAllowedAuthenticators(authenticators)
+                            .build()
+
+                        val biometricPrompt = BiometricPrompt(
+                            activity,
+                            ContextCompat.getMainExecutor(activity),
+                            object : BiometricPrompt.AuthenticationCallback() {
+                                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                                    super.onAuthenticationSucceeded(result)
+                                    viewModel.onRequireAppUnlockChanged(true)
+                                }
+                            }
+                        )
+                        biometricPrompt.authenticate(promptInfo)
+                    } else {
+                        viewModel.onRequireAppUnlockChanged(true)
+                    }
+                } else {
+                    viewModel.onRequireAppUnlockChanged(true)
+                }
+            } else {
+                viewModel.onRequireAppUnlockChanged(false)
+            }
+        },
+        onAllowExternalIntentsChange = viewModel::onAllowExternalIntentsChanged,
+        onEditHostnameClick = { showEditHostnameDialog = true }
+    )
+}
+
+@Composable
+internal fun OptionsSettingsContent(
+    requireAppUnlock: Boolean,
+    allowExternalIntents: Boolean,
+    deviceHostname: String,
+    onRequireAppUnlockChange: (Boolean) -> Unit = {},
+    onAllowExternalIntentsChange: (Boolean) -> Unit = {},
+    onEditHostnameClick: () -> Unit = {}
+) {
     Column(modifier = Modifier.fillMaxWidth()) {
         ExpressiveSectionHeader(title = stringResource(R.string.options_title))
         ExpressiveCardGroup {
             ExpressiveSegmentedSurface(index = 0, count = 3) {
                 AppUnlockOnStartRow(
                     enabled = requireAppUnlock,
-                    onCheckedChange = { required ->
-                        if (required) {
-                            val activity = context as? FragmentActivity
-                            if (activity != null) {
-                                val authenticators = BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
-                                val canAuthenticate = BiometricManager.from(activity).canAuthenticate(authenticators)
-
-                                if (canAuthenticate == BiometricManager.BIOMETRIC_SUCCESS) {
-                                    val promptInfo = BiometricPrompt.PromptInfo.Builder()
-                                        .setTitle(activity.getString(R.string.app_unlock_prompt_title))
-                                        .setSubtitle(activity.getString(R.string.app_unlock_prompt_subtitle))
-                                        .setAllowedAuthenticators(authenticators)
-                                        .build()
-
-                                    val biometricPrompt = BiometricPrompt(
-                                        activity,
-                                        ContextCompat.getMainExecutor(activity),
-                                        object : BiometricPrompt.AuthenticationCallback() {
-                                            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                                                super.onAuthenticationSucceeded(result)
-                                                viewModel.onRequireAppUnlockChanged(true)
-                                            }
-                                        }
-                                    )
-                                    biometricPrompt.authenticate(promptInfo)
-                                } else {
-                                    viewModel.onRequireAppUnlockChanged(true)
-                                }
-                            } else {
-                                viewModel.onRequireAppUnlockChanged(true)
-                            }
-                        } else {
-                            viewModel.onRequireAppUnlockChanged(false)
-                        }
-                    }
+                    onCheckedChange = onRequireAppUnlockChange
                 )
             }
             ExpressiveSegmentedSurface(index = 1, count = 3) {
@@ -96,13 +115,13 @@ fun OptionsSettings(viewModel: SettingsViewModel) {
                     title = stringResource(R.string.allow_external_intents),
                     icon = Icons.Outlined.Bolt,
                     enabled = allowExternalIntents,
-                    onCheckedChange = viewModel::onAllowExternalIntentsChanged
+                    onCheckedChange = onAllowExternalIntentsChange
                 )
             }
             ExpressiveSegmentedSurface(index = 2, count = 3) {
                 DeviceHostnameRow(
                     hostname = deviceHostname,
-                    onClick = { showEditHostnameDialog = true }
+                    onClick = onEditHostnameClick
                 )
             }
         }

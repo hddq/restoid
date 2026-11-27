@@ -137,65 +137,16 @@ fun PresetsScreen(
         }
     }
 
-    Box(modifier = modifier.fillMaxSize()) {
-        if (uiState.isLoading) {
-            LoadingIndicator(modifier = Modifier.align(Alignment.Center))
-        } else if (uiState.presets.isEmpty()) {
-            ExpressiveEmptyState(
-                icon = Icons.Outlined.Bookmarks,
-                title = stringResource(R.string.no_presets_configured),
-                subtitle = stringResource(R.string.no_presets_configured_hint),
-                modifier = Modifier.align(Alignment.Center)
-            )
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp)
-            ) {
-                val presets = uiState.presets
-                ExpressiveCardGroup {
-                    presets.forEachIndexed { index, preset ->
-                        val linkedCount = uiState.schedulesByPresetId[preset.id]?.size ?: 0
-                        ExpressiveSegmentedSurface(
-                            index = index,
-                            count = presets.size
-                        ) {
-                            PresetItem(
-                                preset = preset,
-                                linkedScheduleCount = linkedCount,
-                                hasRoot = hasRoot,
-                                canRunNow = !uiState.isOperationRunning,
-                                onEdit = { onEditPreset(preset) },
-                                onRunNow = { viewModel.runPresetNow(preset) },
-                                onDuplicate = { viewModel.duplicatePreset(preset) },
-                                onDelete = { presetToDelete = preset }
-                            )
-                        }
-                    }
-                }
-                Spacer(Modifier.height(88.dp))
-            }
-        }
-
-        val isRepoSelected = uiState.selectedRepoKey != null
-        ExtendedFloatingActionButton(
-            onClick = {
-                if (isRepoSelected) {
-                    onAddPreset()
-                }
-            },
-            icon = { Icon(Icons.Outlined.Add, contentDescription = null) },
-            text = { Text(stringResource(R.string.fab_new_preset)) },
-            shape = RoundedCornerShape(20.dp),
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp),
-            containerColor = if (isRepoSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
-            contentColor = if (isRepoSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
-        )
-    }
+    PresetsContent(
+        uiState = uiState,
+        hasRoot = hasRoot,
+        onAddPreset = onAddPreset,
+        onEditPreset = onEditPreset,
+        onRunPresetNow = viewModel::runPresetNow,
+        onDuplicatePreset = viewModel::duplicatePreset,
+        onRequestDeletePreset = { presetToDelete = it },
+        modifier = modifier
+    )
 
     presetToDelete?.let { preset ->
         val linkedCount = uiState.schedulesByPresetId[preset.id]?.size ?: 0
@@ -231,6 +182,79 @@ fun PresetsScreen(
                     Text(stringResource(R.string.action_cancel))
                 }
             }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+internal fun PresetsContent(
+    uiState: PresetsUiState,
+    hasRoot: Boolean,
+    onAddPreset: () -> Unit = {},
+    onEditPreset: (TaskPreset) -> Unit = {},
+    onRunPresetNow: (TaskPreset) -> Unit = {},
+    onDuplicatePreset: (TaskPreset) -> Unit = {},
+    onRequestDeletePreset: (TaskPreset) -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    Box(modifier = modifier.fillMaxSize()) {
+        if (uiState.isLoading) {
+            LoadingIndicator(modifier = Modifier.align(Alignment.Center))
+        } else if (uiState.presets.isEmpty()) {
+            ExpressiveEmptyState(
+                icon = Icons.Outlined.Bookmarks,
+                title = stringResource(R.string.no_presets_configured),
+                subtitle = stringResource(R.string.no_presets_configured_hint),
+                modifier = Modifier.align(Alignment.Center)
+            )
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp)
+            ) {
+                val presets = uiState.presets
+                ExpressiveCardGroup {
+                    presets.forEachIndexed { index, preset ->
+                        val linkedCount = uiState.schedulesByPresetId[preset.id]?.size ?: 0
+                        ExpressiveSegmentedSurface(
+                            index = index,
+                            count = presets.size
+                        ) {
+                            PresetItem(
+                                preset = preset,
+                                linkedScheduleCount = linkedCount,
+                                hasRoot = hasRoot,
+                                canRunNow = !uiState.isOperationRunning,
+                                onEdit = { onEditPreset(preset) },
+                                onRunNow = { onRunPresetNow(preset) },
+                                onDuplicate = { onDuplicatePreset(preset) },
+                                onDelete = { onRequestDeletePreset(preset) }
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(88.dp))
+            }
+        }
+
+        val isRepoSelected = uiState.selectedRepoKey != null
+        ExtendedFloatingActionButton(
+            onClick = {
+                if (isRepoSelected) {
+                    onAddPreset()
+                }
+            },
+            icon = { Icon(Icons.Outlined.Add, contentDescription = null) },
+            text = { Text(stringResource(R.string.fab_new_preset)) },
+            shape = RoundedCornerShape(20.dp),
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp),
+            containerColor = if (isRepoSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+            contentColor = if (isRepoSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
         )
     }
 }
