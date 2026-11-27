@@ -22,6 +22,8 @@
     <string name="topbar_snapshot_details">Snapshot Details</string>
     <string name="topbar_restore_snapshot">Restore Snapshot</string>
     <string name="cd_back">Back</string>
+    <string name="cd_expand_navigation_rail">Expand navigation rail</string>
+    <string name="cd_collapse_navigation_rail">Collapse navigation rail</string>
     <string name="cd_forget_snapshot">Forget Snapshot</string>
     <string name="action_run_now">Run now</string>
 

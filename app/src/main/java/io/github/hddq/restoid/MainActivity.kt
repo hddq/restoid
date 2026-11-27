@@ -18,16 +18,18 @@ import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.core.CubicBezierEasing
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -37,11 +39,12 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.MenuOpen
 import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Home
@@ -50,6 +53,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Bookmarks
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.Schedule
@@ -60,13 +64,21 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarDefaults
-import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationItemIconPosition
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ShortNavigationBar
+import androidx.compose.material3.ShortNavigationBarArrangement
+import androidx.compose.material3.ShortNavigationBarDefaults
+import androidx.compose.material3.ShortNavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.WideNavigationRail
+import androidx.compose.material3.WideNavigationRailItem
+import androidx.compose.material3.WideNavigationRailState
+import androidx.compose.material3.WideNavigationRailValue
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
+import androidx.compose.material3.rememberWideNavigationRailState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -74,6 +86,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
@@ -81,6 +94,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
@@ -103,6 +117,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.window.core.layout.WindowSizeClass
+import kotlinx.coroutines.launch
 import io.github.hddq.restoid.data.NotificationRepository
 import io.github.hddq.restoid.ui.components.AppSortMenuButton
 import io.github.hddq.restoid.ui.home.HomeViewModel
@@ -434,7 +450,47 @@ class MainActivity : FragmentActivity() {
                         }
                     }
 
-                    Box(modifier = Modifier.fillMaxSize()) {
+                    val navigationLayout = rememberAdaptiveNavigationLayout()
+                    val useNavigationRail = navigationLayout == AdaptiveNavigationLayout.RailCollapsed ||
+                        navigationLayout == AdaptiveNavigationLayout.RailExpanded
+                    val railDefaultValue = if (navigationLayout == AdaptiveNavigationLayout.RailExpanded) {
+                        WideNavigationRailValue.Expanded
+                    } else {
+                        WideNavigationRailValue.Collapsed
+                    }
+                    val railState = rememberWideNavigationRailState(initialValue = railDefaultValue)
+                    LaunchedEffect(railDefaultValue) {
+                        if (railDefaultValue == WideNavigationRailValue.Expanded) {
+                            railState.expand()
+                        } else {
+                            railState.collapse()
+                        }
+                    }
+
+                    Row(modifier = Modifier.fillMaxSize()) {
+                        AnimatedVisibility(
+                            visible = showBottomBar && useNavigationRail,
+                            enter = expandHorizontally(
+                                animationSpec = motionScheme.defaultSpatialSpec(),
+                                expandFrom = Alignment.Start
+                            ) + fadeIn(animationSpec = bottomBarEnterEffectsSpec),
+                            exit = shrinkHorizontally(
+                                animationSpec = motionScheme.fastSpatialSpec(),
+                                shrinkTowards = Alignment.Start
+                            ) + fadeOut(animationSpec = bottomBarExitEffectsSpec)
+                        ) {
+                            RestoidNavigationRail(
+                                state = railState,
+                                selectedScreen = selectedTopLevelScreen,
+                                interactionEnabled = showBottomBar && useNavigationRail,
+                                onSelectScreen = selectTopLevelTab
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxSize()
+                        ) {
                         NavHost(
                             navController = navController,
                             startDestination = startDestination,
@@ -565,6 +621,7 @@ class MainActivity : FragmentActivity() {
                                                 DestinationScaffold(
                                                     titleRes = R.string.home_title,
                                                     isTopLevel = true,
+                                                    reserveBottomNavSpace = !useNavigationRail,
                                                     isHome = true,
                                                     isExiting = isExiting,
                                                     onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() },
@@ -669,6 +726,7 @@ class MainActivity : FragmentActivity() {
                                                 DestinationScaffold(
                                                     titleRes = R.string.topbar_presets,
                                                     isTopLevel = true,
+                                                    reserveBottomNavSpace = !useNavigationRail,
                                                     isExiting = isExiting,
                                                     onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
                                                 ) {
@@ -712,6 +770,7 @@ class MainActivity : FragmentActivity() {
                                                 DestinationScaffold(
                                                     titleRes = R.string.topbar_schedules,
                                                     isTopLevel = true,
+                                                    reserveBottomNavSpace = !useNavigationRail,
                                                     isExiting = isExiting,
                                                     onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
                                                 ) {
@@ -751,6 +810,7 @@ class MainActivity : FragmentActivity() {
                                                 DestinationScaffold(
                                                     titleRes = R.string.screen_settings,
                                                     isTopLevel = true,
+                                                    reserveBottomNavSpace = !useNavigationRail,
                                                     isExiting = isExiting,
                                                     onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
                                                 ) {
@@ -1531,8 +1591,8 @@ class MainActivity : FragmentActivity() {
                                 }
                             }
                         }
-                        AnimatedVisibility(
-                            visible = showBottomBar,
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = showBottomBar && !useNavigationRail,
                             modifier = Modifier.align(Alignment.BottomCenter),
                             enter = slideInVertically(
                                 animationSpec = bottomBarEnterSpatialSpec,
@@ -1543,11 +1603,13 @@ class MainActivity : FragmentActivity() {
                                 targetOffsetY = { it }
                             ) + fadeOut(animationSpec = bottomBarExitEffectsSpec)
                         ) {
-                            RestoidBottomNavigationBar(
+                            RestoidShortNavigationBar(
+                                layout = navigationLayout,
                                 selectedScreen = selectedTopLevelScreen,
-                                interactionEnabled = showBottomBar,
+                                interactionEnabled = showBottomBar && !useNavigationRail,
                                 onSelectScreen = selectTopLevelTab
                             )
+                        }
                         }
                     }
                 }
@@ -1556,63 +1618,169 @@ class MainActivity : FragmentActivity() {
     }
 }
 
+private enum class AdaptiveNavigationLayout {
+    BottomBarCompact,
+    BottomBarMedium,
+    RailCollapsed,
+    RailExpanded
+}
+
+private data class TopLevelDestination(
+    val screen: Screen,
+    val selectedIcon: ImageVector,
+    val unselectedIcon: ImageVector
+)
+
+private val TopLevelDestinations = listOf(
+    TopLevelDestination(Screen.Home, Icons.Filled.Home, Icons.Outlined.Home),
+    TopLevelDestination(Screen.Presets, Icons.Filled.Bookmarks, Icons.Outlined.Bookmarks),
+    TopLevelDestination(Screen.Schedules, Icons.Filled.Schedule, Icons.Outlined.Schedule),
+    TopLevelDestination(Screen.Settings, Icons.Filled.Settings, Icons.Outlined.Settings)
+)
+
 @Composable
-private fun RestoidBottomNavigationBar(
+private fun rememberAdaptiveNavigationLayout(): AdaptiveNavigationLayout {
+    val adaptiveInfo = currentWindowAdaptiveInfoV2()
+    val windowSizeClass = adaptiveInfo.windowSizeClass
+    val isMediumWidth = windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
+    val isExpandedWidth = windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND)
+    val isMediumHeight = windowSizeClass.isHeightAtLeastBreakpoint(WindowSizeClass.HEIGHT_DP_MEDIUM_LOWER_BOUND)
+
+    return when {
+        adaptiveInfo.windowPosture.isTabletop -> {
+            if (isMediumWidth) AdaptiveNavigationLayout.BottomBarMedium
+            else AdaptiveNavigationLayout.BottomBarCompact
+        }
+        !isMediumWidth -> AdaptiveNavigationLayout.BottomBarCompact
+        !isMediumHeight -> AdaptiveNavigationLayout.BottomBarMedium
+        isExpandedWidth -> AdaptiveNavigationLayout.RailExpanded
+        else -> AdaptiveNavigationLayout.RailCollapsed
+    }
+}
+
+@Composable
+private fun RestoidShortNavigationBar(
+    layout: AdaptiveNavigationLayout,
     selectedScreen: Screen,
     interactionEnabled: Boolean = true,
     onSelectScreen: (Screen) -> Unit
 ) {
-    val items = listOf(
-        Triple(Screen.Home, Icons.Filled.Home, Icons.Outlined.Home),
-        Triple(Screen.Presets, Icons.Filled.Bookmarks, Icons.Outlined.Bookmarks),
-        Triple(Screen.Schedules, Icons.Filled.Schedule, Icons.Outlined.Schedule),
-        Triple(Screen.Settings, Icons.Filled.Settings, Icons.Outlined.Settings)
-    )
-    val motionScheme = MaterialTheme.motionScheme
-    val iconScaleSpec = motionScheme.fastSpatialSpec<Float>()
-    val iconCrossfadeSpec = motionScheme.fastEffectsSpec<Float>()
+    val isHorizontal = layout == AdaptiveNavigationLayout.BottomBarMedium
+    val iconCrossfadeSpec = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
 
-    NavigationBar(
+    ShortNavigationBar(
         modifier = Modifier.blockPointerInput(!interactionEnabled),
-        containerColor = MaterialTheme.colorScheme.surfaceContainer
+        arrangement = if (isHorizontal) {
+            ShortNavigationBarArrangement.Centered
+        } else {
+            ShortNavigationBarArrangement.EqualWeight
+        }
     ) {
-        items.forEach { (screen, selectedIcon, unselectedIcon) ->
-            val selected = screen == selectedScreen
-            val iconScale by animateFloatAsState(
-                targetValue = if (selected) 1.08f else 1f,
-                animationSpec = iconScaleSpec,
-                label = "navIconScale_${screen.route}"
-            )
-            NavigationBarItem(
+        TopLevelDestinations.forEach { destination ->
+            val selected = destination.screen == selectedScreen
+            ShortNavigationBarItem(
+                selected = selected,
+                onClick = {
+                    if (interactionEnabled && !selected) {
+                        onSelectScreen(destination.screen)
+                    }
+                },
+                iconPosition = if (isHorizontal) {
+                    NavigationItemIconPosition.Start
+                } else {
+                    NavigationItemIconPosition.Top
+                },
                 icon = {
                     Crossfade(
                         targetState = selected,
                         animationSpec = iconCrossfadeSpec,
-                        modifier = Modifier.graphicsLayer {
-                            scaleX = iconScale
-                            scaleY = iconScale
-                        },
-                        label = "navIconCrossfade_${screen.route}"
+                        label = "navIconCrossfade_${destination.screen.route}"
                     ) { isSelected ->
                         Icon(
-                            imageVector = if (isSelected) selectedIcon else unselectedIcon,
+                            imageVector = if (isSelected) destination.selectedIcon else destination.unselectedIcon,
                             contentDescription = null
                         )
                     }
                 },
                 label = {
                     Text(
-                        text = stringResource(screen.titleRes),
-                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                        text = stringResource(destination.screen.titleRes),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                },
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun RestoidNavigationRail(
+    state: WideNavigationRailState,
+    selectedScreen: Screen,
+    interactionEnabled: Boolean = true,
+    onSelectScreen: (Screen) -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    val railExpanded = state.targetValue == WideNavigationRailValue.Expanded
+    val iconCrossfadeSpec = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
+    val toggleDescription = stringResource(
+        if (railExpanded) R.string.cd_collapse_navigation_rail else R.string.cd_expand_navigation_rail
+    )
+
+    WideNavigationRail(
+        state = state,
+        modifier = Modifier.blockPointerInput(!interactionEnabled),
+        header = {
+            IconButton(
+                modifier = Modifier.padding(start = 24.dp),
+                onClick = {
+                    if (interactionEnabled) {
+                        scope.launch {
+                            if (railExpanded) state.collapse() else state.expand()
+                        }
+                    }
+                }
+            ) {
+                Icon(
+                    imageVector = if (railExpanded) {
+                        Icons.AutoMirrored.Outlined.MenuOpen
+                    } else {
+                        Icons.Outlined.Menu
+                    },
+                    contentDescription = toggleDescription
+                )
+            }
+        }
+    ) {
+        TopLevelDestinations.forEach { destination ->
+            val selected = destination.screen == selectedScreen
+            WideNavigationRailItem(
+                railExpanded = railExpanded,
                 selected = selected,
                 onClick = {
                     if (interactionEnabled && !selected) {
-                        onSelectScreen(screen)
+                        onSelectScreen(destination.screen)
                     }
+                },
+                icon = {
+                    Crossfade(
+                        targetState = selected,
+                        animationSpec = iconCrossfadeSpec,
+                        label = "railIconCrossfade_${destination.screen.route}"
+                    ) { isSelected ->
+                        Icon(
+                            imageVector = if (isSelected) destination.selectedIcon else destination.unselectedIcon,
+                            contentDescription = null
+                        )
+                    }
+                },
+                label = {
+                    Text(
+                        text = stringResource(destination.screen.titleRes),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             )
         }
@@ -1724,6 +1892,7 @@ internal fun TopLevelTabHost(
 internal fun DestinationScaffold(
     titleRes: Int,
     isTopLevel: Boolean,
+    reserveBottomNavSpace: Boolean = false,
     isHome: Boolean = false,
     isExiting: Boolean = false,
     onBack: () -> Unit,
@@ -1784,12 +1953,12 @@ internal fun DestinationScaffold(
                 )
             },
             bottomBar = {
-                if (isTopLevel) {
+                if (reserveBottomNavSpace) {
                     Spacer(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .windowInsetsPadding(NavigationBarDefaults.windowInsets)
-                            .height(80.dp)
+                            .windowInsetsPadding(ShortNavigationBarDefaults.windowInsets)
+                            .height(64.dp)
                     )
                 }
             },
