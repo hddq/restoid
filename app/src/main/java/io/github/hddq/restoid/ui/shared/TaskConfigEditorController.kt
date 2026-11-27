@@ -798,7 +798,6 @@ class TaskConfigEditorController(
             updateState {
                 it.copy(
                     isRunningForgetDryRun = true,
-                    forgetDryRunResult = null,
                     forgetDryRunError = null
                 )
             }
