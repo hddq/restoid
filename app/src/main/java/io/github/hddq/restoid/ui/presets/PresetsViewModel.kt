@@ -557,11 +557,18 @@ class PresetsViewModel(
     fun setSelectedAppsBackupTypes(backupTypes: BackupTypes) = editorController.setSelectedAppsBackupTypes(backupTypes)
     fun refreshAppsList() = editorController.refreshAppsList()
     fun toggleBackupTag(tagName: String) = editorController.toggleBackupTag(tagName)
+    fun toggleForgetTag(tagName: String) = editorController.toggleForgetTag(tagName)
 
     suspend fun createTag(name: String, colorArgb: Int): Result<BackupTag> {
         val repoId = currentSelectedRepoId()
             ?: return Result.failure(IllegalStateException("No repository selected"))
         return editorController.createTag(repoId, name, colorArgb)
+    }
+
+    suspend fun createForgetTag(name: String, colorArgb: Int): Result<BackupTag> {
+        val repoId = currentSelectedRepoId()
+            ?: return Result.failure(IllegalStateException("No repository selected"))
+        return editorController.createTag(repoId, name, colorArgb, selectInBackup = false, selectInForget = true)
     }
 
     suspend fun updateTagColor(name: String, colorArgb: Int): Result<BackupTag> {

@@ -40,4 +40,21 @@ class TaskConfigEditorTagsTest {
         assertFalse(hasTaskConfigChanges(unchanged, initial))
         assertTrue(hasTaskConfigChanges(changed, initial))
     }
+
+    @Test
+    fun `toRunTasksConfig and withAppliedRunTasksConfig sanitize and preserve forgetTags`() {
+        val state = TaskConfigEditorState(
+            maintenance = io.github.hddq.restoid.model.MaintenanceConfig(
+                forgetTags = listOf(" weekly ", "backup", "a,b", "weekly", "photos")
+            )
+        )
+
+        val config = state.toRunTasksConfig(hasRoot = false)
+        assertEquals(listOf("weekly", "photos"), config.forgetTags)
+
+        val applied = TaskConfigEditorState().withAppliedRunTasksConfig(
+            RunTasksConfig(forgetTags = listOf(" daily ", "restoid", "daily"))
+        )
+        assertEquals(listOf("daily"), applied.maintenance.forgetTags)
+    }
 }

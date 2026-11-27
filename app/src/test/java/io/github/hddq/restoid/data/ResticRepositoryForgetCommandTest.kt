@@ -47,7 +47,7 @@ class ResticRepositoryForgetCommandTest {
 
         assertTrue(result.isSuccess)
         assertEquals(
-            "forget --keep-last 5 --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --group-by host,tags --tag 'restoid' --tag 'backup'",
+            "forget --keep-last 5 --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --group-by host,tags --tag 'restoid,backup'",
             result.getOrNull()
         )
     }
@@ -67,7 +67,28 @@ class ResticRepositoryForgetCommandTest {
 
         assertTrue(result.isSuccess)
         assertEquals(
-            "forget --keep-last 3 --host 'Pixel 8' --host 'Bob'\"'\"'s Phone' --group-by host,tags --tag 'restoid' --tag 'backup'",
+            "forget --keep-last 3 --host 'Pixel 8' --host 'Bob'\"'\"'s Phone' --group-by host,tags --tag 'restoid,backup'",
+            result.getOrNull()
+        )
+    }
+
+    @Test
+    fun buildForgetCommand_selectedTags_emitsCombinedOrTagListsAndSanitizes() {
+        val repository = createRepository()
+
+        val result = repository.buildForgetCommand(
+            keepLast = 5,
+            keepDaily = 0,
+            keepWeekly = 0,
+            keepMonthly = 0,
+            forgetAllHosts = true,
+            forgetHosts = emptyList(),
+            forgetTags = listOf(" daily ", "restoid", "bad,tag", "daily", "Bob's Tag")
+        )
+
+        assertTrue(result.isSuccess)
+        assertEquals(
+            "forget --keep-last 5 --group-by host --tag 'restoid,backup,daily' --tag 'restoid,backup,Bob'\"'\"'s Tag'",
             result.getOrNull()
         )
     }

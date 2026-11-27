@@ -11,5 +11,6 @@ data class MaintenanceConfig(
     val keepWeekly: Int = 4,
     val keepMonthly: Int = 6,
     val forgetAllHosts: Boolean = false,
-    val forgetHosts: List<String> = emptyList()
+    val forgetHosts: List<String> = emptyList(),
+    val forgetTags: List<String> = emptyList()
 )

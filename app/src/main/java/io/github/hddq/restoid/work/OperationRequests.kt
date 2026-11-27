@@ -101,7 +101,8 @@ data class MaintenanceWorkRequest(
     val keepWeekly: Int,
     val keepMonthly: Int,
     val forgetAllHosts: Boolean = true,
-    val forgetHosts: List<String> = emptyList()
+    val forgetHosts: List<String> = emptyList(),
+    val forgetTags: List<String> = emptyList()
 )
 
 @Serializable
@@ -124,7 +125,8 @@ data class RunTasksConfig(
     val keepWeekly: Int = 0,
     val keepMonthly: Int = 0,
     val forgetAllHosts: Boolean = true,
-    val forgetHosts: List<String> = emptyList()
+    val forgetHosts: List<String> = emptyList(),
+    val forgetTags: List<String> = emptyList()
 )
 
 @Serializable
@@ -149,6 +151,7 @@ data class RunTasksWorkRequest(
     val keepMonthly: Int,
     val forgetAllHosts: Boolean = true,
     val forgetHosts: List<String> = emptyList(),
+    val forgetTags: List<String> = emptyList(),
     val presetName: String? = null,
     val scheduleName: String? = null,
     val requireUnmeteredNetwork: Boolean = false
@@ -190,6 +193,7 @@ fun RunTasksConfig.toWorkRequest(
         keepMonthly = keepMonthly,
         forgetAllHosts = forgetAllHosts,
         forgetHosts = normalizedForgetHosts,
+        forgetTags = BackupTagRules.sanitizeBackupTags(forgetTags),
         presetName = presetName,
         scheduleName = scheduleName,
         requireUnmeteredNetwork = requireUnmeteredNetwork

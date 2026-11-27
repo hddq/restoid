@@ -94,6 +94,7 @@ class MaintenanceOperationRunner(
                             keepMonthly = request.keepMonthly,
                             forgetAllHosts = request.forgetAllHosts,
                             forgetHosts = request.forgetHosts,
+                            forgetTags = request.forgetTags,
                             environmentVariables = repositoryEnvironment,
                             resticOptions = repositoryResticOptions
                         )

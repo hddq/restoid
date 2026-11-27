@@ -27,7 +27,8 @@ class ForgetHostsSerializationTest {
             keepWeekly = 4,
             keepMonthly = 6,
             forgetAllHosts = false,
-            forgetHosts = listOf("Pixel 8", "Galaxy Tab")
+            forgetHosts = listOf("Pixel 8", "Galaxy Tab"),
+            forgetTags = listOf("daily", "photos")
         )
 
         val encoded = json.encodeToString(config)
@@ -35,6 +36,7 @@ class ForgetHostsSerializationTest {
 
         assertFalse(decoded.forgetAllHosts)
         assertEquals(listOf("Pixel 8", "Galaxy Tab"), decoded.forgetHosts)
+        assertEquals(listOf("daily", "photos"), decoded.forgetTags)
     }
 
     @Test
@@ -127,5 +129,6 @@ class ForgetHostsSerializationTest {
         val legacyDecoded = json.decodeFromString<MaintenanceWorkRequest>(legacyJson)
         assertTrue(legacyDecoded.forgetAllHosts)
         assertTrue(legacyDecoded.forgetHosts.isEmpty())
+        assertTrue(legacyDecoded.forgetTags.isEmpty())
     }
 }

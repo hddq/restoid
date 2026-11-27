@@ -37,6 +37,10 @@ class PreferencesRepository(private val context: Context) {
                 "maintenance_forgetHosts",
                 state.forgetHosts.map { it.trim() }.filter { it.isNotEmpty() }.toSet()
             )
+            putString(
+                "maintenance_forgetTags",
+                io.github.hddq.restoid.model.BackupTagRules.sanitizeBackupTags(state.forgetTags).joinToString(",")
+            )
             apply()
         }
     }
@@ -60,6 +64,12 @@ class PreferencesRepository(private val context: Context) {
         } else {
             emptyList()
         }
+        val rawForgetTags = prefs.getString("maintenance_forgetTags", null).orEmpty()
+        val forgetTags = if (rawForgetTags.isBlank()) {
+            emptyList()
+        } else {
+            io.github.hddq.restoid.model.BackupTagRules.sanitizeBackupTags(rawForgetTags.split(","))
+        }
         return MaintenanceConfig(
             checkRepo = prefs.getBoolean("maintenance_checkRepo", true),
             pruneRepo = prefs.getBoolean("maintenance_pruneRepo", false),
@@ -71,7 +81,8 @@ class PreferencesRepository(private val context: Context) {
             keepWeekly = prefs.getInt("maintenance_keepWeekly", 4),
             keepMonthly = prefs.getInt("maintenance_keepMonthly", 6),
             forgetAllHosts = forgetAllHosts,
-            forgetHosts = forgetHosts
+            forgetHosts = forgetHosts,
+            forgetTags = forgetTags
         )
     }
 
