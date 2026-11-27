@@ -45,7 +45,11 @@ import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
 import kotlinx.coroutines.launch
 
 @Composable
-fun LicensesScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
+fun LicensesScreen(
+    onNavigateUp: () -> Unit,
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
+) {
     val context = LocalContext.current
 
     val libs = remember {
@@ -65,7 +69,12 @@ fun LicensesScreen(onNavigateUp: () -> Unit, modifier: Modifier = Modifier) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(2.dp),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 32.dp)
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            end = 16.dp,
+            top = 8.dp,
+            bottom = 32.dp + contentPadding.calculateBottomPadding()
+        )
     ) {
         item(key = "restoid_license") {
             ExpressiveSegmentedSurface(index = 0, count = totalCount) {

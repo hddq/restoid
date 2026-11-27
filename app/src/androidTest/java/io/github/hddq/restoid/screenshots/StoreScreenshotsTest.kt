@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Delete
@@ -152,7 +153,7 @@ class StoreScreenshotsTest {
                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
-            ) {
+            ) { contentPadding ->
                 HomeScreen(
                     onSnapshotClick = {},
                     uiState = state,
@@ -168,7 +169,8 @@ class StoreScreenshotsTest {
                     onDismissPasswordDialog = {},
                     onDismissSftpPasswordDialog = {},
                     onDismissRestCredentialsDialog = {},
-                    onDismissS3CredentialsDialog = {}
+                    onDismissS3CredentialsDialog = {},
+                    contentPadding = contentPadding
                 )
             }
         }
@@ -204,12 +206,13 @@ class StoreScreenshotsTest {
                         text = { Text(stringResource(R.string.fab_restore)) }
                     )
                 }
-            ) {
+            ) { contentPadding ->
                 SnapshotDetailsContent(
                     snapshot = snapshot,
                     metadata = metadata,
                     backupDetails = backupDetails,
-                    availableTags = ScreenshotFixtures.tags
+                    availableTags = ScreenshotFixtures.tags,
+                    contentPadding = contentPadding
                 )
             }
         }
@@ -246,10 +249,11 @@ class StoreScreenshotsTest {
                         text = { Text(stringResource(R.string.fab_run_tasks)) }
                     )
                 }
-            ) {
+            ) { contentPadding ->
                 RunTasksContent(
                     uiState = state,
-                    hasRoot = true
+                    hasRoot = true,
+                    contentPadding = contentPadding
                 )
             }
         }
@@ -270,7 +274,7 @@ class StoreScreenshotsTest {
                         onSortOrderChange = {}
                     )
                 }
-            ) {
+            ) { contentPadding ->
                 BackupConfigScreen(
                     isLoadingApps = false,
                     apps = apps,
@@ -280,7 +284,8 @@ class StoreScreenshotsTest {
                     onToggleAllApps = {},
                     onToggleAppSelection = {},
                     onSetSelectedAppsBackupTypes = {},
-                    onSetAppBackupTypes = { _, _ -> }
+                    onSetAppBackupTypes = { _, _ -> },
+                    contentPadding = contentPadding
                 )
             }
         }
@@ -298,11 +303,12 @@ class StoreScreenshotsTest {
                     titleRes = R.string.topbar_operation_progress,
                     isTopLevel = false,
                     onBack = {}
-                ) {
+                ) { contentPadding ->
                     ProgressScreenContent(
                         progress = ScreenshotFixtures.operationProgress(),
                         operationType = stringResource(R.string.operation_run_tasks),
-                        onDone = {}
+                        onDone = {},
+                        contentPadding = contentPadding
                     )
                 }
             }
@@ -319,11 +325,22 @@ class StoreScreenshotsTest {
         setScreenshotContent {
             TopLevelScreenshotHost(
                 selectedScreen = Screen.Presets,
-                titleRes = Screen.Presets.titleRes
-            ) {
+                titleRes = Screen.Presets.titleRes,
+                floatingActionButton = {
+                    ExtendedFloatingActionButton(
+                        onClick = {},
+                        icon = { Icon(Icons.Outlined.Add, contentDescription = null) },
+                        text = { Text(stringResource(R.string.fab_new_preset)) },
+                        shape = RoundedCornerShape(20.dp),
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            ) { contentPadding ->
                 PresetsContent(
                     uiState = state,
-                    hasRoot = true
+                    hasRoot = true,
+                    contentPadding = contentPadding
                 )
             }
         }
@@ -362,13 +379,14 @@ class StoreScreenshotsTest {
                         text = { Text(stringResource(R.string.action_save)) }
                     )
                 }
-            ) {
+            ) { contentPadding ->
                 AddEditScheduleContent(
                     state = state,
                     conditionStatus = conditionStatus,
                     hasRoot = true,
                     onCreatePreset = {},
-                    onEditPreset = {}
+                    onEditPreset = {},
+                    contentPadding = contentPadding
                 )
             }
         }
@@ -412,10 +430,15 @@ class StoreScreenshotsTest {
         TopLevelScreenshotHost(
             selectedScreen = Screen.Settings,
             titleRes = Screen.Settings.titleRes
-        ) {
+        ) { contentPadding ->
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    top = 16.dp,
+                    end = 16.dp,
+                    bottom = 16.dp + contentPadding.calculateBottomPadding()
+                ),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
@@ -491,7 +514,7 @@ class StoreScreenshotsTest {
         isHome: Boolean = false,
         actions: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = {},
         floatingActionButton: @Composable () -> Unit = {},
-        content: @Composable () -> Unit
+        content: @Composable (PaddingValues) -> Unit
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             DestinationScaffold(

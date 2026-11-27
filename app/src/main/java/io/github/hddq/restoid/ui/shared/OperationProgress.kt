@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -104,7 +105,8 @@ fun ProgressScreenContent(
     progress: OperationProgress,
     operationType: String, // e.g., "Backup", "Restore"
     onDone: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val context = LocalContext.current
     val operationComplete = stringResource(R.string.progress_operation_complete, operationType)
@@ -114,7 +116,7 @@ fun ProgressScreenContent(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -143,6 +145,10 @@ fun ProgressScreenContent(
                     modifier = Modifier
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
+                        .padding(
+                            top = 16.dp,
+                            bottom = 16.dp + contentPadding.calculateBottomPadding()
+                        )
                 ) {
                     AnimatedVisibility(
                         visible = startAnimation,
@@ -194,6 +200,10 @@ fun ProgressScreenContent(
                     modifier = Modifier
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
+                        .padding(
+                            top = 16.dp,
+                            bottom = 16.dp + contentPadding.calculateBottomPadding()
+                        )
                 ) {
                     Text(
                         text = stageTitle,

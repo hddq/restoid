@@ -77,7 +77,8 @@ fun OperationLogsScreen(
     viewModel: OperationLogsViewModel,
     initialSelectedLogId: String? = null,
     onNavigateUp: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val logs by viewModel.logs.collectAsState()
     val context = LocalContext.current
@@ -156,7 +157,12 @@ fun OperationLogsScreen(
     } else {
         LazyColumn(
             state = listState,
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                top = 12.dp,
+                end = 16.dp,
+                bottom = 12.dp + contentPadding.calculateBottomPadding()
+            ),
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = modifier.fillMaxSize()
         ) {

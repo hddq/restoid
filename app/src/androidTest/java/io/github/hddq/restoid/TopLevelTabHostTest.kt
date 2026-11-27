@@ -76,7 +76,7 @@ class TopLevelTabHostTest {
                                         text = { Text("Run") }
                                     )
                                 }
-                            ) {
+                            ) { _ ->
                                 Box(modifier = Modifier.fillMaxSize())
                             }
                         }
@@ -97,7 +97,7 @@ class TopLevelTabHostTest {
                                 isTopLevel = true,
                                 isExiting = isExiting,
                                 onBack = {}
-                            ) {
+                            ) { _ ->
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
@@ -184,7 +184,7 @@ class TopLevelTabHostTest {
                                         text = { Text("Run") }
                                     )
                                 }
-                            ) {
+                            ) { _ ->
                                 Box(modifier = Modifier.fillMaxSize())
                             }
                         }
@@ -195,7 +195,7 @@ class TopLevelTabHostTest {
                                 isTopLevel = true,
                                 isExiting = isExiting,
                                 onBack = {}
-                            ) {
+                            ) { _ ->
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
@@ -273,7 +273,7 @@ class TopLevelTabHostTest {
                                 isTopLevel = true,
                                 isExiting = isExiting,
                                 onBack = {}
-                            ) {
+                            ) { _ ->
                                 Box(modifier = Modifier.fillMaxSize())
                             }
                         }
@@ -295,7 +295,7 @@ class TopLevelTabHostTest {
                                 isTopLevel = true,
                                 isExiting = isExiting,
                                 onBack = {}
-                            ) {
+                            ) { _ ->
                                 Box(modifier = Modifier.fillMaxSize())
                             }
                         }

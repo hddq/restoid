@@ -103,7 +103,8 @@ fun RestoreScreen(
     onNavigateToAppsConfig: () -> Unit,
     onNavigateToCustomDirectoriesConfig: () -> Unit,
     onNavigateToDeviceDataConfig: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val application = LocalContext.current.applicationContext as RestoidApplication
     val backupDetails by viewModel.backupDetails.collectAsState()
@@ -203,7 +204,12 @@ fun RestoreScreen(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 88.dp, top = 8.dp),
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            end = 16.dp,
+            bottom = 88.dp + contentPadding.calculateBottomPadding(),
+            top = 8.dp
+        ),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
@@ -341,7 +347,8 @@ fun RestoreScreen(
 @Composable
 fun RestoreAppsConfigScreen(
     viewModel: RestoreViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val backupDetails by viewModel.backupDetails.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -365,7 +372,12 @@ fun RestoreAppsConfigScreen(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 88.dp, top = 8.dp),
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            end = 16.dp,
+            bottom = 88.dp + contentPadding.calculateBottomPadding(),
+            top = 8.dp
+        ),
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         item(key = "options_section") {
@@ -443,7 +455,8 @@ fun RestoreAppsConfigScreen(
 @Composable
 fun RestoreCustomDirectoriesConfigScreen(
     viewModel: RestoreViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val customDirectories by viewModel.customDirectories.collectAsState()
     val customDirectoryMetadata by viewModel.customDirectoryMetadata.collectAsState()
@@ -451,7 +464,12 @@ fun RestoreCustomDirectoriesConfigScreen(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 88.dp, top = 8.dp),
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            end = 16.dp,
+            bottom = 88.dp + contentPadding.calculateBottomPadding(),
+            top = 8.dp
+        ),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         if (customDirectoriesList.isEmpty()) {
@@ -497,7 +515,8 @@ fun RestoreCustomDirectoriesConfigScreen(
 @Composable
 fun RestoreDeviceDataConfigScreen(
     viewModel: RestoreViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val contactsMetadata by viewModel.contactsMetadata.collectAsStateWithLifecycle()
     val callLogsMetadata by viewModel.callLogsMetadata.collectAsStateWithLifecycle()
@@ -566,7 +585,8 @@ fun RestoreDeviceDataConfigScreen(
         onRetrySnapshotCalendars = { viewModel.loadSnapshotCalendars(force = true) },
         onToggleAllCalendars = viewModel::toggleAllCalendars,
         onToggleCalendar = viewModel::toggleCalendar,
-        modifier = modifier
+        modifier = modifier,
+        contentPadding = contentPadding
     )
 }
 
@@ -605,7 +625,8 @@ internal fun RestoreDeviceDataConfigContent(
     onRetrySnapshotCalendars: () -> Unit = {},
     onToggleAllCalendars: () -> Unit = {},
     onToggleCalendar: (String) -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val context = LocalContext.current
     var showContactsOptionsSheet by rememberSaveable { mutableStateOf(false) }
@@ -664,7 +685,12 @@ internal fun RestoreDeviceDataConfigContent(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 88.dp, top = 8.dp),
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            end = 16.dp,
+            bottom = 88.dp + contentPadding.calculateBottomPadding(),
+            top = 8.dp
+        ),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item(key = "restore_device_data_items") {

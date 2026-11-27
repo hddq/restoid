@@ -116,9 +116,9 @@ import java.util.Locale
 @Composable
 fun SchedulesScreen(
     viewModel: SchedulesViewModel,
-    onAddSchedule: () -> Unit,
     onEditSchedule: (Schedule) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var scheduleToDelete by remember { mutableStateOf<Schedule?>(null) }
@@ -171,27 +171,9 @@ fun SchedulesScreen(
                         }
                     }
                 }
-                Spacer(Modifier.height(88.dp))
+                Spacer(Modifier.height(88.dp + contentPadding.calculateBottomPadding()))
             }
         }
-
-        val isRepoSelected = uiState.selectedRepoKey != null
-
-        ExtendedFloatingActionButton(
-            onClick = {
-                if (isRepoSelected) {
-                    onAddSchedule()
-                }
-            },
-            icon = { Icon(Icons.Outlined.Add, contentDescription = null) },
-            text = { Text(stringResource(R.string.fab_add_schedule)) },
-            shape = RoundedCornerShape(20.dp),
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp),
-            containerColor = if (isRepoSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
-            contentColor = if (isRepoSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
-        )
     }
 
     scheduleToDelete?.let { schedule ->
@@ -226,7 +208,8 @@ fun AddEditScheduleScreen(
     onNavigateBack: () -> Unit,
     onCreatePreset: (() -> Unit)? = null,
     onEditPreset: ((TaskPreset) -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val state by viewModel.addEditState.collectAsStateWithLifecycle()
     val conditionStatus by viewModel.conditionStatus.collectAsStateWithLifecycle()
@@ -295,7 +278,8 @@ fun AddEditScheduleScreen(
         onRequireBatteryNotLowChange = viewModel::setRequireBatteryNotLow,
         onRequireChargingChange = viewModel::setRequireCharging,
         onRequireUnmeteredNetworkChange = viewModel::setRequireUnmeteredNetwork,
-        modifier = modifier
+        modifier = modifier,
+        contentPadding = contentPadding
     )
 
     if (showPresetPickerSheet) {
@@ -374,7 +358,8 @@ internal fun AddEditScheduleContent(
     onRequireBatteryNotLowChange: (Boolean) -> Unit = {},
     onRequireChargingChange: (Boolean) -> Unit = {},
     onRequireUnmeteredNetworkChange: (Boolean) -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val context = LocalContext.current
     var intervalText by remember(state.intervalHours) { mutableStateOf(state.intervalHours.toString()) }
@@ -384,7 +369,12 @@ internal fun AddEditScheduleContent(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 88.dp, top = 8.dp),
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            end = 16.dp,
+            bottom = 88.dp + contentPadding.calculateBottomPadding(),
+            top = 8.dp
+        ),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {

@@ -110,10 +110,10 @@ import java.util.Locale
 @Composable
 fun PresetsScreen(
     viewModel: PresetsViewModel,
-    onAddPreset: () -> Unit,
     onEditPreset: (TaskPreset) -> Unit,
     onNavigateToOperationProgress: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val hasRoot by viewModel.hasRoot.collectAsStateWithLifecycle()
@@ -143,12 +143,12 @@ fun PresetsScreen(
     PresetsContent(
         uiState = uiState,
         hasRoot = hasRoot,
-        onAddPreset = onAddPreset,
         onEditPreset = onEditPreset,
         onRunPresetNow = viewModel::runPresetNow,
         onDuplicatePreset = viewModel::duplicatePreset,
         onRequestDeletePreset = { presetToDelete = it },
-        modifier = modifier
+        modifier = modifier,
+        contentPadding = contentPadding
     )
 
     presetToDelete?.let { preset ->
@@ -194,12 +194,12 @@ fun PresetsScreen(
 internal fun PresetsContent(
     uiState: PresetsUiState,
     hasRoot: Boolean,
-    onAddPreset: () -> Unit = {},
     onEditPreset: (TaskPreset) -> Unit = {},
     onRunPresetNow: (TaskPreset) -> Unit = {},
     onDuplicatePreset: (TaskPreset) -> Unit = {},
     onRequestDeletePreset: (TaskPreset) -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         if (uiState.isLoading) {
@@ -239,26 +239,9 @@ internal fun PresetsContent(
                         }
                     }
                 }
-                Spacer(Modifier.height(88.dp))
+                Spacer(Modifier.height(88.dp + contentPadding.calculateBottomPadding()))
             }
         }
-
-        val isRepoSelected = uiState.selectedRepoKey != null
-        ExtendedFloatingActionButton(
-            onClick = {
-                if (isRepoSelected) {
-                    onAddPreset()
-                }
-            },
-            icon = { Icon(Icons.Outlined.Add, contentDescription = null) },
-            text = { Text(stringResource(R.string.fab_new_preset)) },
-            shape = RoundedCornerShape(20.dp),
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp),
-            containerColor = if (isRepoSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
-            contentColor = if (isRepoSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
-        )
     }
 }
 
@@ -410,7 +393,8 @@ fun AddEditPresetScreen(
     onNavigateToCheckConfig: () -> Unit,
     onAddScheduleForPreset: ((presetId: String) -> Unit)? = null,
     onEditSchedule: ((Schedule) -> Unit)? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val state by viewModel.addEditState.collectAsStateWithLifecycle()
     val hasRoot by viewModel.hasRoot.collectAsStateWithLifecycle()
@@ -488,7 +472,12 @@ fun AddEditPresetScreen(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 88.dp, top = 8.dp),
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            end = 16.dp,
+            bottom = 88.dp + contentPadding.calculateBottomPadding(),
+            top = 8.dp
+        ),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item(key = "general") {
@@ -885,7 +874,8 @@ private fun LinkedScheduleRow(
 @Composable
 fun PresetBackupConfigScreen(
     viewModel: PresetsViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val state by viewModel.addEditState.collectAsStateWithLifecycle()
     val editor = state.editor
@@ -899,7 +889,8 @@ fun PresetBackupConfigScreen(
         onToggleAppSelection = viewModel::toggleAppSelection,
         onSetSelectedAppsBackupTypes = viewModel::setSelectedAppsBackupTypes,
         onSetAppBackupTypes = viewModel::setAppBackupTypes,
-        modifier = modifier
+        modifier = modifier,
+        contentPadding = contentPadding
     )
 }
 
@@ -907,7 +898,8 @@ fun PresetBackupConfigScreen(
 fun PresetForgetConfigScreen(
     viewModel: PresetsViewModel,
     onOpenDryRun: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val state by viewModel.addEditState.collectAsStateWithLifecycle()
     val editor = state.editor
@@ -933,7 +925,8 @@ fun PresetForgetConfigScreen(
         onUpdateTagColor = viewModel::updateTagColor,
         onDeleteTag = viewModel::deleteTag,
         onOpenDryRun = onOpenDryRun,
-        modifier = modifier
+        modifier = modifier,
+        contentPadding = contentPadding
     )
 }
 
@@ -944,7 +937,8 @@ fun PresetForgetDryRunScreen(
     appInfoMap: Map<String, List<AppInfo>>,
     repoTagsByName: Map<String, BackupTag>,
     onSnapshotClick: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val state by viewModel.addEditState.collectAsStateWithLifecycle()
     val editor = state.editor
@@ -957,27 +951,31 @@ fun PresetForgetDryRunScreen(
         repoTagsByName = repoTagsByName,
         onRunDryRun = viewModel::runForgetDryRun,
         onSnapshotClick = onSnapshotClick,
-        modifier = modifier
+        modifier = modifier,
+        contentPadding = contentPadding
     )
 }
 
 @Composable
 fun PresetCheckConfigScreen(
     viewModel: PresetsViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val state by viewModel.addEditState.collectAsStateWithLifecycle()
     io.github.hddq.restoid.ui.shared.CheckConfigScreen(
         maintenance = state.editor.maintenance,
         onReadDataChange = viewModel::setReadData,
-        modifier = modifier
+        modifier = modifier,
+        contentPadding = contentPadding
     )
 }
 
 @Composable
 fun PresetCustomDirectoriesConfigScreen(
     viewModel: PresetsViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val state by viewModel.addEditState.collectAsStateWithLifecycle()
     val editor = state.editor
@@ -990,14 +988,16 @@ fun PresetCustomDirectoriesConfigScreen(
         onAddExcludedDirectory = viewModel::addExcludedCustomDirectory,
         onToggleExcludedDirectory = viewModel::toggleExcludedCustomDirectory,
         onRemoveExcludedDirectory = viewModel::removeExcludedCustomDirectory,
-        modifier = modifier
+        modifier = modifier,
+        contentPadding = contentPadding
     )
 }
 
 @Composable
 fun PresetDeviceDataConfigScreen(
     viewModel: PresetsViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val state by viewModel.addEditState.collectAsStateWithLifecycle()
     val editor = state.editor
@@ -1022,6 +1022,7 @@ fun PresetDeviceDataConfigScreen(
         onToggleAllCalendars = viewModel::toggleAllCalendars,
         onToggleCalendar = viewModel::toggleCalendar,
         onRefreshCalendars = viewModel::refreshCalendars,
-        modifier = modifier
+        modifier = modifier,
+        contentPadding = contentPadding
     )
 }

@@ -615,7 +615,8 @@ fun BackupConfigScreen(
     onToggleAppSelection: (String) -> Unit,
     onSetSelectedAppsBackupTypes: (BackupTypes) -> Unit,
     onSetAppBackupTypes: (String, BackupTypes) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
     var selectedAppPackageName by remember { mutableStateOf<String?>(null) }
@@ -646,7 +647,12 @@ fun BackupConfigScreen(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp, top = 8.dp),
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            end = 16.dp,
+            bottom = 24.dp + contentPadding.calculateBottomPadding(),
+            top = 8.dp
+        ),
         verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         if (isLoadingApps) {
@@ -745,7 +751,8 @@ fun ForgetConfigScreen(
     onUpdateTagColor: suspend (name: String, colorArgb: Int) -> Result<BackupTag>,
     onDeleteTag: suspend (name: String) -> Result<Unit>,
     onOpenDryRun: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     var showHostsSheet by rememberSaveable { mutableStateOf(false) }
     var showTagsSheet by rememberSaveable { mutableStateOf(false) }
@@ -781,7 +788,12 @@ fun ForgetConfigScreen(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp, top = 8.dp),
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            end = 16.dp,
+            bottom = 24.dp + contentPadding.calculateBottomPadding(),
+            top = 8.dp
+        ),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item(key = "retention_policy_section", contentType = "retention_policy") {
@@ -1064,7 +1076,8 @@ fun ForgetDryRunScreen(
     repoTagsByName: Map<String, BackupTag>,
     onRunDryRun: () -> Unit,
     onSnapshotClick: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     LaunchedEffect(Unit) {
         if (!isRunning && result == null && error == null) {
@@ -1101,7 +1114,12 @@ fun ForgetDryRunScreen(
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 24.dp)
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    top = 8.dp,
+                    end = 16.dp,
+                    bottom = 24.dp + contentPadding.calculateBottomPadding()
+                )
             ) {
                 when {
                     isRunning && result == null -> {
@@ -1769,11 +1787,17 @@ private fun ForgetHostStatusCard(
 fun CheckConfigScreen(
     maintenance: io.github.hddq.restoid.model.MaintenanceConfig,
     onReadDataChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp, top = 8.dp)
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            end = 16.dp,
+            bottom = 24.dp + contentPadding.calculateBottomPadding(),
+            top = 8.dp
+        )
     ) {
         item {
             ExpressiveSegmentedSurface(index = 0, count = 1) {
@@ -1934,7 +1958,8 @@ fun CustomDirectoriesConfigScreen(
     onAddExcludedDirectory: (String) -> Unit = {},
     onToggleExcludedDirectory: (String) -> Unit = {},
     onRemoveExcludedDirectory: (String) -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     var showFolderPicker by remember { mutableStateOf(false) }
     var showExcludePicker by remember { mutableStateOf(false) }
@@ -1944,7 +1969,12 @@ fun CustomDirectoriesConfigScreen(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp, top = 8.dp),
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            end = 16.dp,
+            bottom = 80.dp + contentPadding.calculateBottomPadding(),
+            top = 8.dp
+        ),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
@@ -2505,7 +2535,8 @@ fun DeviceDataConfigScreen(
     onToggleAllCalendars: () -> Unit = {},
     onToggleCalendar: (String) -> Unit = {},
     onRefreshCalendars: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val (hasReadPermission, requestReadPermission) = rememberPermissionsState(
         Manifest.permission.READ_CONTACTS,
@@ -2576,7 +2607,12 @@ fun DeviceDataConfigScreen(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp, top = 8.dp),
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            end = 16.dp,
+            bottom = 24.dp + contentPadding.calculateBottomPadding(),
+            top = 8.dp
+        ),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item(key = "device_data_items") {

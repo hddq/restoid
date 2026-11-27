@@ -119,7 +119,8 @@ internal const val SNAPSHOT_FORGOTTEN_RESULT_KEY = "snapshot_forgotten"
 fun SnapshotDetailsScreen(
     navController: NavController,
     snapshotId: String?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val application = LocalContext.current.applicationContext as RestoidApplication
     val viewModel: SnapshotDetailsViewModel = viewModel(
@@ -205,7 +206,8 @@ fun SnapshotDetailsScreen(
         availableTags = availableTags,
         isLoading = isLoading,
         error = error,
-        modifier = modifier
+        modifier = modifier,
+        contentPadding = contentPadding
     )
 }
 
@@ -218,7 +220,8 @@ internal fun SnapshotDetailsContent(
     availableTags: List<BackupTag> = emptyList(),
     isLoading: Boolean = false,
     error: String? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     Column(
         modifier = modifier
@@ -241,7 +244,10 @@ internal fun SnapshotDetailsContent(
 
                 LazyColumn(
                     modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(bottom = 88.dp, top = 8.dp),
+                    contentPadding = PaddingValues(
+                        bottom = 88.dp + contentPadding.calculateBottomPadding(),
+                        top = 8.dp
+                    ),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     item(key = "header", contentType = "header") {

@@ -76,7 +76,8 @@ fun RunTasksScreen(
     onNavigateToDeviceDataConfig: () -> Unit,
     onNavigateToForgetConfig: () -> Unit,
     onNavigateToCheckConfig: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -181,7 +182,8 @@ fun RunTasksScreen(
         onSetPruneRepo = viewModel::setPruneRepo,
         onSetCheckRepo = viewModel::setCheckRepo,
         onNavigateToCheckConfig = onNavigateToCheckConfig,
-        modifier = modifier
+        modifier = modifier,
+        contentPadding = contentPadding
     )
 
     val editor = uiState.editor
@@ -271,14 +273,20 @@ internal fun RunTasksContent(
     onSetPruneRepo: (Boolean) -> Unit = {},
     onSetCheckRepo: (Boolean) -> Unit = {},
     onNavigateToCheckConfig: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val context = LocalContext.current
     val editor = uiState.editor
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 88.dp, top = 8.dp),
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            end = 16.dp,
+            bottom = 88.dp + contentPadding.calculateBottomPadding(),
+            top = 8.dp
+        ),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         if (uiState.availablePresets.isNotEmpty()) {
@@ -416,7 +424,8 @@ internal fun RunTasksContent(
 @Composable
 fun BackupConfigScreen(
     viewModel: RunTasksViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val hasRoot by viewModel.hasRoot.collectAsStateWithLifecycle()
     if (!hasRoot) {
@@ -438,7 +447,8 @@ fun BackupConfigScreen(
         onToggleAppSelection = viewModel::toggleAppSelection,
         onSetSelectedAppsBackupTypes = viewModel::setSelectedAppsBackupTypes,
         onSetAppBackupTypes = viewModel::setAppBackupTypes,
-        modifier = modifier
+        modifier = modifier,
+        contentPadding = contentPadding
     )
 }
 
@@ -446,7 +456,8 @@ fun BackupConfigScreen(
 fun ForgetConfigScreen(
     viewModel: RunTasksViewModel,
     onOpenDryRun: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val editor = uiState.editor
@@ -472,7 +483,8 @@ fun ForgetConfigScreen(
         onUpdateTagColor = viewModel::updateTagColor,
         onDeleteTag = viewModel::deleteTag,
         onOpenDryRun = onOpenDryRun,
-        modifier = modifier
+        modifier = modifier,
+        contentPadding = contentPadding
     )
 }
 
@@ -483,7 +495,8 @@ fun ForgetDryRunScreen(
     appInfoMap: Map<String, List<AppInfo>>,
     repoTagsByName: Map<String, BackupTag>,
     onSnapshotClick: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val editor = uiState.editor
@@ -496,27 +509,31 @@ fun ForgetDryRunScreen(
         repoTagsByName = repoTagsByName,
         onRunDryRun = viewModel::runForgetDryRun,
         onSnapshotClick = onSnapshotClick,
-        modifier = modifier
+        modifier = modifier,
+        contentPadding = contentPadding
     )
 }
 
 @Composable
 fun CheckConfigScreen(
     viewModel: RunTasksViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     io.github.hddq.restoid.ui.shared.CheckConfigScreen(
         maintenance = uiState.editor.maintenance,
         onReadDataChange = viewModel::setReadData,
-        modifier = modifier
+        modifier = modifier,
+        contentPadding = contentPadding
     )
 }
 
 @Composable
 fun CustomDirectoriesConfigScreen(
     viewModel: RunTasksViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val editor = uiState.editor
@@ -529,14 +546,16 @@ fun CustomDirectoriesConfigScreen(
         onAddExcludedDirectory = viewModel::addExcludedCustomDirectory,
         onToggleExcludedDirectory = viewModel::toggleExcludedCustomDirectory,
         onRemoveExcludedDirectory = viewModel::removeExcludedCustomDirectory,
-        modifier = modifier
+        modifier = modifier,
+        contentPadding = contentPadding
     )
 }
 
 @Composable
 fun DeviceDataConfigScreen(
     viewModel: RunTasksViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val editor = uiState.editor
@@ -561,6 +580,7 @@ fun DeviceDataConfigScreen(
         onToggleAllCalendars = viewModel::toggleAllCalendars,
         onToggleCalendar = viewModel::toggleCalendar,
         onRefreshCalendars = viewModel::refreshCalendars,
-        modifier = modifier
+        modifier = modifier,
+        contentPadding = contentPadding
     )
 }

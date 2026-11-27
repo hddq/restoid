@@ -29,9 +29,12 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -42,6 +45,7 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.MenuOpen
@@ -50,6 +54,7 @@ import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Bookmarks
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Home
@@ -662,7 +667,7 @@ class MainActivity : FragmentActivity() {
                                                             contentColor = if (isRepoReady) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
                                                         )
                                                     }
-                                                ) {
+                                                ) { contentPadding ->
                                                     HomeScreen(
                                                         onSnapshotClick = { snapshotId ->
                                                             navigateFromTab(Screen.Home) {
@@ -705,7 +710,8 @@ class MainActivity : FragmentActivity() {
                                                         onForceStopOperation = { homeViewModel.forceStopOperation() },
                                                         onToggleFilterTag = { homeViewModel.toggleFilterTag(it) },
                                                         onClearFilterTags = { homeViewModel.clearFilterTags() },
-                                                        onRefreshRepoTags = { homeViewModel.refreshRepoTags() }
+                                                        onRefreshRepoTags = { homeViewModel.refreshRepoTags() },
+                                                        contentPadding = contentPadding
                                                     )
                                                 }
                                             }
@@ -726,22 +732,35 @@ class MainActivity : FragmentActivity() {
                                                         app.tagRepository
                                                     )
                                                 )
+                                                val presetsUiState by vm.uiState.collectAsStateWithLifecycle()
+                                                val isRepoSelected = presetsUiState.selectedRepoKey != null
                                                 DestinationScaffold(
                                                     titleRes = R.string.topbar_presets,
                                                     isTopLevel = true,
                                                     reserveBottomNavSpace = !useNavigationRail,
                                                     isExiting = isExiting,
-                                                    onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
-                                                ) {
+                                                    onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() },
+                                                    floatingActionButton = {
+                                                        ExtendedFloatingActionButton(
+                                                            onClick = {
+                                                                if (isRepoSelected) {
+                                                                    navigateFromTab(Screen.Presets) {
+                                                                        selectCreatedPresetInSchedule = false
+                                                                        vm.startAddPreset()
+                                                                        navController.navigate(PresetsRoutes.AddEdit)
+                                                                    }
+                                                                }
+                                                            },
+                                                            icon = { Icon(Icons.Outlined.Add, contentDescription = null) },
+                                                            text = { Text(stringResource(R.string.fab_new_preset)) },
+                                                            shape = RoundedCornerShape(20.dp),
+                                                            containerColor = if (isRepoSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                                                            contentColor = if (isRepoSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+                                                        )
+                                                    }
+                                                ) { contentPadding ->
                                                     PresetsScreen(
                                                         viewModel = vm,
-                                                        onAddPreset = {
-                                                            navigateFromTab(Screen.Presets) {
-                                                                selectCreatedPresetInSchedule = false
-                                                                vm.startAddPreset()
-                                                                navController.navigate(PresetsRoutes.AddEdit)
-                                                            }
-                                                        },
                                                         onEditPreset = { preset ->
                                                             navigateFromTab(Screen.Presets) {
                                                                 selectCreatedPresetInSchedule = false
@@ -755,7 +774,8 @@ class MainActivity : FragmentActivity() {
                                                                     launchSingleTop = true
                                                                 }
                                                             }
-                                                        }
+                                                        },
+                                                        contentPadding = contentPadding
                                                     )
                                                 }
                                             }
@@ -770,27 +790,41 @@ class MainActivity : FragmentActivity() {
                                                         app.rootRepository
                                                     )
                                                 )
+                                                val schedulesUiState by vm.uiState.collectAsStateWithLifecycle()
+                                                val isRepoSelected = schedulesUiState.selectedRepoKey != null
                                                 DestinationScaffold(
                                                     titleRes = R.string.topbar_schedules,
                                                     isTopLevel = true,
                                                     reserveBottomNavSpace = !useNavigationRail,
                                                     isExiting = isExiting,
-                                                    onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
-                                                ) {
+                                                    onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() },
+                                                    floatingActionButton = {
+                                                        ExtendedFloatingActionButton(
+                                                            onClick = {
+                                                                if (isRepoSelected) {
+                                                                    navigateFromTab(Screen.Schedules) {
+                                                                        vm.startAddSchedule()
+                                                                        navController.navigate(SchedulesRoutes.AddEdit)
+                                                                    }
+                                                                }
+                                                            },
+                                                            icon = { Icon(Icons.Outlined.Add, contentDescription = null) },
+                                                            text = { Text(stringResource(R.string.fab_add_schedule)) },
+                                                            shape = RoundedCornerShape(20.dp),
+                                                            containerColor = if (isRepoSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                                                            contentColor = if (isRepoSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+                                                        )
+                                                    }
+                                                ) { contentPadding ->
                                                     SchedulesScreen(
                                                         viewModel = vm,
-                                                        onAddSchedule = {
-                                                            navigateFromTab(Screen.Schedules) {
-                                                                vm.startAddSchedule()
-                                                                navController.navigate(SchedulesRoutes.AddEdit)
-                                                            }
-                                                        },
                                                         onEditSchedule = { schedule ->
                                                             navigateFromTab(Screen.Schedules) {
                                                                 vm.startEditSchedule(schedule)
                                                                 navController.navigate(SchedulesRoutes.AddEdit)
                                                             }
-                                                        }
+                                                        },
+                                                        contentPadding = contentPadding
                                                     )
                                                 }
                                             }
@@ -816,14 +850,15 @@ class MainActivity : FragmentActivity() {
                                                     reserveBottomNavSpace = !useNavigationRail,
                                                     isExiting = isExiting,
                                                     onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
-                                                ) {
+                                                ) { contentPadding ->
                                                     SettingsScreen(
                                                         viewModel = vm,
                                                         onNavigateToLicenses = {
                                                             navigateFromTab(Screen.Settings) {
                                                                 navController.navigate(Screen.Licenses.route)
                                                             }
-                                                        }
+                                                        },
+                                                        contentPadding = contentPadding
                                                     )
                                                 }
                                             }
@@ -884,7 +919,7 @@ class MainActivity : FragmentActivity() {
                                                 )
                                             }
                                         }
-                                    ) {
+                                    ) { contentPadding ->
                                         AddEditPresetScreen(
                                             viewModel = vm,
                                             onNavigateBack = { savedPresetId ->
@@ -919,7 +954,8 @@ class MainActivity : FragmentActivity() {
                                                     schedulesVm.startEditSchedule(schedule)
                                                     navController.navigate(SchedulesRoutes.AddEdit)
                                                 }
-                                            }
+                                            },
+                                            contentPadding = contentPadding
                                         )
                                     }
                                 }
@@ -958,8 +994,8 @@ class MainActivity : FragmentActivity() {
                                                 )
                                             }
                                         }
-                                    ) {
-                                        PresetBackupConfigScreen(viewModel = vm)
+                                    ) { contentPadding ->
+                                        PresetBackupConfigScreen(viewModel = vm, contentPadding = contentPadding)
                                     }
                                 }
                                 composable(PresetsRoutes.ForgetConfig) { backStackEntry ->
@@ -987,13 +1023,14 @@ class MainActivity : FragmentActivity() {
                                         isTopLevel = false,
                                         isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
-                                    ) {
+                                    ) { contentPadding ->
                                         PresetForgetConfigScreen(
                                             viewModel = vm,
                                             onOpenDryRun = {
                                                 vm.runForgetDryRun()
                                                 navController.navigate(PresetsRoutes.ForgetDryRun)
-                                            }
+                                            },
+                                            contentPadding = contentPadding
                                         )
                                     }
                                 }
@@ -1031,7 +1068,7 @@ class MainActivity : FragmentActivity() {
                                         isTopLevel = false,
                                         isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
-                                    ) {
+                                    ) { contentPadding ->
                                         PresetForgetDryRunScreen(
                                             viewModel = vm,
                                             snapshotsWithMetadata = homeUiState.snapshotsWithMetadata,
@@ -1039,7 +1076,8 @@ class MainActivity : FragmentActivity() {
                                             repoTagsByName = homeUiState.repoTagsByName,
                                             onSnapshotClick = { snapshotId ->
                                                 navController.navigate("${Screen.SnapshotDetails.route}/$snapshotId")
-                                            }
+                                            },
+                                            contentPadding = contentPadding
                                         )
                                     }
                                 }
@@ -1068,8 +1106,8 @@ class MainActivity : FragmentActivity() {
                                         isTopLevel = false,
                                         isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
-                                    ) {
-                                        PresetCheckConfigScreen(viewModel = vm)
+                                    ) { contentPadding ->
+                                        PresetCheckConfigScreen(viewModel = vm, contentPadding = contentPadding)
                                     }
                                 }
                                 composable(PresetsRoutes.CustomDirectoriesConfig) { backStackEntry ->
@@ -1097,8 +1135,8 @@ class MainActivity : FragmentActivity() {
                                         isTopLevel = false,
                                         isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
-                                    ) {
-                                        PresetCustomDirectoriesConfigScreen(viewModel = vm)
+                                    ) { contentPadding ->
+                                        PresetCustomDirectoriesConfigScreen(viewModel = vm, contentPadding = contentPadding)
                                     }
                                 }
                                 composable(PresetsRoutes.DeviceDataConfig) { backStackEntry ->
@@ -1126,8 +1164,8 @@ class MainActivity : FragmentActivity() {
                                         isTopLevel = false,
                                         isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
-                                    ) {
-                                        PresetDeviceDataConfigScreen(viewModel = vm)
+                                    ) { contentPadding ->
+                                        PresetDeviceDataConfigScreen(viewModel = vm, contentPadding = contentPadding)
                                     }
                                 }
                             }
@@ -1184,7 +1222,7 @@ class MainActivity : FragmentActivity() {
                                                 )
                                             }
                                         }
-                                    ) {
+                                    ) { contentPadding ->
                                         AddEditScheduleScreen(
                                             viewModel = vm,
                                             onNavigateBack = {
@@ -1209,7 +1247,8 @@ class MainActivity : FragmentActivity() {
                                                     presetsVm.startEditPreset(preset)
                                                     navController.navigate(PresetsRoutes.AddEdit)
                                                 }
-                                            }
+                                            },
+                                            contentPadding = contentPadding
                                         )
                                     }
                                 }
@@ -1253,7 +1292,7 @@ class MainActivity : FragmentActivity() {
                                                 )
                                             }
                                         }
-                                    ) {
+                                    ) { contentPadding ->
                                         RunTasksScreen(
                                             viewModel = vm,
                                             onNavigateToOperationProgress = {
@@ -1263,7 +1302,8 @@ class MainActivity : FragmentActivity() {
                                             onNavigateToCustomDirectoriesConfig = { navController.navigate(RunTasksRoutes.CustomDirectoriesConfig) },
                                             onNavigateToDeviceDataConfig = { navController.navigate(RunTasksRoutes.DeviceDataConfig) },
                                             onNavigateToForgetConfig = { navController.navigate(RunTasksRoutes.ForgetConfig) },
-                                            onNavigateToCheckConfig = { navController.navigate(RunTasksRoutes.CheckConfig) }
+                                            onNavigateToCheckConfig = { navController.navigate(RunTasksRoutes.CheckConfig) },
+                                            contentPadding = contentPadding
                                         )
                                     }
                                 }
@@ -1302,8 +1342,8 @@ class MainActivity : FragmentActivity() {
                                                 )
                                             }
                                         }
-                                    ) {
-                                        BackupConfigScreen(viewModel = vm)
+                                    ) { contentPadding ->
+                                        BackupConfigScreen(viewModel = vm, contentPadding = contentPadding)
                                     }
                                 }
                                 composable(RunTasksRoutes.CustomDirectoriesConfig) { backStackEntry ->
@@ -1330,8 +1370,8 @@ class MainActivity : FragmentActivity() {
                                         isTopLevel = false,
                                         isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
-                                    ) {
-                                        CustomDirectoriesConfigScreen(viewModel = vm)
+                                    ) { contentPadding ->
+                                        CustomDirectoriesConfigScreen(viewModel = vm, contentPadding = contentPadding)
                                     }
                                 }
                                 composable(RunTasksRoutes.DeviceDataConfig) { backStackEntry ->
@@ -1358,8 +1398,8 @@ class MainActivity : FragmentActivity() {
                                         isTopLevel = false,
                                         isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
-                                    ) {
-                                        DeviceDataConfigScreen(viewModel = vm)
+                                    ) { contentPadding ->
+                                        DeviceDataConfigScreen(viewModel = vm, contentPadding = contentPadding)
                                     }
                                 }
                                 composable(RunTasksRoutes.ForgetConfig) { backStackEntry ->
@@ -1386,13 +1426,14 @@ class MainActivity : FragmentActivity() {
                                         isTopLevel = false,
                                         isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
-                                    ) {
+                                    ) { contentPadding ->
                                         ForgetConfigScreen(
                                             viewModel = vm,
                                             onOpenDryRun = {
                                                 vm.runForgetDryRun()
                                                 navController.navigate(RunTasksRoutes.ForgetDryRun)
-                                            }
+                                            },
+                                            contentPadding = contentPadding
                                         )
                                     }
                                 }
@@ -1429,7 +1470,7 @@ class MainActivity : FragmentActivity() {
                                         isTopLevel = false,
                                         isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
-                                    ) {
+                                    ) { contentPadding ->
                                         ForgetDryRunScreen(
                                             viewModel = vm,
                                             snapshotsWithMetadata = homeUiState.snapshotsWithMetadata,
@@ -1437,7 +1478,8 @@ class MainActivity : FragmentActivity() {
                                             repoTagsByName = homeUiState.repoTagsByName,
                                             onSnapshotClick = { snapshotId ->
                                                 navController.navigate("${Screen.SnapshotDetails.route}/$snapshotId")
-                                            }
+                                            },
+                                            contentPadding = contentPadding
                                         )
                                     }
                                 }
@@ -1465,8 +1507,8 @@ class MainActivity : FragmentActivity() {
                                         isTopLevel = false,
                                         isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
-                                    ) {
-                                        CheckConfigScreen(viewModel = vm)
+                                    ) { contentPadding ->
+                                        CheckConfigScreen(viewModel = vm, contentPadding = contentPadding)
                                     }
                                 }
                             }
@@ -1488,10 +1530,11 @@ class MainActivity : FragmentActivity() {
                                             onClick = { navController.navigate("${Screen.Restore.route}/$snapshotId") }
                                         )
                                     }
-                                ) {
+                                ) { contentPadding ->
                                     SnapshotDetailsScreen(
                                         navController = navController,
-                                        snapshotId = snapshotId
+                                        snapshotId = snapshotId,
+                                        contentPadding = contentPadding
                                     )
                                 }
                             }
@@ -1539,13 +1582,14 @@ class MainActivity : FragmentActivity() {
                                                 )
                                             }
                                         }
-                                    ) {
+                                    ) { contentPadding ->
                                         RestoreScreen(
                                             viewModel = viewModel,
                                             onNavigateToOperationProgress = { navController.navigate(Screen.OperationProgress.route) { launchSingleTop = true } },
                                             onNavigateToAppsConfig = { navController.navigate(io.github.hddq.restoid.ui.restore.RestoreRoutes.AppsConfig) },
                                             onNavigateToCustomDirectoriesConfig = { navController.navigate(io.github.hddq.restoid.ui.restore.RestoreRoutes.CustomDirectoriesConfig) },
-                                            onNavigateToDeviceDataConfig = { navController.navigate(io.github.hddq.restoid.ui.restore.RestoreRoutes.DeviceDataConfig) }
+                                            onNavigateToDeviceDataConfig = { navController.navigate(io.github.hddq.restoid.ui.restore.RestoreRoutes.DeviceDataConfig) },
+                                            contentPadding = contentPadding
                                         )
                                     }
                                 }
@@ -1586,8 +1630,11 @@ class MainActivity : FragmentActivity() {
                                                 )
                                             }
                                         }
-                                    ) {
-                                        io.github.hddq.restoid.ui.screens.RestoreAppsConfigScreen(viewModel = vm)
+                                    ) { contentPadding ->
+                                        io.github.hddq.restoid.ui.screens.RestoreAppsConfigScreen(
+                                            viewModel = vm,
+                                            contentPadding = contentPadding
+                                        )
                                     }
                                 }
                                 composable(io.github.hddq.restoid.ui.restore.RestoreRoutes.CustomDirectoriesConfig) { backStackEntry ->
@@ -1615,8 +1662,11 @@ class MainActivity : FragmentActivity() {
                                         isTopLevel = false,
                                         isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
-                                    ) {
-                                        io.github.hddq.restoid.ui.screens.RestoreCustomDirectoriesConfigScreen(viewModel = vm)
+                                    ) { contentPadding ->
+                                        io.github.hddq.restoid.ui.screens.RestoreCustomDirectoriesConfigScreen(
+                                            viewModel = vm,
+                                            contentPadding = contentPadding
+                                        )
                                     }
                                 }
                                 composable(io.github.hddq.restoid.ui.restore.RestoreRoutes.DeviceDataConfig) { backStackEntry ->
@@ -1644,8 +1694,11 @@ class MainActivity : FragmentActivity() {
                                         isTopLevel = false,
                                         isExiting = transition.targetState == EnterExitState.PostExit,
                                         onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
-                                    ) {
-                                        io.github.hddq.restoid.ui.screens.RestoreDeviceDataConfigScreen(viewModel = vm)
+                                    ) { contentPadding ->
+                                        io.github.hddq.restoid.ui.screens.RestoreDeviceDataConfigScreen(
+                                            viewModel = vm,
+                                            contentPadding = contentPadding
+                                        )
                                     }
                                 }
                             }
@@ -1655,8 +1708,11 @@ class MainActivity : FragmentActivity() {
                                     isTopLevel = false,
                                     isExiting = transition.targetState == EnterExitState.PostExit,
                                     onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
-                                ) {
-                                    LicensesScreen(onNavigateUp = { navController.navigateUp() })
+                                ) { contentPadding ->
+                                    LicensesScreen(
+                                        onNavigateUp = { navController.navigateUp() },
+                                        contentPadding = contentPadding
+                                    )
                                 }
                             }
                             composable(Screen.OperationProgress.route) {
@@ -1665,8 +1721,11 @@ class MainActivity : FragmentActivity() {
                                     isTopLevel = false,
                                     isExiting = transition.targetState == EnterExitState.PostExit,
                                     onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
-                                ) {
-                                    OperationProgressScreen(onNavigateUp = { navController.navigateUp() })
+                                ) { contentPadding ->
+                                    OperationProgressScreen(
+                                        onNavigateUp = { navController.navigateUp() },
+                                        contentPadding = contentPadding
+                                    )
                                 }
                             }
                             composable(
@@ -1688,11 +1747,12 @@ class MainActivity : FragmentActivity() {
                                     isTopLevel = false,
                                     isExiting = transition.targetState == EnterExitState.PostExit,
                                     onBack = { this@MainActivity.onBackPressedDispatcher.onBackPressed() }
-                                ) {
+                                ) { contentPadding ->
                                     OperationLogsScreen(
                                         viewModel = viewModel,
                                         initialSelectedLogId = initialLogId,
-                                        onNavigateUp = { navController.navigateUp() }
+                                        onNavigateUp = { navController.navigateUp() },
+                                        contentPadding = contentPadding
                                     )
                                 }
                             }
@@ -2005,7 +2065,7 @@ internal fun DestinationScaffold(
     onBack: () -> Unit,
     actions: @Composable RowScope.() -> Unit = {},
     floatingActionButton: @Composable () -> Unit = {},
-    content: @Composable () -> Unit
+    content: @Composable (PaddingValues) -> Unit
 ) {
     val appBarActions = remember { mutableStateOf<(@Composable RowScope.() -> Unit)?>(null) }
     CompositionLocalProvider(LocalAppBarActions provides appBarActions) {
@@ -2071,12 +2131,17 @@ internal fun DestinationScaffold(
             },
             floatingActionButton = floatingActionButton
         ) { innerPadding ->
+            val layoutDirection = LocalLayoutDirection.current
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
+                    .padding(
+                        start = innerPadding.calculateStartPadding(layoutDirection),
+                        top = innerPadding.calculateTopPadding(),
+                        end = innerPadding.calculateEndPadding(layoutDirection)
+                    )
             ) {
-                content()
+                content(PaddingValues(bottom = innerPadding.calculateBottomPadding()))
             }
         }
     }
