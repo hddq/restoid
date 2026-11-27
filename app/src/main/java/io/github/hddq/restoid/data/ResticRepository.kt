@@ -511,6 +511,7 @@ class ResticRepository(
         keepMonthly: Int,
         forgetAllHosts: Boolean = true,
         forgetHosts: List<String> = emptyList(),
+        forgetTags: List<String> = emptyList(),
         environmentVariables: Map<String, String> = emptyMap(),
         resticOptions: Map<String, String> = emptyMap()
     ): Result<String> {
@@ -520,7 +521,8 @@ class ResticRepository(
             keepWeekly = keepWeekly,
             keepMonthly = keepMonthly,
             forgetAllHosts = forgetAllHosts,
-            forgetHosts = forgetHosts
+            forgetHosts = forgetHosts,
+            forgetTags = forgetTags
         ).getOrElse { failure ->
             return Result.failure(failure)
         }
@@ -541,7 +543,8 @@ class ResticRepository(
         keepWeekly: Int,
         keepMonthly: Int,
         forgetAllHosts: Boolean = true,
-        forgetHosts: List<String> = emptyList()
+        forgetHosts: List<String> = emptyList(),
+        forgetTags: List<String> = emptyList()
     ): Result<String> {
         val forgetOptions = buildString {
             if (keepLast > 0) append(" --keep-last $keepLast")
@@ -567,7 +570,13 @@ class ResticRepository(
             normalizedHosts.joinToString("") { " --host ${shellQuote(it)}" }
         }
 
-        val groupingAndTagOptions = " --group-by host,tags --tag 'restoid' --tag 'backup'"
+        val sanitizedTags = io.github.hddq.restoid.model.BackupTagRules.sanitizeBackupTags(forgetTags)
+        val groupingAndTagOptions = if (sanitizedTags.isEmpty()) {
+            " --group-by host,tags --tag 'restoid,backup'"
+        } else {
+            val tagOptions = sanitizedTags.joinToString("") { " --tag ${shellQuote("restoid,backup,$it")}" }
+            " --group-by host$tagOptions"
+        }
         return Result.success("forget$forgetOptions$hostOptions$groupingAndTagOptions")
     }
 

@@ -899,6 +899,11 @@ fun PresetForgetConfigScreen(
         onRemoveHost = viewModel::removeCustomForgetHost,
         onRefreshHosts = { viewModel.refreshForgetHosts(userInitiated = true) },
         onAutoLoadHosts = { viewModel.refreshForgetHosts(userInitiated = false) },
+        availableTags = editor.availableTags,
+        onToggleForgetTag = viewModel::toggleForgetTag,
+        onCreateForgetTag = viewModel::createForgetTag,
+        onUpdateTagColor = viewModel::updateTagColor,
+        onDeleteTag = viewModel::deleteTag,
         modifier = modifier
     )
 }

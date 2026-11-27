@@ -99,6 +99,7 @@ fun TaskConfigEditorState.toRunTasksConfig(hasRoot: Boolean): RunTasksConfig {
         keepMonthly = maintenance.keepMonthly,
         forgetAllHosts = maintenance.forgetAllHosts,
         forgetHosts = if (maintenance.forgetAllHosts) emptyList() else normalizeForgetHosts(maintenance.forgetHosts),
+        forgetTags = BackupTagRules.sanitizeBackupTags(maintenance.forgetTags),
         backupTags = BackupTagRules.sanitizeBackupTags(backupTags)
     )
 }
@@ -142,7 +143,8 @@ fun TaskConfigEditorState.withAppliedRunTasksConfig(
             keepWeekly = config.keepWeekly,
             keepMonthly = config.keepMonthly,
             forgetAllHosts = config.forgetAllHosts,
-            forgetHosts = normalizedHosts
+            forgetHosts = normalizedHosts,
+            forgetTags = BackupTagRules.sanitizeBackupTags(config.forgetTags)
         ),
         customDirectoriesBackupEnabled = config.customDirectories.isNotEmpty() || config.excludedCustomDirectories.isNotEmpty(),
         deviceDataBackupEnabled = config.deviceData.anyEnabled(),
@@ -774,21 +776,48 @@ class TaskConfigEditorController(
         }
     }
 
-    suspend fun createTag(repoId: String, name: String, colorArgb: Int): Result<BackupTag> {
+    fun toggleForgetTag(tagName: String) {
+        val normalized = BackupTagRules.normalizeTagName(tagName)
+        if (normalized.isEmpty()) return
+        mutateConfig { state ->
+            val current = state.maintenance.forgetTags
+            val exists = current.any { it.equals(normalized, ignoreCase = true) }
+            val updated = if (exists) {
+                current.filterNot { it.equals(normalized, ignoreCase = true) }
+            } else {
+                current + normalized
+            }
+            state.copy(maintenance = state.maintenance.copy(forgetTags = updated))
+        }
+    }
+
+    suspend fun createTag(
+        repoId: String,
+        name: String,
+        colorArgb: Int,
+        selectInBackup: Boolean = true,
+        selectInForget: Boolean = false
+    ): Result<BackupTag> {
         val repo = tagRepository ?: return Result.failure(IllegalStateException("TagRepository not configured"))
         loadTagsJob?.cancel()
         val result = repo.createTag(repoId, name, colorArgb)
         result.onSuccess { created ->
             val tags = repo.getTags(repoId)
             mutateConfig { state ->
-                val updatedSelection = if (state.backupTags.any { it.equals(created.name, ignoreCase = true) }) {
-                    state.backupTags
-                } else {
+                val updatedBackupTags = if (selectInBackup && state.backupTags.none { it.equals(created.name, ignoreCase = true) }) {
                     state.backupTags + created.name
+                } else {
+                    state.backupTags
+                }
+                val updatedForgetTags = if (selectInForget && state.maintenance.forgetTags.none { it.equals(created.name, ignoreCase = true) }) {
+                    state.maintenance.forgetTags + created.name
+                } else {
+                    state.maintenance.forgetTags
                 }
                 state.copy(
                     availableTags = tags,
-                    backupTags = updatedSelection
+                    backupTags = updatedBackupTags,
+                    maintenance = state.maintenance.copy(forgetTags = updatedForgetTags)
                 )
             }
         }
@@ -813,12 +842,17 @@ class TaskConfigEditorController(
         result.onSuccess {
             val tags = repo.getTags(repoId)
             val normalized = BackupTagRules.normalizeTagName(name)
-            val hadTagSelected = readState().backupTags.any { it.equals(normalized, ignoreCase = true) }
-            if (hadTagSelected) {
+            val currentState = readState()
+            val hadBackupTag = currentState.backupTags.any { it.equals(normalized, ignoreCase = true) }
+            val hadForgetTag = currentState.maintenance.forgetTags.any { it.equals(normalized, ignoreCase = true) }
+            if (hadBackupTag || hadForgetTag) {
                 mutateConfig { state ->
                     state.copy(
                         availableTags = tags,
-                        backupTags = state.backupTags.filterNot { it.equals(normalized, ignoreCase = true) }
+                        backupTags = state.backupTags.filterNot { it.equals(normalized, ignoreCase = true) },
+                        maintenance = state.maintenance.copy(
+                            forgetTags = state.maintenance.forgetTags.filterNot { it.equals(normalized, ignoreCase = true) }
+                        )
                     )
                 }
             } else {

@@ -215,6 +215,12 @@
     </plurals>
     <string name="forget_hosts_credentials_required">Open the repository on Home or save its credentials to load hosts.</string>
     <string name="forget_hosts_picker_title">Target hosts</string>
+    <string name="forget_tags_picker_title">Target tags</string>
+    <string name="forget_tags_all">All tags</string>
+    <plurals name="forget_tags_subtitle_count">
+        <item quantity="one">%1$d tag</item>
+        <item quantity="other">%1$d tags</item>
+    </plurals>
     <string name="forget_hosts_sheet_title">Select hosts</string>
     <string name="forget_hosts_sheet_empty">No hosts available yet. Refresh hosts or add a hostname manually.</string>
     <string name="forget_hosts_toggle_all_title">Toggle all devices</string>

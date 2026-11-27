@@ -258,7 +258,8 @@ fun BackupTagPickerSheet(
     onUpdateTagColor: suspend (name: String, colorArgb: Int) -> Result<BackupTag>,
     onDeleteTag: suspend (name: String) -> Result<Unit>,
     onDismissRequest: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    title: String = stringResource(R.string.run_tasks_tags)
 ) {
     val scope = rememberCoroutineScope()
     var showCreateDialog by remember { mutableStateOf(false) }
@@ -283,7 +284,7 @@ fun BackupTagPickerSheet(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = stringResource(R.string.run_tasks_tags),
+                    text = title,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold
                 )

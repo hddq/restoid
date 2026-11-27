@@ -40,6 +40,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.AccessibilityNew
 import androidx.compose.material.icons.outlined.AccountCircle
@@ -128,9 +129,12 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.model.AppInfo
+import io.github.hddq.restoid.model.BackupTag
+import io.github.hddq.restoid.model.BackupTagRules
 import io.github.hddq.restoid.model.CalendarInfo
 import io.github.hddq.restoid.model.ContactAccountInfo
 import io.github.hddq.restoid.work.ExclusionConflict
+import io.github.hddq.restoid.ui.components.BackupTagPickerSheet
 import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
 import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
@@ -722,9 +726,15 @@ fun ForgetConfigScreen(
     onRemoveHost: (String) -> Unit,
     onRefreshHosts: () -> Unit,
     onAutoLoadHosts: () -> Unit,
+    availableTags: List<BackupTag>,
+    onToggleForgetTag: (String) -> Unit,
+    onCreateForgetTag: suspend (name: String, colorArgb: Int) -> Result<BackupTag>,
+    onUpdateTagColor: suspend (name: String, colorArgb: Int) -> Result<BackupTag>,
+    onDeleteTag: suspend (name: String) -> Result<Unit>,
     modifier: Modifier = Modifier
 ) {
     var showHostsSheet by rememberSaveable { mutableStateOf(false) }
+    var showTagsSheet by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         if (!areRepoSnapshotsLoaded) {
@@ -886,6 +896,78 @@ fun ForgetConfigScreen(
                 }
             }
         }
+
+        item(key = "tags_filter_section", contentType = "tags_filter") {
+            val selectedTags = remember(maintenance.forgetTags) {
+                BackupTagRules.sanitizeBackupTags(maintenance.forgetTags)
+            }
+            val tagsSubtitle = if (selectedTags.isEmpty()) {
+                stringResource(R.string.forget_tags_all)
+            } else {
+                selectedTags.joinToString(", ")
+            }
+
+            Column(modifier = Modifier.fillMaxWidth()) {
+                ExpressiveSectionHeader(title = stringResource(R.string.run_tasks_tags))
+                ExpressiveSegmentedSurface(
+                    index = 0,
+                    count = 1
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showTagsSheet = true }
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.Label,
+                            contentDescription = null,
+                            tint = if (selectedTags.isNotEmpty()) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                        )
+                        Spacer(Modifier.width(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(R.string.forget_tags_picker_title),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = tagsSubtitle,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        if (selectedTags.isNotEmpty()) {
+                            Surface(
+                                shape = RoundedCornerShape(50),
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            ) {
+                                Text(
+                                    text = selectedTags.size.toString(),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                )
+                            }
+                            Spacer(Modifier.width(8.dp))
+                        }
+                        Icon(
+                            imageVector = Icons.Outlined.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
     }
 
     if (showHostsSheet) {
@@ -903,6 +985,19 @@ fun ForgetConfigScreen(
             onRemoveHost = onRemoveHost,
             onRefreshHosts = onRefreshHosts,
             onDismissRequest = { showHostsSheet = false }
+        )
+    }
+
+    if (showTagsSheet) {
+        BackupTagPickerSheet(
+            availableTags = availableTags,
+            selectedTags = maintenance.forgetTags,
+            onToggleTag = onToggleForgetTag,
+            onCreateTag = onCreateForgetTag,
+            onUpdateTagColor = onUpdateTagColor,
+            onDeleteTag = onDeleteTag,
+            onDismissRequest = { showTagsSheet = false },
+            title = stringResource(R.string.forget_tags_picker_title)
         )
     }
 }
@@ -1441,20 +1536,34 @@ fun buildForgetSubtitle(config: io.github.hddq.restoid.model.MaintenanceConfig, 
         config.keepWeekly,
         config.keepMonthly
     )
-    if (config.forgetAllHosts) {
-        return policyText
+    val parts = mutableListOf(policyText)
+    if (!config.forgetAllHosts) {
+        val selectedHosts = normalizeForgetHosts(config.forgetHosts)
+        val hostsText = when (selectedHosts.size) {
+            0 -> context.getString(R.string.forget_hosts_subtitle_none)
+            1 -> context.getString(R.string.forget_hosts_subtitle_single, selectedHosts.first())
+            else -> context.resources.getQuantityString(
+                R.plurals.forget_hosts_subtitle_count,
+                selectedHosts.size,
+                selectedHosts.size
+            )
+        }
+        parts.add(hostsText)
     }
-    val selectedHosts = normalizeForgetHosts(config.forgetHosts)
-    val hostsText = when (selectedHosts.size) {
-        0 -> context.getString(R.string.forget_hosts_subtitle_none)
-        1 -> context.getString(R.string.forget_hosts_subtitle_single, selectedHosts.first())
-        else -> context.resources.getQuantityString(
-            R.plurals.forget_hosts_subtitle_count,
-            selectedHosts.size,
-            selectedHosts.size
-        )
+    val selectedTags = BackupTagRules.sanitizeBackupTags(config.forgetTags)
+    if (selectedTags.isNotEmpty()) {
+        val tagsText = if (selectedTags.size == 1) {
+            selectedTags.first()
+        } else {
+            context.resources.getQuantityString(
+                R.plurals.forget_tags_subtitle_count,
+                selectedTags.size,
+                selectedTags.size
+            )
+        }
+        parts.add(tagsText)
     }
-    return context.getString(R.string.run_tasks_forget_subtitle_with_hosts, policyText, hostsText)
+    return parts.joinToString(" · ")
 }
 
 fun buildCheckSubtitle(config: io.github.hddq.restoid.model.MaintenanceConfig, context: android.content.Context): String {
