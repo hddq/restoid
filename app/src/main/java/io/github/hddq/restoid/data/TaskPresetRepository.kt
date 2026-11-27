@@ -95,22 +95,12 @@ class TaskPresetRepository internal constructor(
         val presets = getPresets(repoId)
         var updatedCount = 0
         val updatedPresets = presets.map { preset ->
-            val filteredBackupTags = preset.config.backupTags.filterNot {
+            val filteredTags = preset.config.backupTags.filterNot {
                 BackupTagRules.normalizeTagName(it).equals(normalizedTagName, ignoreCase = true)
             }
-            val filteredForgetTags = preset.config.forgetTags.filterNot {
-                BackupTagRules.normalizeTagName(it).equals(normalizedTagName, ignoreCase = true)
-            }
-            if (filteredBackupTags.size != preset.config.backupTags.size ||
-                filteredForgetTags.size != preset.config.forgetTags.size
-            ) {
+            if (filteredTags.size != preset.config.backupTags.size) {
                 updatedCount++
-                preset.copy(
-                    config = preset.config.copy(
-                        backupTags = filteredBackupTags,
-                        forgetTags = filteredForgetTags
-                    )
-                )
+                preset.copy(config = preset.config.copy(backupTags = filteredTags))
             } else {
                 preset
             }

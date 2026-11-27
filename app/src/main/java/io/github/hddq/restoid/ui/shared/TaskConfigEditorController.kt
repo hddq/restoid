@@ -842,17 +842,12 @@ class TaskConfigEditorController(
         result.onSuccess {
             val tags = repo.getTags(repoId)
             val normalized = BackupTagRules.normalizeTagName(name)
-            val currentState = readState()
-            val hadBackupTag = currentState.backupTags.any { it.equals(normalized, ignoreCase = true) }
-            val hadForgetTag = currentState.maintenance.forgetTags.any { it.equals(normalized, ignoreCase = true) }
-            if (hadBackupTag || hadForgetTag) {
+            val hadTagSelected = readState().backupTags.any { it.equals(normalized, ignoreCase = true) }
+            if (hadTagSelected) {
                 mutateConfig { state ->
                     state.copy(
                         availableTags = tags,
-                        backupTags = state.backupTags.filterNot { it.equals(normalized, ignoreCase = true) },
-                        maintenance = state.maintenance.copy(
-                            forgetTags = state.maintenance.forgetTags.filterNot { it.equals(normalized, ignoreCase = true) }
-                        )
+                        backupTags = state.backupTags.filterNot { it.equals(normalized, ignoreCase = true) }
                     )
                 }
             } else {

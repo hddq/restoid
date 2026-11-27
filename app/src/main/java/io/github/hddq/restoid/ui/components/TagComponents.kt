@@ -307,7 +307,7 @@ fun BackupTagPickerSheet(
             }
             val entries = availableTags.map { tag ->
                 TagPickerEntry(
-                    key = tag.name,
+                    key = "tracked_${tag.name}",
                     name = tag.name,
                     tag = tag,
                     isSelected = selectedTags.any { it.equals(tag.name, ignoreCase = true) }

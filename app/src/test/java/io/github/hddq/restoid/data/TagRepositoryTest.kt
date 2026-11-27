@@ -105,7 +105,7 @@ class TagRepositoryTest {
         assertTrue(deleted.isSuccess)
         assertTrue(tagRepo.getTags(repoId).isEmpty())
         assertEquals(listOf("personal"), presetRepo.getPresetById(repoId, "p-1")?.config?.backupTags)
-        assertEquals(listOf("archive"), presetRepo.getPresetById(repoId, "p-1")?.config?.forgetTags)
+        assertEquals(listOf("Work", "archive"), presetRepo.getPresetById(repoId, "p-1")?.config?.forgetTags)
         assertEquals(listOf("personal"), presetRepo.getPresetById(repoId, "p-2")?.config?.backupTags)
     }
 
