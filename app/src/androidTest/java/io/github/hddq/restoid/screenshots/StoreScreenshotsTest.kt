@@ -1,5 +1,7 @@
 package io.github.hddq.restoid.screenshots
 
+import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.Build
@@ -27,8 +29,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -58,12 +64,14 @@ import io.github.hddq.restoid.ui.shared.BackupConfigScreen
 import io.github.hddq.restoid.ui.shared.BackupTypes
 import io.github.hddq.restoid.ui.shared.ProgressScreenContent
 import io.github.hddq.restoid.ui.theme.RestoidTheme
+import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
 import java.io.FileOutputStream
+import java.util.Locale
 
 @RunWith(AndroidJUnit4::class)
 class StoreScreenshotsTest {
@@ -77,8 +85,20 @@ class StoreScreenshotsTest {
     private val targetContext
         get() = InstrumentationRegistry.getInstrumentation().targetContext
 
+    private lateinit var previousLocale: Locale
+
+    private val enUsTargetContext: Context
+        get() {
+            val config = Configuration(targetContext.resources.configuration).apply {
+                setLocale(Locale.US)
+            }
+            return targetContext.createConfigurationContext(config)
+        }
+
     @Before
     fun configureEdgeToEdgeDark() {
+        previousLocale = Locale.getDefault()
+        Locale.setDefault(Locale.US)
         composeRule.activityRule.scenario.onActivity { activity ->
             activity.enableEdgeToEdge(
                 statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
@@ -87,6 +107,13 @@ class StoreScreenshotsTest {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 activity.window.isNavigationBarContrastEnforced = false
             }
+        }
+    }
+
+    @After
+    fun restoreLocale() {
+        if (::previousLocale.isInitialized) {
+            Locale.setDefault(previousLocale)
         }
     }
 
@@ -250,7 +277,7 @@ class StoreScreenshotsTest {
             }
         }
         composeRule.waitForIdle()
-        composeRule.onNodeWithText(targetContext.getString(R.string.toggle_all)).performClick()
+        composeRule.onNodeWithText(enUsTargetContext.getString(R.string.toggle_all)).performClick()
         saveScreenshot("4.png", settleMillis = 500L)
     }
 
@@ -350,7 +377,7 @@ class StoreScreenshotsTest {
             SettingsScreenshotContent(showAddRepositoryDialog = true)
         }
         composeRule.waitForIdle()
-        composeRule.onNodeWithText(targetContext.getString(R.string.repo_backend_local)).performClick()
+        composeRule.onNodeWithText(enUsTargetContext.getString(R.string.repo_backend_local)).performClick()
         saveScreenshot("9.png", settleMillis = 450L)
     }
 
@@ -465,12 +492,27 @@ class StoreScreenshotsTest {
 
     private fun setScreenshotContent(content: @Composable () -> Unit) {
         composeRule.setContent {
-            RestoidTheme(darkTheme = true, dynamicColor = false) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    content()
+            val baseContext = LocalContext.current
+            val baseConfig = LocalConfiguration.current
+            val enUsConfig = remember(baseConfig) {
+                Configuration(baseConfig).apply {
+                    setLocale(Locale.US)
+                }
+            }
+            val enUsContext = remember(baseContext, enUsConfig) {
+                baseContext.createConfigurationContext(enUsConfig)
+            }
+            CompositionLocalProvider(
+                LocalConfiguration provides enUsConfig,
+                LocalContext provides enUsContext
+            ) {
+                RestoidTheme(darkTheme = true, dynamicColor = false) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background
+                    ) {
+                        content()
+                    }
                 }
             }
         }

@@ -24,15 +24,15 @@ if [[ -z "${ANDROID_SERIAL:-}" ]]; then
     ADB_CMD+=(-s "${DEVICES[0]}")
 fi
 
-PREV_NIGHT_MODE=$("${ADB_CMD[@]}" shell cmd uimode night 2>/dev/null | tr -d '\r' || true)
+PREV_NIGHT_MODE=$("${ADB_CMD[@]}" shell cmd uimode night 2>/dev/null | tr -d '\r' | awk -F': ' '{print $NF}' | tr -d '[:space:]' || true)
 
 cleanup() {
     "${ADB_CMD[@]}" shell am broadcast -a com.android.systemui.demo -e command exit >/dev/null 2>&1 || true
-    if [[ "$PREV_NIGHT_MODE" == *"no"* ]]; then
-        "${ADB_CMD[@]}" shell cmd uimode night no >/dev/null 2>&1 || true
-    elif [[ "$PREV_NIGHT_MODE" == *"auto"* ]]; then
-        "${ADB_CMD[@]}" shell cmd uimode night auto >/dev/null 2>&1 || true
-    fi
+    case "$PREV_NIGHT_MODE" in
+        no|auto|custom_schedule|custom_bedtime)
+            "${ADB_CMD[@]}" shell cmd uimode night "$PREV_NIGHT_MODE" >/dev/null 2>&1 || true
+            ;;
+    esac
 }
 trap cleanup EXIT
 
