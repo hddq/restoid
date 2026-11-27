@@ -49,10 +49,12 @@ import androidx.compose.material.icons.outlined.AdminPanelSettings
 import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Call
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Contacts
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.Folder
@@ -70,6 +72,7 @@ import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Today
+import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -128,6 +131,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import io.github.hddq.restoid.R
+import io.github.hddq.restoid.data.ForgetDryRunResult
+import io.github.hddq.restoid.data.ForgetDryRunSnapshot
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.BackupTag
 import io.github.hddq.restoid.model.BackupTagRules
@@ -731,10 +736,16 @@ fun ForgetConfigScreen(
     onCreateForgetTag: suspend (name: String, colorArgb: Int) -> Result<BackupTag>,
     onUpdateTagColor: suspend (name: String, colorArgb: Int) -> Result<BackupTag>,
     onDeleteTag: suspend (name: String) -> Result<Unit>,
+    isRunningDryRun: Boolean = false,
+    dryRunResult: ForgetDryRunResult? = null,
+    dryRunError: String? = null,
+    onRunDryRun: () -> Unit = {},
+    onClearDryRun: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showHostsSheet by rememberSaveable { mutableStateOf(false) }
     var showTagsSheet by rememberSaveable { mutableStateOf(false) }
+    var showDryRunSheet by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         if (!areRepoSnapshotsLoaded) {
@@ -968,6 +979,25 @@ fun ForgetConfigScreen(
                 }
             }
         }
+
+        item(key = "dry_run_action", contentType = "dry_run_action") {
+            FilledTonalButton(
+                onClick = {
+                    showDryRunSheet = true
+                    onRunDryRun()
+                },
+                enabled = !isRunningDryRun,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Visibility,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.forget_dry_run_action))
+            }
+        }
     }
 
     if (showHostsSheet) {
@@ -999,6 +1029,231 @@ fun ForgetConfigScreen(
             onDismissRequest = { showTagsSheet = false },
             title = stringResource(R.string.forget_tags_picker_title)
         )
+    }
+
+    if (showDryRunSheet) {
+        ForgetDryRunBottomSheet(
+            isRunning = isRunningDryRun,
+            result = dryRunResult,
+            error = dryRunError,
+            onDismissRequest = {
+                showDryRunSheet = false
+                onClearDryRun()
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun ForgetDryRunBottomSheet(
+    isRunning: Boolean,
+    result: ForgetDryRunResult?,
+    error: String?,
+    onDismissRequest: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, bottom = 28.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.forget_dry_run_sheet_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            if (!isRunning && error == null && result != null && result.groups.isNotEmpty()) {
+                val summaryText = if (result.totalRemove == 0) {
+                    stringResource(R.string.forget_dry_run_no_removals, result.totalKeep)
+                } else {
+                    stringResource(R.string.forget_dry_run_summary, result.totalKeep, result.totalRemove)
+                }
+                Text(
+                    text = summaryText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (result.totalRemove > 0) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(Modifier.height(12.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 420.dp)
+            ) {
+                when {
+                    isRunning -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(160.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                LoadingIndicator()
+                                Text(
+                                    text = stringResource(R.string.forget_dry_run_running),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    error != null -> {
+                        ForgetHostStatusCard(
+                            icon = Icons.Outlined.WarningAmber,
+                            text = error,
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+
+                    result == null || result.groups.isEmpty() -> {
+                        Text(
+                            text = stringResource(R.string.forget_dry_run_empty),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(vertical = 24.dp)
+                        )
+                    }
+
+                    else -> {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            result.groups.forEachIndexed { groupIdx, group ->
+                                val userTags = BackupTagRules.filterUserTags(group.tags)
+                                val orderedRows = group.remove.map { it to true } + group.keep.map { it to false }
+                                item(key = "group_header_$groupIdx", contentType = "dry_run_header") {
+                                    val groupTitle = buildString {
+                                        append(group.host.ifBlank { stringResource(R.string.restic_unknown) })
+                                        if (userTags.isNotEmpty()) {
+                                            append(" · ")
+                                            append(userTags.joinToString(", "))
+                                        }
+                                    }
+                                    ExpressiveSectionHeader(
+                                        title = groupTitle,
+                                        modifier = if (groupIdx > 0) Modifier.padding(top = 10.dp) else Modifier
+                                    )
+                                }
+                                itemsIndexed(
+                                    items = orderedRows,
+                                    key = { idx, (snapshot, isRemove) ->
+                                        "group_${groupIdx}_${if (isRemove) "rm" else "keep"}_${snapshot.id}_$idx"
+                                    },
+                                    contentType = { _, _ -> "dry_run_snapshot" }
+                                ) { idx, (snapshot, isRemove) ->
+                                    ExpressiveSegmentedSurface(
+                                        index = idx,
+                                        count = orderedRows.size,
+                                        containerColor = if (isRemove) {
+                                            MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.55f)
+                                        } else {
+                                            MaterialTheme.colorScheme.surfaceContainer
+                                        }
+                                    ) {
+                                        ForgetDryRunSnapshotRow(
+                                            snapshot = snapshot,
+                                            isRemove = isRemove
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+            Button(
+                onClick = onDismissRequest,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(stringResource(R.string.action_done))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ForgetDryRunSnapshotRow(
+    snapshot: ForgetDryRunSnapshot,
+    isRemove: Boolean
+) {
+    val formattedTime = remember(snapshot.time) {
+        runCatching {
+            val odt = java.time.OffsetDateTime.parse(snapshot.time)
+            val local = odt.atZoneSameInstant(java.time.ZoneId.systemDefault())
+            local.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+        }.getOrElse { snapshot.time }
+    }
+    val userTags = remember(snapshot.tags) { BackupTagRules.filterUserTags(snapshot.tags) }
+    val statusLine = if (isRemove) {
+        stringResource(R.string.forget_dry_run_status_remove)
+    } else if (snapshot.keepReasons.isNotEmpty()) {
+        snapshot.keepReasons.joinToString(", ")
+    } else {
+        stringResource(R.string.forget_dry_run_status_keep)
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = if (isRemove) Icons.Outlined.DeleteOutline else Icons.Outlined.CheckCircle,
+            contentDescription = null,
+            tint = if (isRemove) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = formattedTime,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = snapshot.shortId,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Text(
+                text = if (userTags.isNotEmpty()) "$statusLine · ${userTags.joinToString(", ")}" else statusLine,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isRemove) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 

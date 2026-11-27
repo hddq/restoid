@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
@@ -537,6 +538,47 @@ class ResticRepository(
         )
     }
 
+    suspend fun forgetDryRun(
+        repoPath: String,
+        password: String,
+        keepLast: Int,
+        keepDaily: Int,
+        keepWeekly: Int,
+        keepMonthly: Int,
+        forgetAllHosts: Boolean = true,
+        forgetHosts: List<String> = emptyList(),
+        forgetTags: List<String> = emptyList(),
+        environmentVariables: Map<String, String> = emptyMap(),
+        resticOptions: Map<String, String> = emptyMap()
+    ): Result<ForgetDryRunResult> = withContext(Dispatchers.IO) {
+        val forgetCommand = buildForgetCommand(
+            keepLast = keepLast,
+            keepDaily = keepDaily,
+            keepWeekly = keepWeekly,
+            keepMonthly = keepMonthly,
+            forgetAllHosts = forgetAllHosts,
+            forgetHosts = forgetHosts,
+            forgetTags = forgetTags,
+            dryRun = true,
+            jsonOutput = true,
+            noLock = true
+        ).getOrElse { failure ->
+            return@withContext Result.failure(failure)
+        }
+
+        executor.execute(
+            repoPath = repoPath,
+            password = password,
+            command = forgetCommand,
+            failureMessage = context.getString(R.string.restic_failure_forget_snapshots),
+            environmentVariables = environmentVariables,
+            resticOptions = resticOptions
+        ).fold(
+            onSuccess = { output -> parseForgetDryRunJson(output) },
+            onFailure = { Result.failure(it) }
+        )
+    }
+
     internal fun buildForgetCommand(
         keepLast: Int,
         keepDaily: Int,
@@ -544,7 +586,10 @@ class ResticRepository(
         keepMonthly: Int,
         forgetAllHosts: Boolean = true,
         forgetHosts: List<String> = emptyList(),
-        forgetTags: List<String> = emptyList()
+        forgetTags: List<String> = emptyList(),
+        dryRun: Boolean = false,
+        jsonOutput: Boolean = false,
+        noLock: Boolean = false
     ): Result<String> {
         val forgetOptions = buildString {
             if (keepLast > 0) append(" --keep-last $keepLast")
@@ -577,7 +622,95 @@ class ResticRepository(
             val tagOptions = sanitizedTags.joinToString("") { " --tag ${shellQuote("restoid,backup,$it")}" }
             " --group-by host$tagOptions"
         }
-        return Result.success("forget$forgetOptions$hostOptions$groupingAndTagOptions")
+        val extraOptions = buildString {
+            if (dryRun) append(" --dry-run")
+            if (jsonOutput) append(" --json")
+            if (noLock) append(" --no-lock")
+        }
+        return Result.success("forget$forgetOptions$hostOptions$groupingAndTagOptions$extraOptions")
+    }
+
+    internal fun parseForgetDryRunJson(output: String): Result<ForgetDryRunResult> {
+        val trimmed = output.trim()
+        if (trimmed.isEmpty()) {
+            return Result.success(ForgetDryRunResult(groups = emptyList()))
+        }
+        return runCatching {
+            val jsonText = if (trimmed.startsWith("[")) {
+                trimmed
+            } else {
+                val startIdx = trimmed.indexOf('[')
+                val endIdx = trimmed.lastIndexOf(']')
+                if (startIdx >= 0 && endIdx > startIdx) {
+                    trimmed.substring(startIdx, endIdx + 1)
+                } else {
+                    trimmed
+                }
+            }
+            val root = json.parseToJsonElement(jsonText) as? JsonArray
+                ?: throw IllegalStateException("Unexpected forget dry-run JSON output")
+
+            val groups = root.mapNotNull { element ->
+                val obj = element as? JsonObject ?: return@mapNotNull null
+                val host = obj["host"]?.jsonPrimitive?.contentOrNull.orEmpty()
+                val groupTags = (obj["tags"] as? JsonArray)
+                    ?.mapNotNull { it.jsonPrimitive.contentOrNull }
+                    .orEmpty()
+
+                val reasonsBySnapshotId = mutableMapOf<String, List<String>>()
+                (obj["reasons"] as? JsonArray)?.forEach { reasonEl ->
+                    val reasonObj = reasonEl as? JsonObject ?: return@forEach
+                    val snapObj = reasonObj["snapshot"] as? JsonObject ?: return@forEach
+                    val snapId = snapObj["id"]?.jsonPrimitive?.contentOrNull
+                        ?: snapObj["short_id"]?.jsonPrimitive?.contentOrNull
+                        ?: return@forEach
+                    val matches = (reasonObj["matches"] as? JsonArray)
+                        ?.mapNotNull { it.jsonPrimitive.contentOrNull }
+                        .orEmpty()
+                    reasonsBySnapshotId[snapId] = matches
+                }
+
+                fun parseDryRunSnapshot(snapEl: JsonObject, includeReasons: Boolean): ForgetDryRunSnapshot? {
+                    val id = snapEl["id"]?.jsonPrimitive?.contentOrNull
+                        ?: snapEl["short_id"]?.jsonPrimitive?.contentOrNull
+                        ?: return null
+                    val shortId = snapEl["short_id"]?.jsonPrimitive?.contentOrNull ?: id.take(8)
+                    val time = snapEl["time"]?.jsonPrimitive?.contentOrNull.orEmpty()
+                    val hostname = snapEl["hostname"]?.jsonPrimitive?.contentOrNull
+                    val tags = (snapEl["tags"] as? JsonArray)
+                        ?.mapNotNull { it.jsonPrimitive.contentOrNull }
+                        .orEmpty()
+                    val reasons = if (includeReasons) {
+                        reasonsBySnapshotId[id] ?: reasonsBySnapshotId[shortId].orEmpty()
+                    } else {
+                        emptyList()
+                    }
+                    return ForgetDryRunSnapshot(
+                        id = id,
+                        shortId = shortId,
+                        time = time,
+                        hostname = hostname,
+                        tags = tags,
+                        keepReasons = reasons
+                    )
+                }
+
+                val keep = (obj["keep"] as? JsonArray)
+                    ?.mapNotNull { (it as? JsonObject)?.let { s -> parseDryRunSnapshot(s, includeReasons = true) } }
+                    .orEmpty()
+                val remove = (obj["remove"] as? JsonArray)
+                    ?.mapNotNull { (it as? JsonObject)?.let { s -> parseDryRunSnapshot(s, includeReasons = false) } }
+                    .orEmpty()
+
+                ForgetDryRunGroup(
+                    host = host,
+                    tags = groupTags,
+                    keep = keep,
+                    remove = remove
+                )
+            }
+            ForgetDryRunResult(groups = groups)
+        }
     }
 
     suspend fun forgetSnapshot(
@@ -892,3 +1025,26 @@ data class SnapshotInfo(
     val tags: List<String>,
     val hostname: String? = null
 )
+
+data class ForgetDryRunSnapshot(
+    val id: String,
+    val shortId: String,
+    val time: String,
+    val hostname: String?,
+    val tags: List<String>,
+    val keepReasons: List<String> = emptyList()
+)
+
+data class ForgetDryRunGroup(
+    val host: String,
+    val tags: List<String>,
+    val keep: List<ForgetDryRunSnapshot>,
+    val remove: List<ForgetDryRunSnapshot>
+)
+
+data class ForgetDryRunResult(
+    val groups: List<ForgetDryRunGroup>
+) {
+    val totalKeep: Int get() = groups.sumOf { it.keep.size }
+    val totalRemove: Int get() = groups.sumOf { it.remove.size }
+}

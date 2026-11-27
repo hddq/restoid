@@ -453,6 +453,8 @@ class RunTasksViewModel(
     fun addCustomForgetHost(hostname: String) = editorController.addCustomForgetHost(hostname)
     fun removeCustomForgetHost(hostname: String) = editorController.removeCustomForgetHost(hostname)
     fun refreshForgetHosts(userInitiated: Boolean = true) = editorController.refreshForgetHosts(userInitiated)
+    fun runForgetDryRun() = editorController.runForgetDryRun()
+    fun clearForgetDryRun() = editorController.clearForgetDryRun()
     fun setAppSortOrder(order: AppSortOrder) = editorController.setAppSortOrder(order)
     fun toggleAppSelection(packageName: String) = editorController.toggleAppSelection(packageName)
     fun toggleAllApps() = editorController.toggleAllApps()

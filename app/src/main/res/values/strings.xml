@@ -223,6 +223,14 @@
         <item quantity="one">%1$d tag</item>
         <item quantity="other">%1$d tags</item>
     </plurals>
+    <string name="forget_dry_run_action">Preview forget (Dry run)</string>
+    <string name="forget_dry_run_sheet_title">Forget dry run</string>
+    <string name="forget_dry_run_running">Simulating forget policy…</string>
+    <string name="forget_dry_run_empty">No matching snapshots found.</string>
+    <string name="forget_dry_run_summary">%1$d kept · %2$d would be removed</string>
+    <string name="forget_dry_run_no_removals">%1$d kept · none would be removed</string>
+    <string name="forget_dry_run_status_remove">Would remove</string>
+    <string name="forget_dry_run_status_keep">Keep</string>
     <string name="forget_hosts_sheet_title">Select hosts</string>
     <string name="forget_hosts_sheet_empty">No hosts available yet. Refresh hosts or add a hostname manually.</string>
     <string name="forget_hosts_toggle_all_title">Toggle all devices</string>
