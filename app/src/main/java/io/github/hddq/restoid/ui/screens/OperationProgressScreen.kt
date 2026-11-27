@@ -1,7 +1,9 @@
 package io.github.hddq.restoid.ui.screens
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.unit.dp
 import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.HourglassEmpty
@@ -32,7 +34,8 @@ import io.github.hddq.restoid.ui.shared.ProgressScreenContent
 @Composable
 fun OperationProgressScreen(
     onNavigateUp: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val application = LocalContext.current.applicationContext as RestoidApplication
     val viewModel: OperationProgressViewModel = viewModel(
@@ -94,7 +97,8 @@ fun OperationProgressScreen(
                 viewModel.onDone()
                 onNavigateUp()
             },
-            modifier = modifier.fillMaxSize()
+            modifier = modifier.fillMaxSize(),
+            contentPadding = contentPadding
         )
     } else {
         Box(

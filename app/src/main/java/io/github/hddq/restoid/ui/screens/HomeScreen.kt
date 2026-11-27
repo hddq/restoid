@@ -184,7 +184,8 @@ fun HomeScreen(
     onToggleFilterTag: (String) -> Unit = {},
     onClearFilterTags: () -> Unit = {},
     onRefreshRepoTags: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     var showForceStopDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -262,7 +263,12 @@ fun HomeScreen(
             ) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 88.dp)
+                    contentPadding = PaddingValues(
+                        start = 16.dp,
+                        top = 8.dp,
+                        end = 16.dp,
+                        bottom = 88.dp + contentPadding.calculateBottomPadding()
+                    )
                 ) {
                     when {
                     uiState.selectedRepo == null -> {

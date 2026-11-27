@@ -39,7 +39,8 @@ import io.github.hddq.restoid.util.StorageUtils
 fun SettingsScreen(
     viewModel: SettingsViewModel, // Passed directly
     onNavigateToLicenses: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val addRepoUiState by viewModel.addRepoUiState.collectAsStateWithLifecycle()
     val hasStorageAccess by viewModel.hasStorageAccess.collectAsStateWithLifecycle()
@@ -176,7 +177,12 @@ fun SettingsScreen(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            top = 16.dp,
+            end = 16.dp,
+            bottom = 16.dp + contentPadding.calculateBottomPadding()
+        ),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
