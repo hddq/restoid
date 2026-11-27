@@ -32,9 +32,11 @@ import io.github.hddq.restoid.work.findConflictingExclusions
 import io.github.hddq.restoid.work.resolveExclusionPaths
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class TaskConfigEditorState(
     val apps: List<AppInfo> = emptyList(),
@@ -784,9 +786,11 @@ class TaskConfigEditorController(
                     forgetDryRunError = null
                 )
             }
-            val env = repositoriesRepository.getExecutionEnvironmentVariables(selectedRepoKey)
-            val resticOptions = repositoriesRepository.getExecutionResticOptions(selectedRepoKey)
             val result = try {
+                val (env, resticOptions) = withContext(Dispatchers.IO) {
+                    repositoriesRepository.getExecutionEnvironmentVariables(selectedRepoKey) to
+                        repositoriesRepository.getExecutionResticOptions(selectedRepoKey)
+                }
                 resticRepository.forgetDryRun(
                     repoPath = repository.path,
                     password = password,
