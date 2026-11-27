@@ -1,10 +1,17 @@
 package io.github.hddq.restoid.screenshots
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapShader
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Shader
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import androidx.core.content.ContextCompat
+import kotlin.math.roundToInt
 import io.github.hddq.restoid.data.BatteryConditionStatus
 import io.github.hddq.restoid.data.ChargingPowerSource
 import io.github.hddq.restoid.data.ChargingState
@@ -90,23 +97,56 @@ internal object ScreenshotFixtures {
         fullVersionOutput = "rclone v1.73.1 (android/arm64)"
     )
 
+    private fun circularIcon(
+        testContext: Context,
+        resId: Int,
+        backgroundColor: Int? = null,
+        scale: Float = 1f
+    ): Drawable {
+        val source = ContextCompat.getDrawable(testContext, resId) ?: return ColorDrawable(Color.DKGRAY)
+        val size = 256
+        val contentBitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        Canvas(contentBitmap).apply {
+            if (backgroundColor != null) {
+                drawColor(backgroundColor)
+            }
+            val scaledSize = (size * scale).roundToInt()
+            val offset = (size - scaledSize) / 2
+            source.setBounds(offset, offset, offset + scaledSize, offset + scaledSize)
+            source.draw(this)
+        }
+
+        val outputBitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            isFilterBitmap = true
+            shader = BitmapShader(contentBitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
+        }
+        Canvas(outputBitmap).drawCircle(size / 2f, size / 2f, size / 2f, paint)
+        contentBitmap.recycle()
+
+        return BitmapDrawable(testContext.resources, outputBitmap)
+    }
+
     fun sampleApps(testContext: Context): List<AppInfo> {
-        fun icon(resId: Int): Drawable =
-            ContextCompat.getDrawable(testContext, resId) ?: ColorDrawable(Color.DKGRAY)
+        fun icon(
+            resId: Int,
+            backgroundColor: Int? = null,
+            scale: Float = 1f
+        ): Drawable = circularIcon(testContext, resId, backgroundColor, scale)
 
         return listOf(
             AppInfo("Aegis", "com.beemdevelopment.aegis", "3.4.3", 30403, icon(TestR.drawable.ic_sample_aegis), listOf("/data/app/com.beemdevelopment.aegis/base.apk"), true, 1700000001000L),
             AppInfo("AntennaPod", "de.danoeh.antennapod", "3.8.0", 30800, icon(TestR.drawable.ic_sample_antennapod), listOf("/data/app/de.danoeh.antennapod/base.apk"), true, 1700000002000L),
             AppInfo("BasicSync", "com.chiller3.basicsync", "1.12", 112, icon(TestR.drawable.ic_sample_basicsync), listOf("/data/app/com.chiller3.basicsync/base.apk"), true, 1700000003000L),
             AppInfo("Breezy Weather", "org.breezyweather", "5.4.6", 50406, icon(TestR.drawable.ic_sample_breezy_weather), listOf("/data/app/org.breezyweather/base.apk"), true, 1700000004000L),
-            AppInfo("F-Droid", "org.fdroid.fdroid", "1.23.0", 1023000, icon(TestR.drawable.ic_sample_fdroid), listOf("/data/app/org.fdroid.fdroid/base.apk"), false, 1700000005000L),
-            AppInfo("Gadgetbridge", "nodomain.freeyourgadget.gadgetbridge", "0.85.0", 850, icon(TestR.drawable.ic_sample_gadgetbridge), listOf("/data/app/nodomain.freeyourgadget.gadgetbridge/base.apk"), true, 1700000006000L),
-            AppInfo("Immich", "app.alextran.immich", "1.131.3", 113103, icon(TestR.drawable.ic_sample_immich), listOf("/data/app/app.alextran.immich/base.apk"), true, 1700000007000L),
+            AppInfo("F-Droid", "org.fdroid.fdroid", "1.23.0", 1023000, icon(TestR.drawable.ic_sample_fdroid, backgroundColor = Color.WHITE, scale = 0.70f), listOf("/data/app/org.fdroid.fdroid/base.apk"), false, 1700000005000L),
+            AppInfo("Gadgetbridge", "nodomain.freeyourgadget.gadgetbridge", "0.85.0", 850, icon(TestR.drawable.ic_sample_gadgetbridge, scale = 1.10f), listOf("/data/app/nodomain.freeyourgadget.gadgetbridge/base.apk"), true, 1700000006000L),
+            AppInfo("Immich", "app.alextran.immich", "1.131.3", 113103, icon(TestR.drawable.ic_sample_immich, backgroundColor = Color.WHITE, scale = 0.72f), listOf("/data/app/app.alextran.immich/base.apk"), true, 1700000007000L),
             AppInfo("KeePassDX", "com.kunzisoft.keepass.libre", "4.1.2", 40102, icon(TestR.drawable.ic_sample_keepassdx), listOf("/data/app/com.kunzisoft.keepass.libre/base.apk"), true, 1700000008000L),
-            AppInfo("Navic", "paige.navic", "1.0.0", 10000, icon(TestR.drawable.ic_sample_navic), listOf("/data/app/paige.navic/base.apk"), true, 1700000009000L),
-            AppInfo("Obtainium", "dev.imranr.obtainium.fdroid", "1.2.1", 10201, icon(TestR.drawable.ic_sample_obtainium), listOf("/data/app/dev.imranr.obtainium.fdroid/base.apk"), true, 1700000010000L),
+            AppInfo("Navic", "paige.navic", "1.0.0", 10000, icon(TestR.drawable.ic_sample_navic, scale = 1.06f), listOf("/data/app/paige.navic/base.apk"), true, 1700000009000L),
+            AppInfo("Obtainium", "dev.imranr.obtainium.fdroid", "1.2.1", 10201, icon(TestR.drawable.ic_sample_obtainium, backgroundColor = Color.WHITE, scale = 1.46f), listOf("/data/app/dev.imranr.obtainium.fdroid/base.apk"), true, 1700000010000L),
             AppInfo("Organic Maps", "app.organicmaps", "2026.10.14", 261014, icon(TestR.drawable.ic_sample_organic_maps), listOf("/data/app/app.organicmaps/base.apk"), true, 1700000011000L),
-            AppInfo("Thunderbird", "net.thunderbird.android", "10.0", 100000, icon(TestR.drawable.ic_sample_thunderbird), listOf("/data/app/net.thunderbird.android/base.apk"), false, 1700000012000L)
+            AppInfo("Thunderbird", "net.thunderbird.android", "10.0", 100000, icon(TestR.drawable.ic_sample_thunderbird, backgroundColor = Color.WHITE, scale = 0.84f), listOf("/data/app/net.thunderbird.android/base.apk"), false, 1700000012000L)
         )
     }
 
