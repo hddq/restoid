@@ -24,10 +24,24 @@ if [[ -z "${ANDROID_SERIAL:-}" ]]; then
     ADB_CMD+=(-s "${DEVICES[0]}")
 fi
 
+IS_EMULATOR=$("${ADB_CMD[@]}" shell getprop ro.kernel.qemu 2>/dev/null | tr -d '\r[:space:]' || true)
 PREV_NIGHT_MODE=$("${ADB_CMD[@]}" shell cmd uimode night 2>/dev/null | tr -d '\r' | awk -F': ' '{print $NF}' | tr -d '[:space:]' || true)
+HIDE_ERROR_DIALOGS_READ_OK=0
+PREV_HIDE_ERROR_DIALOGS=""
+if RAW_HIDE_ERROR_DIALOGS=$("${ADB_CMD[@]}" shell settings get global hide_error_dialogs 2>/dev/null); then
+    PREV_HIDE_ERROR_DIALOGS=$(printf '%s' "$RAW_HIDE_ERROR_DIALOGS" | tr -d '\r[:space:]')
+    HIDE_ERROR_DIALOGS_READ_OK=1
+fi
 
 cleanup() {
     "${ADB_CMD[@]}" shell am broadcast -a com.android.systemui.demo -e command exit >/dev/null 2>&1 || true
+    if [[ "$HIDE_ERROR_DIALOGS_READ_OK" == "1" ]]; then
+        if [[ "$PREV_HIDE_ERROR_DIALOGS" == "null" || -z "$PREV_HIDE_ERROR_DIALOGS" ]]; then
+            "${ADB_CMD[@]}" shell settings delete global hide_error_dialogs >/dev/null 2>&1 || true
+        else
+            "${ADB_CMD[@]}" shell settings put global hide_error_dialogs "$PREV_HIDE_ERROR_DIALOGS" >/dev/null 2>&1 || true
+        fi
+    fi
     case "$PREV_NIGHT_MODE" in
         no|auto|custom_schedule|custom_bedtime)
             "${ADB_CMD[@]}" shell cmd uimode night "$PREV_NIGHT_MODE" >/dev/null 2>&1 || true
@@ -37,12 +51,20 @@ cleanup() {
 trap cleanup EXIT
 
 echo "Preparing device (dark mode + System UI Demo Mode)..."
+if [[ "$HIDE_ERROR_DIALOGS_READ_OK" == "1" ]]; then
+    "${ADB_CMD[@]}" shell settings put global hide_error_dialogs 1 >/dev/null 2>&1 || true
+fi
+if [[ "$IS_EMULATOR" == "1" ]]; then
+    "${ADB_CMD[@]}" shell am force-stop com.android.launcher3 >/dev/null 2>&1 || true
+    "${ADB_CMD[@]}" shell am force-stop com.google.android.apps.nexuslauncher >/dev/null 2>&1 || true
+    "${ADB_CMD[@]}" shell cmd overlay enable com.android.internal.systemui.navbar.gestural >/dev/null 2>&1 || true
+fi
 "${ADB_CMD[@]}" shell cmd uimode night yes >/dev/null 2>&1 || true
 "${ADB_CMD[@]}" shell settings put global sysui_demo_allowed 1 >/dev/null 2>&1 || true
 "${ADB_CMD[@]}" shell am broadcast -a com.android.systemui.demo -e command enter >/dev/null 2>&1 || true
 "${ADB_CMD[@]}" shell am broadcast -a com.android.systemui.demo -e command clock -e hhmm 1200 >/dev/null 2>&1 || true
 "${ADB_CMD[@]}" shell am broadcast -a com.android.systemui.demo -e command battery -e level 100 -e plugged false >/dev/null 2>&1 || true
-"${ADB_CMD[@]}" shell am broadcast -a com.android.systemui.demo -e command network -e wifi show -e level 4 -e mobile hide >/dev/null 2>&1 || true
+"${ADB_CMD[@]}" shell am broadcast -a com.android.systemui.demo -e command network -e airplane hide -e wifi show -e level 4 -e fully true -e mobile hide >/dev/null 2>&1 || true
 "${ADB_CMD[@]}" shell am broadcast -a com.android.systemui.demo -e command notifications -e visible false >/dev/null 2>&1 || true
 
 "${ADB_CMD[@]}" shell rm -rf "$DEVICE_SCREENSHOT_DIR" >/dev/null 2>&1 || true
