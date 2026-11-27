@@ -19,6 +19,7 @@ import io.github.hddq.restoid.data.LocalRepository
 import io.github.hddq.restoid.data.NetworkConditionStatus
 import io.github.hddq.restoid.data.NetworkTransport
 import io.github.hddq.restoid.data.RepositoryBackendType
+import io.github.hddq.restoid.data.ResticBinaryManager
 import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.data.SnapshotInfo
 import io.github.hddq.restoid.data.TriggerConditionStatusSnapshot
@@ -51,6 +52,7 @@ import io.github.hddq.restoid.work.BackupTypeSelection
 import io.github.hddq.restoid.work.DeviceDataBackupSelection
 import io.github.hddq.restoid.work.ExclusionConflict
 import io.github.hddq.restoid.work.RunTasksConfig
+import kotlinx.coroutines.runBlocking
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
@@ -85,17 +87,17 @@ internal object ScreenshotFixtures {
         )
     )
 
-    val resticInstalledState = ResticState.Installed(
-        path = "/data/app/restoid/lib/arm64/librestic.so",
-        version = "0.19.1",
-        fullVersionOutput = "restic 0.19.1 compiled with go1.25.0 on android/arm64"
-    )
-
-    val rcloneInstalledState = ResticState.Installed(
-        path = "/data/app/restoid/lib/arm64/librclone.so",
-        version = "1.73.1",
-        fullVersionOutput = "rclone v1.73.1 (android/arm64)"
-    )
+    fun bundledBinaryStates(targetContext: Context): Pair<ResticState.Installed, ResticState.Installed> {
+        val manager = ResticBinaryManager(targetContext)
+        runBlocking { manager.checkResticStatus() }
+        val restic = manager.resticState.value as? ResticState.Installed
+            ?: error("Bundled restic binary unavailable for screenshots: ${manager.resticState.value}")
+        val rclone = manager.rcloneState.value as? ResticState.Installed
+            ?: error("Bundled rclone binary unavailable for screenshots: ${manager.rcloneState.value}")
+        require(restic.fullVersionOutput.isNotBlank()) { "Bundled restic version output was blank" }
+        require(rclone.fullVersionOutput.isNotBlank()) { "Bundled rclone version output was blank" }
+        return restic to rclone
+    }
 
     private fun circularIcon(
         testContext: Context,
@@ -150,7 +152,7 @@ internal object ScreenshotFixtures {
         )
     }
 
-    fun homeUiState(testContext: Context): HomeUiState {
+    fun homeUiState(testContext: Context, resticState: ResticState): HomeUiState {
         val apps = sampleApps(testContext)
         val now = Instant.now()
 
@@ -261,7 +263,7 @@ internal object ScreenshotFixtures {
                 snap3Id to snap2Apps
             ),
             selectedRepo = PRIMARY_REPO_KEY,
-            resticState = resticInstalledState,
+            resticState = resticState,
             isRepoReady = true,
             repoTagsByName = tagsByName
         )
