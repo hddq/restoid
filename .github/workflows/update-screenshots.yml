@@ -86,7 +86,7 @@ jobs:
           api-level: ${{ steps.emulator.outputs.api-level }}
           target: ${{ steps.emulator.outputs.target }}
           arch: x86_64
-          profile: pixel_9
+          profile: pixel_8
           cores: 4
           ram-size: 4096M
           heap-size: 512M

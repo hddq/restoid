@@ -32,10 +32,38 @@ if RAW_HIDE_ERROR_DIALOGS=$("${ADB_CMD[@]}" shell settings get global hide_error
     PREV_HIDE_ERROR_DIALOGS=$(printf '%s' "$RAW_HIDE_ERROR_DIALOGS" | tr -d '\r[:space:]')
     HIDE_ERROR_DIALOGS_READ_OK=1
 fi
+BATTERY_PERCENT_READ_OK=0
+PREV_BATTERY_PERCENT=""
+if RAW_BATTERY_PERCENT=$("${ADB_CMD[@]}" shell settings get system status_bar_show_battery_percent 2>/dev/null); then
+    PREV_BATTERY_PERCENT=$(printf '%s' "$RAW_BATTERY_PERCENT" | tr -d '\r[:space:]')
+    BATTERY_PERCENT_READ_OK=1
+fi
+LINEAGE_BATTERY_PERCENT_READ_OK=0
+PREV_LINEAGE_BATTERY_PERCENT=""
+if RAW_LINEAGE_BATTERY_PERCENT=$("${ADB_CMD[@]}" shell settings --lineage get system status_bar_show_battery_percent 2>/dev/null); then
+    PREV_LINEAGE_BATTERY_PERCENT=$(printf '%s' "$RAW_LINEAGE_BATTERY_PERCENT" | tr -d '\r[:space:]')
+    LINEAGE_BATTERY_PERCENT_READ_OK=1
+fi
 
 cleanup() {
     if [[ "$IS_EMULATOR" == "1" ]]; then
         "${ADB_CMD[@]}" shell dumpsys battery reset >/dev/null 2>&1 || true
+    else
+        "${ADB_CMD[@]}" shell am broadcast -a com.android.systemui.demo -e command exit >/dev/null 2>&1 || true
+    fi
+    if [[ "$LINEAGE_BATTERY_PERCENT_READ_OK" == "1" ]]; then
+        if [[ "$PREV_LINEAGE_BATTERY_PERCENT" == "null" || -z "$PREV_LINEAGE_BATTERY_PERCENT" ]]; then
+            "${ADB_CMD[@]}" shell settings --lineage delete system status_bar_show_battery_percent >/dev/null 2>&1 || true
+        else
+            "${ADB_CMD[@]}" shell settings --lineage put system status_bar_show_battery_percent "$PREV_LINEAGE_BATTERY_PERCENT" >/dev/null 2>&1 || true
+        fi
+    fi
+    if [[ "$BATTERY_PERCENT_READ_OK" == "1" ]]; then
+        if [[ "$PREV_BATTERY_PERCENT" == "null" || -z "$PREV_BATTERY_PERCENT" ]]; then
+            "${ADB_CMD[@]}" shell settings delete system status_bar_show_battery_percent >/dev/null 2>&1 || true
+        else
+            "${ADB_CMD[@]}" shell settings put system status_bar_show_battery_percent "$PREV_BATTERY_PERCENT" >/dev/null 2>&1 || true
+        fi
     fi
     if [[ "$HIDE_ERROR_DIALOGS_READ_OK" == "1" ]]; then
         if [[ "$PREV_HIDE_ERROR_DIALOGS" == "null" || -z "$PREV_HIDE_ERROR_DIALOGS" ]]; then
@@ -56,12 +84,25 @@ echo "Preparing device (dark mode)..."
 if [[ "$HIDE_ERROR_DIALOGS_READ_OK" == "1" ]]; then
     "${ADB_CMD[@]}" shell settings put global hide_error_dialogs 1 >/dev/null 2>&1 || true
 fi
+if [[ "$BATTERY_PERCENT_READ_OK" == "1" ]]; then
+    "${ADB_CMD[@]}" shell settings put system status_bar_show_battery_percent 0 >/dev/null 2>&1 || true
+fi
+if [[ "$LINEAGE_BATTERY_PERCENT_READ_OK" == "1" ]]; then
+    "${ADB_CMD[@]}" shell settings --lineage put system status_bar_show_battery_percent 0 >/dev/null 2>&1 || true
+fi
 if [[ "$IS_EMULATOR" == "1" ]]; then
     "${ADB_CMD[@]}" shell am force-stop com.android.launcher3 >/dev/null 2>&1 || true
     "${ADB_CMD[@]}" shell am force-stop com.google.android.apps.nexuslauncher >/dev/null 2>&1 || true
     "${ADB_CMD[@]}" shell cmd overlay enable com.android.internal.systemui.navbar.gestural >/dev/null 2>&1 || true
     "${ADB_CMD[@]}" shell dumpsys battery unplug >/dev/null 2>&1 || true
     "${ADB_CMD[@]}" shell dumpsys battery set level 100 >/dev/null 2>&1 || true
+else
+    "${ADB_CMD[@]}" shell settings put global sysui_demo_allowed 1 >/dev/null 2>&1 || true
+    "${ADB_CMD[@]}" shell am broadcast -a com.android.systemui.demo -e command enter >/dev/null 2>&1 || true
+    "${ADB_CMD[@]}" shell am broadcast -a com.android.systemui.demo -e command clock -e hhmm 1200 >/dev/null 2>&1 || true
+    "${ADB_CMD[@]}" shell am broadcast -a com.android.systemui.demo -e command battery -e level 100 -e plugged false >/dev/null 2>&1 || true
+    "${ADB_CMD[@]}" shell am broadcast -a com.android.systemui.demo -e command network -e wifi show -e level 4 -e fully true -e mobile hide >/dev/null 2>&1 || true
+    "${ADB_CMD[@]}" shell am broadcast -a com.android.systemui.demo -e command notifications -e visible false >/dev/null 2>&1 || true
 fi
 "${ADB_CMD[@]}" shell cmd uimode night yes >/dev/null 2>&1 || true
 
