@@ -885,6 +885,21 @@
     <string name="tasks_guide_docs_button">Official Restic Documentation</string>
     <string name="no_browser_available">No browser found to open link. URL copied to clipboard.</string>
 
+    <!-- Forget Policy Guide -->
+    <string name="forget_guide_title">Forget Policy Guide</string>
+    <string name="forget_guide_subtitle">Understand how retention rules, host and tag filters, and grouping decide which snapshots to keep.</string>
+    <string name="forget_guide_section_how_it_works">How Forgetting Works</string>
+    <string name="forget_guide_retention_title">Retention rules</string>
+    <string name="forget_guide_retention_desc">Keep last, Keep daily, Keep weekly, and Keep monthly are additive—a snapshot is kept if it matches any enabled rule. Daily, weekly, and monthly buckets use natural calendar boundaries (midnight, Monday–Sunday, and the 1st of each month) rather than rolling 24-hour or 7-day windows.</string>
+    <string name="forget_guide_hosts_title">Target hosts</string>
+    <string name="forget_guide_hosts_desc">Scopes which device hosts the policy evaluates. Select All hosts to include every host in the repository, or pick specific hosts to leave other devices untouched.</string>
+    <string name="forget_guide_tags_title">Target tags</string>
+    <string name="forget_guide_tags_desc">Scopes which snapshots the policy evaluates. Leaving Target tags set to All tags applies the policy to all backup snapshots. Selecting multiple tags matches snapshots that have any of those tags.</string>
+    <string name="forget_guide_grouping_title">Snapshot grouping</string>
+    <string name="forget_guide_grouping_desc">When All tags is selected, snapshots are grouped by host and tag combination so separate tagged backup sets do not evict each other. When specific Target tags are selected, matching snapshots are grouped by host.</string>
+    <string name="forget_guide_forget_vs_prune_desc">Forget only removes snapshot entries from repository history. Run Prune afterward to delete unreferenced data chunks and actually reclaim storage space.</string>
+    <string name="forget_guide_docs_button">Restic Forget Documentation</string>
+
     <!-- Operation Logs -->
     <string name="screen_operation_logs">Operation Logs</string>
     <string name="operation_logs_empty">No operation logs yet</string>

@@ -40,6 +40,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.AccessibilityNew
@@ -130,9 +131,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import io.github.hddq.restoid.LocalAppBarActions
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.ForgetDryRunResult
 import io.github.hddq.restoid.data.ForgetDryRunSnapshot
+import io.github.hddq.restoid.ui.components.ForgetGuideBottomSheet
 import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.BackupTag
 import io.github.hddq.restoid.model.BackupTagRules
@@ -746,6 +749,22 @@ fun ForgetConfigScreen(
     var showHostsSheet by rememberSaveable { mutableStateOf(false) }
     var showTagsSheet by rememberSaveable { mutableStateOf(false) }
     var showDryRunSheet by rememberSaveable { mutableStateOf(false) }
+    var showGuideSheet by rememberSaveable { mutableStateOf(false) }
+    val appBarActions = LocalAppBarActions.current
+
+    DisposableEffect(Unit) {
+        appBarActions.value = {
+            IconButton(onClick = { showGuideSheet = true }) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Outlined.HelpOutline,
+                    contentDescription = stringResource(R.string.cd_help)
+                )
+            }
+        }
+        onDispose {
+            appBarActions.value = null
+        }
+    }
 
     LaunchedEffect(Unit) {
         if (!areRepoSnapshotsLoaded) {
@@ -1040,6 +1059,12 @@ fun ForgetConfigScreen(
                 showDryRunSheet = false
                 onClearDryRun()
             }
+        )
+    }
+
+    if (showGuideSheet) {
+        ForgetGuideBottomSheet(
+            onDismissRequest = { showGuideSheet = false }
         )
     }
 }
