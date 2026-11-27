@@ -63,6 +63,7 @@ import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.FolderOff
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.InstallMobile
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.ManageSearch
@@ -616,7 +617,9 @@ fun BackupConfigScreen(
     onSetSelectedAppsBackupTypes: (BackupTypes) -> Unit,
     onSetAppBackupTypes: (String, BackupTypes) -> Unit,
     modifier: Modifier = Modifier,
-    contentPadding: PaddingValues = PaddingValues(0.dp)
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+    selectAllApps: Boolean = false,
+    onSetSelectAllApps: (Boolean) -> Unit = {}
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
     var selectedAppPackageName by remember { mutableStateOf<String?>(null) }
@@ -668,6 +671,21 @@ fun BackupConfigScreen(
             }
         } else {
             val totalRows = apps.size + 1
+            item(key = "include_new_apps", contentType = "include_new_apps") {
+                ExpressiveSegmentedSurface(
+                    index = 0,
+                    count = 1,
+                    modifier = Modifier.padding(bottom = 14.dp)
+                ) {
+                    TaskRow(
+                        title = stringResource(R.string.backup_include_new_apps_title),
+                        subtitle = stringResource(R.string.backup_include_new_apps_subtitle),
+                        icon = Icons.Outlined.InstallMobile,
+                        checked = selectAllApps,
+                        onCheckedChange = onSetSelectAllApps
+                    )
+                }
+            }
             item(key = "header", contentType = "header") {
                 ExpressiveSectionHeader(title = stringResource(R.string.apps_title))
             }
@@ -1817,13 +1835,28 @@ fun buildBackupSubtitle(
     apps: List<AppInfo>,
     appBackupTypes: Map<String, BackupTypes>,
     defaultBackupTypes: BackupTypes,
-    context: android.content.Context
+    context: android.content.Context,
+    selectAllApps: Boolean = false,
+    excludedCount: Int = 0
 ): String {
+    val typesSummary = buildSelectedBackupTypesSummary(apps, appBackupTypes, defaultBackupTypes, context)
+    if (apps.isEmpty() && selectAllApps) {
+        val appsLabel = if (excludedCount == 0) {
+            context.getString(R.string.preset_summary_all_apps)
+        } else {
+            context.resources.getQuantityString(
+                R.plurals.preset_summary_all_apps_except_count,
+                excludedCount,
+                excludedCount
+            )
+        }
+        return context.getString(R.string.run_tasks_backup_subtitle_all_apps, appsLabel, typesSummary)
+    }
     val selectedCount = apps.count { it.isSelected }
     return context.getString(
         R.string.run_tasks_backup_subtitle,
         selectedCount,
-        buildSelectedBackupTypesSummary(apps, appBackupTypes, defaultBackupTypes, context)
+        typesSummary
     )
 }
 

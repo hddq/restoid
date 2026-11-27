@@ -534,7 +534,18 @@ fun AddEditPresetScreen(
                     ExpressiveSegmentedSurface(index = 0, count = 4) {
                         TaskRow(
                             title = stringResource(R.string.run_tasks_applications),
-                            subtitle = if (hasRoot) buildBackupSubtitle(editor.apps, editor.appBackupTypes, editor.backupTypes, context) else stringResource(R.string.root_access_denied),
+                            subtitle = if (hasRoot) {
+                                buildBackupSubtitle(
+                                    apps = editor.apps,
+                                    appBackupTypes = editor.appBackupTypes,
+                                    defaultBackupTypes = editor.backupTypes,
+                                    context = context,
+                                    selectAllApps = editor.selectAllApps,
+                                    excludedCount = editor.excludedPackageNames.size
+                                )
+                            } else {
+                                stringResource(R.string.root_access_denied)
+                            },
                             icon = Icons.Outlined.Apps,
                             checked = if (hasRoot) editor.backupEnabled else false,
                             onCheckedChange = viewModel::setBackupEnabled,
@@ -890,7 +901,9 @@ fun PresetBackupConfigScreen(
         onSetSelectedAppsBackupTypes = viewModel::setSelectedAppsBackupTypes,
         onSetAppBackupTypes = viewModel::setAppBackupTypes,
         modifier = modifier,
-        contentPadding = contentPadding
+        contentPadding = contentPadding,
+        selectAllApps = editor.selectAllApps,
+        onSetSelectAllApps = viewModel::setSelectAllApps
     )
 }
 

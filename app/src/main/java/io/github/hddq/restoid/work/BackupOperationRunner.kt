@@ -93,7 +93,11 @@ class BackupOperationRunner(
 
         try {
             throwIfCancelled()
-            val selectedApps = appInfoRepository.getAppInfoForPackages(request.selectedPackageNames)
+            val selectedApps = resolveBackupTargetApps(
+                request = request,
+                getInstalledUserApps = appInfoRepository::getInstalledUserApps,
+                getAppInfoForPackages = appInfoRepository::getAppInfoForPackages
+            )
             val errorState = preflightChecks(request, selectedApps)
             if (errorState != null) {
                 return OperationRunResult(success = false, progress = errorState)
@@ -875,3 +879,16 @@ fun findConflictingExclusion(
     request: BackupWorkRequest,
     currentUserId: Int
 ): ExclusionConflict? = findConflictingExclusions(selectedApps, request, currentUserId).firstOrNull()
+
+internal suspend fun resolveBackupTargetApps(
+    request: BackupWorkRequest,
+    getInstalledUserApps: suspend () -> List<AppInfo>,
+    getAppInfoForPackages: suspend (List<String>) -> List<AppInfo>
+): List<AppInfo> {
+    return if (request.selectAllApps) {
+        val excluded = request.excludedPackageNames.toSet()
+        getInstalledUserApps().filterNot { it.packageName in excluded }
+    } else {
+        getAppInfoForPackages(request.selectedPackageNames)
+    }
+}

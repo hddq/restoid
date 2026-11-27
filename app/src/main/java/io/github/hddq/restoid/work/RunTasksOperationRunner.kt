@@ -108,6 +108,8 @@ class RunTasksOperationRunner(
                     repositoryKey = request.repositoryKey,
                     backupTypes = request.backupTypes,
                     selectedPackageNames = request.selectedPackageNames,
+                    selectAllApps = request.selectAllApps,
+                    excludedPackageNames = request.excludedPackageNames,
                     appBackupTypes = request.appBackupTypes,
                     customDirectories = request.customDirectories,
                     excludedCustomDirectories = request.excludedCustomDirectories,

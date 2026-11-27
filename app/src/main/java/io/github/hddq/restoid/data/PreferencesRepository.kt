@@ -95,10 +95,15 @@ class PreferencesRepository(private val context: Context) {
         return prefs.getBoolean("runtasks_backup_enabled", true)
     }
 
-    fun saveRunTasksSelectedApps(selectAll: Boolean, packageNames: Set<String>) {
+    fun saveRunTasksSelectedApps(
+        selectAll: Boolean,
+        packageNames: Set<String>,
+        excludedPackageNames: Set<String> = emptySet()
+    ) {
         with(prefs.edit()) {
             putBoolean("runtasks_select_all_apps", selectAll)
             putStringSet("runtasks_selected_packages", packageNames)
+            putStringSet("runtasks_excluded_packages", excludedPackageNames)
             apply()
         }
     }
@@ -109,6 +114,10 @@ class PreferencesRepository(private val context: Context) {
 
     fun loadRunTasksSelectedPackages(): Set<String> {
         return prefs.getStringSet("runtasks_selected_packages", emptySet()) ?: emptySet()
+    }
+
+    fun loadRunTasksExcludedPackages(): Set<String> {
+        return prefs.getStringSet("runtasks_excluded_packages", emptySet())?.toSet() ?: emptySet()
     }
 
     fun saveRunTasksAppBackupTypes(types: Map<String, BackupTypes>) {

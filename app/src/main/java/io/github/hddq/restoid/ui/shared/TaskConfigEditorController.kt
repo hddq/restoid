@@ -43,6 +43,8 @@ data class TaskConfigEditorState(
     val isLoadingApps: Boolean = false,
     val appSortOrder: AppSortOrder = AppSortOrder.NAME_ASCENDING,
     val backupEnabled: Boolean = true,
+    val selectAllApps: Boolean = true,
+    val excludedPackageNames: Set<String> = emptySet(),
     val backupTypes: BackupTypes = BackupTypes(),
     val appBackupTypes: Map<String, BackupTypes> = emptyMap(),
     val maintenance: MaintenanceConfig = MaintenanceConfig(),
@@ -75,15 +77,48 @@ data class TaskConfigEditorState(
 
 fun TaskConfigEditorState.toRunTasksConfig(hasRoot: Boolean): RunTasksConfig {
     val actualBackupEnabled = backupEnabled && hasRoot
+    val effectiveSelectAllApps = actualBackupEnabled && selectAllApps
     val selectedApps = apps.filter { it.isSelected }
-    val selectedAppTypes = selectedApps.associate { app ->
-        app.packageName to (appBackupTypes[app.packageName] ?: backupTypes).toSelection()
+    val defaultSelection = backupTypes.toSelection()
+    val effectiveExcluded = if (effectiveSelectAllApps) {
+        if (apps.isNotEmpty()) {
+            val installedPackages = apps.mapTo(mutableSetOf()) { it.packageName }
+            val preservedUninstalled = excludedPackageNames.filterNot { it in installedPackages }
+            val excludedInstalled = apps.filterNot { it.isSelected }.map { it.packageName }
+            (excludedInstalled + preservedUninstalled).distinct().sorted()
+        } else {
+            excludedPackageNames.distinct().sorted()
+        }
+    } else {
+        emptyList()
+    }
+    val selectedAppTypes = when {
+        !actualBackupEnabled -> emptyMap()
+        effectiveSelectAllApps -> {
+            val source = if (apps.isNotEmpty()) {
+                selectedApps.associate { app ->
+                    app.packageName to (appBackupTypes[app.packageName] ?: backupTypes).toSelection()
+                }
+            } else {
+                appBackupTypes
+                    .filterKeys { it !in effectiveExcluded }
+                    .mapValues { it.value.toSelection() }
+            }
+            source.filterValues { it != defaultSelection }
+        }
+        else -> {
+            selectedApps.associate { app ->
+                app.packageName to (appBackupTypes[app.packageName] ?: backupTypes).toSelection()
+            }
+        }
     }
     return RunTasksConfig(
         backupEnabled = actualBackupEnabled,
-        backupTypes = backupTypes.toSelection(),
-        selectedPackageNames = if (actualBackupEnabled) selectedApps.map { it.packageName } else emptyList(),
-        appBackupTypes = if (actualBackupEnabled) selectedAppTypes else emptyMap(),
+        backupTypes = defaultSelection,
+        selectedPackageNames = if (actualBackupEnabled && !effectiveSelectAllApps) selectedApps.map { it.packageName } else emptyList(),
+        selectAllApps = effectiveSelectAllApps,
+        excludedPackageNames = effectiveExcluded,
+        appBackupTypes = selectedAppTypes,
         customDirectories = if (customDirectoriesBackupEnabled) customDirectories.filter { it.isSelected }.map { it.uri } else emptyList(),
         excludedCustomDirectories = if (customDirectoriesBackupEnabled) excludedCustomDirectories.filter { it.isSelected }.map { it.uri } else emptyList(),
         deviceData = DeviceDataBackupSelection(
@@ -119,9 +154,17 @@ fun TaskConfigEditorState.withAppliedRunTasksConfig(
     val defaultTypes = config.backupTypes.toUiModel()
     val configAppTypes = config.appBackupTypes.mapValues { it.value.toUiModel() }
     val selectedPkgSet = config.selectedPackageNames.toSet()
+    val excludedPkgSet = if (config.selectAllApps) config.excludedPackageNames.toSet() else emptySet()
     val updatedApps = if (existingApps.isNotEmpty()) {
         sortApps(
-            existingApps.map { app -> app.copy(isSelected = app.packageName in selectedPkgSet) },
+            existingApps.map { app ->
+                val isSelected = if (config.selectAllApps) {
+                    app.packageName !in excludedPkgSet
+                } else {
+                    app.packageName in selectedPkgSet
+                }
+                app.copy(isSelected = isSelected)
+            },
             appSortOrder
         )
     } else {
@@ -137,6 +180,8 @@ fun TaskConfigEditorState.withAppliedRunTasksConfig(
     return copy(
         apps = updatedApps,
         backupEnabled = config.backupEnabled,
+        selectAllApps = config.selectAllApps,
+        excludedPackageNames = excludedPkgSet,
         backupTypes = defaultTypes,
         appBackupTypes = updatedAppBackupTypes,
         maintenance = MaintenanceConfig(
@@ -173,6 +218,8 @@ fun hasTaskConfigChanges(
     initial: TaskConfigEditorState
 ): Boolean {
     return current.backupEnabled != initial.backupEnabled ||
+        current.selectAllApps != initial.selectAllApps ||
+        current.excludedPackageNames != initial.excludedPackageNames ||
         current.backupTypes != initial.backupTypes ||
         current.appBackupTypes != initial.appBackupTypes ||
         current.apps.associate { it.packageName to it.isSelected } != initial.apps.associate { it.packageName to it.isSelected } ||
@@ -198,8 +245,23 @@ fun summarizeTaskConfig(
 ): String {
     val parts = mutableListOf<String>()
     if (config.backupEnabled && hasRoot) {
-        val appCount = config.selectedPackageNames.size
-        parts.add(context.resources.getQuantityString(R.plurals.preset_summary_apps_count, appCount, appCount))
+        if (config.selectAllApps) {
+            val excludedCount = config.excludedPackageNames.distinct().size
+            if (excludedCount == 0) {
+                parts.add(context.getString(R.string.preset_summary_all_apps))
+            } else {
+                parts.add(
+                    context.resources.getQuantityString(
+                        R.plurals.preset_summary_all_apps_except_count,
+                        excludedCount,
+                        excludedCount
+                    )
+                )
+            }
+        } else {
+            val appCount = config.selectedPackageNames.size
+            parts.add(context.resources.getQuantityString(R.plurals.preset_summary_apps_count, appCount, appCount))
+        }
     }
     if (config.customDirectories.isNotEmpty()) {
         parts.add(context.getString(R.string.preset_summary_custom_folders))
@@ -369,7 +431,9 @@ class TaskConfigEditorController(
         forgetHostsController.setManualHosts(normalizedHosts)
         if (existingApps.isEmpty()) {
             loadInstalledApps(
-                selectedPackageNames = config.selectedPackageNames,
+                selectedPackageNames = if (config.selectAllApps) null else config.selectedPackageNames,
+                selectAllDefault = if (config.selectAllApps) true else null,
+                excludedPackageNames = if (config.selectAllApps) config.excludedPackageNames.toSet() else null,
                 sessionId = sessionId,
                 onAppsLoaded = onAppsLoaded
             )
@@ -392,6 +456,7 @@ class TaskConfigEditorController(
     fun loadInstalledApps(
         selectedPackageNames: List<String>? = null,
         selectAllDefault: Boolean? = null,
+        excludedPackageNames: Set<String>? = null,
         savedAppBackupTypes: Map<String, BackupTypes> = emptyMap(),
         sessionId: Long = ++appsLoadSessionId,
         onAppsLoaded: ((List<AppInfo>, Map<String, BackupTypes>) -> Unit)? = null
@@ -405,13 +470,15 @@ class TaskConfigEditorController(
             val currentSelection = stateSnapshot.apps.associate { it.packageName to it.isSelected }
             val currentBackupTypes = stateSnapshot.appBackupTypes
             val defaultBackupTypes = stateSnapshot.backupTypes
+            val effectiveExcluded = excludedPackageNames ?: stateSnapshot.excludedPackageNames
 
             val mappedApps = installedApps.map { app ->
                 val selected = when {
                     selectedPackageNames != null -> selectedPackageNames.contains(app.packageName)
-                    selectAllDefault != null -> selectAllDefault
-                    stateSnapshot.apps.isNotEmpty() -> currentSelection[app.packageName] ?: app.isSelected
-                    else -> app.isSelected
+                    selectAllDefault != null -> selectAllDefault && app.packageName !in effectiveExcluded
+                    stateSnapshot.selectAllApps -> app.packageName !in effectiveExcluded
+                    stateSnapshot.apps.isNotEmpty() -> currentSelection[app.packageName] ?: false
+                    else -> false
                 }
                 app.copy(isSelected = selected)
             }
@@ -859,13 +926,36 @@ class TaskConfigEditorController(
         }
     }
 
+    fun setSelectAllApps(enabled: Boolean) {
+        mutateConfig { state ->
+            if (state.selectAllApps == enabled) return@mutateConfig state
+            val updatedExcluded = if (enabled) {
+                state.apps.filterNot { it.isSelected }.map { it.packageName }.toSet()
+            } else {
+                emptySet()
+            }
+            state.copy(
+                selectAllApps = enabled,
+                excludedPackageNames = updatedExcluded
+            )
+        }
+    }
+
     fun toggleAppSelection(packageName: String) {
         mutateConfig { state ->
+            val updatedApps = state.apps.map { app ->
+                if (app.packageName == packageName) app.copy(isSelected = !app.isSelected) else app
+            }
+            val updatedExcluded = if (state.selectAllApps) {
+                val isNowSelected = updatedApps.firstOrNull { it.packageName == packageName }?.isSelected ?: true
+                if (isNowSelected) state.excludedPackageNames - packageName else state.excludedPackageNames + packageName
+            } else {
+                emptySet()
+            }
             recomputeConflicts(
                 state.copy(
-                    apps = state.apps.map { app ->
-                        if (app.packageName == packageName) app.copy(isSelected = !app.isSelected) else app
-                    },
+                    apps = updatedApps,
+                    excludedPackageNames = updatedExcluded,
                     appBackupTypes = state.appBackupTypes.ensurePackage(packageName, state.backupTypes)
                 )
             )
@@ -876,9 +966,19 @@ class TaskConfigEditorController(
         mutateConfig { state ->
             val shouldSelectAll = state.apps.any { !it.isSelected }
             val apps = state.apps.map { it.copy(isSelected = shouldSelectAll) }
+            val updatedExcluded = if (state.selectAllApps) {
+                if (shouldSelectAll) {
+                    emptySet()
+                } else {
+                    state.excludedPackageNames + apps.map { it.packageName }
+                }
+            } else {
+                emptySet()
+            }
             recomputeConflicts(
                 state.copy(
                     apps = apps,
+                    excludedPackageNames = updatedExcluded,
                     appBackupTypes = apps.fold(state.appBackupTypes) { acc, app ->
                         acc.ensurePackage(app.packageName, state.backupTypes)
                     }
@@ -1101,15 +1201,21 @@ class TaskConfigEditorController(
         }
 
         if (backupAppsEnabled) {
-            if (config.selectedPackageNames.isEmpty() && !hasCustomDirs && !hasDeviceData) {
+            val hasSelectedApps = config.selectAllApps || config.selectedPackageNames.isNotEmpty()
+            if (!hasSelectedApps && !hasCustomDirs && !hasDeviceData) {
                 return OperationProgress(
                     isFinished = true,
                     error = application.getString(R.string.error_no_items_selected),
                     finalSummary = application.getString(R.string.summary_no_items_selected)
                 )
             }
-            val hasSelectedBackupType = config.selectedPackageNames.any { pkg ->
-                (config.appBackupTypes[pkg] ?: config.backupTypes).toUiModel().anyEnabled()
+            val hasSelectedBackupType = if (config.selectAllApps) {
+                config.backupTypes.toUiModel().anyEnabled() ||
+                    config.appBackupTypes.values.any { it.toUiModel().anyEnabled() }
+            } else {
+                config.selectedPackageNames.any { pkg ->
+                    (config.appBackupTypes[pkg] ?: config.backupTypes).toUiModel().anyEnabled()
+                }
             } || hasCustomDirs || hasDeviceData
             if (!hasSelectedBackupType) {
                 return OperationProgress(

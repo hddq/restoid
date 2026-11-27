@@ -553,6 +553,7 @@ class PresetsViewModel(
     fun runForgetDryRun() = editorController.runForgetDryRun()
     fun clearForgetDryRun() = editorController.clearForgetDryRun()
     fun setAppSortOrder(order: AppSortOrder) = editorController.setAppSortOrder(order)
+    fun setSelectAllApps(enabled: Boolean) = editorController.setSelectAllApps(enabled)
     fun toggleAppSelection(packageName: String) = editorController.toggleAppSelection(packageName)
     fun toggleAllApps() = editorController.toggleAllApps()
     fun setAppBackupTypes(packageName: String, backupTypes: BackupTypes) = editorController.setAppBackupTypes(packageName, backupTypes)
