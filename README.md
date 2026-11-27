@@ -28,6 +28,22 @@ Whether you want to back up photos to a home NAS, store encrypted snapshots in t
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.png" alt="Restoid app screenshot 3" width="32%" />
 </p>
 
+<details>
+  <summary>More screenshots</summary>
+
+  <p align="center">
+    <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.png" alt="Restoid app screenshot 4" width="32%" />
+    <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5.png" alt="Restoid app screenshot 5" width="32%" />
+    <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6.png" alt="Restoid app screenshot 6" width="32%" />
+  </p>
+
+  <p align="center">
+    <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/7.png" alt="Restoid app screenshot 7" width="32%" />
+    <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/8.png" alt="Restoid app screenshot 8" width="32%" />
+    <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/9.png" alt="Restoid app screenshot 9" width="32%" />
+  </p>
+</details>
+
 ## ✨ Features
 
 * ⚡ **Blazing Fast & Deduplicated**: Content-defined deduplication uploads only unique changed blocks, making subsequent backups blazingly fast and drastically more efficient than traditional `tar.gz` archives.
