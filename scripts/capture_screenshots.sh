@@ -101,7 +101,8 @@ else
     "${ADB_CMD[@]}" shell am broadcast -a com.android.systemui.demo -e command enter >/dev/null 2>&1 || true
     "${ADB_CMD[@]}" shell am broadcast -a com.android.systemui.demo -e command clock -e hhmm 1200 >/dev/null 2>&1 || true
     "${ADB_CMD[@]}" shell am broadcast -a com.android.systemui.demo -e command battery -e level 100 -e plugged false >/dev/null 2>&1 || true
-    "${ADB_CMD[@]}" shell am broadcast -a com.android.systemui.demo -e command network -e wifi show -e level 4 -e fully true -e mobile hide >/dev/null 2>&1 || true
+    "${ADB_CMD[@]}" shell am broadcast -a com.android.systemui.demo -e command network -e wifi show -e level 4 -e fully true >/dev/null 2>&1 || true
+    "${ADB_CMD[@]}" shell am broadcast -a com.android.systemui.demo -e command network -e mobile show -e level 4 -e datatype none >/dev/null 2>&1 || true
     "${ADB_CMD[@]}" shell am broadcast -a com.android.systemui.demo -e command notifications -e visible false >/dev/null 2>&1 || true
 fi
 "${ADB_CMD[@]}" shell cmd uimode night yes >/dev/null 2>&1 || true
