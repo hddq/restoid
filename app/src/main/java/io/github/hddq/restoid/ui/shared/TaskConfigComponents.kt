@@ -1188,7 +1188,7 @@ fun ForgetDryRunScreen(
                     result.groups.forEachIndexed { groupIdx, group ->
                         val userTags = BackupTagRules.filterUserTags(group.tags)
                         val orderedRows = (group.remove.map { it to true } + group.keep.map { it to false })
-                            .sortedByDescending { it.first.time }
+                            .sortedByDescending { parseSnapshotTimeInstant(it.first.time) ?: java.time.Instant.MIN }
 
                         item(key = "group_header_$groupIdx", contentType = "dry_run_header") {
                             val groupTitle = buildString {
@@ -1278,6 +1278,9 @@ fun ForgetDryRunScreen(
         }
     }
 }
+
+internal fun parseSnapshotTimeInstant(time: String): java.time.Instant? =
+    runCatching { java.time.OffsetDateTime.parse(time).toInstant() }.getOrNull()
 
 internal fun formatForgetKeepReason(reason: String): String {
     val cleaned = reason.trim().removeSuffix(" snapshot").trim()

@@ -112,6 +112,8 @@ import io.github.hddq.restoid.ui.snapshot.ForgetResult
 import io.github.hddq.restoid.ui.snapshot.SnapshotDetailsViewModel
 import io.github.hddq.restoid.ui.snapshot.SnapshotDetailsViewModelFactory
 
+internal const val SNAPSHOT_FORGOTTEN_RESULT_KEY = "snapshot_forgotten"
+
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SnapshotDetailsScreen(
@@ -168,6 +170,7 @@ fun SnapshotDetailsScreen(
 
     LaunchedEffect(forgetResult) {
         if (forgetResult is ForgetResult.Success) {
+            navController.previousBackStackEntry?.savedStateHandle?.set(SNAPSHOT_FORGOTTEN_RESULT_KEY, true)
             navController.popBackStack()
         }
     }

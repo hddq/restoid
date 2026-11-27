@@ -161,6 +161,7 @@ import io.github.hddq.restoid.ui.screens.OperationLogsScreen
 import io.github.hddq.restoid.ui.screens.OperationProgressScreen
 import io.github.hddq.restoid.ui.screens.RestoreScreen
 import io.github.hddq.restoid.ui.screens.SettingsScreen
+import io.github.hddq.restoid.ui.screens.SNAPSHOT_FORGOTTEN_RESULT_KEY
 import io.github.hddq.restoid.ui.screens.SnapshotDetailsScreen
 import io.github.hddq.restoid.ui.screens.WelcomeScreen
 import io.github.hddq.restoid.ui.settings.SettingsViewModel
@@ -989,7 +990,10 @@ class MainActivity : FragmentActivity() {
                                     ) {
                                         PresetForgetConfigScreen(
                                             viewModel = vm,
-                                            onOpenDryRun = { navController.navigate(PresetsRoutes.ForgetDryRun) }
+                                            onOpenDryRun = {
+                                                vm.runForgetDryRun()
+                                                navController.navigate(PresetsRoutes.ForgetDryRun)
+                                            }
                                         )
                                     }
                                 }
@@ -1013,6 +1017,15 @@ class MainActivity : FragmentActivity() {
                                             app.tagRepository
                                         )
                                     )
+                                    val snapshotForgotten by backStackEntry.savedStateHandle
+                                        .getStateFlow(SNAPSHOT_FORGOTTEN_RESULT_KEY, false)
+                                        .collectAsStateWithLifecycle()
+                                    LaunchedEffect(snapshotForgotten) {
+                                        if (snapshotForgotten) {
+                                            backStackEntry.savedStateHandle.remove<Boolean>(SNAPSHOT_FORGOTTEN_RESULT_KEY)
+                                            vm.runForgetDryRun()
+                                        }
+                                    }
                                     DestinationScaffold(
                                         titleRes = R.string.forget_dry_run_sheet_title,
                                         isTopLevel = false,
@@ -1376,7 +1389,10 @@ class MainActivity : FragmentActivity() {
                                     ) {
                                         ForgetConfigScreen(
                                             viewModel = vm,
-                                            onOpenDryRun = { navController.navigate(RunTasksRoutes.ForgetDryRun) }
+                                            onOpenDryRun = {
+                                                vm.runForgetDryRun()
+                                                navController.navigate(RunTasksRoutes.ForgetDryRun)
+                                            }
                                         )
                                     }
                                 }
@@ -1399,6 +1415,15 @@ class MainActivity : FragmentActivity() {
                                             app.tagRepository
                                         )
                                     )
+                                    val snapshotForgotten by backStackEntry.savedStateHandle
+                                        .getStateFlow(SNAPSHOT_FORGOTTEN_RESULT_KEY, false)
+                                        .collectAsStateWithLifecycle()
+                                    LaunchedEffect(snapshotForgotten) {
+                                        if (snapshotForgotten) {
+                                            backStackEntry.savedStateHandle.remove<Boolean>(SNAPSHOT_FORGOTTEN_RESULT_KEY)
+                                            vm.runForgetDryRun()
+                                        }
+                                    }
                                     DestinationScaffold(
                                         titleRes = R.string.forget_dry_run_sheet_title,
                                         isTopLevel = false,
