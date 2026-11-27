@@ -33,6 +33,7 @@ import io.github.hddq.restoid.work.resolveExclusionPaths
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 data class TaskConfigEditorState(
@@ -312,6 +313,8 @@ class TaskConfigEditorController(
         ++appsLoadSessionId
         ++contactAccountsRefreshRequestId
         ++calendarRefreshRequestId
+        forgetDryRunJob?.cancel()
+        forgetDryRunJob = null
     }
 
     fun resetForNewConfig(
@@ -320,6 +323,8 @@ class TaskConfigEditorController(
         val sessionId = ++appsLoadSessionId
         ++contactAccountsRefreshRequestId
         ++calendarRefreshRequestId
+        forgetDryRunJob?.cancel()
+        forgetDryRunJob = null
         val defaultHostname = preferencesRepository.getDeviceHostname()
         val newState = TaskConfigEditorState(
             maintenance = MaintenanceConfig(
@@ -344,13 +349,18 @@ class TaskConfigEditorController(
         val sessionId = ++appsLoadSessionId
         ++contactAccountsRefreshRequestId
         ++calendarRefreshRequestId
+        forgetDryRunJob?.cancel()
+        forgetDryRunJob = null
         val normalizedHosts = normalizeForgetHosts(config.forgetHosts)
         val existingApps = if (reloadApps) emptyList() else readState().apps
         updateState { state ->
             recomputeConflicts(
                 state.withAppliedRunTasksConfig(config, existingApps = existingApps).copy(
                     isLoadingContactAccounts = false,
-                    isLoadingCalendars = false
+                    isLoadingCalendars = false,
+                    isRunningForgetDryRun = false,
+                    forgetDryRunResult = null,
+                    forgetDryRunError = null
                 )
             )
         }
@@ -698,6 +708,8 @@ class TaskConfigEditorController(
     }
 
     fun runForgetDryRun() {
+        forgetDryRunJob?.cancel()
+        forgetDryRunJob = null
         val state = readState()
         val maintenance = state.maintenance
         if (maintenance.keepLast <= 0 &&
@@ -764,7 +776,6 @@ class TaskConfigEditorController(
             return
         }
 
-        forgetDryRunJob?.cancel()
         forgetDryRunJob = scope.launch {
             updateState {
                 it.copy(
@@ -775,19 +786,26 @@ class TaskConfigEditorController(
             }
             val env = repositoriesRepository.getExecutionEnvironmentVariables(selectedRepoKey)
             val resticOptions = repositoriesRepository.getExecutionResticOptions(selectedRepoKey)
-            val result = resticRepository.forgetDryRun(
-                repoPath = repository.path,
-                password = password,
-                keepLast = maintenance.keepLast,
-                keepDaily = maintenance.keepDaily,
-                keepWeekly = maintenance.keepWeekly,
-                keepMonthly = maintenance.keepMonthly,
-                forgetAllHosts = maintenance.forgetAllHosts,
-                forgetHosts = maintenance.forgetHosts,
-                forgetTags = maintenance.forgetTags,
-                environmentVariables = env,
-                resticOptions = resticOptions
-            )
+            val result = try {
+                resticRepository.forgetDryRun(
+                    repoPath = repository.path,
+                    password = password,
+                    keepLast = maintenance.keepLast,
+                    keepDaily = maintenance.keepDaily,
+                    keepWeekly = maintenance.keepWeekly,
+                    keepMonthly = maintenance.keepMonthly,
+                    forgetAllHosts = maintenance.forgetAllHosts,
+                    forgetHosts = maintenance.forgetHosts,
+                    forgetTags = maintenance.forgetTags,
+                    environmentVariables = env,
+                    resticOptions = resticOptions
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+            if (!isActive) return@launch
             result.fold(
                 onSuccess = { dryRunResult ->
                     updateState {

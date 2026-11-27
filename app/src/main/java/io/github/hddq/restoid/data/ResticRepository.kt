@@ -648,7 +648,7 @@ class ResticRepository(
                 }
             }
             val root = json.parseToJsonElement(jsonText) as? JsonArray
-                ?: return Result.success(ForgetDryRunResult(groups = emptyList()))
+                ?: throw IllegalStateException("Unexpected forget dry-run JSON output")
 
             val groups = root.mapNotNull { element ->
                 val obj = element as? JsonObject ?: return@mapNotNull null

@@ -131,7 +131,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import io.github.hddq.restoid.R
-import io.github.hddq.restoid.data.ForgetDryRunGroup
 import io.github.hddq.restoid.data.ForgetDryRunResult
 import io.github.hddq.restoid.data.ForgetDryRunSnapshot
 import io.github.hddq.restoid.model.AppInfo
@@ -1139,11 +1138,45 @@ private fun ForgetDryRunBottomSheet(
                     else -> {
                         LazyColumn(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
                             result.groups.forEachIndexed { groupIdx, group ->
-                                item(key = "group_$groupIdx") {
-                                    ForgetDryRunGroupSection(group = group)
+                                val userTags = BackupTagRules.filterUserTags(group.tags)
+                                val orderedRows = group.remove.map { it to true } + group.keep.map { it to false }
+                                item(key = "group_header_$groupIdx", contentType = "dry_run_header") {
+                                    val groupTitle = buildString {
+                                        append(group.host.ifBlank { stringResource(R.string.restic_unknown) })
+                                        if (userTags.isNotEmpty()) {
+                                            append(" · ")
+                                            append(userTags.joinToString(", "))
+                                        }
+                                    }
+                                    ExpressiveSectionHeader(
+                                        title = groupTitle,
+                                        modifier = if (groupIdx > 0) Modifier.padding(top = 10.dp) else Modifier
+                                    )
+                                }
+                                itemsIndexed(
+                                    items = orderedRows,
+                                    key = { idx, (snapshot, isRemove) ->
+                                        "group_${groupIdx}_${if (isRemove) "rm" else "keep"}_${snapshot.id}_$idx"
+                                    },
+                                    contentType = { _, _ -> "dry_run_snapshot" }
+                                ) { idx, (snapshot, isRemove) ->
+                                    ExpressiveSegmentedSurface(
+                                        index = idx,
+                                        count = orderedRows.size,
+                                        containerColor = if (isRemove) {
+                                            MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.55f)
+                                        } else {
+                                            MaterialTheme.colorScheme.surfaceContainer
+                                        }
+                                    ) {
+                                        ForgetDryRunSnapshotRow(
+                                            snapshot = snapshot,
+                                            isRemove = isRemove
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -1157,45 +1190,6 @@ private fun ForgetDryRunBottomSheet(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(stringResource(R.string.action_done))
-            }
-        }
-    }
-}
-
-@Composable
-private fun ForgetDryRunGroupSection(
-    group: ForgetDryRunGroup
-) {
-    val userTags = remember(group.tags) { BackupTagRules.filterUserTags(group.tags) }
-    val groupTitle = buildString {
-        append(group.host.ifBlank { stringResource(R.string.restic_unknown) })
-        if (userTags.isNotEmpty()) {
-            append(" · ")
-            append(userTags.joinToString(", "))
-        }
-    }
-    val orderedRows = remember(group) {
-        group.remove.map { it to true } + group.keep.map { it to false }
-    }
-
-    Column(modifier = Modifier.fillMaxWidth()) {
-        ExpressiveSectionHeader(title = groupTitle)
-        ExpressiveCardGroup {
-            orderedRows.forEachIndexed { idx, (snapshot, isRemove) ->
-                ExpressiveSegmentedSurface(
-                    index = idx,
-                    count = orderedRows.size,
-                    containerColor = if (isRemove) {
-                        MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.55f)
-                    } else {
-                        MaterialTheme.colorScheme.surfaceContainer
-                    }
-                ) {
-                    ForgetDryRunSnapshotRow(
-                        snapshot = snapshot,
-                        isRemove = isRemove
-                    )
-                }
             }
         }
     }

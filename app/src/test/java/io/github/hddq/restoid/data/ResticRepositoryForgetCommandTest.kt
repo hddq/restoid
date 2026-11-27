@@ -190,4 +190,11 @@ class ResticRepositoryForgetCommandTest {
         assertTrue(parsed.isSuccess)
         assertEquals(0, parsed.getOrThrow().groups.size)
     }
+
+    @Test
+    fun parseForgetDryRunJson_nonArrayJson_returnsFailure() {
+        val repository = createRepository()
+        val parsed = repository.parseForgetDryRunJson("""{"unexpected": true}""")
+        assertTrue(parsed.isFailure)
+    }
 }
