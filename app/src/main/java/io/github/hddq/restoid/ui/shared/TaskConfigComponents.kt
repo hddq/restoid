@@ -78,7 +78,6 @@ import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -1208,14 +1207,6 @@ private fun ForgetDryRunBottomSheet(
                     }
                 }
             }
-
-            Spacer(Modifier.height(16.dp))
-            Button(
-                onClick = onDismissRequest,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(stringResource(R.string.action_done))
-            }
         }
     }
 }
@@ -1485,14 +1476,6 @@ private fun ForgetHostsBottomSheet(
                         }
                     }
                 }
-            }
-
-            Spacer(Modifier.height(16.dp))
-            Button(
-                onClick = onDismissRequest,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(stringResource(R.string.action_done))
             }
         }
     }
