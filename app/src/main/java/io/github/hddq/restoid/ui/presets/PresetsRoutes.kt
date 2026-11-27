@@ -6,5 +6,6 @@ object PresetsRoutes {
     const val CustomDirectoriesConfig = "presets/custom_directories_config"
     const val DeviceDataConfig = "presets/device_data_config"
     const val ForgetConfig = "presets/forget_config"
+    const val ForgetDryRun = "presets/forget_dry_run"
     const val CheckConfig = "presets/check_config"
 }
