@@ -1,0 +1,8 @@
+* Reusable task presets & unlimited preset-based schedules
+* Trigger task presets via external intents (opt-in)
+* Colored backup tags with Home filtering & Forget targeting
+* Auto-include newly installed apps in backups with exclusions
+* Forget policy dry-run review screen & built-in help guide
+* First-time welcome setup wizard & in-app update changelog
+* Adaptive navigation bar & expressive segmented lists
+* Redesigned snapshot header, empty states & permission fixes
