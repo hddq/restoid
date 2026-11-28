@@ -41,6 +41,7 @@ data class PresetsUiState(
     val presets: List<TaskPreset> = emptyList(),
     val schedulesByPresetId: Map<String, List<Schedule>> = emptyMap(),
     val selectedRepoKey: String? = null,
+    val selectedRepoName: String? = null,
     val isLoading: Boolean = false,
     val isOperationRunning: Boolean = false
 )
@@ -76,6 +77,7 @@ class PresetsViewModel(
 ) : ViewModel() {
 
     val hasRoot = rootRepository.hasRoot
+    val allowExternalIntents = preferencesRepository.allowExternalIntents
 
     private val _uiState = MutableStateFlow(PresetsUiState())
     val uiState = _uiState.asStateFlow()
@@ -130,6 +132,7 @@ class PresetsViewModel(
                 it.copy(
                     presets = emptyList(),
                     schedulesByPresetId = emptyMap(),
+                    selectedRepoName = null,
                     isLoading = false
                 )
             }
@@ -140,7 +143,7 @@ class PresetsViewModel(
         editorController.loadAvailableTags(repoId)
 
         loadPresetsJob = viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            _uiState.update { it.copy(selectedRepoName = repository.name, isLoading = true) }
             val presets = taskPresetRepository.getPresets(repoId)
             val schedules = scheduleRepository.getSchedules(repoId)
             if (_uiState.value.selectedRepoKey != repoKey) return@launch

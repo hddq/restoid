@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.AutoDelete
+import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.Bookmarks
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.CleaningServices
@@ -120,7 +121,9 @@ fun PresetsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val hasRoot by viewModel.hasRoot.collectAsStateWithLifecycle()
+    val allowExternalIntents by viewModel.allowExternalIntents.collectAsStateWithLifecycle()
     var presetToDelete by remember { mutableStateOf<TaskPreset?>(null) }
+    var presetForIntentDetails by remember { mutableStateOf<TaskPreset?>(null) }
     val lifecycleOwner = LocalLifecycleOwner.current
 
     DisposableEffect(lifecycleOwner) {
@@ -146,13 +149,24 @@ fun PresetsScreen(
     PresetsContent(
         uiState = uiState,
         hasRoot = hasRoot,
+        allowExternalIntents = allowExternalIntents,
         onEditPreset = onEditPreset,
         onRunPresetNow = viewModel::runPresetNow,
         onDuplicatePreset = viewModel::duplicatePreset,
+        onShowIntentDetails = { presetForIntentDetails = it },
         onRequestDeletePreset = { presetToDelete = it },
         modifier = modifier,
         contentPadding = contentPadding
     )
+
+    presetForIntentDetails?.let { preset ->
+        PresetIntentSheet(
+            presetId = preset.id,
+            presetName = preset.name,
+            repositoryName = uiState.selectedRepoName,
+            onDismissRequest = { presetForIntentDetails = null }
+        )
+    }
 
     presetToDelete?.let { preset ->
         val linkedCount = uiState.schedulesByPresetId[preset.id]?.size ?: 0
@@ -197,9 +211,11 @@ fun PresetsScreen(
 internal fun PresetsContent(
     uiState: PresetsUiState,
     hasRoot: Boolean,
+    allowExternalIntents: Boolean = false,
     onEditPreset: (TaskPreset) -> Unit = {},
     onRunPresetNow: (TaskPreset) -> Unit = {},
     onDuplicatePreset: (TaskPreset) -> Unit = {},
+    onShowIntentDetails: (TaskPreset) -> Unit = {},
     onRequestDeletePreset: (TaskPreset) -> Unit = {},
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp)
@@ -230,10 +246,12 @@ internal fun PresetsContent(
                             linkedScheduleCount = linkedCount,
                             hasRoot = hasRoot,
                             canRunNow = !uiState.isOperationRunning,
+                            allowExternalIntents = allowExternalIntents,
                             shapes = ListItemDefaults.segmentedShapes(index = index, count = presets.size),
                             onEdit = { onEditPreset(preset) },
                             onRunNow = { onRunPresetNow(preset) },
                             onDuplicate = { onDuplicatePreset(preset) },
+                            onShowIntentDetails = { onShowIntentDetails(preset) },
                             onDelete = { onRequestDeletePreset(preset) }
                         )
                     }
@@ -251,10 +269,12 @@ private fun PresetItem(
     linkedScheduleCount: Int,
     hasRoot: Boolean,
     canRunNow: Boolean,
+    allowExternalIntents: Boolean,
     shapes: ListItemShapes,
     onEdit: () -> Unit,
     onRunNow: () -> Unit,
     onDuplicate: () -> Unit,
+    onShowIntentDetails: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -356,6 +376,16 @@ private fun PresetItem(
                     onDuplicate()
                 }
             )
+            if (allowExternalIntents) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_intent_details)) },
+                    leadingIcon = { Icon(Icons.Outlined.Bolt, contentDescription = null) },
+                    onClick = {
+                        menuExpanded = false
+                        onShowIntentDetails()
+                    }
+                )
+            }
             DropdownMenuItem(
                 text = {
                     Text(
@@ -396,11 +426,14 @@ fun AddEditPresetScreen(
     contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val state by viewModel.addEditState.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val hasRoot by viewModel.hasRoot.collectAsStateWithLifecycle()
+    val allowExternalIntents by viewModel.allowExternalIntents.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val appBarActions = LocalAppBarActions.current
     var showGuideSheet by remember { mutableStateOf(false) }
     var showTagPickerSheet by remember { mutableStateOf(false) }
+    var showIntentSheet by remember { mutableStateOf(false) }
     val lifecycleOwner = LocalLifecycleOwner.current
 
     val (deviceDataPermissions, requestDeviceDataPermissions) = rememberPermissionsMap(
@@ -430,7 +463,7 @@ fun AddEditPresetScreen(
         }
     }
 
-    DisposableEffect(state.id) {
+    DisposableEffect(state.id, allowExternalIntents) {
         appBarActions.value = {
             IconButton(onClick = { showGuideSheet = true }) {
                 Icon(
@@ -439,6 +472,14 @@ fun AddEditPresetScreen(
                 )
             }
             if (state.id != null) {
+                if (allowExternalIntents) {
+                    IconButton(onClick = { showIntentSheet = true }) {
+                        Icon(
+                            Icons.Outlined.Bolt,
+                            contentDescription = stringResource(R.string.action_intent_details)
+                        )
+                    }
+                }
                 IconButton(onClick = { viewModel.runCurrentPresetNow() }) {
                     Icon(
                         Icons.Outlined.PlayArrow,
@@ -784,6 +825,16 @@ fun AddEditPresetScreen(
 
     if (showGuideSheet) {
         TasksGuideBottomSheet(onDismissRequest = { showGuideSheet = false })
+    }
+
+    val savedPresetId = state.id
+    if (showIntentSheet && allowExternalIntents && savedPresetId != null) {
+        PresetIntentSheet(
+            presetId = savedPresetId,
+            presetName = state.name.trim(),
+            repositoryName = uiState.selectedRepoName,
+            onDismissRequest = { showIntentSheet = false }
+        )
     }
 
     if (showTagPickerSheet) {
