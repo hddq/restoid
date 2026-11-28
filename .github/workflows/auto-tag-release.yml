@@ -1,0 +1,75 @@
+name: Auto-Tag Release
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "app/build.gradle.kts"
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: auto-tag-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  tag-and-trigger-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Create release tag and trigger Android Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          GRADLE_FILE=app/build.gradle.kts
+
+          VERSION_NAME=$(sed -n -E 's/^[[:space:]]*versionName = "([^"]+)".*/\1/p' "$GRADLE_FILE")
+          BASE_CODE=$(sed -n -E 's/^val baseAppVersionCode = ([0-9]+).*/\1/p' "$GRADLE_FILE")
+          DEFAULT_CODE=$(sed -n -E 's/^[[:space:]]*versionCode = ([0-9]+).*/\1/p' "$GRADLE_FILE")
+
+          if [ -z "$VERSION_NAME" ]; then
+            echo "::error::Could not parse versionName from $GRADLE_FILE."
+            exit 1
+          fi
+
+          TAG="v${VERSION_NAME}"
+          echo "Detected versionName=$VERSION_NAME (tag=$TAG), baseAppVersionCode=$BASE_CODE, defaultConfig.versionCode=$DEFAULT_CODE"
+
+          if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z][0-9A-Za-z.-]*)?$ ]]; then
+            echo "::error::Derived tag '$TAG' must look like vX.Y.Z or vX.Y.Z-<pre-release> (e.g. v0.9.0-beta.1)."
+            exit 1
+          fi
+
+          EXISTING_TAG=$(git ls-remote --tags origin "refs/tags/${TAG}")
+          if [ -n "$EXISTING_TAG" ]; then
+            echo "Tag '${TAG}' already exists on origin; nothing to do."
+            exit 0
+          fi
+
+          if [ -z "$BASE_CODE" ] || [ "$BASE_CODE" != "$DEFAULT_CODE" ]; then
+            echo "::error::baseAppVersionCode ($BASE_CODE) and defaultConfig versionCode ($DEFAULT_CODE) must be equal before tagging."
+            exit 1
+          fi
+
+          if [[ "$TAG" != *-* ]]; then
+            CHANGELOG_VERSION_CODE=$((BASE_CODE * 10 + 2))
+            CHANGELOG_FILE="fastlane/metadata/android/en-US/changelogs/${CHANGELOG_VERSION_CODE}.txt"
+            if [ ! -f "$CHANGELOG_FILE" ]; then
+              echo "::error::$CHANGELOG_FILE is required for stable releases; refusing to create tag '${TAG}'."
+              exit 1
+            fi
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "refs/tags/${TAG}"
+
+          gh workflow run android-release.yml --ref "refs/tags/${TAG}"
+          echo "Created tag '${TAG}' and dispatched android-release.yml."
