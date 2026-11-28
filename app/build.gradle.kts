@@ -28,7 +28,7 @@ val hasReleaseSigning = listOf(
 // Bump by 1 for every release tag, stable or pre-release (e.g. v0.9.0-beta.1 -> 29, v0.9.0 -> 30).
 // Per-ABI APK version code: 10 * base + abiCode. Keep the defaultConfig version code below equal to
 // this value as a literal: F-Droid's checkupdates regex-parses it and cannot resolve variables.
-val baseAppVersionCode = 33
+val baseAppVersionCode = 34
 
 val fastlaneChangelogsDir = layout.projectDirectory.dir("../fastlane/metadata/android/en-US/changelogs")
 val currentChangelogText = providers.fileContents(
@@ -63,8 +63,8 @@ android {
         applicationId = "io.github.hddq.restoid"
         minSdk = 29
         targetSdk = 37
-        versionCode = 33
-        versionName = "0.9.2"
+        versionCode = 34
+        versionName = "0.10.0"
         buildConfigField("int", "BASE_VERSION_CODE", baseAppVersionCode.toString())
         buildConfigField("String", "APP_CHANGELOG", "\"${escapeBuildConfigString(currentChangelogText)}\"")
 
