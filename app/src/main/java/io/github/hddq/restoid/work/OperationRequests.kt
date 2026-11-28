@@ -68,6 +68,8 @@ data class BackupWorkRequest(
     val repositoryKey: String,
     val backupTypes: BackupTypeSelection,
     val selectedPackageNames: List<String>,
+    val selectAllApps: Boolean = false,
+    val excludedPackageNames: List<String> = emptyList(),
     val appBackupTypes: Map<String, BackupTypeSelection> = emptyMap(),
     val customDirectories: List<String> = emptyList(),
     val excludedCustomDirectories: List<String> = emptyList(),
@@ -110,6 +112,8 @@ data class RunTasksConfig(
     val backupEnabled: Boolean = false,
     val backupTypes: BackupTypeSelection = BackupTypeSelection(),
     val selectedPackageNames: List<String> = emptyList(),
+    val selectAllApps: Boolean = false,
+    val excludedPackageNames: List<String> = emptyList(),
     val appBackupTypes: Map<String, BackupTypeSelection> = emptyMap(),
     val customDirectories: List<String> = emptyList(),
     val excludedCustomDirectories: List<String> = emptyList(),
@@ -135,6 +139,8 @@ data class RunTasksWorkRequest(
     val backupEnabled: Boolean,
     val backupTypes: BackupTypeSelection,
     val selectedPackageNames: List<String>,
+    val selectAllApps: Boolean = false,
+    val excludedPackageNames: List<String> = emptyList(),
     val appBackupTypes: Map<String, BackupTypeSelection> = emptyMap(),
     val customDirectories: List<String> = emptyList(),
     val excludedCustomDirectories: List<String> = emptyList(),
@@ -165,6 +171,7 @@ fun RunTasksConfig.toWorkRequest(
     requireUnmeteredNetwork: Boolean = false
 ): RunTasksWorkRequest {
     val backupAppsEnabled = backupEnabled && hasRoot
+    val effectiveSelectAllApps = backupAppsEnabled && selectAllApps
     val hasCustomDirectories = customDirectories.isNotEmpty()
     val hasDeviceData = deviceData.anyEnabled()
     val normalizedForgetHosts = if (forgetAllHosts) {
@@ -176,7 +183,9 @@ fun RunTasksConfig.toWorkRequest(
         repositoryKey = repositoryKey,
         backupEnabled = backupAppsEnabled || hasCustomDirectories || hasDeviceData,
         backupTypes = backupTypes,
-        selectedPackageNames = if (backupAppsEnabled) selectedPackageNames else emptyList(),
+        selectedPackageNames = if (backupAppsEnabled && !effectiveSelectAllApps) selectedPackageNames else emptyList(),
+        selectAllApps = effectiveSelectAllApps,
+        excludedPackageNames = if (effectiveSelectAllApps) excludedPackageNames.distinct() else emptyList(),
         appBackupTypes = if (backupAppsEnabled) appBackupTypes else emptyMap(),
         customDirectories = customDirectories,
         excludedCustomDirectories = excludedCustomDirectories,

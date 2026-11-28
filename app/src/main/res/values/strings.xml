@@ -63,6 +63,8 @@
     <string name="backup_type_accessibility_desc">Enabled accessibility services</string>
     <string name="apps_title">Apps</string>
     <string name="toggle_all">Toggle All</string>
+    <string name="backup_include_new_apps_title">Include newly installed apps</string>
+    <string name="backup_include_new_apps_subtitle">Automatically back up apps installed in the future</string>
     <string name="backup_types_for_selected_apps">Backup types for selected apps</string>
     <string name="backup_types_none">None</string>
     <string name="backup_types_mixed">Mixed</string>
@@ -188,6 +190,7 @@
     <string name="error_calendar_read_permission_restore_required">READ_CALENDAR permission is required to restore calendars.</string>
     <string name="error_calendar_write_permission_required">Calendar permission is required to restore calendars.</string>
     <string name="run_tasks_backup_subtitle">%1$d apps selected - %2$s</string>
+    <string name="run_tasks_backup_subtitle_all_apps">%1$s - %2$s</string>
     <string name="run_tasks_forget_snapshots">Forget Snapshots</string>
     <string name="run_tasks_forget_subtitle">Keep last %1$d, daily %2$d, weekly %3$d, monthly %4$d</string>
     <string name="run_tasks_forget_subtitle_with_hosts">%1$s · %2$s</string>
@@ -939,6 +942,11 @@
     <plurals name="preset_summary_apps_count">
         <item quantity="one">%1$d app</item>
         <item quantity="other">%1$d apps</item>
+    </plurals>
+    <string name="preset_summary_all_apps">All apps</string>
+    <plurals name="preset_summary_all_apps_except_count">
+        <item quantity="one">All apps (except %1$d)</item>
+        <item quantity="other">All apps (except %1$d)</item>
     </plurals>
     <string name="preset_summary_custom_folders">Custom folders</string>
     <string name="preset_summary_device_data">Device data</string>

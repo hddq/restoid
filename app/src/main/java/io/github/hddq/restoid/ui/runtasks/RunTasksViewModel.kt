@@ -116,10 +116,19 @@ class RunTasksViewModel(
     private fun buildInitialCustomEditorState(): TaskConfigEditorState {
         val selectedCustomDirs = preferencesRepository.loadCustomDirectoriesSelected()
         val selectedExcludedDirs = preferencesRepository.loadExcludedCustomDirectoriesSelected()
+        val selectAllApps = preferencesRepository.loadRunTasksSelectAllApps()
+        val excludedPackages = if (selectAllApps) {
+            preferencesRepository.loadRunTasksExcludedPackages()
+        } else {
+            emptySet()
+        }
         return TaskConfigEditorState(
             isLoadingApps = true,
             backupEnabled = preferencesRepository.loadRunTasksBackupEnabled(),
+            selectAllApps = selectAllApps,
+            excludedPackageNames = excludedPackages,
             backupTypes = preferencesRepository.loadBackupTypes(),
+            appBackupTypes = preferencesRepository.loadRunTasksAppBackupTypes(),
             maintenance = preferencesRepository.loadMaintenanceState(),
             customDirectoriesBackupEnabled = preferencesRepository.loadCustomDirectoriesBackupEnabled(),
             deviceDataBackupEnabled = preferencesRepository.loadDeviceDataBackupEnabled(),
@@ -142,11 +151,13 @@ class RunTasksViewModel(
 
     private fun loadInitialCustomApps() {
         val selectAll = preferencesRepository.loadRunTasksSelectAllApps()
+        val excludedPackages = if (selectAll) preferencesRepository.loadRunTasksExcludedPackages() else emptySet()
         val selectedPackages = if (selectAll) null else preferencesRepository.loadRunTasksSelectedPackages().toList()
         val savedAppBackupTypes = preferencesRepository.loadRunTasksAppBackupTypes()
         editorController.loadInstalledApps(
             selectedPackageNames = selectedPackages,
             selectAllDefault = if (selectAll) true else null,
+            excludedPackageNames = if (selectAll) excludedPackages else null,
             savedAppBackupTypes = savedAppBackupTypes
         )
     }
@@ -307,9 +318,29 @@ class RunTasksViewModel(
 
         if (editor.apps.isNotEmpty()) {
             preferencesRepository.saveRunTasksAppBackupTypes(editor.appBackupTypes)
-            val allAppsSelected = editor.apps.all { it.isSelected }
-            val selectedPackages = editor.apps.filter { it.isSelected }.map { it.packageName }.toSet()
-            preferencesRepository.saveRunTasksSelectedApps(allAppsSelected, selectedPackages)
+            val selectedPackages = if (editor.selectAllApps) {
+                emptySet()
+            } else {
+                editor.apps.filter { it.isSelected }.map { it.packageName }.toSet()
+            }
+            val excludedPackages = if (editor.selectAllApps) {
+                val installedPackages = editor.apps.mapTo(mutableSetOf()) { it.packageName }
+                val preservedUninstalled = editor.excludedPackageNames.filterNot { it in installedPackages }
+                editor.apps.filterNot { it.isSelected }.map { it.packageName }.toSet() + preservedUninstalled
+            } else {
+                emptySet()
+            }
+            preferencesRepository.saveRunTasksSelectedApps(
+                selectAll = editor.selectAllApps,
+                packageNames = selectedPackages,
+                excludedPackageNames = excludedPackages
+            )
+        } else {
+            preferencesRepository.saveRunTasksSelectedApps(
+                selectAll = editor.selectAllApps,
+                packageNames = if (editor.selectAllApps) emptySet() else preferencesRepository.loadRunTasksSelectedPackages(),
+                excludedPackageNames = if (editor.selectAllApps) editor.excludedPackageNames else emptySet()
+            )
         }
 
         preferencesRepository.saveCustomDirectoriesBackupEnabled(editor.customDirectoriesBackupEnabled)
@@ -351,6 +382,7 @@ class RunTasksViewModel(
     fun run() {
         val state = _uiState.value
         if (state.isRunning) return
+        if (state.editor.isLoadingApps) return
 
         if (state.selectedPresetId == null) {
             persistCustomJob?.cancel()
@@ -456,6 +488,7 @@ class RunTasksViewModel(
     fun runForgetDryRun() = editorController.runForgetDryRun()
     fun clearForgetDryRun() = editorController.clearForgetDryRun()
     fun setAppSortOrder(order: AppSortOrder) = editorController.setAppSortOrder(order)
+    fun setSelectAllApps(enabled: Boolean) = editorController.setSelectAllApps(enabled)
     fun toggleAppSelection(packageName: String) = editorController.toggleAppSelection(packageName)
     fun toggleAllApps() = editorController.toggleAllApps()
     fun setAppBackupTypes(packageName: String, backupTypes: BackupTypes) = editorController.setAppBackupTypes(packageName, backupTypes)
