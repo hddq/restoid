@@ -264,7 +264,14 @@ jobs:
               cat "$CHANGELOG_FILE"
               printf '\n\n'
             fi
-            printf '%s\n' "$GENERATED_NOTES"
+            if [ -n "$GENERATED_NOTES" ]; then
+              echo "<details>"
+              echo "<summary>What's Changed</summary>"
+              echo ""
+              printf '%s\n' "$GENERATED_NOTES" | sed '1{/^## What'\''s Changed$/d;}'
+              echo ""
+              echo "</details>"
+            fi
           } > "$RELEASE_BODY_FILE"
           echo "path=$RELEASE_BODY_FILE" >> "$GITHUB_OUTPUT"
 
