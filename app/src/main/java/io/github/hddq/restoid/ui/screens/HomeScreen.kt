@@ -908,10 +908,6 @@ internal fun SnapshotItem(
                 (if (hasCalendar) 1 else 0)
 
             if (totalCount > 0) {
-                Text(
-                    pluralStringResource(R.plurals.backed_up_items_count, totalCount, totalCount),
-                    style = MaterialTheme.typography.labelMedium
-                )
                 val iconSize = 32.dp
                 val spacing = 8.dp
                 val customDirSlot = if (customDirCount > 0) 1 else 0
