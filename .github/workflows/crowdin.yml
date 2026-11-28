@@ -2,10 +2,7 @@ name: Crowdin Synchronization
 
 on:
   workflow_dispatch:
-
-concurrency:
-  group: crowdin-translation-sync
-  cancel-in-progress: false
+  workflow_call:
 
 permissions:
   contents: write
@@ -16,6 +13,9 @@ jobs:
     name: Synchronize with Crowdin
     if: github.repository_owner == 'hddq'
     runs-on: ubuntu-latest
+    concurrency:
+      group: crowdin-translation-sync
+      cancel-in-progress: false
     steps:
       - name: Checkout
         uses: actions/checkout@v7
