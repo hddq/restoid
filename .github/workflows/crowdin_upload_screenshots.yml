@@ -18,7 +18,7 @@ permissions:
 jobs:
   upload-screenshots:
     name: Upload screenshots to Crowdin
-    if: github.repository_owner == 'hddq'
+    if: github.repository_owner == 'hddq' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
