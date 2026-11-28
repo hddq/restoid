@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
   actions: write
 
 concurrency:
@@ -16,15 +17,17 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  tag-and-trigger-release:
+  validate:
     runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.validate.outputs.should_release }}
+      tag: ${{ steps.validate.outputs.tag }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Create release tag and trigger Android Release
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Validate release metadata
+        id: validate
         run: |
           set -euo pipefail
           GRADLE_FILE=app/build.gradle.kts
@@ -49,6 +52,7 @@ jobs:
           EXISTING_TAG=$(git ls-remote --tags origin "refs/tags/${TAG}")
           if [ -n "$EXISTING_TAG" ]; then
             echo "Tag '${TAG}' already exists on origin; nothing to do."
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -66,10 +70,89 @@ jobs:
             fi
           fi
 
+          {
+            echo "should_release=true"
+            echo "tag=$TAG"
+          } >> "$GITHUB_OUTPUT"
+
+  crowdin-sync:
+    needs: validate
+    if: needs.validate.outputs.should_release == 'true' && github.repository_owner == 'hddq'
+    uses: ./.github/workflows/crowdin.yml
+    secrets: inherit
+
+  merge-and-tag:
+    needs: [validate, crowdin-sync]
+    if: >-
+      always() &&
+      needs.validate.result == 'success' &&
+      needs.validate.outputs.should_release == 'true' &&
+      (needs.crowdin-sync.result == 'success' ||
+        (needs.crowdin-sync.result == 'skipped' && github.repository_owner != 'hddq'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          ref: master
+
+      - name: Merge Crowdin PR if present
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          PR_NUMBER=$(gh pr list --base master --head crowdin --state open --json number --jq '.[0].number // empty')
+          if [ -z "$PR_NUMBER" ]; then
+            echo "No open Crowdin PR found; proceeding to tag master."
+            exit 0
+          fi
+
+          echo "Found open Crowdin PR #${PR_NUMBER}; waiting for mergeable status..."
+          MERGEABLE="UNKNOWN"
+          for _ in $(seq 1 15); do
+            MERGEABLE=$(gh pr view "$PR_NUMBER" --json mergeable --jq '.mergeable')
+            if [ "$MERGEABLE" != "UNKNOWN" ]; then
+              break
+            fi
+            sleep 2
+          done
+
+          if [ "$MERGEABLE" != "MERGEABLE" ]; then
+            echo "::error::Crowdin PR #${PR_NUMBER} is not mergeable (status: ${MERGEABLE})."
+            exit 1
+          fi
+
+          gh pr merge "$PR_NUMBER" --squash
+          echo "Merged Crowdin PR #${PR_NUMBER} into master."
+
+      - name: Create release tag and trigger Android Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.validate.outputs.tag }}
+        run: |
+          set -euo pipefail
+
+          git fetch origin master
+          git checkout -B master origin/master
+
+          GRADLE_FILE=app/build.gradle.kts
+          CURRENT_VERSION=$(sed -n -E 's/^[[:space:]]*versionName = "([^"]+)".*/\1/p' "$GRADLE_FILE")
+          if [ "v${CURRENT_VERSION}" != "$TAG" ]; then
+            echo "::error::master versionName ('v${CURRENT_VERSION}') no longer matches expected tag '${TAG}'; aborting."
+            exit 1
+          fi
+
+          EXISTING_TAG=$(git ls-remote --tags origin "refs/tags/${TAG}")
+          if [ -n "$EXISTING_TAG" ]; then
+            echo "Tag '${TAG}' already exists on origin; nothing to do."
+            exit 0
+          fi
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "$TAG" -m "Release $TAG"
           git push origin "refs/tags/${TAG}"
 
           gh workflow run android-release.yml --ref "refs/tags/${TAG}"
-          echo "Created tag '${TAG}' and dispatched android-release.yml."
+          echo "Created tag '${TAG}' on $(git rev-parse --short HEAD) and dispatched android-release.yml."
