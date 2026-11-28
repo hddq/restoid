@@ -39,7 +39,6 @@
     <string name="operation_maintenance">Maintenance</string>
     <string name="run_tasks_phase_summary">%1$s:\n%2$s</string>
 
-    <string name="backup_types_title">Backup Types</string>
     <string name="backup_type_apk">APK</string>
     <string name="backup_type_apk_desc">The application package file</string>
     <string name="backup_type_data">Data</string>
@@ -52,9 +51,7 @@
     <string name="backup_type_obb_data_desc">Opaque Binary Blob files (/storage/emulated/&lt;id&gt;/Android/obb)</string>
     <string name="backup_type_media_data">Media Data</string>
     <string name="backup_type_media_data_desc">App media files (/storage/emulated/&lt;id&gt;/Android/media)</string>
-    <string name="settings_system_permission_storage">Storage Access</string>
     <string name="settings_system_permission_local_network">Local Network Access</string>
-    <string name="local_network_permission_enabled">Local network access granted</string>
     <string name="backup_type_permissions">Permissions</string>
     <string name="backup_type_permissions_desc">Granted runtime permissions</string>
     <string name="backup_type_special_access">Special access</string>
@@ -193,7 +190,6 @@
     <string name="run_tasks_backup_subtitle_all_apps">%1$s - %2$s</string>
     <string name="run_tasks_forget_snapshots">Forget Snapshots</string>
     <string name="run_tasks_forget_subtitle">Keep last %1$d, daily %2$d, weekly %3$d, monthly %4$d</string>
-    <string name="run_tasks_forget_subtitle_with_hosts">%1$s · %2$s</string>
     <string name="forget_section_retention_policy">Retention policy</string>
     <string name="forget_section_hosts">Hosts</string>
     <string name="forget_hosts_all_title">All hosts</string>
@@ -250,7 +246,6 @@
     <string name="no_schedules_configured">No schedules configured for this repository.</string>
     <string name="no_schedules_configured_hint">Create a schedule to automatically run a task preset at set intervals.</string>
     <string name="schedule_interval_label">Interval (Hours)</string>
-    <string name="schedule_name_label">Name</string>
     <string name="schedule_last_run">Last run: %1$s (%2$s)</string>
     <string name="schedule_never_run">Never run</string>
     <string name="dialog_delete_schedule_title">Delete Schedule?</string>
@@ -276,17 +271,9 @@
     <string name="enter_rest_credentials_for_repository">Please enter the REST username and password for repository: %1$s</string>
     <string name="s3_credentials_required">S3 Credentials Required</string>
     <string name="enter_s3_credentials_for_repository">Please enter the S3 access key and secret key for repository: %1$s</string>
-    <plurals name="apps_count">
-        <item quantity="one">App (%1$d):</item>
-        <item quantity="other">Apps (%1$d):</item>
-    </plurals>
     <plurals name="backed_up_items_count">
         <item quantity="one">Backed up (%1$d):</item>
         <item quantity="other">Backed up (%1$d):</item>
-    </plurals>
-    <plurals name="custom_directories_count">
-        <item quantity="one">Custom Directory (%1$d):</item>
-        <item quantity="other">Custom Directories (%1$d):</item>
     </plurals>
     <string name="no_app_info_for_snapshot">No app information available for this snapshot.</string>
     <string name="metadata_missing_or_corrupted">Metadata is missing or corrupted.</string>
@@ -333,9 +320,6 @@
     <string name="snapshot_backed_up_device_data">Backed up Device Data</string>
     <string name="snapshot_not_found">No snapshot found.</string>
     <string name="snapshot_forgetting">Forgetting snapshot…</string>
-    <string name="snapshot_id">ID: %1$s</string>
-    <string name="snapshot_hostname">Device: %1$s</string>
-    <string name="snapshot_time">Time: %1$s</string>
     <string name="snapshot_id_copied_to_clipboard">Snapshot ID copied to clipboard</string>
     <string name="cd_copy_snapshot_id">Copy snapshot ID</string>
     <string name="snapshot_label_id">Snapshot ID</string>
@@ -376,12 +360,6 @@
     <string name="action_settings">Settings</string>
     <string name="action_forget">Forget</string>
     <string name="action_retry">Retry</string>
-    <string name="action_try_again">Try Again</string>
-    <string name="action_disable">Disable</string>
-    <string name="action_enable">Enable</string>
-    <string name="usage_stats_permission_enabled">App usage access granted</string>
-    <string name="usage_stats_permission_disabled">App usage access required</string>
-    <string name="usage_stats_permission_description">Enables faster application size calculation during backups instead of scanning directories</string>
 
     <string name="progress_initializing">Initializing…</string>
     <string name="progress_in_progress">Running…</string>
@@ -437,7 +415,6 @@
     <string name="repo_error_rclone_config_missing">No rclone.conf configuration found. Please configure Rclone first.</string>
     <string name="rclone_select_remote">Select remote</string>
     <string name="rclone_no_remotes_warning">No remotes detected in rclone.conf. Make sure it contains valid [remote_name] sections.</string>
-    <string name="rclone_missing_config_warning">No rclone.conf loaded. Configure Rclone in Settings to import or paste your config.</string>
 
     <string name="label_sftp_host">Host</string>
     <string name="label_sftp_port">Port</string>
@@ -464,11 +441,9 @@
     <string name="backup_repositories_title">Backup Repositories</string>
     <string name="cd_add_repository">Add Repository</string>
     <string name="no_repositories_configured">No repositories configured. Add one to get started.</string>
-    <string name="install_restic_manage_repositories">Install restic to manage repositories.</string>
 
     <string name="system_title">System</string>
     <string name="root_access_denied">Root access denied</string>
-    <string name="root_access_granted">Root access granted</string>
 
     <string name="permissions_and_access_title">Permissions &amp; access</string>
     <string name="permissions_summary_root_all_ready">Root active • Core permissions granted</string>
@@ -502,7 +477,6 @@
     <string name="action_check_again">Check again</string>
     <string name="action_allow">Allow</string>
 
-    <string name="storage_permission_enabled">All files access granted</string>
     <string name="storage_permission_disabled">All files access required</string>
     <string name="storage_permission_description">Required to back up custom directories without root access.</string>
 
@@ -513,10 +487,6 @@
     <string name="translate">Translate</string>
 
     <string name="notifications_enabled">Notifications enabled</string>
-    <string name="notifications_disabled">Notifications disabled</string>
-    <string name="notification_permission">Notification permission</string>
-    <string name="battery_optimization_enabled">Battery optimization enabled</string>
-    <string name="battery_optimization_disabled">Battery optimization disabled</string>
     <string name="battery_optimization_description">Disable this to improve reliability of long background operations.</string>
     <string name="require_app_unlock_on_start">Require app unlock on start</string>
     <string name="allow_external_intents">Allow triggering presets via intents</string>
@@ -700,9 +670,7 @@
     <string name="error_unknown">Unknown error</string>
 
     <string name="channel_ongoing_operations">Ongoing Operations</string>
-    <string name="channel_completed_operations">Completed Operations</string>
     <string name="channel_ongoing_description">Shows ongoing backup and restore progress silently.</string>
-    <string name="channel_completed_description">Alerts when a backup or restore has finished.</string>
     <string name="channel_successful_operations">Successful Operations</string>
     <string name="channel_successful_description">Alerts when a backup or restore has finished successfully.</string>
     <string name="channel_failed_operations">Failed Operations</string>
