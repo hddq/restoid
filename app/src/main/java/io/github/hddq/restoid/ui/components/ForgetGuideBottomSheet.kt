@@ -7,7 +7,9 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -188,6 +190,7 @@ private fun ForgetGuideItem(
         shapes = shapes,
         modifier = modifier,
         colors = expressiveListItemColors(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.Top,
         leadingContent = {
             Icon(
@@ -196,18 +199,19 @@ private fun ForgetGuideItem(
                 tint = MaterialTheme.colorScheme.primary
             )
         },
-        supportingContent = {
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall
-            )
-        },
         content = {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     )
 }

@@ -335,12 +335,17 @@ fun BackupTagPickerSheet(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     itemsIndexed(items = entries, key = { _, entry -> entry.key }) { index, entry ->
+                        val shapes = ListItemDefaults.segmentedShapes(index = index, count = entries.size)
                         SegmentedListItem(
-                            onClick = { onToggleTag(entry.name) },
-                            shapes = ListItemDefaults.segmentedShapes(index = index, count = entries.size),
+                            checked = entry.isSelected,
+                            onCheckedChange = { onToggleTag(entry.name) },
+                            shapes = shapes.copy(selectedShape = shapes.shape),
                             enabled = !isMutating,
                             verticalAlignment = Alignment.CenterVertically,
-        colors = expressiveListItemColors(),
+                            colors = expressiveListItemColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                selectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
                             modifier = Modifier.animateItem(),
                             trailingContent = entry.tag?.let { trackedTag ->
                                 {
