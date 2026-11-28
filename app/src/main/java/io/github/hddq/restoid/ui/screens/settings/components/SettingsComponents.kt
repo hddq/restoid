@@ -1,17 +1,13 @@
 package io.github.hddq.restoid.ui.screens.settings.components
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -27,11 +23,14 @@ import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -46,7 +45,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -55,6 +53,7 @@ import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.LocalRepository
 import io.github.hddq.restoid.data.RepositoryBackendType
 import io.github.hddq.restoid.data.ResticState
+import io.github.hddq.restoid.ui.components.expressiveListItemColors
 import io.github.hddq.restoid.ui.screens.settings.dialogs.ChangePasswordDialog
 import io.github.hddq.restoid.ui.screens.settings.dialogs.SavePasswordDialog
 import io.github.hddq.restoid.ui.screens.settings.dialogs.SaveRestCredentialsDialog
@@ -62,201 +61,208 @@ import io.github.hddq.restoid.ui.screens.settings.dialogs.SaveS3CredentialsDialo
 import io.github.hddq.restoid.ui.screens.settings.dialogs.SaveSftpCredentialsDialog
 import io.github.hddq.restoid.ui.settings.SettingsViewModel
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SettingsToggleRow(
     title: String,
     icon: ImageVector,
     enabled: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    shapes: ListItemShapes,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onCheckedChange(!enabled) }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+    SegmentedListItem(
+        onClick = { onCheckedChange(!enabled) },
+        shapes = shapes,
+        modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1f)
-        ) {
+        colors = expressiveListItemColors(),
+        leadingContent = {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(end = 16.dp)
+                tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Text(text = title)
-        }
-        Switch(
-            checked = enabled,
-            onCheckedChange = onCheckedChange,
-            thumbContent = if (enabled) {
-                {
-                    Icon(
-                        imageVector = Icons.Filled.Check,
-                        contentDescription = null,
-                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                    )
+        },
+        trailingContent = {
+            Switch(
+                checked = enabled,
+                onCheckedChange = onCheckedChange,
+                thumbContent = if (enabled) {
+                    {
+                        Icon(
+                            imageVector = Icons.Filled.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(SwitchDefaults.IconSize)
+                        )
+                    }
+                } else {
+                    null
                 }
-            } else {
-                null
-            }
-        )
-    }
+            )
+        },
+        content = { Text(text = title) }
+    )
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AppUnlockOnStartRow(
     enabled: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    shapes: ListItemShapes,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     SettingsToggleRow(
         title = stringResource(R.string.require_app_unlock_on_start),
         icon = Icons.Outlined.Lock,
         enabled = enabled,
-        onCheckedChange = onCheckedChange
+        shapes = shapes,
+        onCheckedChange = onCheckedChange,
+        modifier = modifier
     )
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun DeviceHostnameRow(
     hostname: String,
-    onClick: () -> Unit
+    shapes: ListItemShapes,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+    SegmentedListItem(
+        onClick = onClick,
+        shapes = shapes,
+        modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1f)
-        ) {
+        colors = expressiveListItemColors(),
+        leadingContent = {
             Icon(
                 imageVector = Icons.Outlined.Dns,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(end = 16.dp)
+                contentDescription = null
             )
-            Column {
-                Text(
-                    text = stringResource(R.string.settings_device_hostname_title),
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                Text(
-                    text = hostname,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+        },
+        supportingContent = {
+            Text(
+                text = hostname,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        },
+        trailingContent = {
+            Icon(
+                imageVector = Icons.Outlined.Edit,
+                contentDescription = stringResource(R.string.action_change)
+            )
+        },
+        content = {
+            Text(text = stringResource(R.string.settings_device_hostname_title))
         }
-        Icon(
-            imageVector = Icons.Outlined.Edit,
-            contentDescription = stringResource(R.string.action_change),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
+    )
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun SelectableRepositoryRowLayout(
     repo: LocalRepository,
     isSelected: Boolean,
+    shapes: ListItemShapes,
     onSelected: () -> Unit,
+    modifier: Modifier = Modifier,
     trailingContent: @Composable () -> Unit = {
         IconButton(onClick = {}) {
             Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.cd_more_options))
         }
     }
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .selectable(
+    SegmentedListItem(
+        selected = isSelected,
+        onClick = onSelected,
+        shapes = shapes.copy(selectedShape = shapes.shape),
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        contentPadding = PaddingValues(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
+        colors = expressiveListItemColors(
+            selectedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+            selectedContentColor = MaterialTheme.colorScheme.onSurface
+        ),
+        leadingContent = {
+            RadioButton(
                 selected = isSelected,
-                onClick = onSelected,
-                role = Role.RadioButton
+                onClick = null
             )
-            .padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        RadioButton(
-            selected = isSelected,
-            onClick = null
-        )
-        Spacer(Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = repo.name,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false)
-                )
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = if (isSelected) {
-                        MaterialTheme.colorScheme.primaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.surfaceContainerHigh
-                    },
-                    contentColor = if (isSelected) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    }
+        },
+        trailingContent = trailingContent,
+        content = {
+            Column {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = when (repo.backendType) {
-                            RepositoryBackendType.LOCAL -> stringResource(R.string.repo_backend_local)
-                            RepositoryBackendType.SFTP -> stringResource(R.string.repo_backend_sftp)
-                            RepositoryBackendType.REST -> stringResource(R.string.repo_backend_rest)
-                            RepositoryBackendType.S3 -> stringResource(R.string.repo_backend_s3)
-                            RepositoryBackendType.RCLONE -> stringResource(R.string.repo_backend_rclone)
+                        text = repo.name,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (isSelected) {
+                            MaterialTheme.colorScheme.primaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surfaceContainerHigh
                         },
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        contentColor = if (isSelected) {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                    ) {
+                        Text(
+                            text = when (repo.backendType) {
+                                RepositoryBackendType.LOCAL -> stringResource(R.string.repo_backend_local)
+                                RepositoryBackendType.SFTP -> stringResource(R.string.repo_backend_sftp)
+                                RepositoryBackendType.REST -> stringResource(R.string.repo_backend_rest)
+                                RepositoryBackendType.S3 -> stringResource(R.string.repo_backend_s3)
+                                RepositoryBackendType.RCLONE -> stringResource(R.string.repo_backend_rclone)
+                            },
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+                Text(
+                    text = repo.path,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                repo.id?.let {
+                    Text(
+                        text = stringResource(R.string.repository_id_short, it.take(12)),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = LocalContentColor.current.copy(alpha = 0.7f)
                     )
                 }
             }
-            Text(
-                repo.path,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            repo.id?.let {
-                Text(
-                    stringResource(R.string.repository_id_short, it.take(12)),
-                    style = MaterialTheme.typography.bodySmall,
-                    fontFamily = FontFamily.Monospace,
-                    color = LocalContentColor.current.copy(alpha = 0.7f)
-                )
-            }
         }
-        trailingContent()
-    }
+    )
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SelectableRepositoryRow(
     repo: LocalRepository,
     isSelected: Boolean,
+    shapes: ListItemShapes,
     onSelected: () -> Unit,
-    viewModel: SettingsViewModel
+    viewModel: SettingsViewModel,
+    modifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val repoKey = viewModel.repositoryKey(repo)
@@ -264,7 +270,9 @@ fun SelectableRepositoryRow(
     SelectableRepositoryRowLayout(
         repo = repo,
         isSelected = isSelected,
-        onSelected = onSelected
+        shapes = shapes,
+        onSelected = onSelected,
+        modifier = modifier
     ) {
         var showChangePasswordDialog by remember { mutableStateOf(false) }
         var showSavePasswordDialog by remember { mutableStateOf(false) }
@@ -504,23 +512,22 @@ fun SelectableRepositoryRow(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun ResticDependencyRow(state: ResticState) {
-    AnimatedContent(targetState = state, label = "ResticStatusAnimation") { targetState ->
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
-            ) {
+fun ResticDependencyRow(
+    state: ResticState,
+    shapes: ListItemShapes,
+    modifier: Modifier = Modifier
+) {
+    SegmentedListItem(
+        shapes = shapes,
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        colors = expressiveListItemColors(),
+        leadingContent = {
+            AnimatedContent(targetState = state, label = "ResticIconAnimation") { targetState ->
                 val icon: ImageVector
                 val iconColor: Color
-
                 when (targetState) {
                     is ResticState.Installed -> {
                         icon = Icons.Outlined.CheckCircle
@@ -535,60 +542,63 @@ fun ResticDependencyRow(state: ResticState) {
                         iconColor = MaterialTheme.colorScheme.onSurfaceVariant
                     }
                 }
-
-                Icon(imageVector = icon, contentDescription = null, modifier = Modifier.padding(end = 16.dp), tint = iconColor)
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.restic_binary), style = MaterialTheme.typography.bodyLarge)
-                    val supportingText = when (targetState) {
-                        ResticState.Idle -> stringResource(R.string.restic_checking_status)
-                        is ResticState.Installed -> targetState.fullVersionOutput
-                        is ResticState.Error -> stringResource(R.string.restic_error_with_message, targetState.message)
-                    }
-                    Text(
-                        text = supportingText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                Icon(imageVector = icon, contentDescription = null, tint = iconColor)
             }
-        }
-    }
+        },
+        supportingContent = {
+            AnimatedContent(targetState = state, label = "ResticStatusAnimation") { targetState ->
+                val supportingText = when (targetState) {
+                    ResticState.Idle -> stringResource(R.string.restic_checking_status)
+                    is ResticState.Installed -> targetState.fullVersionOutput
+                    is ResticState.Error -> stringResource(R.string.restic_error_with_message, targetState.message)
+                }
+                Text(
+                    text = supportingText,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        },
+        content = { Text(stringResource(R.string.restic_binary)) }
+    )
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun RcloneDependencyRow(state: ResticState) {
-    AnimatedContent(targetState = state, label = "RcloneStatusAnimation") { targetState ->
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val icon: ImageVector
-            val iconColor: Color
-
-            when (targetState) {
-                is ResticState.Installed -> {
-                    icon = Icons.Outlined.CheckCircle
-                    iconColor = MaterialTheme.colorScheme.primary
+fun RcloneDependencyRow(
+    state: ResticState,
+    shapes: ListItemShapes,
+    modifier: Modifier = Modifier
+) {
+    SegmentedListItem(
+        shapes = shapes,
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        colors = expressiveListItemColors(),
+        leadingContent = {
+            AnimatedContent(targetState = state, label = "RcloneIconAnimation") { targetState ->
+                val icon: ImageVector
+                val iconColor: Color
+                when (targetState) {
+                    is ResticState.Installed -> {
+                        icon = Icons.Outlined.CheckCircle
+                        iconColor = MaterialTheme.colorScheme.primary
+                    }
+                    is ResticState.Error -> {
+                        icon = Icons.Outlined.ErrorOutline
+                        iconColor = MaterialTheme.colorScheme.error
+                    }
+                    ResticState.Idle -> {
+                        icon = Icons.Outlined.CheckCircle
+                        iconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    }
                 }
-                is ResticState.Error -> {
-                    icon = Icons.Outlined.ErrorOutline
-                    iconColor = MaterialTheme.colorScheme.error
-                }
-                ResticState.Idle -> {
-                    icon = Icons.Outlined.CheckCircle
-                    iconColor = MaterialTheme.colorScheme.onSurfaceVariant
-                }
+                Icon(imageVector = icon, contentDescription = null, tint = iconColor)
             }
-
-            Icon(imageVector = icon, contentDescription = null, modifier = Modifier.padding(end = 16.dp), tint = iconColor)
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(stringResource(R.string.rclone_binary), style = MaterialTheme.typography.bodyLarge)
+        },
+        supportingContent = {
+            AnimatedContent(targetState = state, label = "RcloneStatusAnimation") { targetState ->
                 val supportingText = when (targetState) {
                     ResticState.Idle -> stringResource(R.string.restic_checking_status)
                     is ResticState.Installed -> targetState.fullVersionOutput.ifBlank { "rclone" }
@@ -597,11 +607,11 @@ fun RcloneDependencyRow(state: ResticState) {
                 Text(
                     text = supportingText,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
             }
-        }
-    }
+        },
+        content = { Text(stringResource(R.string.rclone_binary)) }
+    )
 }

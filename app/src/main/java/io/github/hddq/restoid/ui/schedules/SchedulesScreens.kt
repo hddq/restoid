@@ -56,12 +56,15 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
+import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -105,7 +108,7 @@ import io.github.hddq.restoid.model.TriggerConditions
 import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
 import io.github.hddq.restoid.ui.components.ExpressiveEmptyState
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
-import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
+import io.github.hddq.restoid.ui.components.expressiveListItemColors
 import io.github.hddq.restoid.ui.shared.TaskRow
 import io.github.hddq.restoid.ui.shared.summarizeTaskConfig
 import java.text.SimpleDateFormat
@@ -151,24 +154,20 @@ fun SchedulesScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(16.dp)
+                    .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp)
             ) {
                 val schedules = uiState.schedules
                 ExpressiveCardGroup {
                     schedules.forEachIndexed { index, schedule ->
-                        ExpressiveSegmentedSurface(
-                            index = index,
-                            count = schedules.size
-                        ) {
-                            ScheduleItem(
-                                schedule = schedule,
-                                preset = uiState.presetsById[schedule.presetId],
-                                onEdit = { onEditSchedule(schedule) },
-                                onDelete = { scheduleToDelete = schedule },
-                                onToggleEnabled = { viewModel.toggleScheduleEnabled(schedule) },
-                                onRunNow = { viewModel.runNow(schedule) }
-                            )
-                        }
+                        ScheduleItem(
+                            schedule = schedule,
+                            preset = uiState.presetsById[schedule.presetId],
+                            shapes = ListItemDefaults.segmentedShapes(index = index, count = schedules.size),
+                            onEdit = { onEditSchedule(schedule) },
+                            onDelete = { scheduleToDelete = schedule },
+                            onToggleEnabled = { viewModel.toggleScheduleEnabled(schedule) },
+                            onRunNow = { viewModel.runNow(schedule) }
+                        )
                     }
                 }
                 Spacer(Modifier.height(88.dp + contentPadding.calculateBottomPadding()))
@@ -344,7 +343,7 @@ fun AddEditScheduleScreen(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun AddEditScheduleContent(
     state: AddEditScheduleUiState,
@@ -382,11 +381,12 @@ internal fun AddEditScheduleContent(
                 ExpressiveSectionHeader(title = stringResource(R.string.section_task_preset))
                 if (state.availablePresets.isEmpty()) {
                     ExpressiveCardGroup {
-                        ExpressiveSegmentedSurface(index = 0, count = 1) {
+                        SegmentedListItem(
+                            shapes = ListItemDefaults.segmentedShapes(index = 0, count = 1),
+                            colors = expressiveListItemColors()
+                        ) {
                             Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 16.dp),
+                                modifier = Modifier.fillMaxWidth(),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Row(
@@ -432,55 +432,56 @@ internal fun AddEditScheduleContent(
                     val showPresetActions = (selectedPreset != null && onEditPreset != null) || onCreatePreset != null
                     val cardCount = if (showPresetActions) 2 else 1
                     ExpressiveCardGroup {
-                        ExpressiveSegmentedSurface(index = 0, count = cardCount) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable(onClick = onSelectPresetClick)
-                                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+                        SegmentedListItem(
+                            onClick = onSelectPresetClick,
+                            shapes = ListItemDefaults.segmentedShapes(index = 0, count = cardCount),
+                        verticalAlignment = Alignment.CenterVertically,
+                        colors = expressiveListItemColors(),
+                            leadingContent = {
                                 Icon(
                                     imageVector = Icons.Outlined.Bookmarks,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(end = 16.dp)
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
-                                Column(modifier = Modifier.weight(1f)) {
+                            },
+                            supportingContent = selectedPreset?.let { preset ->
+                                {
                                     Text(
-                                        text = selectedPreset?.name ?: stringResource(R.string.schedule_select_preset),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = if (selectedPreset != null) {
-                                            MaterialTheme.colorScheme.onSurface
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant
-                                        },
+                                        text = summarizeTaskConfig(context, preset.config, hasRoot),
+                                        style = MaterialTheme.typography.bodySmall,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
-                                    if (selectedPreset != null) {
-                                        Text(
-                                            text = summarizeTaskConfig(context, selectedPreset.config, hasRoot),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
                                 }
+                            },
+                            trailingContent = {
                                 Icon(
                                     imageVector = Icons.Outlined.UnfoldMore,
-                                    contentDescription = stringResource(R.string.schedule_select_preset),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    contentDescription = stringResource(R.string.schedule_select_preset)
+                                )
+                            },
+                            content = {
+                                Text(
+                                    text = selectedPreset?.name ?: stringResource(R.string.schedule_select_preset),
+                                    color = if (selectedPreset != null) {
+                                        MaterialTheme.colorScheme.onSurface
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
-                        }
+                        )
                         if (showPresetActions) {
-                            ExpressiveSegmentedSurface(index = 1, count = 2) {
+                            SegmentedListItem(
+                                shapes = ListItemDefaults.segmentedShapes(index = 1, count = 2),
+                            verticalAlignment = Alignment.CenterVertically,
+                        colors = expressiveListItemColors(),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
                                 Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                                    modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
@@ -518,7 +519,10 @@ internal fun AddEditScheduleContent(
             Column(modifier = Modifier.fillMaxWidth()) {
                 ExpressiveSectionHeader(title = stringResource(R.string.section_schedule))
                 ExpressiveCardGroup {
-                    ExpressiveSegmentedSurface(index = 0, count = 2) {
+                    SegmentedListItem(
+                        shapes = ListItemDefaults.segmentedShapes(index = 0, count = 2),
+                        colors = expressiveListItemColors()
+                    ) {
                         OutlinedTextField(
                             value = state.name,
                             onValueChange = onNameChange,
@@ -537,14 +541,15 @@ internal fun AddEditScheduleContent(
                                 )
                             },
                             singleLine = true,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp)
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
 
-                    ExpressiveSegmentedSurface(index = 1, count = 2) {
-                        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                    SegmentedListItem(
+                        shapes = ListItemDefaults.segmentedShapes(index = 1, count = 2),
+                        colors = expressiveListItemColors()
+                    ) {
+                        Column(modifier = Modifier.fillMaxWidth()) {
                             val isError = intervalText.toIntOrNull()?.let { it !in 1..720 } ?: true
                             Text(
                                 text = stringResource(R.string.schedule_interval_label),
@@ -635,7 +640,7 @@ internal fun AddEditScheduleContent(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun TaskPresetPickerBottomSheet(
     presets: List<TaskPreset>,
@@ -674,67 +679,27 @@ internal fun TaskPresetPickerBottomSheet(
             ExpressiveCardGroup(modifier = Modifier.selectableGroup()) {
                 presets.forEachIndexed { index, preset ->
                     val isSelected = preset.id == selectedPresetId
-                    val containerColor = if (isSelected) {
-                        MaterialTheme.colorScheme.secondaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.surfaceContainer
-                    }
-                    val contentColor = if (isSelected) {
-                        MaterialTheme.colorScheme.onSecondaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    }
-                    val supportingColor = if (isSelected) {
-                        MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    }
-                    val iconTint = if (isSelected) {
-                        MaterialTheme.colorScheme.onSecondaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    }
-                    ExpressiveSegmentedSurface(
-                        index = index,
-                        count = presets.size,
-                        containerColor = containerColor,
-                        contentColor = contentColor
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .selectable(
-                                    selected = isSelected,
-                                    onClick = { onSelectPreset(preset.id) },
-                                    role = Role.RadioButton
-                                )
-                                .padding(horizontal = 16.dp, vertical = 14.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                    SegmentedListItem(
+                        selected = isSelected,
+                        onClick = { onSelectPreset(preset.id) },
+                        shapes = ListItemDefaults.segmentedShapes(index = index, count = presets.size),
+                        verticalAlignment = Alignment.CenterVertically,
+                        colors = expressiveListItemColors(),
+                        leadingContent = {
                             Icon(
                                 imageVector = Icons.Outlined.Bookmarks,
-                                contentDescription = null,
-                                tint = iconTint,
-                                modifier = Modifier.padding(end = 16.dp)
+                                contentDescription = null
                             )
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = preset.name,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                    color = contentColor,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    text = summarizeTaskConfig(context, preset.config, hasRoot),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = supportingColor,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                            Spacer(Modifier.width(12.dp))
+                        },
+                        supportingContent = {
+                            Text(
+                                text = summarizeTaskConfig(context, preset.config, hasRoot),
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        },
+                        trailingContent = {
                             RadioButton(
                                 selected = isSelected,
                                 onClick = null,
@@ -743,8 +708,16 @@ internal fun TaskPresetPickerBottomSheet(
                                     unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             )
+                        },
+                        content = {
+                            Text(
+                                text = preset.name,
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
-                    }
+                    )
                 }
             }
             if (onCreatePreset != null) {
@@ -766,15 +739,17 @@ internal fun TaskPresetPickerBottomSheet(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ScheduleItem(
     schedule: Schedule,
     preset: TaskPreset?,
+    shapes: ListItemShapes,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onToggleEnabled: () -> Unit,
-    onRunNow: () -> Unit
+    onRunNow: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
@@ -787,136 +762,131 @@ private fun ScheduleItem(
         else -> stringResource(R.string.preset_hours, schedule.intervalHours)
     }
 
-    Box(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(IntrinsicSize.Min)
-                .combinedClickable(
-                    onClick = onEdit,
-                    onLongClick = { menuExpanded = true }
+    Box(modifier = modifier.fillMaxWidth()) {
+        SegmentedListItem(
+            onClick = onEdit,
+            onLongClick = { menuExpanded = true },
+            shapes = shapes,
+            verticalAlignment = Alignment.CenterVertically,
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+            colors = expressiveListItemColors(),
+            leadingContent = {
+                Icon(
+                    imageVector = Icons.Outlined.EventRepeat,
+                    contentDescription = null,
+                    tint = if (schedule.isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.EventRepeat,
-                contentDescription = null,
-                tint = if (schedule.isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(end = 16.dp)
-            )
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                Text(
-                    text = displayTitle,
-                    style = MaterialTheme.typography.bodyLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                val metaLine = buildList {
-                    if (customLabel != null && preset != null && !customLabel.equals(preset.name, ignoreCase = true)) {
-                        add(preset.name)
-                    }
-                    add("${stringResource(R.string.schedule_interval_label)}: $intervalText")
-                }.joinToString(" · ")
-
-                Text(
-                    text = metaLine,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                val conditions = buildList {
-                    if (schedule.triggerConditions.requireUnmeteredNetwork) {
-                        add(stringResource(R.string.condition_chip_wifi))
-                    }
-                    if (schedule.triggerConditions.requireCharging) {
-                        add(stringResource(R.string.condition_chip_charging))
-                    }
-                    if (schedule.triggerConditions.requireBatteryNotLow) {
-                        add(stringResource(R.string.condition_chip_battery))
-                    }
-                }
-                if (conditions.isNotEmpty()) {
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.padding(top = 2.dp)
-                    ) {
-                        conditions.forEach { label ->
-                            Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = MaterialTheme.colorScheme.surfaceContainerHighest
-                            ) {
-                                Text(
-                                    text = label,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+            },
+            trailingContent = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Outlined.ChevronRight,
+                        contentDescription = null
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Box(
+                        modifier = Modifier
+                            .height(24.dp)
+                            .width(1.dp)
+                            .background(MaterialTheme.colorScheme.outlineVariant)
+                    )
+                    Spacer(Modifier.width(16.dp))
+                    Switch(
+                        checked = schedule.isEnabled,
+                        onCheckedChange = { onToggleEnabled() },
+                        thumbContent = if (schedule.isEnabled) {
+                            {
+                                Icon(
+                                    imageVector = Icons.Filled.Check,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(SwitchDefaults.IconSize)
                                 )
+                            }
+                        } else {
+                            null
+                        }
+                    )
+                }
+            },
+            content = {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = displayTitle,
+                        style = MaterialTheme.typography.bodyLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    val metaLine = buildList {
+                        if (customLabel != null && preset != null && !customLabel.equals(preset.name, ignoreCase = true)) {
+                            add(preset.name)
+                        }
+                        add("${stringResource(R.string.schedule_interval_label)}: $intervalText")
+                    }.joinToString(" · ")
+
+                    Text(
+                        text = metaLine,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    val conditions = buildList {
+                        if (schedule.triggerConditions.requireUnmeteredNetwork) {
+                            add(stringResource(R.string.condition_chip_wifi))
+                        }
+                        if (schedule.triggerConditions.requireCharging) {
+                            add(stringResource(R.string.condition_chip_charging))
+                        }
+                        if (schedule.triggerConditions.requireBatteryNotLow) {
+                            add(stringResource(R.string.condition_chip_battery))
+                        }
+                    }
+                    if (conditions.isNotEmpty()) {
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.padding(top = 2.dp)
+                        ) {
+                            conditions.forEach { label ->
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = MaterialTheme.colorScheme.surfaceContainerHighest
+                                ) {
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
                             }
                         }
                     }
-                }
 
-                val lastRunText = if (schedule.lastRunTimestamp != null) {
-                    val relativeTime = android.text.format.DateUtils.getRelativeTimeSpanString(
-                        schedule.lastRunTimestamp,
-                        System.currentTimeMillis(),
-                        android.text.format.DateUtils.MINUTE_IN_MILLIS
-                    ).toString()
-                    val exactTime = dateFormat.format(Date(schedule.lastRunTimestamp))
-                    stringResource(R.string.schedule_last_run, relativeTime, exactTime)
-                } else {
-                    stringResource(R.string.schedule_never_run)
-                }
-
-                Text(
-                    text = lastRunText,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            Spacer(Modifier.width(12.dp))
-            Icon(
-                imageVector = Icons.Outlined.ChevronRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(Modifier.width(12.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight(0.5f)
-                    .width(1.dp)
-                    .background(MaterialTheme.colorScheme.outlineVariant)
-            )
-            Spacer(Modifier.width(16.dp))
-
-            Switch(
-                checked = schedule.isEnabled,
-                onCheckedChange = { onToggleEnabled() },
-                thumbContent = if (schedule.isEnabled) {
-                    {
-                        Icon(
-                            imageVector = Icons.Filled.Check,
-                            contentDescription = null,
-                            modifier = Modifier.size(SwitchDefaults.IconSize)
-                        )
+                    val lastRunText = if (schedule.lastRunTimestamp != null) {
+                        val relativeTime = android.text.format.DateUtils.getRelativeTimeSpanString(
+                            schedule.lastRunTimestamp,
+                            System.currentTimeMillis(),
+                            android.text.format.DateUtils.MINUTE_IN_MILLIS
+                        ).toString()
+                        val exactTime = dateFormat.format(Date(schedule.lastRunTimestamp))
+                        stringResource(R.string.schedule_last_run, relativeTime, exactTime)
+                    } else {
+                        stringResource(R.string.schedule_never_run)
                     }
-                } else {
-                    null
+
+                    Text(
+                        text = lastRunText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
-            )
-        }
+            }
+        )
 
         DropdownMenu(
             expanded = menuExpanded,
@@ -960,6 +930,7 @@ private fun ScheduleItem(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun ScheduleConditionsSection(
     triggerConditions: TriggerConditions,
@@ -972,47 +943,44 @@ internal fun ScheduleConditionsSection(
     Column(modifier = modifier.fillMaxWidth()) {
         ExpressiveSectionHeader(title = stringResource(R.string.section_conditions))
         ExpressiveCardGroup {
-            ExpressiveSegmentedSurface(index = 0, count = 3) {
-                TaskRow(
-                    title = stringResource(R.string.condition_battery_not_low),
-                    icon = Icons.Outlined.Battery5Bar,
-                    checked = triggerConditions.requireBatteryNotLow,
-                    onCheckedChange = onRequireBatteryNotLowChange
-                ) {
-                    ConditionStatusSubtitle(
-                        currentStateText = batteryNotLowStateText(conditionStatus.battery),
-                        isMet = conditionStatus.battery.isBatteryNotLow,
-                        isRequired = triggerConditions.requireBatteryNotLow
-                    )
-                }
+            TaskRow(
+                title = stringResource(R.string.condition_battery_not_low),
+                icon = Icons.Outlined.Battery5Bar,
+                checked = triggerConditions.requireBatteryNotLow,
+                onCheckedChange = onRequireBatteryNotLowChange,
+                shapes = ListItemDefaults.segmentedShapes(index = 0, count = 3)
+            ) {
+                ConditionStatusSubtitle(
+                    currentStateText = batteryNotLowStateText(conditionStatus.battery),
+                    isMet = conditionStatus.battery.isBatteryNotLow,
+                    isRequired = triggerConditions.requireBatteryNotLow
+                )
             }
-            ExpressiveSegmentedSurface(index = 1, count = 3) {
-                TaskRow(
-                    title = stringResource(R.string.condition_charging),
-                    icon = Icons.Outlined.Bolt,
-                    checked = triggerConditions.requireCharging,
-                    onCheckedChange = onRequireChargingChange
-                ) {
-                    ConditionStatusSubtitle(
-                        currentStateText = chargingStateText(conditionStatus.battery),
-                        isMet = conditionStatus.battery.isChargingMet,
-                        isRequired = triggerConditions.requireCharging
-                    )
-                }
+            TaskRow(
+                title = stringResource(R.string.condition_charging),
+                icon = Icons.Outlined.Bolt,
+                checked = triggerConditions.requireCharging,
+                onCheckedChange = onRequireChargingChange,
+                shapes = ListItemDefaults.segmentedShapes(index = 1, count = 3)
+            ) {
+                ConditionStatusSubtitle(
+                    currentStateText = chargingStateText(conditionStatus.battery),
+                    isMet = conditionStatus.battery.isChargingMet,
+                    isRequired = triggerConditions.requireCharging
+                )
             }
-            ExpressiveSegmentedSurface(index = 2, count = 3) {
-                TaskRow(
-                    title = stringResource(R.string.condition_unmetered_network),
-                    icon = Icons.Outlined.Wifi,
-                    checked = triggerConditions.requireUnmeteredNetwork,
-                    onCheckedChange = onRequireUnmeteredNetworkChange
-                ) {
-                    ConditionStatusSubtitle(
-                        currentStateText = networkStateText(conditionStatus.network),
-                        isMet = conditionStatus.network.isUnmeteredMet,
-                        isRequired = triggerConditions.requireUnmeteredNetwork
-                    )
-                }
+            TaskRow(
+                title = stringResource(R.string.condition_unmetered_network),
+                icon = Icons.Outlined.Wifi,
+                checked = triggerConditions.requireUnmeteredNetwork,
+                onCheckedChange = onRequireUnmeteredNetworkChange,
+                shapes = ListItemDefaults.segmentedShapes(index = 2, count = 3)
+            ) {
+                ConditionStatusSubtitle(
+                    currentStateText = networkStateText(conditionStatus.network),
+                    isMet = conditionStatus.network.isUnmeteredMet,
+                    isRequired = triggerConditions.requireUnmeteredNetwork
+                )
             }
         }
     }

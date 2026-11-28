@@ -50,8 +50,11 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -106,7 +109,7 @@ import io.github.hddq.restoid.model.CallLogsBackupMetadata
 import io.github.hddq.restoid.model.ContactsBackupMetadata
 import io.github.hddq.restoid.ui.components.AppSortMenuButton
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
-import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
+import io.github.hddq.restoid.ui.components.expressiveListItemColors
 import coil.compose.AsyncImage
 import io.github.hddq.restoid.ui.snapshot.ForgetResult
 import io.github.hddq.restoid.ui.snapshot.SnapshotDetailsViewModel
@@ -248,7 +251,7 @@ internal fun SnapshotDetailsContent(
                         bottom = 88.dp + contentPadding.calculateBottomPadding(),
                         top = 8.dp
                     ),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                    verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)
                 ) {
                     item(key = "header", contentType = "header") {
                         SnapshotDetailsHeader(
@@ -272,12 +275,11 @@ internal fun SnapshotDetailsContent(
                             key = { _, detail -> "app_${detail.appInfo.packageName}" },
                             contentType = { _, _ -> "backed_up_app" }
                         ) { index, detail ->
-                            ExpressiveSegmentedSurface(
-                                index = index,
-                                count = backupDetails.size
-                            ) {
-                                BackedUpAppItem(detail = detail)
-                            }
+                            BackedUpAppItem(
+                                detail = detail,
+                                shapes = ListItemDefaults.segmentedShapes(index = index, count = backupDetails.size),
+                                modifier = Modifier.animateItem()
+                            )
                         }
                     }
                     if (dirsList.isNotEmpty()) {
@@ -296,12 +298,11 @@ internal fun SnapshotDetailsContent(
                             key = { _, (path, _) -> "dir_$path" },
                             contentType = { _, _ -> "backed_up_dir" }
                         ) { index, (path, dirMetadata) ->
-                            ExpressiveSegmentedSurface(
-                                index = index,
-                                count = dirsList.size
-                            ) {
-                                BackedUpCustomDirItem(path = path, metadata = dirMetadata)
-                            }
+                            BackedUpCustomDirItem(
+                                path = path,
+                                metadata = dirMetadata,
+                                shapes = ListItemDefaults.segmentedShapes(index = index, count = dirsList.size)
+                            )
                         }
                     }
                     if (deviceDataItemsCount > 0) {
@@ -317,34 +318,28 @@ internal fun SnapshotDetailsContent(
                         if (contactsMeta != null) {
                             val currentIndex = deviceDataIndex++
                             item(key = "device_data_contacts", contentType = "device_data_contacts") {
-                                ExpressiveSegmentedSurface(
-                                    index = currentIndex,
-                                    count = deviceDataItemsCount
-                                ) {
-                                    BackedUpContactsItem(metadata = contactsMeta)
-                                }
+                                BackedUpContactsItem(
+                                    metadata = contactsMeta,
+                                    shapes = ListItemDefaults.segmentedShapes(index = currentIndex, count = deviceDataItemsCount)
+                                )
                             }
                         }
                         if (callLogsMeta != null) {
                             val currentIndex = deviceDataIndex++
                             item(key = "device_data_call_logs", contentType = "device_data_call_logs") {
-                                ExpressiveSegmentedSurface(
-                                    index = currentIndex,
-                                    count = deviceDataItemsCount
-                                ) {
-                                    BackedUpCallLogsItem(metadata = callLogsMeta)
-                                }
+                                BackedUpCallLogsItem(
+                                    metadata = callLogsMeta,
+                                    shapes = ListItemDefaults.segmentedShapes(index = currentIndex, count = deviceDataItemsCount)
+                                )
                             }
                         }
                         if (calendarMeta != null) {
                             val currentIndex = deviceDataIndex++
                             item(key = "device_data_calendar", contentType = "device_data_calendar") {
-                                ExpressiveSegmentedSurface(
-                                    index = currentIndex,
-                                    count = deviceDataItemsCount
-                                ) {
-                                    BackedUpCalendarItem(metadata = calendarMeta)
-                                }
+                                BackedUpCalendarItem(
+                                    metadata = calendarMeta,
+                                    shapes = ListItemDefaults.segmentedShapes(index = currentIndex, count = deviceDataItemsCount)
+                                )
                             }
                         }
                     }
@@ -653,11 +648,12 @@ private fun formatRelativeSnapshotTime(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun BackedUpAppItem(
     detail: BackupDetail,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    shapes: ListItemShapes = ListItemDefaults.segmentedShapes(index = 0, count = 1)
 ) {
     val context = LocalContext.current
     val notAvailable = stringResource(R.string.not_available)
@@ -688,21 +684,45 @@ fun BackedUpAppItem(
         }
     }
 
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        AsyncImage(
-            model = detail.appInfo.icon,
-            contentDescription = null,
-            modifier = Modifier
-                .size(44.dp)
-                .clip(RoundedCornerShape(10.dp))
-        )
-        Spacer(Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
+    SegmentedListItem(
+        shapes = shapes,
+        modifier = modifier,
+        colors = expressiveListItemColors(),
+        verticalAlignment = Alignment.Top,
+        leadingContent = {
+            AsyncImage(
+                model = detail.appInfo.icon,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(10.dp))
+            )
+        },
+        supportingContent = {
+            Column {
+                val versionInfo = detail.versionName ?: notAvailable
+                val sizeInfo = detail.backupSize?.let { Formatter.formatShortFileSize(context, it) } ?: notAvailable
+                Text(
+                    text = stringResource(R.string.snapshot_version_size, versionInfo, sizeInfo),
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                if (badges.isNotEmpty()) {
+                    Spacer(Modifier.height(6.dp))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        badges.forEach { labelText ->
+                            BackedUpItemBadge(text = labelText)
+                        }
+                    }
+                }
+            }
+        },
+        content = {
             Text(
                 text = detail.appInfo.name,
                 fontWeight = FontWeight.Bold,
@@ -710,30 +730,8 @@ fun BackedUpAppItem(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-
-            val versionInfo = detail.versionName ?: notAvailable
-            val sizeInfo = detail.backupSize?.let { Formatter.formatShortFileSize(context, it) } ?: notAvailable
-            Text(
-                text = stringResource(R.string.snapshot_version_size, versionInfo, sizeInfo),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            if (badges.isNotEmpty()) {
-                Spacer(Modifier.height(6.dp))
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    badges.forEach { labelText ->
-                        BackedUpItemBadge(text = labelText)
-                    }
-                }
-            }
         }
-    }
+    )
 }
 
 @Composable
@@ -835,15 +833,17 @@ fun ForgetErrorDialog(
     )
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun BackedUpCustomDirItem(
     path: String,
     metadata: io.github.hddq.restoid.model.CustomDirectoryMetadata,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    shapes: ListItemShapes = ListItemDefaults.segmentedShapes(index = 0, count = 1)
 ) {
     val context = LocalContext.current
     metadata.isDirectory?.let { isDirectory ->
-        BackedUpCustomDirItemContent(path, metadata, isDirectory, context, modifier)
+        BackedUpCustomDirItemContent(path, metadata, isDirectory, context, shapes, modifier)
         return
     }
     val initialIsDir = io.github.hddq.restoid.util.StorageUtils.isDirectoryFast(path)
@@ -857,16 +857,17 @@ fun BackedUpCustomDirItem(
             }
         }
     }
-    BackedUpCustomDirItemContent(path, metadata, isDirectory, context, modifier)
+    BackedUpCustomDirItemContent(path, metadata, isDirectory, context, shapes, modifier)
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun BackedUpCustomDirItemContent(
     path: String,
     metadata: io.github.hddq.restoid.model.CustomDirectoryMetadata,
     isDirectory: Boolean,
     context: android.content.Context,
+    shapes: ListItemShapes,
     modifier: Modifier = Modifier
 ) {
     var isExpanded by rememberSaveable { mutableStateOf(false) }
@@ -882,151 +883,171 @@ private fun BackedUpCustomDirItemContent(
             Toast.makeText(context, copiedText, Toast.LENGTH_SHORT).show()
         }
     }
-    val interactionModifier = if (canExpand || isExpanded) {
-        Modifier.combinedClickable(
-            onClick = { isExpanded = !isExpanded },
-            onLongClick = copyPath
-        )
-    } else {
-        Modifier
-            .semantics {
-                onLongClick {
-                    copyPath()
-                    true
-                }
-            }
-            .pointerInput(path, copiedText) {
-                detectTapGestures(onLongPress = { copyPath() })
-            }
-    }
-
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .then(interactionModifier)
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-            .animateContentSize(),
-        verticalAlignment = if (isExpanded) Alignment.Top else Alignment.CenterVertically
-    ) {
+    val leadingSlot: @Composable () -> Unit = {
         Icon(
             if (isDirectory) Icons.Outlined.Folder else Icons.Outlined.Description,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary
         )
-        Spacer(Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                path.substringAfterLast("/").ifEmpty { path },
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = if (isExpanded) Int.MAX_VALUE else 1,
-                overflow = TextOverflow.Ellipsis,
-                onTextLayout = { result ->
-                    if (!isExpanded) {
-                        titleOverflows = result.hasVisualOverflow
-                    }
+    }
+    val supportingSlot: @Composable () -> Unit = {
+        val sizeInfo = Formatter.formatShortFileSize(context, metadata.size)
+        Text(
+            stringResource(R.string.progress_size) + ": " + sizeInfo + " • " + path,
+            style = MaterialTheme.typography.bodySmall,
+            maxLines = if (isExpanded) Int.MAX_VALUE else 1,
+            overflow = TextOverflow.Ellipsis,
+            onTextLayout = { result ->
+                if (!isExpanded) {
+                    subtitleOverflows = result.hasVisualOverflow
                 }
-            )
-            val sizeInfo = Formatter.formatShortFileSize(context, metadata.size)
-            Text(
-                stringResource(R.string.progress_size) + ": " + sizeInfo + " • " + path,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = if (isExpanded) Int.MAX_VALUE else 1,
-                overflow = TextOverflow.Ellipsis,
-                onTextLayout = { result ->
-                    if (!isExpanded) {
-                        subtitleOverflows = result.hasVisualOverflow
-                    }
-                }
-            )
-        }
-        if (canExpand || isExpanded) {
-            Spacer(Modifier.width(8.dp))
+            }
+        )
+    }
+    val trailingSlot: (@Composable () -> Unit)? = if (canExpand || isExpanded) {
+        {
             Icon(
                 imageVector = if (isExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
                 contentDescription = if (isExpanded) stringResource(R.string.action_collapse) else stringResource(R.string.action_expand),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
             )
         }
+    } else {
+        null
+    }
+    val contentSlot: @Composable () -> Unit = {
+        Text(
+            path.substringAfterLast("/").ifEmpty { path },
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleMedium,
+            maxLines = if (isExpanded) Int.MAX_VALUE else 1,
+            overflow = TextOverflow.Ellipsis,
+            onTextLayout = { result ->
+                if (!isExpanded) {
+                    titleOverflows = result.hasVisualOverflow
+                }
+            }
+        )
+    }
+
+    if (canExpand || isExpanded) {
+        SegmentedListItem(
+            onClick = { isExpanded = !isExpanded },
+            onLongClick = copyPath,
+            shapes = shapes,
+            modifier = modifier.animateContentSize(),
+            colors = expressiveListItemColors(),
+            verticalAlignment = if (isExpanded) Alignment.Top else Alignment.CenterVertically,
+            leadingContent = leadingSlot,
+            supportingContent = supportingSlot,
+            trailingContent = trailingSlot,
+            content = contentSlot
+        )
+    } else {
+        SegmentedListItem(
+            shapes = shapes,
+            modifier = modifier
+                .semantics {
+                    onLongClick {
+                        copyPath()
+                        true
+                    }
+                }
+                .pointerInput(path, copiedText) {
+                    detectTapGestures(onLongPress = { copyPath() })
+                }
+                .animateContentSize(),
+            verticalAlignment = Alignment.CenterVertically,
+            colors = expressiveListItemColors(),
+            leadingContent = leadingSlot,
+            supportingContent = supportingSlot,
+            content = contentSlot
+        )
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun BackedUpContactsItem(
     metadata: ContactsBackupMetadata,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    shapes: ListItemShapes = ListItemDefaults.segmentedShapes(index = 0, count = 1)
 ) {
     val context = LocalContext.current
     val countText = pluralStringResource(R.plurals.device_data_contacts_count, metadata.count, metadata.count)
     val sizeText = Formatter.formatShortFileSize(context, metadata.size)
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            Icons.Outlined.Contacts,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary
-        )
-        Spacer(Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
+    SegmentedListItem(
+        shapes = shapes,
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        colors = expressiveListItemColors(),
+        leadingContent = {
+            Icon(
+                Icons.Outlined.Contacts,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+        },
+        supportingContent = {
+            Text(
+                stringResource(R.string.device_data_contacts_count_size, countText, sizeText),
+                style = MaterialTheme.typography.bodySmall
+            )
+        },
+        content = {
             Text(
                 stringResource(R.string.device_data_contacts),
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleMedium
             )
-            Text(
-                stringResource(R.string.device_data_contacts_count_size, countText, sizeText),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
-    }
+    )
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun BackedUpCallLogsItem(
     metadata: CallLogsBackupMetadata,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    shapes: ListItemShapes = ListItemDefaults.segmentedShapes(index = 0, count = 1)
 ) {
     val context = LocalContext.current
     val countText = pluralStringResource(R.plurals.device_data_call_logs_count, metadata.count, metadata.count)
     val sizeText = Formatter.formatShortFileSize(context, metadata.size)
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            Icons.Outlined.Call,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary
-        )
-        Spacer(Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
+    SegmentedListItem(
+        shapes = shapes,
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        colors = expressiveListItemColors(),
+        leadingContent = {
+            Icon(
+                Icons.Outlined.Call,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+        },
+        supportingContent = {
+            Text(
+                stringResource(R.string.device_data_call_logs_count_size, countText, sizeText),
+                style = MaterialTheme.typography.bodySmall
+            )
+        },
+        content = {
             Text(
                 stringResource(R.string.device_data_call_logs),
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleMedium
             )
-            Text(
-                stringResource(R.string.device_data_call_logs_count_size, countText, sizeText),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
-    }
+    )
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun BackedUpCalendarItem(
     metadata: CalendarBackupMetadata,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    shapes: ListItemShapes = ListItemDefaults.segmentedShapes(index = 0, count = 1)
 ) {
     val context = LocalContext.current
     val eventsText = pluralStringResource(R.plurals.device_data_calendar_events_count, metadata.count, metadata.count)
@@ -1035,33 +1056,35 @@ fun BackedUpCalendarItem(
         val calendarsText = pluralStringResource(R.plurals.device_data_calendar_calendars_count, calCount, calCount)
         stringResource(R.string.device_data_calendar_calendars_events_size, calendarsText, eventsText, sizeText)
     } ?: stringResource(R.string.device_data_calendar_count_size, eventsText, sizeText)
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            Icons.Outlined.CalendarMonth,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary
-        )
-        Spacer(Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
+    SegmentedListItem(
+        shapes = shapes,
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        colors = expressiveListItemColors(),
+        leadingContent = {
+            Icon(
+                Icons.Outlined.CalendarMonth,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+        },
+        supportingContent = {
+            Text(
+                summaryText,
+                style = MaterialTheme.typography.bodySmall
+            )
+        },
+        content = {
             Text(
                 stringResource(R.string.device_data_calendar),
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleMedium
             )
-            Text(
-                summaryText,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
-    }
+    )
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Preview(name = "Snapshot Details Apps Preview", showBackground = true)
 @Composable
 private fun BackedUpAppItemPreview() {
@@ -1082,9 +1105,8 @@ private fun BackedUpAppItemPreview() {
                 )
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                    verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)
                 ) {
-                    ExpressiveSegmentedSurface(index = 0, count = 2) {
                     BackedUpAppItem(
                         detail = BackupDetail(
                             appInfo = io.github.hddq.restoid.model.AppInfo(
@@ -1109,10 +1131,9 @@ private fun BackedUpAppItemPreview() {
                                 "user_de" to 4_096L,
                                 "external_data" to 1_995_904L
                             )
-                        )
+                        ),
+                        shapes = ListItemDefaults.segmentedShapes(index = 0, count = 2)
                     )
-                }
-                ExpressiveSegmentedSurface(index = 1, count = 2) {
                     BackedUpAppItem(
                         detail = BackupDetail(
                             appInfo = io.github.hddq.restoid.model.AppInfo(
@@ -1135,11 +1156,11 @@ private fun BackedUpAppItemPreview() {
                                 "apk" to 32_000_000L,
                                 "data" to 53_200_000L
                             )
-                        )
+                        ),
+                        shapes = ListItemDefaults.segmentedShapes(index = 1, count = 2)
                     )
                 }
             }
         }
     }
-}
 }
