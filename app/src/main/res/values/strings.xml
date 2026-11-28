@@ -1019,4 +1019,6 @@
     <string name="tag_error_name_duplicate">A tag with this name already exists.</string>
     <string name="home_no_matching_snapshots_title">No snapshots match the selected tags</string>
     <string name="action_clear_filters">Clear filters</string>
+    <string name="changelog_dialog_title">What\'s new in v%1$s</string>
+    <string name="action_got_it">Got it</string>
 </resources>

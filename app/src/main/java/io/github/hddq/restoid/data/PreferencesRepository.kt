@@ -18,6 +18,7 @@ class PreferencesRepository(private val context: Context) {
         const val KEY_DEVICE_HOSTNAME = "device_hostname"
         const val KEY_HAS_ROOT = "has_root"
         const val KEY_ONBOARDING_COMPLETED = "onboarding_completed"
+        const val KEY_LAST_SEEN_CHANGELOG_VERSION_CODE = "last_seen_changelog_version_code"
     }
 
     // Maintenance Preferences
@@ -352,6 +353,14 @@ class PreferencesRepository(private val context: Context) {
 
     fun saveOnboardingCompleted(completed: Boolean) {
         prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETED, completed).apply()
+    }
+
+    fun loadLastSeenChangelogVersionCode(): Int {
+        return prefs.getInt(KEY_LAST_SEEN_CHANGELOG_VERSION_CODE, -1)
+    }
+
+    fun saveLastSeenChangelogVersionCode(versionCode: Int) {
+        prefs.edit().putInt(KEY_LAST_SEEN_CHANGELOG_VERSION_CODE, versionCode).apply()
     }
 
     fun getCustomDeviceHostname(): String? {
