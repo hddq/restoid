@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - "v*.*.*"
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -29,6 +30,11 @@ jobs:
         run: |
           set -euo pipefail
           GRADLE_FILE=app/build.gradle.kts
+
+          if [ "${GITHUB_REF_TYPE:-}" != "tag" ]; then
+            echo "::error::Android Release must run on a tag ref (got '${GITHUB_REF:-unknown}', type '${GITHUB_REF_TYPE:-unknown}')."
+            exit 1
+          fi
 
           if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z][0-9A-Za-z.-]*)?$ ]]; then
             echo "::error::Tag '$TAG' must look like vX.Y.Z or vX.Y.Z-<pre-release> (e.g. v0.9.0-beta.1)."
