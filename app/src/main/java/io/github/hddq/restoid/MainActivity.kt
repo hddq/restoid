@@ -436,7 +436,7 @@ class MainActivity : FragmentActivity() {
                     }
 
                     val changelogItems = remember { parseChangelogItems(BuildConfig.APP_CHANGELOG) }
-                    var showChangelogDialog by rememberSaveable {
+                    var showChangelogDialog by remember {
                         mutableStateOf(
                             startDestination == TOP_LEVEL_ROUTE &&
                                 changelogItems.isNotEmpty() &&
