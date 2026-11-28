@@ -1,5 +1,6 @@
 package io.github.hddq.restoid.ui.screens.settings
 
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.Column
@@ -42,6 +43,15 @@ fun AboutSettings(onNavigateToLicenses: () -> Unit) {
     val githubIntent = remember { Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/hddq/restoid")) }
     val issuesIntent = remember { Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/hddq/restoid/issues/new/choose")) }
     val crowdinIntent = remember { Intent(Intent.ACTION_VIEW, Uri.parse("https://crowdin.com/project/restoid")) }
+    val launchExternalIntent = remember(context) {
+        { intent: Intent ->
+            try {
+                context.startActivity(intent)
+            } catch (_: ActivityNotFoundException) {
+                // No handler available for this intent.
+            }
+        }
+    }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         ExpressiveSectionHeader(title = stringResource(R.string.about_title))
@@ -61,7 +71,7 @@ fun AboutSettings(onNavigateToLicenses: () -> Unit) {
             )
 
             SegmentedListItem(
-                onClick = { context.startActivity(crowdinIntent) },
+                onClick = { launchExternalIntent(crowdinIntent) },
                 shapes = ListItemDefaults.segmentedShapes(index = 1, count = 4),
                 verticalAlignment = Alignment.CenterVertically,
                 colors = expressiveListItemColors(),
@@ -75,7 +85,7 @@ fun AboutSettings(onNavigateToLicenses: () -> Unit) {
             )
 
             SegmentedListItem(
-                onClick = { context.startActivity(issuesIntent) },
+                onClick = { launchExternalIntent(issuesIntent) },
                 shapes = ListItemDefaults.segmentedShapes(index = 2, count = 4),
                 verticalAlignment = Alignment.CenterVertically,
                 colors = expressiveListItemColors(),
@@ -89,7 +99,7 @@ fun AboutSettings(onNavigateToLicenses: () -> Unit) {
             )
 
             SegmentedListItem(
-                onClick = { context.startActivity(githubIntent) },
+                onClick = { launchExternalIntent(githubIntent) },
                 shapes = ListItemDefaults.segmentedShapes(index = 3, count = 4),
                 verticalAlignment = Alignment.CenterVertically,
                 colors = expressiveListItemColors(),
