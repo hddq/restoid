@@ -21,7 +21,7 @@ Restoid — это современное приложение для резер
 
 Резервное копирование приложений и данных (требуются root-права)
 • Выборочное резервное копирование установленных пользовательских приложений.
-• Детализированный контроль: выбирайте, что включать — APK-файлы, данные приложений, защищенные данные устройства, внешние файлы или кэш OBB.
+• Granular control: Choose whether to include APKs, app data, device-protected data, external files, or OBB caches, and exclude specific paths inside app data (such as large caches or re-downloadable media) while preserving core databases and settings.
 
 Пользовательские файлы и медиа
 • Резервное копирование личных папок: DCIM, Документы, Загрузки или любая другая директория на вашем устройстве.

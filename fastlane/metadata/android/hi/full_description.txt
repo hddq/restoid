@@ -21,7 +21,7 @@ Restoid एंड्रॉइड के लिए एक आधुनिक, ग
 
 पूर्ण ऐप और डेटा बैकअप (रूट आवश्यक)
 • इंस्टॉल किए गए उपयोगकर्ता एप्लिकेशन का चुनिंदा बैकअप लें।
-• दानेदार नियंत्रण: चुनें कि APK, ऐप डेटा, डिवाइस-सुरक्षित डेटा, बाहरी फ़ाइलें या OBB कैश शामिल करना है या नहीं।
+• Granular control: Choose whether to include APKs, app data, device-protected data, external files, or OBB caches, and exclude specific paths inside app data (such as large caches or re-downloadable media) while preserving core databases and settings.
 
 कस्टम फ़ाइलें और मीडिया
 • व्यक्तिगत फ़ोल्डर का बैकअप लें: DCIM, दस्तावेज़, डाउनलोड, या आपके डिवाइस पर कोई भी निर्देशिका।

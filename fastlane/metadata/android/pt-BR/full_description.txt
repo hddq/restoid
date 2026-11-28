@@ -21,7 +21,7 @@ Backends de Armazenamento Flexíveis
 
 Backup Completo de Apps e Dados (Root Necessário)
 • Faça backup seletivo de aplicativos de usuário instalados.
-• Controle granular: Escolha se deseja incluir APKs, dados de aplicativos, dados protegidos pelo dispositivo, arquivos externos ou caches OBB.
+• Granular control: Choose whether to include APKs, app data, device-protected data, external files, or OBB caches, and exclude specific paths inside app data (such as large caches or re-downloadable media) while preserving core databases and settings.
 
 Arquivos e Mídia Personalizados
 • Faça backup de pastas pessoais: DCIM, Documentos, Downloads ou qualquer diretório no seu dispositivo.

@@ -21,7 +21,7 @@ Fleksibilne pozadinske pohrane
 
 Potpuna sigurnosna kopija aplikacija i podataka (potreban root)
 • Selektivno sigurnosno kopirajte instalirane korisničke aplikacije.
-• Granularna kontrola: Odaberite želite li uključiti APK-ove, podatke aplikacija, podatke zaštićene uređajem, vanjske datoteke ili OBB predmemorije.
+• Granular control: Choose whether to include APKs, app data, device-protected data, external files, or OBB caches, and exclude specific paths inside app data (such as large caches or re-downloadable media) while preserving core databases and settings.
 
 Prilagođene datoteke i mediji
 • Sigurnosno kopirajte osobne mape: DCIM, Dokumente, Preuzimanja ili bilo koji direktorij na vašem uređaju.

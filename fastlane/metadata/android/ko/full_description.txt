@@ -21,7 +21,7 @@ Restoid는 강력한 오픈소스 restic 엔진을 기반으로 하는 Android�
 
 전체 앱 및 데이터 백업(루트 필요)
 • 설치된 사용자 애플리케이션을 선택적으로 백업합니다.
-• 세부적인 제어: APK, 앱 데이터, 기기 보호 데이터, 외부 파일 또는 OBB 캐시 포함 여부를 선택할 수 있습니다.
+• Granular control: Choose whether to include APKs, app data, device-protected data, external files, or OBB caches, and exclude specific paths inside app data (such as large caches or re-downloadable media) while preserving core databases and settings.
 
 사용자 지정 파일 및 미디어
 • 개인 폴더 백업: DCIM, 문서, 다운로드 또는 기기의 모든 디렉터리.

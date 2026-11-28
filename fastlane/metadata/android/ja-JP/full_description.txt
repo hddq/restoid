@@ -21,7 +21,7 @@ Rootアクセスは完全にオプションです：rootなしでカスタムフ
 
 アプリとデータの完全バックアップ（root必須）
 • インストールされているユーザーアプリを選択してバックアップできます。
-• きめ細かな制御: APK、アプリデータ、デバイス保護データ、外部ファイル、OBBキャッシュのいずれを含めるかを選択できます。
+• Granular control: Choose whether to include APKs, app data, device-protected data, external files, or OBB caches, and exclude specific paths inside app data (such as large caches or re-downloadable media) while preserving core databases and settings.
 
 カスタムファイルとメディア
 • 個人フォルダー（DCIM、ドキュメント、ダウンロード、またはデバイス上の任意のディレクトリ）をバックアップできます。

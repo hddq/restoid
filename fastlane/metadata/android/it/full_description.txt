@@ -21,7 +21,7 @@ Backend di archiviazione flessibili
 
 Backup completo di app e dati (richiesti permessi di root)
 • Esegui selettivamente il backup delle applicazioni utente installate.
-• Controllo granulare: scegli se includere APK, dati delle app, dati protetti dal dispositivo, file esterni o cache OBB.
+• Granular control: Choose whether to include APKs, app data, device-protected data, external files, or OBB caches, and exclude specific paths inside app data (such as large caches or re-downloadable media) while preserving core databases and settings.
 
 File e file multimediali personalizzati
 • Esegui il backup delle cartelle personali: DCIM, Documenti, Download o qualsiasi directory sul tuo dispositivo.
