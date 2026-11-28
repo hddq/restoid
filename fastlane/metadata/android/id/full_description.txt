@@ -21,7 +21,7 @@ Backend Penyimpanan yang Fleksibel
 
 Pencadangan Aplikasi & Data Penuh (Membutuhkan Root)
 • Pilih secara selektif aplikasi pengguna yang diinstal.
-• Kontrol terperinci: Pilih apakah akan menyertakan APK, data aplikasi, data yang dilindungi perangkat, file eksternal, atau tembolok OBB.
+• Granular control: Choose whether to include APKs, app data, device-protected data, external files, or OBB caches, and exclude specific paths inside app data (such as large caches or re-downloadable media) while preserving core databases and settings.
 
 File & Media Kustom
 • Cadangkan folder pribadi: DCIM, Dokumen, Unduhan, atau direktori apa pun di perangkat Anda.

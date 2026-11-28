@@ -21,7 +21,7 @@
 
 پشتیبان‌گیری کامل از برنامه و داده‌ها (نیازمند روت)
 • پشتیبان‌گیری انتخابی از برنامه‌های کاربر نصب‌شده.
-• کنترل دقیق: انتخاب اینکه آیا APKها، داده‌های برنامه، داده‌های محافظت‌شده دستگاه، فایل‌های خارجی یا کش‌های OBB گنجانده شوند یا خیر.
+• Granular control: Choose whether to include APKs, app data, device-protected data, external files, or OBB caches, and exclude specific paths inside app data (such as large caches or re-downloadable media) while preserving core databases and settings.
 
 فایل‌ها و رسانه‌های سفارشی
 • پشتیبان‌گیری از پوشه‌های شخصی: DCIM، اسناد، دانلودها یا هر دایرکتوری دیگری در دستگاه شما.

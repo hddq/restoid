@@ -21,7 +21,7 @@ Hệ thống lưu trữ linh hoạt
 
 Sao lưu toàn bộ ứng dụng & dữ liệu (Yêu cầu Root)
 • Tùy chọn sao lưu các ứng dụng người dùng đã cài đặt.
-• Kiểm soát chi tiết: Chọn có bao gồm APK, dữ liệu ứng dụng, dữ liệu được bảo vệ trên thiết bị, tệp bên ngoài hoặc bộ đệm OBB hay không.
+• Granular control: Choose whether to include APKs, app data, device-protected data, external files, or OBB caches, and exclude specific paths inside app data (such as large caches or re-downloadable media) while preserving core databases and settings.
 
 Tệp tùy chỉnh & Phương tiện
 • Sao lưu các thư mục cá nhân: DCIM, Documents, Downloads hoặc bất kỳ thư mục nào trên thiết bị của bạn.

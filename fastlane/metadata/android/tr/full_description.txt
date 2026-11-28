@@ -21,7 +21,7 @@ Esnek Depolama Altyapıları
 
 Tam Uygulama ve Veri Yedekleme (Root Gerekir)
 • Yüklenen kullanıcı uygulamalarını seçici olarak yedekleyin.
-• Ayrıntılı kontrol: APK'ları, uygulama verilerini, cihaz korumalı verileri, harici dosyaları veya OBB önbelleklerini dahil edip etmeyeceğinizi seçin.
+• Granular control: Choose whether to include APKs, app data, device-protected data, external files, or OBB caches, and exclude specific paths inside app data (such as large caches or re-downloadable media) while preserving core databases and settings.
 
 Özel Dosyalar ve Medya
 • Kişisel klasörlerinizi yedekleyin: DCIM, Belgeler, İndirilenler veya cihazınızdaki herhangi bir dizin.

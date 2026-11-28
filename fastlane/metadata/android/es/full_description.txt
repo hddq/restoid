@@ -21,7 +21,7 @@ Backend de almacenamiento flexible
 
 Copia de seguridad completa de aplicaciones y datos (se requiere root)
 • Realiza copias de seguridad selectivas de las aplicaciones de usuario instaladas.
-• Control granular: elige si deseas incluir APKs, datos de aplicaciones, datos protegidos del dispositivo, archivos externos o cachés OBB.
+• Granular control: Choose whether to include APKs, app data, device-protected data, external files, or OBB caches, and exclude specific paths inside app data (such as large caches or re-downloadable media) while preserving core databases and settings.
 
 Archivos y multimedia personalizados
 • Haz una copia de seguridad de carpetas personales: DCIM, Documentos, Descargas o cualquier directorio de tu dispositivo.

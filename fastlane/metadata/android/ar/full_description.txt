@@ -21,7 +21,7 @@ Restoid هو تطبيق نسخ احتياطي حديث يركز على الخص�
 
 نسخ احتياطي كامل للتطبيقات والبيانات (يتطلب الرووت)
 • تحديد تطبيقات المستخدم المثبتة لنسخها احتياطياً بشكل انتقائي.
-• تحكم دقيق: اختر ما إذا كنت تريد تضمين ملفات APK، أو بيانات التطبيقات، أو البيانات المحمية للجهاز، أو الملفات الخارجية، أو ذاكرات التخزين المؤقت لـ OBB.
+• Granular control: Choose whether to include APKs, app data, device-protected data, external files, or OBB caches, and exclude specific paths inside app data (such as large caches or re-downloadable media) while preserving core databases and settings.
 
 ملفات وموسائط مخصصة
 • نسخ المجلدات الشخصية احتياطياً: DCIM، أو المستندات، أو التنزيلات، أو أي مجلد على جهازك.

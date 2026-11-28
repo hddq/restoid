@@ -21,7 +21,7 @@ Elastyczne zaplecze pamięci masowej
 
 Pełna kopia zapasowa aplikacji i danych (wymagany root)
 • Wybiórcze tworzenie kopii zapasowych zainstalowanych aplikacji użytkownika.
-• Szczegółowa kontrola: wybierz, czy chcesz uwzględnić pliki APK, dane aplikacji, dane chronione przez urządzenie, pliki zewnętrzne czy pamięć podręczną OBB.
+• Precyzyjna kontrola: Wybieraj, czy chcesz uwzględnić pliki APK, dane aplikacji, dane chronione urządzenia, pliki zewnętrzne lub pamięć podręczną OBB, a także wykluczaj konkretne ścieżki wewnątrz danych aplikacji (takie jak duże pliki podręczne czy media możliwe do ponownego pobrania), zachowując jednocześnie kluczowe bazy danych i ustawienia.
 
 Własne pliki i media
 • Twórz kopie zapasowe folderów osobistych: DCIM, Dokumenty, Pobrane lub dowolny katalog na urządzeniu.

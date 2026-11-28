@@ -21,7 +21,7 @@ Root 权限完全可选：无需 root 即可备份自定义文件夹、照片、
 
 完整应用与数据备份（需要 Root）
 • 选择性备份已安装的用户应用程序。
-• 精细控制：选择是否包含 APK、应用数据、设备保护数据、外部文件或 OBB 缓存。
+• Granular control: Choose whether to include APKs, app data, device-protected data, external files, or OBB caches, and exclude specific paths inside app data (such as large caches or re-downloadable media) while preserving core databases and settings.
 
 自定义文件与媒体
 • 备份个人文件夹：DCIM、文档、下载或设备上的任何目录。

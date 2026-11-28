@@ -21,7 +21,7 @@ Flexible Speicher-Backends
 
 Vollständiges App- & Daten-Backup (Root erforderlich)
 • Sichere installierte Benutzeranwendungen selektiv.
-• Granulare Kontrolle: Wähle, ob APKs, App-Daten, gerätekeschützte Daten, externe Dateien oder OBB-Caches einbezogen werden sollen.
+• Granular control: Choose whether to include APKs, app data, device-protected data, external files, or OBB caches, and exclude specific paths inside app data (such as large caches or re-downloadable media) while preserving core databases and settings.
 
 Benutzerdefinierte Dateien & Medien
 • Sichere persönliche Ordner: DCIM, Dokumente, Downloads oder ein beliebiges Verzeichnis auf deinem Gerät.

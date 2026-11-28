@@ -21,7 +21,7 @@ Backends de stockage flexibles
 
 Sauvegarde complète des applications et des données (Root requis)
 • Sauvegardez sélectivement les applications utilisateur installées.
-• Contrôle granulaire : Choisissez d'inclure ou non les APK, les données d'applications, les données protégées de l'appareil, les fichiers externes ou les caches OBB.
+• Granular control: Choose whether to include APKs, app data, device-protected data, external files, or OBB caches, and exclude specific paths inside app data (such as large caches or re-downloadable media) while preserving core databases and settings.
 
 Fichiers et médias personnalisés
 • Sauvegardez des dossiers personnels : DCIM, Documents, Téléchargements ou tout autre répertoire de votre appareil.
