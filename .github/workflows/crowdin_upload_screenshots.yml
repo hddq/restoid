@@ -1,0 +1,81 @@
+name: Crowdin Upload Screenshots
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'fastlane/metadata/android/en-US/images/phoneScreenshots/**'
+  workflow_dispatch:
+
+concurrency:
+  group: crowdin-screenshot-upload
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  upload-screenshots:
+    name: Upload screenshots to Crowdin
+    if: github.repository_owner == 'hddq'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Upload screenshots
+        id: upload
+        uses: crowdin/github-action@v3
+        with:
+          command: 'screenshot upload'
+          command_args: 'fastlane/metadata/android/en-US/images/phoneScreenshots --auto-tag --branch master --output json --no-progress --no-colors'
+        env:
+          CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
+          CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
+
+      - name: List screenshots
+        id: list
+        uses: crowdin/github-action@v3
+        with:
+          command: 'screenshot list'
+          command_args: '--output json --no-progress --no-colors'
+        env:
+          CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
+          CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
+
+      - name: Delete stale screenshots
+        env:
+          CROWDIN_PROJECT_ID: ${{ secrets.CROWDIN_PROJECT_ID }}
+          CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
+          UPLOADED_SCREENSHOTS: ${{ steps.upload.outputs.command_output }}
+          ALL_SCREENSHOTS: ${{ steps.list.outputs.command_output }}
+        run: |
+          set -euo pipefail
+
+          local_count=$(find fastlane/metadata/android/en-US/images/phoneScreenshots -not -path '*/.*' -type f \( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.gif' \) | wc -l)
+          uploaded_count=$(jq 'length' <<< "$UPLOADED_SCREENSHOTS")
+          if [[ "$uploaded_count" -eq 0 || "$uploaded_count" -lt "$local_count" ]]; then
+            echo "Error: Uploaded screenshot count ($uploaded_count) is less than local screenshots ($local_count); skipping stale cleanup." >&2
+            exit 1
+          fi
+
+          mapfile -t stale_entries < <(
+            jq -nr \
+              --argjson uploaded "$UPLOADED_SCREENSHOTS" \
+              --argjson all "$ALL_SCREENSHOTS" \
+              '($uploaded | map(.id)) as $keep | $all[] | select(.id as $id | ($keep | index($id)) == null) | "\(.id)\t\(.name)"'
+          )
+
+          if [[ ${#stale_entries[@]} -eq 0 ]]; then
+            echo "No stale screenshots to delete."
+            exit 0
+          fi
+
+          for entry in "${stale_entries[@]}"; do
+            IFS=$'\t' read -r id name <<< "$entry"
+            echo "Deleting stale screenshot #${id} (${name})..."
+            curl -fsS -X DELETE \
+              -H "Authorization: Bearer ${CROWDIN_PERSONAL_TOKEN}" \
+              "https://api.crowdin.com/api/v2/projects/${CROWDIN_PROJECT_ID}/screenshots/${id}"
+          done
