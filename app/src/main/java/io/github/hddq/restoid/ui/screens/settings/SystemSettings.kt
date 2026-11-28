@@ -31,11 +31,15 @@ import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -59,7 +63,7 @@ import io.github.hddq.restoid.data.NotificationPermissionState
 import io.github.hddq.restoid.data.StoragePermissionState
 import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
-import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
+import io.github.hddq.restoid.ui.components.expressiveListItemColors
 import io.github.hddq.restoid.ui.settings.DeviceDataPermissionsState
 import io.github.hddq.restoid.ui.settings.SettingsViewModel
 
@@ -154,6 +158,7 @@ fun SystemSettings(
     )
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun SystemSettingsCard(
     hasRoot: Boolean,
@@ -164,44 +169,27 @@ internal fun SystemSettingsCard(
     Column(modifier = modifier.fillMaxWidth()) {
         ExpressiveSectionHeader(title = stringResource(R.string.system_title))
         ExpressiveCardGroup {
-            ExpressiveSegmentedSurface(index = 0, count = 1) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(onClick = onClick)
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(
-                            imageVector = if (hasRoot) Icons.Outlined.AdminPanelSettings else Icons.Outlined.Security,
-                            contentDescription = null,
-                            tint = if (hasRoot) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(end = 16.dp)
-                        )
-                        Column {
-                            Text(
-                                text = stringResource(R.string.permissions_and_access_title),
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            Text(
-                                text = summaryText,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
+            SegmentedListItem(
+                onClick = onClick,
+                shapes = ListItemDefaults.segmentedShapes(index = 0, count = 1),
+                verticalAlignment = Alignment.CenterVertically,
+                colors = expressiveListItemColors(),
+                leadingContent = {
+                    Icon(
+                        imageVector = if (hasRoot) Icons.Outlined.AdminPanelSettings else Icons.Outlined.Security,
+                        contentDescription = null,
+                        tint = if (hasRoot) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                supportingContent = { Text(text = summaryText) },
+                trailingContent = {
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        contentDescription = null
                     )
-                }
-            }
+                },
+                content = { Text(text = stringResource(R.string.permissions_and_access_title)) }
+            )
         }
     }
 }
@@ -278,6 +266,7 @@ private fun PermissionsBottomSheet(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun PermissionsSectionsContent(
     hasRoot: Boolean,
@@ -298,11 +287,11 @@ internal fun PermissionsSectionsContent(
     modifier: Modifier = Modifier,
     preferRuntimeNotificationRequest: Boolean = false
 ) {
-    val systemRows = buildList<@Composable () -> Unit> {
+    val systemRows = buildList<@Composable (ListItemShapes) -> Unit> {
         if (showStorageRow) {
             val storageGranted = storagePermissionState == StoragePermissionState.Granted
             val coveredByRoot = hasRoot && !storageGranted
-            add {
+            add { shapes ->
                 PermissionItemRow(
                     icon = Icons.Outlined.Folder,
                     title = stringResource(R.string.permissions_storage_title),
@@ -313,14 +302,15 @@ internal fun PermissionsSectionsContent(
                     },
                     granted = storageGranted || coveredByRoot,
                     actionLabel = if (!storageGranted && !coveredByRoot) stringResource(R.string.action_grant) else null,
-                    onAction = onRequestStorage
+                    onAction = onRequestStorage,
+                    shapes = shapes
                 )
             }
         }
         if (showNotificationRow) {
             val granted = notificationPermissionState == NotificationPermissionState.Granted
             val isDenied = notificationPermissionState == NotificationPermissionState.Denied
-            add {
+            add { shapes ->
                 PermissionItemRow(
                     icon = Icons.Outlined.Notifications,
                     title = stringResource(R.string.permissions_notifications_title),
@@ -340,6 +330,7 @@ internal fun PermissionsSectionsContent(
                     } else {
                         onRequestNotification
                     },
+                    shapes = shapes,
                     trailingIconAction = if (granted) {
                         {
                             IconButton(onClick = onOpenNotificationSettings) {
@@ -355,7 +346,7 @@ internal fun PermissionsSectionsContent(
                 )
             }
         }
-        add {
+        add { shapes ->
             PermissionItemRow(
                 icon = Icons.Outlined.BatteryChargingFull,
                 title = stringResource(R.string.permissions_battery_title),
@@ -366,12 +357,13 @@ internal fun PermissionsSectionsContent(
                 },
                 granted = batteryOptimizationDisabled,
                 actionLabel = if (!batteryOptimizationDisabled) stringResource(R.string.action_allow) else null,
-                onAction = onRequestBatteryUnrestricted
+                onAction = onRequestBatteryUnrestricted,
+                shapes = shapes
             )
         }
         if (showLocalNetworkRow) {
             val granted = localNetworkPermissionState == LocalNetworkPermissionState.Granted
-            add {
+            add { shapes ->
                 PermissionItemRow(
                     icon = Icons.Outlined.Lan,
                     title = stringResource(R.string.settings_system_permission_local_network),
@@ -382,7 +374,8 @@ internal fun PermissionsSectionsContent(
                     },
                     granted = granted,
                     actionLabel = if (!granted) stringResource(R.string.action_grant) else null,
-                    onAction = onRequestLocalNetwork
+                    onAction = onRequestLocalNetwork,
+                    shapes = shapes
                 )
             }
         }
@@ -392,9 +385,7 @@ internal fun PermissionsSectionsContent(
         ExpressiveSectionHeader(title = stringResource(R.string.system_title))
         ExpressiveCardGroup {
             systemRows.forEachIndexed { index, rowContent ->
-                ExpressiveSegmentedSurface(index = index, count = systemRows.size) {
-                    rowContent()
-                }
+                rowContent(ListItemDefaults.segmentedShapes(index = index, count = systemRows.size))
             }
         }
 
@@ -402,60 +393,57 @@ internal fun PermissionsSectionsContent(
 
         ExpressiveSectionHeader(title = stringResource(R.string.permissions_section_device_data))
         ExpressiveCardGroup {
-            ExpressiveSegmentedSurface(index = 0, count = 3) {
-                PermissionItemRow(
-                    icon = Icons.Outlined.Contacts,
-                    title = stringResource(R.string.permissions_contacts_title),
-                    subtitle = if (deviceDataPermissions.contactsGranted) {
-                        stringResource(R.string.permissions_status_granted)
-                    } else {
-                        stringResource(R.string.permissions_contacts_description)
-                    },
-                    granted = deviceDataPermissions.contactsGranted,
-                    actionLabel = if (!deviceDataPermissions.contactsGranted) stringResource(R.string.action_grant) else null,
-                    onAction = {
-                        onRequestDeviceDataPermissions(
-                            arrayOf(Manifest.permission.READ_CONTACTS, Manifest.permission.WRITE_CONTACTS)
-                        )
-                    }
-                )
-            }
-            ExpressiveSegmentedSurface(index = 1, count = 3) {
-                PermissionItemRow(
-                    icon = Icons.Outlined.Call,
-                    title = stringResource(R.string.permissions_call_logs_title),
-                    subtitle = if (deviceDataPermissions.callLogsGranted) {
-                        stringResource(R.string.permissions_status_granted)
-                    } else {
-                        stringResource(R.string.permissions_call_logs_description)
-                    },
-                    granted = deviceDataPermissions.callLogsGranted,
-                    actionLabel = if (!deviceDataPermissions.callLogsGranted) stringResource(R.string.action_grant) else null,
-                    onAction = {
-                        onRequestDeviceDataPermissions(
-                            arrayOf(Manifest.permission.READ_CALL_LOG, Manifest.permission.WRITE_CALL_LOG)
-                        )
-                    }
-                )
-            }
-            ExpressiveSegmentedSurface(index = 2, count = 3) {
-                PermissionItemRow(
-                    icon = Icons.Outlined.CalendarMonth,
-                    title = stringResource(R.string.permissions_calendar_title),
-                    subtitle = if (deviceDataPermissions.calendarGranted) {
-                        stringResource(R.string.permissions_status_granted)
-                    } else {
-                        stringResource(R.string.permissions_calendar_description)
-                    },
-                    granted = deviceDataPermissions.calendarGranted,
-                    actionLabel = if (!deviceDataPermissions.calendarGranted) stringResource(R.string.action_grant) else null,
-                    onAction = {
-                        onRequestDeviceDataPermissions(
-                            arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR)
-                        )
-                    }
-                )
-            }
+            PermissionItemRow(
+                icon = Icons.Outlined.Contacts,
+                title = stringResource(R.string.permissions_contacts_title),
+                subtitle = if (deviceDataPermissions.contactsGranted) {
+                    stringResource(R.string.permissions_status_granted)
+                } else {
+                    stringResource(R.string.permissions_contacts_description)
+                },
+                granted = deviceDataPermissions.contactsGranted,
+                actionLabel = if (!deviceDataPermissions.contactsGranted) stringResource(R.string.action_grant) else null,
+                onAction = {
+                    onRequestDeviceDataPermissions(
+                        arrayOf(Manifest.permission.READ_CONTACTS, Manifest.permission.WRITE_CONTACTS)
+                    )
+                },
+                shapes = ListItemDefaults.segmentedShapes(index = 0, count = 3)
+            )
+            PermissionItemRow(
+                icon = Icons.Outlined.Call,
+                title = stringResource(R.string.permissions_call_logs_title),
+                subtitle = if (deviceDataPermissions.callLogsGranted) {
+                    stringResource(R.string.permissions_status_granted)
+                } else {
+                    stringResource(R.string.permissions_call_logs_description)
+                },
+                granted = deviceDataPermissions.callLogsGranted,
+                actionLabel = if (!deviceDataPermissions.callLogsGranted) stringResource(R.string.action_grant) else null,
+                onAction = {
+                    onRequestDeviceDataPermissions(
+                        arrayOf(Manifest.permission.READ_CALL_LOG, Manifest.permission.WRITE_CALL_LOG)
+                    )
+                },
+                shapes = ListItemDefaults.segmentedShapes(index = 1, count = 3)
+            )
+            PermissionItemRow(
+                icon = Icons.Outlined.CalendarMonth,
+                title = stringResource(R.string.permissions_calendar_title),
+                subtitle = if (deviceDataPermissions.calendarGranted) {
+                    stringResource(R.string.permissions_status_granted)
+                } else {
+                    stringResource(R.string.permissions_calendar_description)
+                },
+                granted = deviceDataPermissions.calendarGranted,
+                actionLabel = if (!deviceDataPermissions.calendarGranted) stringResource(R.string.action_grant) else null,
+                onAction = {
+                    onRequestDeviceDataPermissions(
+                        arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR)
+                    )
+                },
+                shapes = ListItemDefaults.segmentedShapes(index = 2, count = 3)
+            )
         }
     }
 }
@@ -530,6 +518,7 @@ internal fun AccessModeCard(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun PermissionItemRow(
     icon: ImageVector,
@@ -538,40 +527,42 @@ private fun PermissionItemRow(
     granted: Boolean,
     actionLabel: String?,
     onAction: () -> Unit,
+    shapes: ListItemShapes,
     modifier: Modifier = Modifier,
     trailingIconAction: (@Composable () -> Unit)? = null
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+    SegmentedListItem(
+        shapes = shapes,
+        modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Icon(
-            imageVector = if (granted) Icons.Outlined.CheckCircle else icon,
-            contentDescription = null,
-            tint = if (granted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(24.dp)
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface
+        colors = expressiveListItemColors(),
+        leadingContent = {
+            Icon(
+                imageVector = if (granted) Icons.Outlined.CheckCircle else icon,
+                contentDescription = null,
+                tint = if (granted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(24.dp)
             )
+        },
+        supportingContent = {
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = MaterialTheme.typography.bodySmall
             )
-        }
-        if (actionLabel != null) {
-            FilledTonalButton(onClick = onAction) {
-                Text(actionLabel)
+        },
+        trailingContent = if (actionLabel != null || trailingIconAction != null) {
+            {
+                if (actionLabel != null) {
+                    FilledTonalButton(onClick = onAction) {
+                        Text(actionLabel)
+                    }
+                } else {
+                    trailingIconAction?.invoke()
+                }
             }
-        } else if (trailingIconAction != null) {
-            trailingIconAction()
-        }
-    }
+        } else {
+            null
+        },
+        content = { Text(text = title) }
+    )
 }

@@ -15,12 +15,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ListItemDefaults
 import io.github.hddq.restoid.R
 import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
-import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Bolt
 import io.github.hddq.restoid.ui.screens.settings.components.AppUnlockOnStartRow
 import io.github.hddq.restoid.ui.screens.settings.components.DeviceHostnameRow
 import io.github.hddq.restoid.ui.screens.settings.components.SettingsToggleRow
@@ -92,6 +93,7 @@ fun OptionsSettings(viewModel: SettingsViewModel) {
     )
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun OptionsSettingsContent(
     requireAppUnlock: Boolean,
@@ -104,26 +106,23 @@ internal fun OptionsSettingsContent(
     Column(modifier = Modifier.fillMaxWidth()) {
         ExpressiveSectionHeader(title = stringResource(R.string.options_title))
         ExpressiveCardGroup {
-            ExpressiveSegmentedSurface(index = 0, count = 3) {
-                AppUnlockOnStartRow(
-                    enabled = requireAppUnlock,
-                    onCheckedChange = onRequireAppUnlockChange
-                )
-            }
-            ExpressiveSegmentedSurface(index = 1, count = 3) {
-                SettingsToggleRow(
-                    title = stringResource(R.string.allow_external_intents),
-                    icon = Icons.Outlined.Bolt,
-                    enabled = allowExternalIntents,
-                    onCheckedChange = onAllowExternalIntentsChange
-                )
-            }
-            ExpressiveSegmentedSurface(index = 2, count = 3) {
-                DeviceHostnameRow(
-                    hostname = deviceHostname,
-                    onClick = onEditHostnameClick
-                )
-            }
+            AppUnlockOnStartRow(
+                enabled = requireAppUnlock,
+                shapes = ListItemDefaults.segmentedShapes(index = 0, count = 3),
+                onCheckedChange = onRequireAppUnlockChange
+            )
+            SettingsToggleRow(
+                title = stringResource(R.string.allow_external_intents),
+                icon = Icons.Outlined.Bolt,
+                enabled = allowExternalIntents,
+                shapes = ListItemDefaults.segmentedShapes(index = 1, count = 3),
+                onCheckedChange = onAllowExternalIntentsChange
+            )
+            DeviceHostnameRow(
+                hostname = deviceHostname,
+                shapes = ListItemDefaults.segmentedShapes(index = 2, count = 3),
+                onClick = onEditHostnameClick
+            )
         }
     }
 }

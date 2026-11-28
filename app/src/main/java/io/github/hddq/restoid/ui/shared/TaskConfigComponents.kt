@@ -91,10 +91,13 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -150,11 +153,12 @@ import io.github.hddq.restoid.work.ExclusionConflict
 import io.github.hddq.restoid.ui.components.BackupTagPickerSheet
 import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
-import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
 import io.github.hddq.restoid.ui.components.PullToRefreshBox
+import io.github.hddq.restoid.ui.components.expressiveListItemColors
 import coil.compose.AsyncImage
 import kotlin.math.roundToInt
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun TaskRow(
     title: String,
@@ -165,182 +169,188 @@ fun TaskRow(
     onNavigate: (() -> Unit)? = null,
     enabled: Boolean = true,
     modifier: Modifier = Modifier,
+    shapes: ListItemShapes = ListItemDefaults.segmentedShapes(index = 0, count = 1),
     subtitleContent: (@Composable () -> Unit)? = null
 ) {
     val rowClick = onNavigate ?: { onCheckedChange(!checked) }
 
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .alpha(if (enabled) 1f else 0.5f)
-            .clickable(enabled = enabled, onClick = rowClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (icon != null) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(end = 16.dp)
-            )
-        }
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge
-            )
-            if (subtitleContent != null) {
-                subtitleContent()
-            } else if (subtitle != null) {
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+    SegmentedListItem(
+        onClick = rowClick,
+        shapes = shapes,
+        modifier = modifier,
+        enabled = enabled,
+        verticalAlignment = Alignment.CenterVertically,
+        colors = expressiveListItemColors(),
+        leadingContent = icon?.let {
+            {
+                Icon(
+                    imageVector = it,
+                    contentDescription = null,
+                    tint = if (checked && enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-        }
-
-        if (onNavigate != null) {
-            Spacer(Modifier.width(12.dp))
-            Icon(
-                imageVector = Icons.Outlined.ChevronRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(Modifier.width(12.dp))
-            Box(
-                modifier = Modifier
-                    .height(24.dp)
-                    .width(1.dp)
-                    .background(MaterialTheme.colorScheme.outlineVariant)
-            )
-            Spacer(Modifier.width(16.dp))
-        } else {
-            Spacer(Modifier.width(12.dp))
-        }
-
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            enabled = enabled,
-            thumbContent = if (checked) {
+        },
+        supportingContent = when {
+            subtitleContent != null -> subtitleContent
+            subtitle != null -> {
                 {
-                    Icon(
-                        imageVector = Icons.Filled.Check,
-                        contentDescription = null,
-                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
-            } else {
-                null
             }
-        )
-    }
+            else -> null
+        },
+        trailingContent = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (onNavigate != null) {
+                    Icon(
+                        imageVector = Icons.Outlined.ChevronRight,
+                        contentDescription = null
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Box(
+                        modifier = Modifier
+                            .height(24.dp)
+                            .width(1.dp)
+                            .background(MaterialTheme.colorScheme.outlineVariant)
+                    )
+                    Spacer(Modifier.width(16.dp))
+                }
+                Switch(
+                    checked = checked,
+                    onCheckedChange = onCheckedChange,
+                    enabled = enabled,
+                    thumbContent = if (checked) {
+                        {
+                            Icon(
+                                imageVector = Icons.Filled.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(SwitchDefaults.IconSize)
+                            )
+                        }
+                    } else {
+                        null
+                    }
+                )
+            }
+        },
+        content = { Text(text = title) }
+    )
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun PolicySlider(
     label: String,
     value: Int,
     range: IntRange,
     icon: ImageVector? = null,
+    shapes: ListItemShapes = ListItemDefaults.segmentedShapes(index = 0, count = 1),
+    modifier: Modifier = Modifier,
     onValueChange: (Int) -> Unit
 ) {
     val isDiscrete = (range.last - range.first) <= 30
 
-    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+    SegmentedListItem(
+        shapes = shapes,
+        modifier = modifier,
+        colors = expressiveListItemColors()
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                if (icon != null) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = if (value > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(end = 12.dp)
-                    )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    if (icon != null) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = if (value > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(end = 12.dp)
+                        )
+                    }
+                    Text(label, style = MaterialTheme.typography.bodyLarge)
                 }
-                Text(label, style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    text = value.toString(),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
-            Text(
-                text = value.toString(),
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+            Slider(
+                value = value.toFloat(),
+                onValueChange = { onValueChange(it.roundToInt()) },
+                valueRange = range.first.toFloat()..range.last.toFloat(),
+                steps = if (isDiscrete) (range.last - range.first - 1).coerceAtLeast(0) else 0
             )
         }
-        Slider(
-            value = value.toFloat(),
-            onValueChange = { onValueChange(it.roundToInt()) },
-            valueRange = range.first.toFloat()..range.last.toFloat(),
-            steps = if (isDiscrete) (range.last - range.first - 1).coerceAtLeast(0) else 0
-        )
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun BackupTypeToggle(
     label: String,
     description: String,
     icon: ImageVector? = null,
     checked: Boolean,
+    shapes: ListItemShapes = ListItemDefaults.segmentedShapes(index = 0, count = 1),
+    modifier: Modifier = Modifier,
     onCheckedChange: (Boolean) -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onCheckedChange(!checked) }
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (icon != null) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(end = 16.dp)
-            )
-        }
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyLarge
-            )
+    SegmentedListItem(
+        onClick = { onCheckedChange(!checked) },
+        shapes = shapes,
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        colors = expressiveListItemColors(),
+        leadingContent = icon?.let {
+            {
+                Icon(
+                    imageVector = it,
+                    contentDescription = null,
+                    tint = if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        supportingContent = {
             Text(
                 text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = MaterialTheme.typography.bodySmall
             )
-        }
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            thumbContent = if (checked) {
-                {
-                    Icon(
-                        imageVector = Icons.Filled.Check,
-                        contentDescription = null,
-                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                    )
+        },
+        trailingContent = {
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                thumbContent = if (checked) {
+                    {
+                        Icon(
+                            imageVector = Icons.Filled.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(SwitchDefaults.IconSize)
+                        )
+                    }
+                } else {
+                    null
                 }
-            } else {
-                null
-            }
-        )
-    }
+            )
+        },
+        content = { Text(text = label) }
+    )
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SelectAllListItem(
     isChecked: Boolean,
@@ -348,146 +358,155 @@ fun SelectAllListItem(
     onClick: (() -> Unit)? = null,
     onToggle: () -> Unit,
     iconSize: Dp = 48.dp,
-    iconPadding: Dp = 8.dp
+    iconPadding: Dp = 8.dp,
+    shapes: ListItemShapes = ListItemDefaults.segmentedShapes(index = 0, count = 1),
+    modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick ?: onToggle)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.SelectAll,
-            contentDescription = null,
-            modifier = Modifier
-                .size(iconSize)
-                .padding(iconPadding),
-            tint = MaterialTheme.colorScheme.primary
-        )
-        Spacer(Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
+    SegmentedListItem(
+        onClick = onClick ?: onToggle,
+        shapes = shapes,
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        colors = expressiveListItemColors(),
+        leadingContent = {
+            Icon(
+                imageVector = Icons.Outlined.SelectAll,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(iconSize)
+                    .padding(iconPadding),
+                tint = MaterialTheme.colorScheme.primary
+            )
+        },
+        supportingContent = subtitle?.let {
+            {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        },
+        trailingContent = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (onClick != null) {
+                    Icon(
+                        imageVector = Icons.Outlined.ChevronRight,
+                        contentDescription = null
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Box(
+                        modifier = Modifier
+                            .height(24.dp)
+                            .width(1.dp)
+                            .background(MaterialTheme.colorScheme.outlineVariant)
+                    )
+                    Spacer(Modifier.width(16.dp))
+                }
+                Switch(
+                    checked = isChecked,
+                    onCheckedChange = { onToggle() },
+                    thumbContent = if (isChecked) {
+                        {
+                            Icon(
+                                imageVector = Icons.Filled.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(SwitchDefaults.IconSize)
+                            )
+                        }
+                    } else {
+                        null
+                    }
+                )
+            }
+        },
+        content = {
             Text(
                 text = stringResource(R.string.toggle_all),
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary
             )
-            if (subtitle != null) {
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
         }
-        if (onClick != null) {
-            Spacer(Modifier.width(12.dp))
-            Icon(
-                imageVector = Icons.Outlined.ChevronRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.width(12.dp))
-            Box(
-                modifier = Modifier
-                    .height(24.dp)
-                    .width(1.dp)
-                    .background(MaterialTheme.colorScheme.outlineVariant)
-            )
-        }
-        Spacer(Modifier.width(16.dp))
-        Switch(
-            checked = isChecked,
-            onCheckedChange = { onToggle() },
-            thumbContent = if (isChecked) {
-                {
-                    Icon(
-                        imageVector = Icons.Filled.Check,
-                        contentDescription = null,
-                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                    )
-                }
-            } else {
-                null
-            }
-        )
-    }
+    )
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AppListItem(
     app: AppInfo,
     subtitle: String? = null,
     onClick: () -> Unit,
-    onToggle: () -> Unit
+    onToggle: () -> Unit,
+    shapes: ListItemShapes = ListItemDefaults.segmentedShapes(index = 0, count = 1),
+    modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        AsyncImage(
-            model = app.icon,
-            contentDescription = app.name,
-            modifier = Modifier.size(48.dp)
-        )
-        Spacer(Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
+    SegmentedListItem(
+        onClick = onClick,
+        shapes = shapes,
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        colors = expressiveListItemColors(),
+        leadingContent = {
+            AsyncImage(
+                model = app.icon,
+                contentDescription = app.name,
+                modifier = Modifier.size(48.dp)
+            )
+        },
+        supportingContent = subtitle?.let {
+            {
+                Text(
+                    text = it,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        },
+        trailingContent = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Outlined.ChevronRight,
+                    contentDescription = null
+                )
+                Spacer(Modifier.width(12.dp))
+                Box(
+                    modifier = Modifier
+                        .height(24.dp)
+                        .width(1.dp)
+                        .background(MaterialTheme.colorScheme.outlineVariant)
+                )
+                Spacer(Modifier.width(16.dp))
+                Switch(
+                    checked = app.isSelected,
+                    onCheckedChange = { onToggle() },
+                    thumbContent = if (app.isSelected) {
+                        {
+                            Icon(
+                                imageVector = Icons.Filled.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(SwitchDefaults.IconSize)
+                            )
+                        }
+                    } else {
+                        null
+                    }
+                )
+            }
+        },
+        content = {
             Text(
                 text = app.name,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface
+                overflow = TextOverflow.Ellipsis
             )
-            if (subtitle != null) {
-                Text(
-                    text = subtitle,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         }
-        Spacer(Modifier.width(12.dp))
-        Icon(
-            imageVector = Icons.Outlined.ChevronRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(Modifier.width(12.dp))
-        Box(
-            modifier = Modifier
-                .height(24.dp)
-                .width(1.dp)
-                .background(MaterialTheme.colorScheme.outlineVariant)
-        )
-        Spacer(Modifier.width(16.dp))
-        Switch(
-            checked = app.isSelected,
-            onCheckedChange = { onToggle() },
-            thumbContent = if (app.isSelected) {
-                {
-                    Icon(
-                        imageVector = Icons.Filled.Check,
-                        contentDescription = null,
-                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                    )
-                }
-            } else {
-                null
-            }
-        )
-    }
+    )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun BackupTypesBottomSheet(
     title: String,
@@ -509,95 +528,86 @@ fun BackupTypesBottomSheet(
                 modifier = Modifier.padding(bottom = 12.dp)
             )
             ExpressiveCardGroup {
-                ExpressiveSegmentedSurface(index = 0, count = 9) {
-                    BackupTypeToggle(
-                        label = stringResource(R.string.backup_type_apk),
-                        description = stringResource(R.string.backup_type_apk_desc),
-                        icon = Icons.Outlined.Android,
-                        checked = backupTypes.apk
-                    ) {
-                        onBackupTypesChange(backupTypes.copy(apk = it))
-                    }
+                BackupTypeToggle(
+                    label = stringResource(R.string.backup_type_apk),
+                    description = stringResource(R.string.backup_type_apk_desc),
+                    icon = Icons.Outlined.Android,
+                    checked = backupTypes.apk,
+                    shapes = ListItemDefaults.segmentedShapes(index = 0, count = 9)
+                ) {
+                    onBackupTypesChange(backupTypes.copy(apk = it))
                 }
-                ExpressiveSegmentedSurface(index = 1, count = 9) {
-                    BackupTypeToggle(
-                        label = stringResource(R.string.backup_type_data),
-                        description = stringResource(R.string.backup_type_data_desc),
-                        icon = Icons.Outlined.Storage,
-                        checked = backupTypes.data
-                    ) {
-                        onBackupTypesChange(backupTypes.copy(data = it))
-                    }
+                BackupTypeToggle(
+                    label = stringResource(R.string.backup_type_data),
+                    description = stringResource(R.string.backup_type_data_desc),
+                    icon = Icons.Outlined.Storage,
+                    checked = backupTypes.data,
+                    shapes = ListItemDefaults.segmentedShapes(index = 1, count = 9)
+                ) {
+                    onBackupTypesChange(backupTypes.copy(data = it))
                 }
-                ExpressiveSegmentedSurface(index = 2, count = 9) {
-                    BackupTypeToggle(
-                        label = stringResource(R.string.backup_type_device_protected_data),
-                        description = stringResource(R.string.backup_type_device_protected_data_desc),
-                        icon = Icons.Outlined.Shield,
-                        checked = backupTypes.deviceProtectedData
-                    ) {
-                        onBackupTypesChange(backupTypes.copy(deviceProtectedData = it))
-                    }
+                BackupTypeToggle(
+                    label = stringResource(R.string.backup_type_device_protected_data),
+                    description = stringResource(R.string.backup_type_device_protected_data_desc),
+                    icon = Icons.Outlined.Shield,
+                    checked = backupTypes.deviceProtectedData,
+                    shapes = ListItemDefaults.segmentedShapes(index = 2, count = 9)
+                ) {
+                    onBackupTypesChange(backupTypes.copy(deviceProtectedData = it))
                 }
-                ExpressiveSegmentedSurface(index = 3, count = 9) {
-                    BackupTypeToggle(
-                        label = stringResource(R.string.backup_type_external_data),
-                        description = stringResource(R.string.backup_type_external_data_desc),
-                        icon = Icons.Outlined.SdCard,
-                        checked = backupTypes.externalData
-                    ) {
-                        onBackupTypesChange(backupTypes.copy(externalData = it))
-                    }
+                BackupTypeToggle(
+                    label = stringResource(R.string.backup_type_external_data),
+                    description = stringResource(R.string.backup_type_external_data_desc),
+                    icon = Icons.Outlined.SdCard,
+                    checked = backupTypes.externalData,
+                    shapes = ListItemDefaults.segmentedShapes(index = 3, count = 9)
+                ) {
+                    onBackupTypesChange(backupTypes.copy(externalData = it))
                 }
-                ExpressiveSegmentedSurface(index = 4, count = 9) {
-                    BackupTypeToggle(
-                        label = stringResource(R.string.backup_type_obb_data),
-                        description = stringResource(R.string.backup_type_obb_data_desc),
-                        icon = Icons.Outlined.Inventory2,
-                        checked = backupTypes.obb
-                    ) {
-                        onBackupTypesChange(backupTypes.copy(obb = it))
-                    }
+                BackupTypeToggle(
+                    label = stringResource(R.string.backup_type_obb_data),
+                    description = stringResource(R.string.backup_type_obb_data_desc),
+                    icon = Icons.Outlined.Inventory2,
+                    checked = backupTypes.obb,
+                    shapes = ListItemDefaults.segmentedShapes(index = 4, count = 9)
+                ) {
+                    onBackupTypesChange(backupTypes.copy(obb = it))
                 }
-                ExpressiveSegmentedSurface(index = 5, count = 9) {
-                    BackupTypeToggle(
-                        label = stringResource(R.string.backup_type_media_data),
-                        description = stringResource(R.string.backup_type_media_data_desc),
-                        icon = Icons.Outlined.PermMedia,
-                        checked = backupTypes.media
-                    ) {
-                        onBackupTypesChange(backupTypes.copy(media = it))
-                    }
+                BackupTypeToggle(
+                    label = stringResource(R.string.backup_type_media_data),
+                    description = stringResource(R.string.backup_type_media_data_desc),
+                    icon = Icons.Outlined.PermMedia,
+                    checked = backupTypes.media,
+                    shapes = ListItemDefaults.segmentedShapes(index = 5, count = 9)
+                ) {
+                    onBackupTypesChange(backupTypes.copy(media = it))
                 }
-                ExpressiveSegmentedSurface(index = 6, count = 9) {
-                    BackupTypeToggle(
-                        label = stringResource(R.string.backup_type_permissions),
-                        description = stringResource(R.string.backup_type_permissions_desc),
-                        icon = Icons.Outlined.Key,
-                        checked = backupTypes.permissions
-                    ) {
-                        onBackupTypesChange(backupTypes.copy(permissions = it))
-                    }
+                BackupTypeToggle(
+                    label = stringResource(R.string.backup_type_permissions),
+                    description = stringResource(R.string.backup_type_permissions_desc),
+                    icon = Icons.Outlined.Key,
+                    checked = backupTypes.permissions,
+                    shapes = ListItemDefaults.segmentedShapes(index = 6, count = 9)
+                ) {
+                    onBackupTypesChange(backupTypes.copy(permissions = it))
                 }
-                ExpressiveSegmentedSurface(index = 7, count = 9) {
-                    BackupTypeToggle(
-                        label = stringResource(R.string.backup_type_special_access),
-                        description = stringResource(R.string.backup_type_special_access_desc),
-                        icon = Icons.Outlined.AdminPanelSettings,
-                        checked = backupTypes.specialAccess
-                    ) {
-                        onBackupTypesChange(backupTypes.copy(specialAccess = it))
-                    }
+                BackupTypeToggle(
+                    label = stringResource(R.string.backup_type_special_access),
+                    description = stringResource(R.string.backup_type_special_access_desc),
+                    icon = Icons.Outlined.AdminPanelSettings,
+                    checked = backupTypes.specialAccess,
+                    shapes = ListItemDefaults.segmentedShapes(index = 7, count = 9)
+                ) {
+                    onBackupTypesChange(backupTypes.copy(specialAccess = it))
                 }
-                ExpressiveSegmentedSurface(index = 8, count = 9) {
-                    BackupTypeToggle(
-                        label = stringResource(R.string.backup_type_accessibility),
-                        description = stringResource(R.string.backup_type_accessibility_desc),
-                        icon = Icons.Outlined.AccessibilityNew,
-                        checked = backupTypes.accessibility
-                    ) {
-                        onBackupTypesChange(backupTypes.copy(accessibility = it))
-                    }
+                BackupTypeToggle(
+                    label = stringResource(R.string.backup_type_accessibility),
+                    description = stringResource(R.string.backup_type_accessibility_desc),
+                    icon = Icons.Outlined.AccessibilityNew,
+                    checked = backupTypes.accessibility,
+                    shapes = ListItemDefaults.segmentedShapes(index = 8, count = 9)
+                ) {
+                    onBackupTypesChange(backupTypes.copy(accessibility = it))
                 }
             }
         }
@@ -656,7 +666,7 @@ fun BackupConfigScreen(
             bottom = 24.dp + contentPadding.calculateBottomPadding(),
             top = 8.dp
         ),
-        verticalArrangement = Arrangement.spacedBy(2.dp)
+        verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)
     ) {
         if (isLoadingApps) {
             item(key = "loading", contentType = "loading") {
@@ -672,32 +682,27 @@ fun BackupConfigScreen(
         } else {
             val totalRows = apps.size + 1
             item(key = "include_new_apps", contentType = "include_new_apps") {
-                ExpressiveSegmentedSurface(
-                    index = 0,
-                    count = 1,
+                TaskRow(
+                    title = stringResource(R.string.backup_include_new_apps_title),
+                    subtitle = stringResource(R.string.backup_include_new_apps_subtitle),
+                    icon = Icons.Outlined.InstallMobile,
+                    checked = selectAllApps,
+                    onCheckedChange = onSetSelectAllApps,
+                    shapes = ListItemDefaults.segmentedShapes(index = 0, count = 1),
                     modifier = Modifier.padding(bottom = 14.dp)
-                ) {
-                    TaskRow(
-                        title = stringResource(R.string.backup_include_new_apps_title),
-                        subtitle = stringResource(R.string.backup_include_new_apps_subtitle),
-                        icon = Icons.Outlined.InstallMobile,
-                        checked = selectAllApps,
-                        onCheckedChange = onSetSelectAllApps
-                    )
-                }
+                )
             }
             item(key = "header", contentType = "header") {
                 ExpressiveSectionHeader(title = stringResource(R.string.apps_title))
             }
             item(key = "select_all", contentType = "select_all") {
-                ExpressiveSegmentedSurface(index = 0, count = totalRows) {
-                    SelectAllListItem(
-                        isChecked = isAllSelected,
-                        subtitle = selectAllSubtitle,
-                        onClick = { showBulkBackupTypesSheet = true },
-                        onToggle = onToggleAllApps
-                    )
-                }
+                SelectAllListItem(
+                    isChecked = isAllSelected,
+                    subtitle = selectAllSubtitle,
+                    onClick = { showBulkBackupTypesSheet = true },
+                    onToggle = onToggleAllApps,
+                    shapes = ListItemDefaults.segmentedShapes(index = 0, count = totalRows)
+                )
             }
             itemsIndexed(
                 items = apps,
@@ -712,14 +717,14 @@ fun BackupConfigScreen(
                         buildBackupTypesSummary(currentAppBackupTypes, context)
                     }
                 }
-                ExpressiveSegmentedSurface(index = index + 1, count = totalRows) {
-                    AppListItem(
-                        app = app,
-                        subtitle = itemSubtitle,
-                        onClick = { selectedAppPackageName = app.packageName },
-                        onToggle = { onToggleAppSelection(app.packageName) }
-                    )
-                }
+                AppListItem(
+                    app = app,
+                    subtitle = itemSubtitle,
+                    onClick = { selectedAppPackageName = app.packageName },
+                    onToggle = { onToggleAppSelection(app.packageName) },
+                    shapes = ListItemDefaults.segmentedShapes(index = index + 1, count = totalRows),
+                    modifier = Modifier.animateItem()
+                )
             }
         }
     }
@@ -746,6 +751,7 @@ fun BackupConfigScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ForgetConfigScreen(
     maintenance: io.github.hddq.restoid.model.MaintenanceConfig,
@@ -818,42 +824,38 @@ fun ForgetConfigScreen(
             Column(modifier = Modifier.fillMaxWidth()) {
                 ExpressiveSectionHeader(title = stringResource(R.string.forget_section_retention_policy))
                 ExpressiveCardGroup {
-                    ExpressiveSegmentedSurface(index = 0, count = 4) {
-                        PolicySlider(
-                            label = stringResource(R.string.maintenance_keep_last),
-                            value = maintenance.keepLast,
-                            range = 0..20,
-                            icon = Icons.Outlined.History,
-                            onValueChange = onKeepLastChange
-                        )
-                    }
-                    ExpressiveSegmentedSurface(index = 1, count = 4) {
-                        PolicySlider(
-                            label = stringResource(R.string.maintenance_keep_daily),
-                            value = maintenance.keepDaily,
-                            range = 0..30,
-                            icon = Icons.Outlined.Today,
-                            onValueChange = onKeepDailyChange
-                        )
-                    }
-                    ExpressiveSegmentedSurface(index = 2, count = 4) {
-                        PolicySlider(
-                            label = stringResource(R.string.maintenance_keep_weekly),
-                            value = maintenance.keepWeekly,
-                            range = 0..12,
-                            icon = Icons.Outlined.DateRange,
-                            onValueChange = onKeepWeeklyChange
-                        )
-                    }
-                    ExpressiveSegmentedSurface(index = 3, count = 4) {
-                        PolicySlider(
-                            label = stringResource(R.string.maintenance_keep_monthly),
-                            value = maintenance.keepMonthly,
-                            range = 0..24,
-                            icon = Icons.Outlined.CalendarMonth,
-                            onValueChange = onKeepMonthlyChange
-                        )
-                    }
+                    PolicySlider(
+                        label = stringResource(R.string.maintenance_keep_last),
+                        value = maintenance.keepLast,
+                        range = 0..20,
+                        icon = Icons.Outlined.History,
+                        shapes = ListItemDefaults.segmentedShapes(index = 0, count = 4),
+                        onValueChange = onKeepLastChange
+                    )
+                    PolicySlider(
+                        label = stringResource(R.string.maintenance_keep_daily),
+                        value = maintenance.keepDaily,
+                        range = 0..30,
+                        icon = Icons.Outlined.Today,
+                        shapes = ListItemDefaults.segmentedShapes(index = 1, count = 4),
+                        onValueChange = onKeepDailyChange
+                    )
+                    PolicySlider(
+                        label = stringResource(R.string.maintenance_keep_weekly),
+                        value = maintenance.keepWeekly,
+                        range = 0..12,
+                        icon = Icons.Outlined.DateRange,
+                        shapes = ListItemDefaults.segmentedShapes(index = 2, count = 4),
+                        onValueChange = onKeepWeeklyChange
+                    )
+                    PolicySlider(
+                        label = stringResource(R.string.maintenance_keep_monthly),
+                        value = maintenance.keepMonthly,
+                        range = 0..24,
+                        icon = Icons.Outlined.CalendarMonth,
+                        shapes = ListItemDefaults.segmentedShapes(index = 3, count = 4),
+                        onValueChange = onKeepMonthlyChange
+                    )
                 }
             }
         }
@@ -896,64 +898,58 @@ fun ForgetConfigScreen(
                     else -> selectedHosts.joinToString(", ")
                 }
 
-                ExpressiveSegmentedSurface(
-                    index = 0,
-                    count = 1,
-                    containerColor = containerColor,
-                    contentColor = contentColor,
+                SegmentedListItem(
+                    onClick = { showHostsSheet = true },
+                    shapes = ListItemDefaults.segmentedShapes(index = 0, count = 1),
+                    verticalAlignment = Alignment.CenterVertically,
+                    colors = expressiveListItemColors(
+                        containerColor = containerColor,
+                        contentColor = contentColor,
+                        supportingContentColor = secondaryColor,
+                        trailingContentColor = secondaryColor
+                    ),
                     modifier = Modifier.animateContentSize(
                         animationSpec = tween(220, easing = FastOutSlowInEasing)
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { showHostsSheet = true }
-                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    ),
+                    leadingContent = {
                         Icon(
                             imageVector = if (isEmptySelection) Icons.Outlined.WarningAmber else Icons.Outlined.Dns,
                             contentDescription = null,
                             tint = if (isEmptySelection) contentColor else MaterialTheme.colorScheme.primary
                         )
-                        Spacer(Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.forget_hosts_picker_title),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = contentColor
-                            )
-                            Text(
-                                text = pickerSubtitle,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = secondaryColor,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                        Spacer(Modifier.width(12.dp))
-                        if (!isEmptySelection && !maintenance.forgetAllHosts) {
-                            Surface(
-                                shape = RoundedCornerShape(50),
-                                color = MaterialTheme.colorScheme.secondaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                            ) {
-                                Text(
-                                    text = selectedHosts.size.toString(),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                                )
-                            }
-                            Spacer(Modifier.width(8.dp))
-                        }
-                        Icon(
-                            imageVector = Icons.Outlined.ChevronRight,
-                            contentDescription = null,
-                            tint = secondaryColor
+                    },
+                    supportingContent = {
+                        Text(
+                            text = pickerSubtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
                         )
-                    }
-                }
+                    },
+                    trailingContent = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (!isEmptySelection && !maintenance.forgetAllHosts) {
+                                Surface(
+                                    shape = RoundedCornerShape(50),
+                                    color = MaterialTheme.colorScheme.secondaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                ) {
+                                    Text(
+                                        text = selectedHosts.size.toString(),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                    )
+                                }
+                                Spacer(Modifier.width(8.dp))
+                            }
+                            Icon(
+                                imageVector = Icons.Outlined.ChevronRight,
+                                contentDescription = null
+                            )
+                        }
+                    },
+                    content = { Text(text = stringResource(R.string.forget_hosts_picker_title)) }
+                )
             }
         }
 
@@ -969,17 +965,12 @@ fun ForgetConfigScreen(
 
             Column(modifier = Modifier.fillMaxWidth()) {
                 ExpressiveSectionHeader(title = stringResource(R.string.run_tasks_tags))
-                ExpressiveSegmentedSurface(
-                    index = 0,
-                    count = 1
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { showTagsSheet = true }
-                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                SegmentedListItem(
+                    onClick = { showTagsSheet = true },
+                    shapes = ListItemDefaults.segmentedShapes(index = 0, count = 1),
+                    verticalAlignment = Alignment.CenterVertically,
+        colors = expressiveListItemColors(),
+                    leadingContent = {
                         Icon(
                             imageVector = Icons.AutoMirrored.Outlined.Label,
                             contentDescription = null,
@@ -989,43 +980,39 @@ fun ForgetConfigScreen(
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             }
                         )
-                        Spacer(Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.forget_tags_picker_title),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = tagsSubtitle,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                        Spacer(Modifier.width(12.dp))
-                        if (selectedTags.isNotEmpty()) {
-                            Surface(
-                                shape = RoundedCornerShape(50),
-                                color = MaterialTheme.colorScheme.secondaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                            ) {
-                                Text(
-                                    text = selectedTags.size.toString(),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                                )
-                            }
-                            Spacer(Modifier.width(8.dp))
-                        }
-                        Icon(
-                            imageVector = Icons.Outlined.ChevronRight,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    supportingContent = {
+                        Text(
+                            text = tagsSubtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
                         )
-                    }
-                }
+                    },
+                    trailingContent = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (selectedTags.isNotEmpty()) {
+                                Surface(
+                                    shape = RoundedCornerShape(50),
+                                    color = MaterialTheme.colorScheme.secondaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                ) {
+                                    Text(
+                                        text = selectedTags.size.toString(),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                    )
+                                }
+                                Spacer(Modifier.width(8.dp))
+                            }
+                            Icon(
+                                imageVector = Icons.Outlined.ChevronRight,
+                                contentDescription = null
+                            )
+                        }
+                    },
+                    content = { Text(text = stringResource(R.string.forget_tags_picker_title)) }
+                )
             }
         }
 
@@ -1281,30 +1268,31 @@ fun ForgetDryRunScreen(
                                     MaterialTheme.colorScheme.onSurfaceVariant
                                 }
 
-                                ExpressiveSegmentedSurface(
-                                    index = idx,
-                                    count = orderedRows.size,
-                                    containerColor = containerColor,
-                                    contentColor = contentColor,
-                                    modifier = Modifier.padding(bottom = if (idx < orderedRows.size - 1) 2.dp else 0.dp)
-                                ) {
-                                    SnapshotItem(
-                                        snapshotWithMetadata = effectiveSnapshotWithMetadata,
-                                        apps = matched?.let { appInfoMap[it.snapshotInfo.id] },
-                                        tagColors = userTagColors,
-                                        nowEpochMinute = nowEpochMinute,
-                                        maxIconsPossible = maxIconsPossible,
-                                        onClick = { onSnapshotClick(matched?.snapshotInfo?.id ?: snapshot.id) },
-                                        showMetadataStatusWhenMissing = matched != null,
-                                        secondaryContentColor = secondaryColor,
-                                        statusContent = {
-                                            ForgetDryRunStatusRow(
-                                                isRemove = isRemove,
-                                                keepReasons = snapshot.keepReasons
-                                            )
-                                        }
-                                    )
-                                }
+                                SnapshotItem(
+                                    snapshotWithMetadata = effectiveSnapshotWithMetadata,
+                                    apps = matched?.let { appInfoMap[it.snapshotInfo.id] },
+                                    tagColors = userTagColors,
+                                    nowEpochMinute = nowEpochMinute,
+                                    maxIconsPossible = maxIconsPossible,
+                                    onClick = { onSnapshotClick(matched?.snapshotInfo?.id ?: snapshot.id) },
+                                    shapes = ListItemDefaults.segmentedShapes(index = idx, count = orderedRows.size),
+                                    colors = expressiveListItemColors(
+                                        containerColor = containerColor,
+                                        contentColor = contentColor,
+                                        supportingContentColor = secondaryColor
+                                    ),
+                                    modifier = Modifier
+                                        .animateItem()
+                                        .padding(bottom = if (idx < orderedRows.size - 1) ListItemDefaults.SegmentedGap else 0.dp),
+                                    showMetadataStatusWhenMissing = matched != null,
+                                    secondaryContentColor = secondaryColor,
+                                    statusContent = {
+                                        ForgetDryRunStatusRow(
+                                            isRemove = isRemove,
+                                            keepReasons = snapshot.keepReasons
+                                        )
+                                    }
+                                )
                             }
                         }
                     }
@@ -1537,34 +1525,27 @@ private fun ForgetHostsBottomSheet(
                         val totalRows = availableHosts.size + 1
                         LazyColumn(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                            verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)
                         ) {
                             item(key = "toggle_all_hosts") {
-                                ExpressiveSegmentedSurface(
-                                    index = 0,
-                                    count = totalRows
-                                ) {
-                                    ForgetToggleAllHostsRow(
-                                        checked = isAllSelected,
-                                        onToggle = onToggleAllHosts
-                                    )
-                                }
+                                ForgetToggleAllHostsRow(
+                                    checked = isAllSelected,
+                                    onToggle = onToggleAllHosts,
+                                    shapes = ListItemDefaults.segmentedShapes(index = 0, count = totalRows)
+                                )
                             }
                             itemsIndexed(
                                 items = availableHosts,
                                 key = { _, option -> "host_${option.hostname}" }
                             ) { index, hostOption ->
-                                ExpressiveSegmentedSurface(
-                                    index = index + 1,
-                                    count = totalRows
-                                ) {
-                                    ForgetHostItemRow(
-                                        option = hostOption,
-                                        selected = forgetAllHosts || hostOption.hostname in selectedHostSet,
-                                        onToggle = { onToggleHost(hostOption.hostname) },
-                                        onRemove = { onRemoveHost(hostOption.hostname) }
-                                    )
-                                }
+                                ForgetHostItemRow(
+                                    option = hostOption,
+                                    selected = forgetAllHosts || hostOption.hostname in selectedHostSet,
+                                    onToggle = { onToggleHost(hostOption.hostname) },
+                                    onRemove = { onRemoveHost(hostOption.hostname) },
+                                    shapes = ListItemDefaults.segmentedShapes(index = index + 1, count = totalRows),
+                                    modifier = Modifier.animateItem()
+                                )
                             }
                         }
                     }
@@ -1615,88 +1596,139 @@ private fun ForgetHostsBottomSheet(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ForgetToggleAllHostsRow(
     checked: Boolean,
     onToggle: () -> Unit,
+    shapes: ListItemShapes,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onToggle)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.SelectAll,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(end = 16.dp)
-        )
-        Column(modifier = Modifier.weight(1f)) {
+    SegmentedListItem(
+        onClick = onToggle,
+        shapes = shapes,
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        colors = expressiveListItemColors(),
+        leadingContent = {
+            Icon(
+                imageVector = Icons.Outlined.SelectAll,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+        },
+        supportingContent = {
+            Text(
+                text = stringResource(R.string.forget_hosts_toggle_all_subtitle),
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        },
+        trailingContent = {
+            Switch(
+                checked = checked,
+                onCheckedChange = { onToggle() },
+                thumbContent = if (checked) {
+                    {
+                        Icon(
+                            imageVector = Icons.Filled.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(SwitchDefaults.IconSize)
+                        )
+                    }
+                } else {
+                    null
+                }
+            )
+        },
+        content = {
             Text(
                 text = stringResource(R.string.forget_hosts_toggle_all_title),
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary
             )
-            Text(
-                text = stringResource(R.string.forget_hosts_toggle_all_subtitle),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
         }
-        Spacer(Modifier.width(16.dp))
-        Switch(
-            checked = checked,
-            onCheckedChange = { onToggle() },
-            thumbContent = if (checked) {
-                {
-                    Icon(
-                        imageVector = Icons.Filled.Check,
-                        contentDescription = null,
-                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                    )
-                }
-            } else {
-                null
-            }
-        )
-    }
+    )
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ForgetHostItemRow(
     option: ForgetHostOption,
     selected: Boolean,
     onToggle: () -> Unit,
     onRemove: () -> Unit,
+    shapes: ListItemShapes,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onToggle)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = if (option.isCurrentDevice) Icons.Outlined.Smartphone else Icons.Outlined.Dns,
-            contentDescription = null,
-            tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(end = 16.dp)
+    val subtitle = when {
+        option.snapshotCount != null -> pluralStringResource(
+            R.plurals.forget_host_snapshot_count,
+            option.snapshotCount,
+            option.snapshotCount
         )
-        Column(modifier = Modifier.weight(1f)) {
+        option.isRemovable -> stringResource(R.string.forget_hosts_manual_entry)
+        else -> null
+    }
+
+    SegmentedListItem(
+        onClick = onToggle,
+        shapes = shapes,
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        colors = expressiveListItemColors(),
+        leadingContent = {
+            Icon(
+                imageVector = if (option.isCurrentDevice) Icons.Outlined.Smartphone else Icons.Outlined.Dns,
+                contentDescription = null,
+                tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        },
+        supportingContent = subtitle?.let {
+            {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        },
+        trailingContent = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (option.isRemovable) {
+                    IconButton(onClick = onRemove) {
+                        Icon(
+                            imageVector = Icons.Outlined.Delete,
+                            contentDescription = stringResource(R.string.cd_remove_host)
+                        )
+                    }
+                    Spacer(Modifier.width(4.dp))
+                }
+                Switch(
+                    checked = selected,
+                    onCheckedChange = { onToggle() },
+                    thumbContent = if (selected) {
+                        {
+                            Icon(
+                                imageVector = Icons.Filled.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(SwitchDefaults.IconSize)
+                            )
+                        }
+                    } else {
+                        null
+                    }
+                )
+            }
+        },
+        content = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
                     text = option.hostname,
-                    style = MaterialTheme.typography.bodyLarge,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false)
@@ -1715,52 +1747,8 @@ private fun ForgetHostItemRow(
                     }
                 }
             }
-            val subtitle = when {
-                option.snapshotCount != null -> pluralStringResource(
-                    R.plurals.forget_host_snapshot_count,
-                    option.snapshotCount,
-                    option.snapshotCount
-                )
-                option.isRemovable -> stringResource(R.string.forget_hosts_manual_entry)
-                else -> null
-            }
-            if (subtitle != null) {
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         }
-        if (option.isRemovable) {
-            Spacer(Modifier.width(4.dp))
-            IconButton(onClick = onRemove) {
-                Icon(
-                    imageVector = Icons.Outlined.Delete,
-                    contentDescription = stringResource(R.string.cd_remove_host),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Spacer(Modifier.width(4.dp))
-        } else {
-            Spacer(Modifier.width(16.dp))
-        }
-        Switch(
-            checked = selected,
-            onCheckedChange = { onToggle() },
-            thumbContent = if (selected) {
-                {
-                    Icon(
-                        imageVector = Icons.Filled.Check,
-                        contentDescription = null,
-                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                    )
-                }
-            } else {
-                null
-            }
-        )
-    }
+    )
 }
 
 @Composable
@@ -1801,6 +1789,7 @@ private fun ForgetHostStatusCard(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun CheckConfigScreen(
     maintenance: io.github.hddq.restoid.model.MaintenanceConfig,
@@ -1818,15 +1807,14 @@ fun CheckConfigScreen(
         )
     ) {
         item {
-            ExpressiveSegmentedSurface(index = 0, count = 1) {
-                TaskRow(
-                    title = stringResource(R.string.maintenance_read_all_data),
-                    subtitle = stringResource(R.string.run_tasks_check_read_all_data_description),
-                    icon = Icons.Outlined.ManageSearch,
-                    checked = maintenance.readData,
-                    onCheckedChange = onReadDataChange
-                )
-            }
+            TaskRow(
+                title = stringResource(R.string.maintenance_read_all_data),
+                subtitle = stringResource(R.string.run_tasks_check_read_all_data_description),
+                icon = Icons.Outlined.ManageSearch,
+                checked = maintenance.readData,
+                onCheckedChange = onReadDataChange,
+                shapes = ListItemDefaults.segmentedShapes(index = 0, count = 1)
+            )
         }
     }
 }
@@ -1980,7 +1968,7 @@ fun buildCustomDirectoriesSubtitle(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun CustomDirectoriesConfigScreen(
     customDirectories: List<io.github.hddq.restoid.model.CustomDirectory>,
@@ -2043,55 +2031,41 @@ fun CustomDirectoriesConfigScreen(
                             android.net.Uri.parse(customDir.uri).lastPathSegment
                         }.getOrNull() ?: customDir.uri
 
-                        ExpressiveSegmentedSurface(
-                            index = index,
-                            count = customDirectories.size
+                        val initialIsDir = io.github.hddq.restoid.util.StorageUtils.isDirectoryFast(customDir.uri)
+                        val isDirectory by produceState(
+                            initialValue = initialIsDir ?: true,
+                            key1 = customDir.uri
                         ) {
-                            Box(modifier = Modifier.fillMaxWidth()) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .combinedClickable(
-                                            onClick = { onToggleDirectory(customDir.uri) },
-                                            onLongClick = { menuExpandedForUri = customDir.uri }
-                                        )
-                                        .padding(vertical = 12.dp, horizontal = 16.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    val initialIsDir = io.github.hddq.restoid.util.StorageUtils.isDirectoryFast(customDir.uri)
-                                    val isDirectory by produceState(
-                                        initialValue = initialIsDir ?: true,
-                                        key1 = customDir.uri
-                                    ) {
-                                        if (initialIsDir == null) {
-                                            value = withContext(Dispatchers.IO) {
-                                                io.github.hddq.restoid.util.StorageUtils.isDirectoryPath(customDir.uri)
-                                            }
-                                        }
-                                    }
+                            if (initialIsDir == null) {
+                                value = withContext(Dispatchers.IO) {
+                                    io.github.hddq.restoid.util.StorageUtils.isDirectoryPath(customDir.uri)
+                                }
+                            }
+                        }
+
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            SegmentedListItem(
+                                onClick = { onToggleDirectory(customDir.uri) },
+                                onLongClick = { menuExpandedForUri = customDir.uri },
+                                shapes = ListItemDefaults.segmentedShapes(index = index, count = customDirectories.size),
+                                verticalAlignment = Alignment.CenterVertically,
+        colors = expressiveListItemColors(),
+                                leadingContent = {
                                     Icon(
                                         imageVector = if (isDirectory) Icons.Outlined.Folder else Icons.Outlined.Description,
                                         contentDescription = null,
-                                        tint = if (customDir.isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(end = 16.dp)
+                                        tint = if (customDir.isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        val title = displayPath.substringAfterLast("/")
-                                        Text(
-                                            text = title.ifEmpty { displayPath },
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            style = MaterialTheme.typography.bodyLarge
-                                        )
-                                        Text(
-                                            text = displayPath,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(16.dp))
+                                },
+                                supportingContent = {
+                                    Text(
+                                        text = displayPath,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                },
+                                trailingContent = {
                                     Switch(
                                         checked = customDir.isSelected,
                                         onCheckedChange = { onToggleDirectory(customDir.uri) },
@@ -2107,48 +2081,56 @@ fun CustomDirectoriesConfigScreen(
                                             null
                                         }
                                     )
+                                },
+                                content = {
+                                    val title = displayPath.substringAfterLast("/")
+                                    Text(
+                                        text = title.ifEmpty { displayPath },
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                 }
+                            )
 
-                                DropdownMenu(
-                                    expanded = menuExpandedForUri == customDir.uri,
-                                    onDismissRequest = { menuExpandedForUri = null }
-                                ) {
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(text = stringResource(R.string.action_exclude_subfolder))
-                                        },
-                                        leadingIcon = {
-                                            Icon(
-                                                imageVector = Icons.Outlined.FolderOff,
-                                                contentDescription = null
-                                            )
-                                        },
-                                        onClick = {
-                                            menuExpandedForUri = null
-                                            excludePickerInitialPath = resolvedPath ?: customDir.uri
-                                            showExcludePicker = true
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                text = stringResource(R.string.action_delete),
-                                                color = MaterialTheme.colorScheme.error
-                                            )
-                                        },
-                                        leadingIcon = {
-                                            Icon(
-                                                imageVector = Icons.Outlined.Delete,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.error
-                                            )
-                                        },
-                                        onClick = {
-                                            menuExpandedForUri = null
-                                            onRemoveDirectory(customDir.uri)
-                                        }
-                                    )
-                                }
+                            DropdownMenu(
+                                expanded = menuExpandedForUri == customDir.uri,
+                                onDismissRequest = { menuExpandedForUri = null }
+                            ) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(text = stringResource(R.string.action_exclude_subfolder))
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Outlined.FolderOff,
+                                            contentDescription = null
+                                        )
+                                    },
+                                    onClick = {
+                                        menuExpandedForUri = null
+                                        excludePickerInitialPath = resolvedPath ?: customDir.uri
+                                        showExcludePicker = true
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            text = stringResource(R.string.action_delete),
+                                            color = MaterialTheme.colorScheme.error
+                                        )
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Delete,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
+                                    },
+                                    onClick = {
+                                        menuExpandedForUri = null
+                                        onRemoveDirectory(customDir.uri)
+                                    }
+                                )
                             }
                         }
                         }
@@ -2196,55 +2178,41 @@ fun CustomDirectoriesConfigScreen(
                                 android.net.Uri.parse(excludedDir.uri).lastPathSegment
                             }.getOrNull() ?: excludedDir.uri
 
-                            ExpressiveSegmentedSurface(
-                                index = index,
-                                count = excludedDirectories.size
+                            val initialIsDir = io.github.hddq.restoid.util.StorageUtils.isDirectoryFast(excludedDir.uri)
+                            val isDirectory by produceState(
+                                initialValue = initialIsDir ?: true,
+                                key1 = excludedDir.uri
                             ) {
-                                Box(modifier = Modifier.fillMaxWidth()) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .combinedClickable(
-                                                onClick = { onToggleExcludedDirectory(excludedDir.uri) },
-                                                onLongClick = { menuExpandedForExcludedUri = excludedDir.uri }
-                                            )
-                                            .padding(vertical = 12.dp, horizontal = 16.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        val initialIsDir = io.github.hddq.restoid.util.StorageUtils.isDirectoryFast(excludedDir.uri)
-                                        val isDirectory by produceState(
-                                            initialValue = initialIsDir ?: true,
-                                            key1 = excludedDir.uri
-                                        ) {
-                                            if (initialIsDir == null) {
-                                                value = withContext(Dispatchers.IO) {
-                                                    io.github.hddq.restoid.util.StorageUtils.isDirectoryPath(excludedDir.uri)
-                                                }
-                                            }
-                                        }
+                                if (initialIsDir == null) {
+                                    value = withContext(Dispatchers.IO) {
+                                        io.github.hddq.restoid.util.StorageUtils.isDirectoryPath(excludedDir.uri)
+                                    }
+                                }
+                            }
+
+                            Box(modifier = Modifier.fillMaxWidth()) {
+                                SegmentedListItem(
+                                    onClick = { onToggleExcludedDirectory(excludedDir.uri) },
+                                    onLongClick = { menuExpandedForExcludedUri = excludedDir.uri },
+                                    shapes = ListItemDefaults.segmentedShapes(index = index, count = excludedDirectories.size),
+                                    verticalAlignment = Alignment.CenterVertically,
+        colors = expressiveListItemColors(),
+                                    leadingContent = {
                                         Icon(
                                             imageVector = if (isDirectory) Icons.Outlined.FolderOff else Icons.Outlined.Description,
                                             contentDescription = null,
-                                            tint = if (excludedDir.isSelected) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.padding(end = 16.dp)
+                                            tint = if (excludedDir.isSelected) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                                         )
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            val title = displayPath.substringAfterLast("/")
-                                            Text(
-                                                text = title.ifEmpty { displayPath },
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                                style = MaterialTheme.typography.bodyLarge
-                                            )
-                                            Text(
-                                                text = displayPath,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.width(16.dp))
+                                    },
+                                    supportingContent = {
+                                        Text(
+                                            text = displayPath,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    },
+                                    trailingContent = {
                                         Switch(
                                             checked = excludedDir.isSelected,
                                             onCheckedChange = { onToggleExcludedDirectory(excludedDir.uri) },
@@ -2260,32 +2228,40 @@ fun CustomDirectoriesConfigScreen(
                                                 null
                                             }
                                         )
-                                    }
-
-                                    DropdownMenu(
-                                        expanded = menuExpandedForExcludedUri == excludedDir.uri,
-                                        onDismissRequest = { menuExpandedForExcludedUri = null }
-                                    ) {
-                                        DropdownMenuItem(
-                                            text = {
-                                                Text(
-                                                    text = stringResource(R.string.action_delete),
-                                                    color = MaterialTheme.colorScheme.error
-                                                )
-                                            },
-                                            leadingIcon = {
-                                                Icon(
-                                                    imageVector = Icons.Outlined.Delete,
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.error
-                                                )
-                                            },
-                                            onClick = {
-                                                menuExpandedForExcludedUri = null
-                                                onRemoveExcludedDirectory(excludedDir.uri)
-                                            }
+                                    },
+                                    content = {
+                                        val title = displayPath.substringAfterLast("/")
+                                        Text(
+                                            text = title.ifEmpty { displayPath },
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                     }
+                                )
+
+                                DropdownMenu(
+                                    expanded = menuExpandedForExcludedUri == excludedDir.uri,
+                                    onDismissRequest = { menuExpandedForExcludedUri = null }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = stringResource(R.string.action_delete),
+                                                color = MaterialTheme.colorScheme.error
+                                            )
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                imageVector = Icons.Outlined.Delete,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.error
+                                            )
+                                        },
+                                        onClick = {
+                                            menuExpandedForExcludedUri = null
+                                            onRemoveExcludedDirectory(excludedDir.uri)
+                                        }
+                                    )
                                 }
                             }
                         }
@@ -2546,6 +2522,7 @@ fun buildDeviceDataSubtitle(
     }.joinToString(", ")
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun DeviceDataConfigScreen(
     contactsEnabled: Boolean,
@@ -2650,95 +2627,56 @@ fun DeviceDataConfigScreen(
     ) {
         item(key = "device_data_items") {
             ExpressiveCardGroup {
-                ExpressiveSegmentedSurface(index = 0, count = 3) {
-                    TaskRow(
-                        title = stringResource(R.string.device_data_contacts),
-                        subtitle = contactsSubtitle,
-                        icon = Icons.Outlined.Contacts,
-                        checked = contactsEnabled,
-                        onCheckedChange = { enabled ->
-                            if (enabled && !hasReadPermission) requestReadPermission() else onContactsEnabledChange(enabled)
-                        },
-                        onNavigate = {
-                            if (hasReadPermission) {
-                                onRefreshContactAccounts()
-                            }
-                            showContactsOptionsSheet = true
+                TaskRow(
+                    title = stringResource(R.string.device_data_contacts),
+                    subtitle = contactsSubtitle,
+                    icon = Icons.Outlined.Contacts,
+                    checked = contactsEnabled,
+                    onCheckedChange = { enabled ->
+                        if (enabled && !hasReadPermission) requestReadPermission() else onContactsEnabledChange(enabled)
+                    },
+                    onNavigate = {
+                        if (hasReadPermission) {
+                            onRefreshContactAccounts()
                         }
-                    )
-                }
-                ExpressiveSegmentedSurface(index = 1, count = 3) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                if (!callLogsEnabled && !hasReadCallLogPermission) requestReadCallLogPermission() else onCallLogsEnabledChange(!callLogsEnabled)
-                            }
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Call,
-                            contentDescription = null,
-                            tint = if (callLogsEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(end = 16.dp)
-                        )
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.device_data_call_logs),
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            if (callLogsEnabled && !hasReadCallLogPermission) {
-                                Text(
-                                    text = stringResource(R.string.device_data_call_logs_permission_required),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
+                        showContactsOptionsSheet = true
+                    },
+                    shapes = ListItemDefaults.segmentedShapes(index = 0, count = 3)
+                )
+                TaskRow(
+                    title = stringResource(R.string.device_data_call_logs),
+                    subtitle = if (callLogsEnabled && !hasReadCallLogPermission) {
+                        stringResource(R.string.device_data_call_logs_permission_required)
+                    } else {
+                        null
+                    },
+                    icon = Icons.Outlined.Call,
+                    checked = callLogsEnabled,
+                    onCheckedChange = { enabled ->
+                        if (enabled && !hasReadCallLogPermission) requestReadCallLogPermission() else onCallLogsEnabledChange(enabled)
+                    },
+                    shapes = ListItemDefaults.segmentedShapes(index = 1, count = 3)
+                )
+                TaskRow(
+                    title = stringResource(R.string.device_data_calendar),
+                    subtitle = calendarSubtitle,
+                    icon = Icons.Outlined.CalendarMonth,
+                    checked = calendarEnabled,
+                    onCheckedChange = { enabled ->
+                        if (enabled && !hasReadCalendarPermission) {
+                            requestReadCalendarPermission()
+                        } else {
+                            onCalendarEnabledChange(enabled)
                         }
-                        Spacer(Modifier.width(16.dp))
-                        Switch(
-                            checked = callLogsEnabled,
-                            onCheckedChange = { enabled ->
-                                if (enabled && !hasReadCallLogPermission) requestReadCallLogPermission() else onCallLogsEnabledChange(enabled)
-                            },
-                            thumbContent = if (callLogsEnabled) {
-                                {
-                                    Icon(
-                                        imageVector = Icons.Filled.Check,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                                    )
-                                }
-                            } else {
-                                null
-                            }
-                        )
-                    }
-                }
-                ExpressiveSegmentedSurface(index = 2, count = 3) {
-                    TaskRow(
-                        title = stringResource(R.string.device_data_calendar),
-                        subtitle = calendarSubtitle,
-                        icon = Icons.Outlined.CalendarMonth,
-                        checked = calendarEnabled,
-                        onCheckedChange = { enabled ->
-                            if (enabled && !hasReadCalendarPermission) {
-                                requestReadCalendarPermission()
-                            } else {
-                                onCalendarEnabledChange(enabled)
-                            }
-                        },
-                        onNavigate = {
-                            if (hasReadCalendarPermission) {
-                                onRefreshCalendars()
-                            }
-                            showCalendarOptionsSheet = true
+                    },
+                    onNavigate = {
+                        if (hasReadCalendarPermission) {
+                            onRefreshCalendars()
                         }
-                    )
-                }
+                        showCalendarOptionsSheet = true
+                    },
+                    shapes = ListItemDefaults.segmentedShapes(index = 2, count = 3)
+                )
             }
         }
     }
@@ -2878,18 +2816,16 @@ internal fun ContactsOptionsBottomSheet(
                 else -> {
                     val totalRows = availableContactAccounts.size + 1
                     ExpressiveCardGroup {
-                        ExpressiveSegmentedSurface(index = 0, count = totalRows) {
-                            Box(modifier = Modifier.testTag(CONTACTS_OPTIONS_SELECT_ALL_TAG)) {
-                                SelectAllListItem(
-                                    isChecked = isAllSelected,
-                                    subtitle = null,
-                                    onClick = null,
-                                    onToggle = onToggleAllContactAccounts,
-                                    iconSize = 24.dp,
-                                    iconPadding = 0.dp
-                                )
-                            }
-                        }
+                        SelectAllListItem(
+                            isChecked = isAllSelected,
+                            subtitle = null,
+                            onClick = null,
+                            onToggle = onToggleAllContactAccounts,
+                            iconSize = 24.dp,
+                            iconPadding = 0.dp,
+                            shapes = ListItemDefaults.segmentedShapes(index = 0, count = totalRows),
+                            modifier = Modifier.testTag(CONTACTS_OPTIONS_SELECT_ALL_TAG)
+                        )
                         availableContactAccounts.forEachIndexed { index, account ->
                             val isChecked = selectAllContactAccounts || account.selectionKey in selectedContactAccountKeys
                             val subtitle = buildList {
@@ -2906,39 +2842,30 @@ internal fun ContactsOptionsBottomSheet(
                                 }
                             }.joinToString(" • ").ifEmpty { null }
 
-                            ExpressiveSegmentedSurface(index = index + 1, count = totalRows) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .testTag("$CONTACTS_OPTION_ROW_TAG_PREFIX${account.selectionKey}")
-                                        .clickable { onToggleContactAccount(account.selectionKey) }
-                                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
+                            SegmentedListItem(
+                                onClick = { onToggleContactAccount(account.selectionKey) },
+                                shapes = ListItemDefaults.segmentedShapes(index = index + 1, count = totalRows),
+                                verticalAlignment = Alignment.CenterVertically,
+        colors = expressiveListItemColors(),
+                                modifier = Modifier.testTag("$CONTACTS_OPTION_ROW_TAG_PREFIX${account.selectionKey}"),
+                                leadingContent = {
                                     Icon(
                                         imageVector = if (account.isLocal) Icons.Outlined.Smartphone else Icons.Outlined.AccountCircle,
                                         contentDescription = null,
-                                        tint = if (isChecked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(end = 16.dp)
+                                        tint = if (isChecked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
-                                    Column(modifier = Modifier.weight(1f)) {
+                                },
+                                supportingContent = subtitle?.let {
+                                    {
                                         Text(
-                                            text = account.displayName,
-                                            style = MaterialTheme.typography.bodyLarge,
+                                            text = it,
+                                            style = MaterialTheme.typography.bodySmall,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
-                                        if (subtitle != null) {
-                                            Text(
-                                                text = subtitle,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        }
                                     }
-                                    Spacer(Modifier.width(16.dp))
+                                },
+                                trailingContent = {
                                     Switch(
                                         checked = isChecked,
                                         onCheckedChange = { onToggleContactAccount(account.selectionKey) },
@@ -2954,8 +2881,15 @@ internal fun ContactsOptionsBottomSheet(
                                             null
                                         }
                                     )
+                                },
+                                content = {
+                                    Text(
+                                        text = account.displayName,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                 }
-                            }
+                            )
                         }
                     }
                 }
@@ -3063,18 +2997,16 @@ internal fun CalendarOptionsBottomSheet(
                 else -> {
                     val totalRows = availableCalendars.size + 1
                     ExpressiveCardGroup {
-                        ExpressiveSegmentedSurface(index = 0, count = totalRows) {
-                            Box(modifier = Modifier.testTag(CALENDAR_OPTIONS_SELECT_ALL_TAG)) {
-                                SelectAllListItem(
-                                    isChecked = isAllSelected,
-                                    subtitle = null,
-                                    onClick = null,
-                                    onToggle = onToggleAllCalendars,
-                                    iconSize = 24.dp,
-                                    iconPadding = 0.dp
-                                )
-                            }
-                        }
+                        SelectAllListItem(
+                            isChecked = isAllSelected,
+                            subtitle = null,
+                            onClick = null,
+                            onToggle = onToggleAllCalendars,
+                            iconSize = 24.dp,
+                            iconPadding = 0.dp,
+                            shapes = ListItemDefaults.segmentedShapes(index = 0, count = totalRows),
+                            modifier = Modifier.testTag(CALENDAR_OPTIONS_SELECT_ALL_TAG)
+                        )
                         availableCalendars.forEachIndexed { index, calendar ->
                             val isChecked = selectAllCalendars || calendar.selectionKey in selectedCalendarKeys
                             val subtitle = buildList {
@@ -3091,40 +3023,31 @@ internal fun CalendarOptionsBottomSheet(
                                 }
                             }.joinToString(" • ").ifEmpty { null }
 
-                            ExpressiveSegmentedSurface(index = index + 1, count = totalRows) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .testTag("$CALENDAR_OPTION_ROW_TAG_PREFIX${calendar.selectionKey}")
-                                        .clickable { onToggleCalendar(calendar.selectionKey) }
-                                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
+                            SegmentedListItem(
+                                onClick = { onToggleCalendar(calendar.selectionKey) },
+                                shapes = ListItemDefaults.segmentedShapes(index = index + 1, count = totalRows),
+                                verticalAlignment = Alignment.CenterVertically,
+        colors = expressiveListItemColors(),
+                                modifier = Modifier.testTag("$CALENDAR_OPTION_ROW_TAG_PREFIX${calendar.selectionKey}"),
+                                leadingContent = {
                                     Box(
                                         modifier = Modifier
                                             .size(16.dp)
                                             .clip(CircleShape)
                                             .background(Color(calendar.color))
                                     )
-                                    Spacer(Modifier.width(16.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
+                                },
+                                supportingContent = subtitle?.let {
+                                    {
                                         Text(
-                                            text = calendar.displayName,
-                                            style = MaterialTheme.typography.bodyLarge,
+                                            text = it,
+                                            style = MaterialTheme.typography.bodySmall,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
-                                        if (subtitle != null) {
-                                            Text(
-                                                text = subtitle,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        }
                                     }
-                                    Spacer(Modifier.width(16.dp))
+                                },
+                                trailingContent = {
                                     Switch(
                                         checked = isChecked,
                                         onCheckedChange = { onToggleCalendar(calendar.selectionKey) },
@@ -3140,8 +3063,15 @@ internal fun CalendarOptionsBottomSheet(
                                             null
                                         }
                                     )
+                                },
+                                content = {
+                                    Text(
+                                        text = calendar.displayName,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                 }
-                            }
+                            )
                         }
                     }
                 }

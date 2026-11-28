@@ -57,8 +57,12 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItemColors
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -111,11 +115,11 @@ import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.model.BackupTagRules
 import io.github.hddq.restoid.ui.components.ExpressiveEmptyState
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
-import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
 import io.github.hddq.restoid.ui.components.PasswordDialog
 import io.github.hddq.restoid.ui.components.SshPrivateKeyField
 import io.github.hddq.restoid.ui.components.TagColorDot
 import io.github.hddq.restoid.ui.components.UsernamePasswordDialog
+import io.github.hddq.restoid.ui.components.expressiveListItemColors
 import coil.compose.AsyncImage
 import io.github.hddq.restoid.ui.home.HomeAuthFailure
 import io.github.hddq.restoid.ui.home.HomeCredentialPrompt
@@ -444,22 +448,23 @@ fun HomeScreen(
                                     uiState.repoTagsByName[tagName]?.colorArgb ?: fallbackColorArgb
                                 }
                             }
-                            ExpressiveSegmentedSurface(
-                                index = index,
-                                count = filteredSnapshots.size,
-                                modifier = Modifier.padding(bottom = if (index < filteredSnapshots.size - 1) 2.dp else 0.dp)
-                            ) {
-                                SnapshotItem(
-                                    snapshotWithMetadata = item,
-                                    apps = uiState.appInfoMap[item.snapshotInfo.id],
-                                    tagColors = userTagColors,
-                                    nowEpochMinute = nowEpochMinute,
-                                    maxIconsPossible = maxIconsPossible,
-                                    onClick = { onSnapshotClick(item.snapshotInfo.id) },
-                                    onRestoreClick = { onRestoreSnapshotClick(item.snapshotInfo.id) },
-                                    onForgetClick = { onRequestForgetSnapshot(item.snapshotInfo.id) }
-                                )
-                            }
+                            SnapshotItem(
+                                snapshotWithMetadata = item,
+                                apps = uiState.appInfoMap[item.snapshotInfo.id],
+                                tagColors = userTagColors,
+                                nowEpochMinute = nowEpochMinute,
+                                maxIconsPossible = maxIconsPossible,
+                                shapes = ListItemDefaults.segmentedShapes(
+                                    index = index,
+                                    count = filteredSnapshots.size
+                                ),
+                                onClick = { onSnapshotClick(item.snapshotInfo.id) },
+                                onRestoreClick = { onRestoreSnapshotClick(item.snapshotInfo.id) },
+                                onForgetClick = { onRequestForgetSnapshot(item.snapshotInfo.id) },
+                                modifier = Modifier
+                                    .animateItem()
+                                    .padding(bottom = if (index < filteredSnapshots.size - 1) ListItemDefaults.SegmentedGap else 0.dp)
+                            )
                         }
                     }
                 }
@@ -807,7 +812,7 @@ private fun ExpressiveTagFilterChip(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun SnapshotItem(
     snapshotWithMetadata: SnapshotWithMetadata,
@@ -816,6 +821,9 @@ internal fun SnapshotItem(
     nowEpochMinute: Long = System.currentTimeMillis() / 60_000L,
     maxIconsPossible: Int,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    shapes: ListItemShapes = ListItemDefaults.segmentedShapes(index = 0, count = 1),
+    colors: ListItemColors = expressiveListItemColors(),
     onRestoreClick: (() -> Unit)? = null,
     onForgetClick: (() -> Unit)? = null,
     showMetadataStatusWhenMissing: Boolean = true,
@@ -863,23 +871,22 @@ internal fun SnapshotItem(
         }
     }
 
-    val clickModifier = if (hasContextMenu) {
-        Modifier.combinedClickable(
+    Box(modifier = modifier.fillMaxWidth()) {
+        SegmentedListItem(
             onClick = onClick,
-            onLongClick = { menuExpanded = true }
-        )
-    } else {
-        Modifier.clickable(onClick = onClick)
-    }
-
-    Box(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .then(clickModifier)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            onLongClick = if (hasContextMenu) {
+                { menuExpanded = true }
+            } else {
+                null
+            },
+            shapes = shapes,
+            colors = colors,
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
         ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
             SnapshotHeader(
                 snapshotId = snapshot.id,
                 hostname = snapshot.hostname,
@@ -1023,6 +1030,7 @@ internal fun SnapshotItem(
                     style = MaterialTheme.typography.bodySmall,
                     color = secondaryContentColor
                 )
+            }
             }
         }
 

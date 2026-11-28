@@ -2,8 +2,6 @@ package io.github.hddq.restoid.ui.screens
 
 import android.content.ClipData
 import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -19,9 +17,13 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -41,9 +43,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mikepenz.aboutlibraries.Libs
 import io.github.hddq.restoid.R
-import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
+import io.github.hddq.restoid.ui.components.expressiveListItemColors
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun LicensesScreen(
     onNavigateUp: () -> Unit,
@@ -68,7 +71,7 @@ fun LicensesScreen(
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
         contentPadding = PaddingValues(
             start = 16.dp,
             end = 16.dp,
@@ -77,37 +80,34 @@ fun LicensesScreen(
         )
     ) {
         item(key = "restoid_license") {
-            ExpressiveSegmentedSurface(index = 0, count = totalCount) {
-                LicenseCard(
-                    name = stringResource(R.string.app_name),
-                    author = stringResource(R.string.license_restoid_author),
-                    licenseName = stringResource(R.string.license_restoid_name),
-                    licenseText = Licenses.RESTOID_LICENSE,
-                    url = stringResource(R.string.license_restoid_url)
-                )
-            }
+            LicenseCard(
+                name = stringResource(R.string.app_name),
+                author = stringResource(R.string.license_restoid_author),
+                licenseName = stringResource(R.string.license_restoid_name),
+                licenseText = Licenses.RESTOID_LICENSE,
+                url = stringResource(R.string.license_restoid_url),
+                shapes = ListItemDefaults.segmentedShapes(index = 0, count = totalCount)
+            )
         }
         item(key = "restic_license") {
-            ExpressiveSegmentedSurface(index = 1, count = totalCount) {
-                LicenseCard(
-                    name = stringResource(R.string.license_restic_name),
-                    author = stringResource(R.string.license_restic_author),
-                    licenseName = stringResource(R.string.license_restic_license),
-                    licenseText = Licenses.RESTIC_LICENSE,
-                    url = stringResource(R.string.license_restic_url)
-                )
-            }
+            LicenseCard(
+                name = stringResource(R.string.license_restic_name),
+                author = stringResource(R.string.license_restic_author),
+                licenseName = stringResource(R.string.license_restic_license),
+                licenseText = Licenses.RESTIC_LICENSE,
+                url = stringResource(R.string.license_restic_url),
+                shapes = ListItemDefaults.segmentedShapes(index = 1, count = totalCount)
+            )
         }
         item(key = "rclone_license") {
-            ExpressiveSegmentedSurface(index = 2, count = totalCount) {
-                LicenseCard(
-                    name = stringResource(R.string.license_rclone_name),
-                    author = stringResource(R.string.license_rclone_author),
-                    licenseName = stringResource(R.string.license_rclone_license),
-                    licenseText = Licenses.RCLONE_LICENSE,
-                    url = stringResource(R.string.license_rclone_url)
-                )
-            }
+            LicenseCard(
+                name = stringResource(R.string.license_rclone_name),
+                author = stringResource(R.string.license_rclone_author),
+                licenseName = stringResource(R.string.license_rclone_license),
+                licenseText = Licenses.RCLONE_LICENSE,
+                url = stringResource(R.string.license_rclone_url),
+                shapes = ListItemDefaults.segmentedShapes(index = 2, count = totalCount)
+            )
         }
 
         itemsIndexed(libraries, key = { index, library -> "${library.uniqueId}_$index" }) { index, library ->
@@ -116,27 +116,26 @@ fun LicensesScreen(
             val website = library.website ?: ""
             val primaryUrl = if (licenseUrl.isNotBlank()) licenseUrl else website
 
-            ExpressiveSegmentedSurface(index = index + 3, count = totalCount) {
-                LicenseCard(
-                    name = library.name,
-                    author = library.developers.firstOrNull()?.name ?: library.organization?.name ?: stringResource(R.string.license_unknown_author),
-                    licenseName = firstLicense?.name ?: stringResource(R.string.license_unknown_name),
-                    licenseText = if (licenseUrl.isNotBlank()) {
-                        stringResource(R.string.license_url_label, licenseUrl)
-                    } else if (website.isNotBlank()) {
-                        stringResource(R.string.license_project_website_label, website)
-                    } else {
-                        stringResource(R.string.license_no_link_available)
-                    },
-                    version = library.artifactVersion,
-                    url = primaryUrl
-                )
-            }
+            LicenseCard(
+                name = library.name,
+                author = library.developers.firstOrNull()?.name ?: library.organization?.name ?: stringResource(R.string.license_unknown_author),
+                licenseName = firstLicense?.name ?: stringResource(R.string.license_unknown_name),
+                licenseText = if (licenseUrl.isNotBlank()) {
+                    stringResource(R.string.license_url_label, licenseUrl)
+                } else if (website.isNotBlank()) {
+                    stringResource(R.string.license_project_website_label, website)
+                } else {
+                    stringResource(R.string.license_no_link_available)
+                },
+                version = library.artifactVersion,
+                url = primaryUrl,
+                shapes = ListItemDefaults.segmentedShapes(index = index + 3, count = totalCount)
+            )
         }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun LicenseCard(
     name: String,
@@ -144,7 +143,9 @@ fun LicenseCard(
     licenseName: String = "",
     licenseText: String,
     version: String? = null,
-    url: String = ""
+    url: String = "",
+    shapes: ListItemShapes = ListItemDefaults.segmentedShapes(index = 0, count = 1),
+    modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
     val uriHandler = LocalUriHandler.current
@@ -160,36 +161,33 @@ fun LicenseCard(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                onClick = { expanded = !expanded },
-                onLongClick = {
-                    scope.launch {
-                        clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(null, "$name\n$url\n\n$licenseText")))
+    SegmentedListItem(
+        onClick = { expanded = !expanded },
+        onLongClick = {
+            scope.launch {
+                clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(null, "$name\n$url\n\n$licenseText")))
+            }
+        },
+        shapes = shapes,
+        colors = expressiveListItemColors(),
+        modifier = modifier.animateContentSize()
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    if (author.isNotBlank()) {
+                        Text(author, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                    }
+                    if (version != null) {
+                        Text(version, style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace)
                     }
                 }
-            )
-            .padding(16.dp)
-            .animateContentSize()
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                if (author.isNotBlank()) {
-                    Text(author, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-                }
-                if (version != null) {
-                    Text(version, style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace)
-                }
-            }
 
-            Row {
                 if (url.isNotBlank()) {
                     IconButton(
                         onClick = { uriHandler.openUri(url) },
@@ -204,43 +202,43 @@ fun LicenseCard(
                     }
                 }
             }
-        }
 
-        if (licenseName.isNotBlank()) {
-            Spacer(Modifier.height(6.dp))
-            Text(licenseName, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+            if (licenseName.isNotBlank()) {
+                Spacer(Modifier.height(6.dp))
+                Text(licenseName, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
 
-        if (expanded || licenseText.isNotBlank()) {
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = if (expanded) licenseText.trimIndent() else licensePreview,
-                style = MaterialTheme.typography.bodySmall,
-                fontFamily = FontFamily.Monospace,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            if (expanded || licenseText.isNotBlank()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = if (expanded) licenseText.trimIndent() else licensePreview,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
 
-            if (expanded) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    IconButton(
-                        onClick = {
-                            scope.launch {
-                                clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(null, "$name\n$url\n\n$licenseText")))
-                            }
-                        },
-                        modifier = Modifier.size(32.dp)
+                if (expanded) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        horizontalArrangement = Arrangement.End
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.ContentCopy,
-                            contentDescription = stringResource(R.string.cd_copy_license),
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp)
-                        )
+                        IconButton(
+                            onClick = {
+                                scope.launch {
+                                    clipboard.setClipEntry(ClipEntry(ClipData.newPlainText(null, "$name\n$url\n\n$licenseText")))
+                                }
+                            },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ContentCopy,
+                                contentDescription = stringResource(R.string.cd_copy_license),
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
                 }
             }

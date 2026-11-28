@@ -1,7 +1,6 @@
 package io.github.hddq.restoid.ui.screens.settings
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -9,10 +8,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -25,10 +27,12 @@ import io.github.hddq.restoid.R
 import io.github.hddq.restoid.data.ResticState
 import io.github.hddq.restoid.ui.components.ExpressiveCardGroup
 import io.github.hddq.restoid.ui.components.ExpressiveSectionHeader
-import io.github.hddq.restoid.ui.components.ExpressiveSegmentedSurface
+import io.github.hddq.restoid.ui.components.expressiveListItemColors
 import io.github.hddq.restoid.ui.screens.settings.components.SelectableRepositoryRow
+import io.github.hddq.restoid.ui.screens.settings.components.SelectableRepositoryRowLayout
 import io.github.hddq.restoid.ui.settings.SettingsViewModel
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun RepositorySettingsContent(
     resticState: ResticState,
@@ -40,11 +44,13 @@ internal fun RepositorySettingsContent(
     rowContent: @Composable (
         repo: io.github.hddq.restoid.data.LocalRepository,
         isSelected: Boolean,
+        shapes: ListItemShapes,
         onSelected: () -> Unit
-    ) -> Unit = { repo, isSelected, onSelected ->
-        io.github.hddq.restoid.ui.screens.settings.components.SelectableRepositoryRowLayout(
+    ) -> Unit = { repo, isSelected, shapes, onSelected ->
+        SelectableRepositoryRowLayout(
             repo = repo,
             isSelected = isSelected,
+            shapes = shapes,
             onSelected = onSelected
         )
     }
@@ -54,46 +60,49 @@ internal fun RepositorySettingsContent(
 
         if (resticState is ResticState.Installed) {
             if (repositories.isEmpty()) {
-                ExpressiveSegmentedSurface(index = 0, count = 1) {
-                    Text(
-                        stringResource(R.string.no_repositories_configured),
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-                    )
-                }
+                SegmentedListItem(
+                    shapes = ListItemDefaults.segmentedShapes(index = 0, count = 1),
+                    verticalAlignment = Alignment.CenterVertically,
+                    colors = expressiveListItemColors(),
+                    content = {
+                        Text(
+                            text = stringResource(R.string.no_repositories_configured),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                )
             } else {
                 ExpressiveCardGroup {
                     repositories.forEachIndexed { index, repo ->
                         val repoKey = repositoryKey(repo)
-                        ExpressiveSegmentedSurface(
-                            index = index,
-                            count = repositories.size
+                        rowContent(
+                            repo,
+                            repoKey == selectedRepositoryKey,
+                            ListItemDefaults.segmentedShapes(index = index, count = repositories.size)
                         ) {
-                            rowContent(repo, repoKey == selectedRepositoryKey) {
-                                onSelectRepository(repoKey)
-                            }
+                            onSelectRepository(repoKey)
                         }
                     }
                 }
             }
         } else {
-            ExpressiveSegmentedSurface(index = 0, count = 1) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+            SegmentedListItem(
+                shapes = ListItemDefaults.segmentedShapes(index = 0, count = 1),
+                verticalAlignment = Alignment.CenterVertically,
+                colors = expressiveListItemColors(),
+                leadingContent = {
                     Icon(
-                        Icons.Outlined.Info,
-                        contentDescription = null,
-                        modifier = Modifier.padding(end = 8.dp),
-                        tint = LocalContentColor.current.copy(alpha = 0.6f)
+                        imageVector = Icons.Outlined.Info,
+                        contentDescription = null
                     )
+                },
+                content = {
                     Text(
-                        stringResource(R.string.restic_not_available_check_settings),
+                        text = stringResource(R.string.restic_not_available_check_settings),
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
-            }
+            )
         }
 
         if (resticState is ResticState.Installed) {
@@ -113,6 +122,7 @@ internal fun RepositorySettingsContent(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun RepositorySettings(viewModel: SettingsViewModel) {
     val resticState by viewModel.resticState.collectAsStateWithLifecycle()
@@ -126,10 +136,11 @@ fun RepositorySettings(viewModel: SettingsViewModel) {
         repositoryKey = viewModel::repositoryKey,
         onSelectRepository = viewModel::selectRepository,
         onAddRepository = viewModel::onShowAddRepoDialog,
-        rowContent = { repo, isSelected, onSelected ->
+        rowContent = { repo, isSelected, shapes, onSelected ->
             SelectableRepositoryRow(
                 repo = repo,
                 isSelected = isSelected,
+                shapes = shapes,
                 onSelected = onSelected,
                 viewModel = viewModel
             )

@@ -39,9 +39,12 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -192,13 +195,15 @@ private data class TagPickerEntry(
     val isSelected: Boolean
 )
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun BackupTagsRow(
     selectedTags: List<String>,
     availableTags: List<BackupTag>,
     enabled: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    shapes: ListItemShapes = ListItemDefaults.segmentedShapes(index = 0, count = 1)
 ) {
     val subtitle = if (selectedTags.isEmpty()) {
         stringResource(R.string.tags_none)
@@ -206,49 +211,43 @@ fun BackupTagsRow(
         selectedTags.joinToString(", ")
     }
 
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .alpha(if (enabled) 1f else 0.5f)
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = Icons.AutoMirrored.Outlined.Label,
-            contentDescription = null,
-            tint = if (selectedTags.isNotEmpty()) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            },
-            modifier = Modifier.padding(end = 16.dp)
-        )
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = stringResource(R.string.run_tasks_tags),
-                style = MaterialTheme.typography.bodyLarge
+    SegmentedListItem(
+        onClick = onClick,
+        shapes = shapes,
+        modifier = modifier,
+        enabled = enabled,
+        verticalAlignment = Alignment.CenterVertically,
+        colors = expressiveListItemColors(),
+        leadingContent = {
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.Label,
+                contentDescription = null,
+                tint = if (selectedTags.isNotEmpty() && enabled) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                }
             )
+        },
+        supportingContent = {
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
-        }
-
-        Spacer(Modifier.width(12.dp))
-        Icon(
-            imageVector = Icons.Outlined.ChevronRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
+        },
+        trailingContent = {
+            Icon(
+                imageVector = Icons.Outlined.ChevronRight,
+                contentDescription = null
+            )
+        },
+        content = { Text(text = stringResource(R.string.run_tasks_tags)) }
+    )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun BackupTagPickerSheet(
     availableTags: List<BackupTag>,
@@ -332,59 +331,55 @@ fun BackupTagPickerSheet(
                 )
             } else {
                 LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     itemsIndexed(items = entries, key = { _, entry -> entry.key }) { index, entry ->
-                        ExpressiveSegmentedSurface(
-                            index = index,
-                            count = entries.size
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .toggleable(
-                                        value = entry.isSelected,
-                                        enabled = !isMutating,
-                                        role = Role.Checkbox,
-                                        onValueChange = { onToggleTag(entry.name) }
-                                    )
-                                    .padding(horizontal = 16.dp, vertical = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier.weight(1f),
-                                    contentAlignment = Alignment.CenterStart
-                                ) {
-                                    ExpressiveTagChip(
-                                        label = entry.name,
-                                        selected = entry.isSelected,
-                                        tagColorArgb = entry.tag?.colorArgb
-                                    )
-                                }
-                                entry.tag?.let { trackedTag ->
-                                    IconButton(
-                                        onClick = { editingTag = trackedTag },
-                                        enabled = !isMutating
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.Palette,
-                                            contentDescription = stringResource(R.string.action_edit_tag_color)
-                                        )
-                                    }
-                                    IconButton(
-                                        onClick = { deletingTag = trackedTag },
-                                        enabled = !isMutating
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.Delete,
-                                            contentDescription = stringResource(R.string.action_delete_tag),
-                                            tint = MaterialTheme.colorScheme.error
-                                        )
+                        val shapes = ListItemDefaults.segmentedShapes(index = index, count = entries.size)
+                        SegmentedListItem(
+                            checked = entry.isSelected,
+                            onCheckedChange = { onToggleTag(entry.name) },
+                            shapes = shapes.copy(selectedShape = shapes.shape),
+                            enabled = !isMutating,
+                            verticalAlignment = Alignment.CenterVertically,
+                            colors = expressiveListItemColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                selectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
+                            modifier = Modifier.animateItem(),
+                            trailingContent = entry.tag?.let { trackedTag ->
+                                {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        IconButton(
+                                            onClick = { editingTag = trackedTag },
+                                            enabled = !isMutating
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.Palette,
+                                                contentDescription = stringResource(R.string.action_edit_tag_color)
+                                            )
+                                        }
+                                        IconButton(
+                                            onClick = { deletingTag = trackedTag },
+                                            enabled = !isMutating
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.Delete,
+                                                contentDescription = stringResource(R.string.action_delete_tag),
+                                                tint = MaterialTheme.colorScheme.error
+                                            )
+                                        }
                                     }
                                 }
+                            },
+                            content = {
+                                ExpressiveTagChip(
+                                    label = entry.name,
+                                    selected = entry.isSelected,
+                                    tagColorArgb = entry.tag?.colorArgb
+                                )
                             }
-                        }
+                        )
                     }
                 }
             }

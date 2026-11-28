@@ -9,6 +9,7 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,10 +30,14 @@ import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.LockOpen
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -48,7 +53,7 @@ import io.github.hddq.restoid.R
 
 private const val RESTIC_DOCS_URL = "https://restic.readthedocs.io/en/stable/"
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun TasksGuideBottomSheet(
     onDismissRequest: () -> Unit,
@@ -86,34 +91,30 @@ fun TasksGuideBottomSheet(
 
             ExpressiveSectionHeader(title = stringResource(R.string.operation_maintenance))
             ExpressiveCardGroup {
-                ExpressiveSegmentedSurface(index = 0, count = 4) {
-                    GuideItem(
-                        icon = Icons.Outlined.LockOpen,
-                        title = stringResource(R.string.tasks_guide_unlock_title),
-                        description = stringResource(R.string.tasks_guide_unlock_desc)
-                    )
-                }
-                ExpressiveSegmentedSurface(index = 1, count = 4) {
-                    GuideItem(
-                        icon = Icons.Outlined.AutoDelete,
-                        title = stringResource(R.string.tasks_guide_forget_title),
-                        description = stringResource(R.string.tasks_guide_forget_desc)
-                    )
-                }
-                ExpressiveSegmentedSurface(index = 2, count = 4) {
-                    GuideItem(
-                        icon = Icons.Outlined.CleaningServices,
-                        title = stringResource(R.string.tasks_guide_prune_title),
-                        description = stringResource(R.string.tasks_guide_prune_desc)
-                    )
-                }
-                ExpressiveSegmentedSurface(index = 3, count = 4) {
-                    GuideItem(
-                        icon = Icons.AutoMirrored.Outlined.FactCheck,
-                        title = stringResource(R.string.tasks_guide_check_title),
-                        description = stringResource(R.string.tasks_guide_check_desc)
-                    )
-                }
+                GuideItem(
+                    icon = Icons.Outlined.LockOpen,
+                    title = stringResource(R.string.tasks_guide_unlock_title),
+                    description = stringResource(R.string.tasks_guide_unlock_desc),
+                    shapes = ListItemDefaults.segmentedShapes(index = 0, count = 4)
+                )
+                GuideItem(
+                    icon = Icons.Outlined.AutoDelete,
+                    title = stringResource(R.string.tasks_guide_forget_title),
+                    description = stringResource(R.string.tasks_guide_forget_desc),
+                    shapes = ListItemDefaults.segmentedShapes(index = 1, count = 4)
+                )
+                GuideItem(
+                    icon = Icons.Outlined.CleaningServices,
+                    title = stringResource(R.string.tasks_guide_prune_title),
+                    description = stringResource(R.string.tasks_guide_prune_desc),
+                    shapes = ListItemDefaults.segmentedShapes(index = 2, count = 4)
+                )
+                GuideItem(
+                    icon = Icons.AutoMirrored.Outlined.FactCheck,
+                    title = stringResource(R.string.tasks_guide_check_title),
+                    description = stringResource(R.string.tasks_guide_check_desc),
+                    shapes = ListItemDefaults.segmentedShapes(index = 3, count = 4)
+                )
             }
 
             Surface(
@@ -156,20 +157,18 @@ fun TasksGuideBottomSheet(
 
             ExpressiveSectionHeader(title = stringResource(R.string.operation_backup))
             ExpressiveCardGroup {
-                ExpressiveSegmentedSurface(index = 0, count = 2) {
-                    GuideItem(
-                        icon = Icons.Outlined.Apps,
-                        title = stringResource(R.string.tasks_guide_apps_title),
-                        description = stringResource(R.string.tasks_guide_apps_desc)
-                    )
-                }
-                ExpressiveSegmentedSurface(index = 1, count = 2) {
-                    GuideItem(
-                        icon = Icons.Outlined.Folder,
-                        title = stringResource(R.string.tasks_guide_files_title),
-                        description = stringResource(R.string.tasks_guide_files_desc)
-                    )
-                }
+                GuideItem(
+                    icon = Icons.Outlined.Apps,
+                    title = stringResource(R.string.tasks_guide_apps_title),
+                    description = stringResource(R.string.tasks_guide_apps_desc),
+                    shapes = ListItemDefaults.segmentedShapes(index = 0, count = 2)
+                )
+                GuideItem(
+                    icon = Icons.Outlined.Folder,
+                    title = stringResource(R.string.tasks_guide_files_title),
+                    description = stringResource(R.string.tasks_guide_files_desc),
+                    shapes = ListItemDefaults.segmentedShapes(index = 1, count = 2)
+                )
             }
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -198,40 +197,41 @@ fun TasksGuideBottomSheet(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun GuideItem(
     icon: ImageVector,
     title: String,
     description: String,
+    shapes: ListItemShapes,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier
-                .padding(end = 16.dp, top = 2.dp)
-                .size(24.dp)
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
+    SegmentedListItem(
+        shapes = shapes,
+        modifier = modifier,
+        colors = expressiveListItemColors(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.Top,
+        leadingContent = {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        },
+        content = {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
-    }
+    )
 }

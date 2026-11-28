@@ -7,7 +7,9 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,10 +28,14 @@ import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,7 +51,7 @@ import io.github.hddq.restoid.R
 
 private const val RESTIC_FORGET_DOCS_URL = "https://restic.readthedocs.io/en/stable/060_forget.html"
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ForgetGuideBottomSheet(
     onDismissRequest: () -> Unit,
@@ -83,34 +89,30 @@ fun ForgetGuideBottomSheet(
 
             ExpressiveSectionHeader(title = stringResource(R.string.forget_guide_section_how_it_works))
             ExpressiveCardGroup {
-                ExpressiveSegmentedSurface(index = 0, count = 4) {
-                    ForgetGuideItem(
-                        icon = Icons.Outlined.History,
-                        title = stringResource(R.string.forget_guide_retention_title),
-                        description = stringResource(R.string.forget_guide_retention_desc)
-                    )
-                }
-                ExpressiveSegmentedSurface(index = 1, count = 4) {
-                    ForgetGuideItem(
-                        icon = Icons.Outlined.Dns,
-                        title = stringResource(R.string.forget_guide_hosts_title),
-                        description = stringResource(R.string.forget_guide_hosts_desc)
-                    )
-                }
-                ExpressiveSegmentedSurface(index = 2, count = 4) {
-                    ForgetGuideItem(
-                        icon = Icons.AutoMirrored.Outlined.Label,
-                        title = stringResource(R.string.forget_guide_tags_title),
-                        description = stringResource(R.string.forget_guide_tags_desc)
-                    )
-                }
-                ExpressiveSegmentedSurface(index = 3, count = 4) {
-                    ForgetGuideItem(
-                        icon = Icons.Outlined.Layers,
-                        title = stringResource(R.string.forget_guide_grouping_title),
-                        description = stringResource(R.string.forget_guide_grouping_desc)
-                    )
-                }
+                ForgetGuideItem(
+                    icon = Icons.Outlined.History,
+                    title = stringResource(R.string.forget_guide_retention_title),
+                    description = stringResource(R.string.forget_guide_retention_desc),
+                    shapes = ListItemDefaults.segmentedShapes(index = 0, count = 4)
+                )
+                ForgetGuideItem(
+                    icon = Icons.Outlined.Dns,
+                    title = stringResource(R.string.forget_guide_hosts_title),
+                    description = stringResource(R.string.forget_guide_hosts_desc),
+                    shapes = ListItemDefaults.segmentedShapes(index = 1, count = 4)
+                )
+                ForgetGuideItem(
+                    icon = Icons.AutoMirrored.Outlined.Label,
+                    title = stringResource(R.string.forget_guide_tags_title),
+                    description = stringResource(R.string.forget_guide_tags_desc),
+                    shapes = ListItemDefaults.segmentedShapes(index = 2, count = 4)
+                )
+                ForgetGuideItem(
+                    icon = Icons.Outlined.Layers,
+                    title = stringResource(R.string.forget_guide_grouping_title),
+                    description = stringResource(R.string.forget_guide_grouping_desc),
+                    shapes = ListItemDefaults.segmentedShapes(index = 3, count = 4)
+                )
             }
 
             Surface(
@@ -175,40 +177,41 @@ fun ForgetGuideBottomSheet(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ForgetGuideItem(
     icon: ImageVector,
     title: String,
     description: String,
+    shapes: ListItemShapes,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier
-                .padding(end = 16.dp, top = 2.dp)
-                .size(24.dp)
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
+    SegmentedListItem(
+        shapes = shapes,
+        modifier = modifier,
+        colors = expressiveListItemColors(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.Top,
+        leadingContent = {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        },
+        content = {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
-    }
+    )
 }
