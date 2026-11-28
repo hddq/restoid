@@ -447,6 +447,7 @@ class TaskConfigEditorController(
         updateState { state ->
             recomputeConflicts(
                 state.withAppliedRunTasksConfig(config, existingApps = existingApps).copy(
+                    isLoadingApps = existingApps.isEmpty(),
                     isLoadingContactAccounts = false,
                     isLoadingCalendars = false,
                     isRunningForgetDryRun = false,
