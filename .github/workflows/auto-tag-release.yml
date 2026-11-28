@@ -102,7 +102,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          PR_NUMBER=$(gh pr list --base master --head crowdin --state open --json number --jq '.[0].number // empty')
+          PR_NUMBER=$(gh pr list --base master --head crowdin --state open --json number,isCrossRepository --jq '[.[] | select(.isCrossRepository | not)] | .[0].number // empty')
           if [ -z "$PR_NUMBER" ]; then
             echo "No open Crowdin PR found; proceeding to tag master."
             exit 0
@@ -147,6 +147,22 @@ jobs:
           if [ -n "$EXISTING_TAG" ]; then
             echo "Tag '${TAG}' already exists on origin; nothing to do."
             exit 0
+          fi
+
+          BASE_CODE=$(sed -n -E 's/^val baseAppVersionCode = ([0-9]+).*/\1/p' "$GRADLE_FILE")
+          DEFAULT_CODE=$(sed -n -E 's/^[[:space:]]*versionCode = ([0-9]+).*/\1/p' "$GRADLE_FILE")
+          if [ -z "$BASE_CODE" ] || [ "$BASE_CODE" != "$DEFAULT_CODE" ]; then
+            echo "::error::baseAppVersionCode ($BASE_CODE) and defaultConfig versionCode ($DEFAULT_CODE) must be equal before tagging."
+            exit 1
+          fi
+
+          if [[ "$TAG" != *-* ]]; then
+            CHANGELOG_VERSION_CODE=$((BASE_CODE * 10 + 2))
+            CHANGELOG_FILE="fastlane/metadata/android/en-US/changelogs/${CHANGELOG_VERSION_CODE}.txt"
+            if [ ! -f "$CHANGELOG_FILE" ]; then
+              echo "::error::$CHANGELOG_FILE is required for stable releases; refusing to create tag '${TAG}'."
+              exit 1
+            fi
           fi
 
           git config user.name "github-actions[bot]"
