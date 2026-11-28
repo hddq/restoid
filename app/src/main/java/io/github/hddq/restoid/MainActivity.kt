@@ -126,6 +126,8 @@ import androidx.window.core.layout.WindowSizeClass
 import kotlinx.coroutines.launch
 import io.github.hddq.restoid.data.NotificationRepository
 import io.github.hddq.restoid.ui.components.AppSortMenuButton
+import io.github.hddq.restoid.ui.components.ChangelogDialog
+import io.github.hddq.restoid.ui.components.parseChangelogItems
 import io.github.hddq.restoid.ui.home.HomeViewModel
 import io.github.hddq.restoid.ui.home.HomeViewModelFactory
 import io.github.hddq.restoid.ui.presets.AddEditPresetScreen
@@ -433,6 +435,25 @@ class MainActivity : FragmentActivity() {
                         }
                     }
 
+                    val changelogItems = remember { parseChangelogItems(BuildConfig.APP_CHANGELOG) }
+                    var showChangelogDialog by remember {
+                        mutableStateOf(
+                            startDestination == TOP_LEVEL_ROUTE &&
+                                changelogItems.isNotEmpty() &&
+                                app.preferencesRepository.loadLastSeenChangelogVersionCode() != BuildConfig.BASE_VERSION_CODE
+                        )
+                    }
+                    if (showChangelogDialog && showBottomBar && isNavigationAllowed) {
+                        ChangelogDialog(
+                            versionName = BuildConfig.VERSION_NAME,
+                            items = changelogItems,
+                            onDismiss = {
+                                app.preferencesRepository.saveLastSeenChangelogVersionCode(BuildConfig.BASE_VERSION_CODE)
+                                showChangelogDialog = false
+                            }
+                        )
+                    }
+
                     val standardEasing = remember { CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f) }
                     val predictiveEasing = remember { CubicBezierEasing(0.4f, 0.0f, 0.2f, 1.0f) }
                     val fadeOutEasing = remember { CubicBezierEasing(0.4f, 0.0f, 1.0f, 1.0f) }
@@ -606,6 +627,7 @@ class MainActivity : FragmentActivity() {
                                 viewModel = vm,
                                 onFinish = {
                                     app.preferencesRepository.saveOnboardingCompleted(true)
+                                    app.preferencesRepository.saveLastSeenChangelogVersionCode(BuildConfig.BASE_VERSION_CODE)
                                     navController.navigate(TOP_LEVEL_ROUTE) {
                                         popUpTo(Screen.Welcome.route) { inclusive = true }
                                         launchSingleTop = true

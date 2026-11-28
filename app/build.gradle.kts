@@ -30,6 +30,26 @@ val hasReleaseSigning = listOf(
 // this value as a literal: F-Droid's checkupdates regex-parses it and cannot resolve variables.
 val baseAppVersionCode = 33
 
+val fastlaneChangelogsDir = layout.projectDirectory.dir("../fastlane/metadata/android/en-US/changelogs")
+val currentChangelogText = providers.fileContents(
+    fastlaneChangelogsDir.file("${baseAppVersionCode * 10 + 2}.txt")
+).asText.orElse(
+    providers.fileContents(
+        fastlaneChangelogsDir.file("$baseAppVersionCode.txt")
+    ).asText
+).orElse("").get().trim()
+
+fun escapeBuildConfigString(value: String): String = buildString(value.length + 16) {
+    value.replace("\r\n", "\n").replace("\r", "\n").forEach { ch ->
+        when (ch) {
+            '\\' -> append("\\\\")
+            '"' -> append("\\\"")
+            '\n' -> append("\\n")
+            else -> append(ch)
+        }
+    }
+}
+
 android {
     namespace = "io.github.hddq.restoid"
     compileSdk {
@@ -45,6 +65,8 @@ android {
         targetSdk = 37
         versionCode = 33
         versionName = "0.9.2"
+        buildConfigField("int", "BASE_VERSION_CODE", baseAppVersionCode.toString())
+        buildConfigField("String", "APP_CHANGELOG", "\"${escapeBuildConfigString(currentChangelogText)}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
