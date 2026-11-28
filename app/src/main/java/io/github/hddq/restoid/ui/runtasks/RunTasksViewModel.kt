@@ -128,6 +128,7 @@ class RunTasksViewModel(
             selectAllApps = selectAllApps,
             excludedPackageNames = excludedPackages,
             backupTypes = preferencesRepository.loadBackupTypes(),
+            appBackupTypes = preferencesRepository.loadRunTasksAppBackupTypes(),
             maintenance = preferencesRepository.loadMaintenanceState(),
             customDirectoriesBackupEnabled = preferencesRepository.loadCustomDirectoriesBackupEnabled(),
             deviceDataBackupEnabled = preferencesRepository.loadDeviceDataBackupEnabled(),
@@ -381,6 +382,7 @@ class RunTasksViewModel(
     fun run() {
         val state = _uiState.value
         if (state.isRunning) return
+        if (state.editor.isLoadingApps) return
 
         if (state.selectedPresetId == null) {
             persistCustomJob?.cancel()

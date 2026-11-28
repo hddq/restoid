@@ -8,6 +8,7 @@ import io.github.hddq.restoid.model.AppInfo
 import io.github.hddq.restoid.ui.shared.BackupTypes
 import io.github.hddq.restoid.ui.shared.TaskConfigEditorState
 import io.github.hddq.restoid.ui.shared.hasTaskConfigChanges
+import io.github.hddq.restoid.ui.shared.resolveEditorAppBackupTypes
 import io.github.hddq.restoid.ui.shared.toRunTasksConfig
 import io.github.hddq.restoid.ui.shared.toUiModel
 import io.github.hddq.restoid.ui.shared.withAppliedRunTasksConfig
@@ -278,5 +279,68 @@ class SelectAllAppsBackupTest {
         assertFalse(hasTaskConfigChanges(unchanged, initial))
         assertTrue(hasTaskConfigChanges(changedMode, initial))
         assertTrue(hasTaskConfigChanges(changedExcluded, initial))
+    }
+
+    @Test
+    fun uninstalledNonExcludedOverride_survivesApplyReloadSaveAndReinstall() {
+        val defaultTypes = BackupTypes()
+        val apkOnlySelection = BackupTypeSelection(
+            apk = true,
+            data = false,
+            deviceProtectedData = false,
+            externalData = false,
+            obb = false,
+            media = false,
+            permissions = false,
+            specialAccess = false,
+            accessibility = false
+        )
+        val apkOnlyUi = apkOnlySelection.toUiModel()
+
+        // Saved preset with an override for com.temp.uninstalled and an exclusion for com.big.game
+        val savedConfig = RunTasksConfig(
+            backupEnabled = true,
+            selectAllApps = true,
+            excludedPackageNames = listOf("com.big.game"),
+            appBackupTypes = mapOf(
+                "com.temp.uninstalled" to apkOnlySelection,
+                "com.big.game" to apkOnlySelection
+            )
+        )
+
+        // 1. Apply config while com.temp.uninstalled is not installed
+        val installedWithoutTemp = listOf(testApp("com.other.app"))
+        val applied = TaskConfigEditorState()
+            .withAppliedRunTasksConfig(savedConfig, existingApps = installedWithoutTemp)
+
+        assertEquals(apkOnlyUi, applied.appBackupTypes["com.temp.uninstalled"])
+        assertFalse("com.big.game" in applied.appBackupTypes)
+
+        // 2. Reload installed apps while com.temp.uninstalled is still uninstalled
+        val afterReloadTypes = resolveEditorAppBackupTypes(
+            apps = installedWithoutTemp,
+            defaultBackupTypes = defaultTypes,
+            existingBackupTypes = applied.appBackupTypes,
+            selectAllApps = applied.selectAllApps,
+            excludedPackageNames = applied.excludedPackageNames
+        )
+        assertEquals(apkOnlyUi, afterReloadTypes["com.temp.uninstalled"])
+
+        // 3. Save an unrelated edit while com.temp.uninstalled is still uninstalled
+        val reSaved = applied.copy(
+            appBackupTypes = afterReloadTypes,
+            maintenance = applied.maintenance.copy(checkRepo = true)
+        ).toRunTasksConfig(hasRoot = true)
+        assertEquals(mapOf("com.temp.uninstalled" to apkOnlySelection), reSaved.appBackupTypes)
+
+        // 4. Reinstall com.temp.uninstalled and apply/reload: override is restored
+        val installedAfterReinstall = listOf(
+            testApp("com.other.app"),
+            testApp("com.temp.uninstalled")
+        )
+        val afterReinstall = TaskConfigEditorState()
+            .withAppliedRunTasksConfig(reSaved, existingApps = installedAfterReinstall)
+        assertEquals(apkOnlyUi, afterReinstall.appBackupTypes["com.temp.uninstalled"])
+        assertEquals(defaultTypes, afterReinstall.appBackupTypes["com.other.app"])
     }
 }

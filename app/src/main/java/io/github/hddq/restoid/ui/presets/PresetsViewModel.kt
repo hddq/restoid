@@ -185,9 +185,13 @@ class PresetsViewModel(
                 if (addEditSessionId != sessionId) return@resetForNewConfig
                 val currentInitial = initialState
                 if (currentInitial != null && currentInitial.editor.apps.isEmpty() && loadedApps.isNotEmpty()) {
-                    val initialAppTypes = loadedApps.associate { app ->
-                        app.packageName to (currentInitial.editor.appBackupTypes[app.packageName] ?: currentInitial.editor.backupTypes)
-                    }
+                    val initialAppTypes = io.github.hddq.restoid.ui.shared.resolveEditorAppBackupTypes(
+                        apps = loadedApps,
+                        defaultBackupTypes = currentInitial.editor.backupTypes,
+                        existingBackupTypes = currentInitial.editor.appBackupTypes,
+                        selectAllApps = currentInitial.editor.selectAllApps,
+                        excludedPackageNames = currentInitial.editor.excludedPackageNames
+                    )
                     initialState = currentInitial.copy(
                         editor = editorController.recomputeConflicts(
                             currentInitial.editor.copy(
@@ -220,9 +224,13 @@ class PresetsViewModel(
                 if (addEditSessionId != sessionId) return@applyRunTasksConfig
                 val currentInitial = initialState
                 if (currentInitial != null && currentInitial.editor.apps.isEmpty() && loadedApps.isNotEmpty()) {
-                    val initialAppTypes = loadedApps.associate { app ->
-                        app.packageName to (currentInitial.editor.appBackupTypes[app.packageName] ?: currentInitial.editor.backupTypes)
-                    }
+                    val initialAppTypes = io.github.hddq.restoid.ui.shared.resolveEditorAppBackupTypes(
+                        apps = loadedApps,
+                        defaultBackupTypes = currentInitial.editor.backupTypes,
+                        existingBackupTypes = currentInitial.editor.appBackupTypes,
+                        selectAllApps = currentInitial.editor.selectAllApps,
+                        excludedPackageNames = currentInitial.editor.excludedPackageNames
+                    )
                     initialState = currentInitial.copy(
                         editor = editorController.recomputeConflicts(
                             currentInitial.editor.copy(

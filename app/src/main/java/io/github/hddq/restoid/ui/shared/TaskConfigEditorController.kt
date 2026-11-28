@@ -95,13 +95,19 @@ fun TaskConfigEditorState.toRunTasksConfig(hasRoot: Boolean): RunTasksConfig {
     val selectedAppTypes = when {
         !actualBackupEnabled -> emptyMap()
         effectiveSelectAllApps -> {
+            val excludedSet = effectiveExcluded.toSet()
             val source = if (apps.isNotEmpty()) {
-                selectedApps.associate { app ->
+                val installedPackages = apps.mapTo(mutableSetOf()) { it.packageName }
+                val preservedUninstalled = appBackupTypes
+                    .filterKeys { it !in installedPackages && it !in excludedSet }
+                    .mapValues { it.value.toSelection() }
+                val selectedInstalled = selectedApps.associate { app ->
                     app.packageName to (appBackupTypes[app.packageName] ?: backupTypes).toSelection()
                 }
+                preservedUninstalled + selectedInstalled
             } else {
                 appBackupTypes
-                    .filterKeys { it !in effectiveExcluded }
+                    .filterKeys { it !in excludedSet }
                     .mapValues { it.value.toSelection() }
             }
             source.filterValues { it != defaultSelection }
@@ -146,6 +152,27 @@ fun TaskConfigEditorState.toRunTasksConfig(hasRoot: Boolean): RunTasksConfig {
     )
 }
 
+internal fun resolveEditorAppBackupTypes(
+    apps: List<AppInfo>,
+    defaultBackupTypes: BackupTypes,
+    existingBackupTypes: Map<String, BackupTypes>,
+    selectAllApps: Boolean,
+    excludedPackageNames: Set<String>
+): Map<String, BackupTypes> {
+    if (apps.isEmpty()) return existingBackupTypes
+    val installedPackages = apps.mapTo(mutableSetOf()) { it.packageName }
+    val installedTypes = apps.associate { app ->
+        app.packageName to (existingBackupTypes[app.packageName] ?: defaultBackupTypes)
+    }
+    if (!selectAllApps) return installedTypes
+    val preservedUninstalledOverrides = existingBackupTypes.filter { (pkg, types) ->
+        pkg !in installedPackages &&
+            pkg !in excludedPackageNames &&
+            types != defaultBackupTypes
+    }
+    return preservedUninstalledOverrides + installedTypes
+}
+
 fun TaskConfigEditorState.withAppliedRunTasksConfig(
     config: RunTasksConfig,
     existingApps: List<AppInfo> = apps
@@ -170,13 +197,13 @@ fun TaskConfigEditorState.withAppliedRunTasksConfig(
     } else {
         emptyList()
     }
-    val updatedAppBackupTypes = if (updatedApps.isNotEmpty()) {
-        updatedApps.associate { app ->
-            app.packageName to (configAppTypes[app.packageName] ?: defaultTypes)
-        }
-    } else {
-        configAppTypes
-    }
+    val updatedAppBackupTypes = resolveEditorAppBackupTypes(
+        apps = updatedApps,
+        defaultBackupTypes = defaultTypes,
+        existingBackupTypes = configAppTypes,
+        selectAllApps = config.selectAllApps,
+        excludedPackageNames = excludedPkgSet
+    )
     return copy(
         apps = updatedApps,
         backupEnabled = config.backupEnabled,
@@ -483,13 +510,13 @@ class TaskConfigEditorController(
                 app.copy(isSelected = selected)
             }
             val sortedApps = sortApps(mappedApps, stateSnapshot.appSortOrder)
-            val appBackupTypes = sortedApps.associate { app ->
-                app.packageName to (
-                    currentBackupTypes[app.packageName]
-                        ?: savedAppBackupTypes[app.packageName]
-                        ?: defaultBackupTypes
-                    )
-            }
+            val appBackupTypes = resolveEditorAppBackupTypes(
+                apps = sortedApps,
+                defaultBackupTypes = defaultBackupTypes,
+                existingBackupTypes = savedAppBackupTypes + currentBackupTypes,
+                selectAllApps = stateSnapshot.selectAllApps,
+                excludedPackageNames = effectiveExcluded
+            )
             var delivered = false
             updateState { state ->
                 if (appsLoadSessionId != sessionId) return@updateState state
