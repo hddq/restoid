@@ -24,8 +24,32 @@ if [[ -z "${ANDROID_SERIAL:-}" ]]; then
     ADB_CMD+=(-s "${DEVICES[0]}")
 fi
 
+TARGET_SMALLEST_WIDTH_DP="${SCREENSHOT_SMALLEST_WIDTH_DP:-440}"
 IS_EMULATOR=$("${ADB_CMD[@]}" shell getprop ro.kernel.qemu 2>/dev/null | tr -d '\r[:space:]' || true)
 PREV_NIGHT_MODE=$("${ADB_CMD[@]}" shell cmd uimode night 2>/dev/null | tr -d '\r' | awk -F': ' '{print $NF}' | tr -d '[:space:]' || true)
+DENSITY_READ_OK=0
+PREV_OVERRIDE_DENSITY=""
+TARGET_DENSITY=""
+if RAW_DENSITY=$("${ADB_CMD[@]}" shell wm density 2>/dev/null) && RAW_SIZE=$("${ADB_CMD[@]}" shell wm size 2>/dev/null); then
+    PREV_OVERRIDE_DENSITY=$(printf '%s\n' "$RAW_DENSITY" | tr -d '\r' | awk -F': ' '/Override density:/ {print $2}' | tr -d '[:space:]')
+    ACTIVE_SIZE=$(printf '%s\n' "$RAW_SIZE" | tr -d '\r' | awk -F': ' '/Override size:/ {s=$2} END {print s}')
+    if [[ -z "$ACTIVE_SIZE" ]]; then
+        ACTIVE_SIZE=$(printf '%s\n' "$RAW_SIZE" | tr -d '\r' | awk -F': ' '/Physical size:/ {s=$2} END {print s}')
+    fi
+    if [[ "$ACTIVE_SIZE" =~ ^([0-9]+)x([0-9]+)$ ]]; then
+        W="${BASH_REMATCH[1]}"
+        H="${BASH_REMATCH[2]}"
+        SMALLEST_PX=$(( W < H ? W : H ))
+        TARGET_DENSITY=$(( (SMALLEST_PX * 160 + TARGET_SMALLEST_WIDTH_DP / 2) / TARGET_SMALLEST_WIDTH_DP ))
+        DENSITY_READ_OK=1
+    fi
+fi
+FONT_SCALE_READ_OK=0
+PREV_FONT_SCALE=""
+if RAW_FONT_SCALE=$("${ADB_CMD[@]}" shell settings get system font_scale 2>/dev/null); then
+    PREV_FONT_SCALE=$(printf '%s' "$RAW_FONT_SCALE" | tr -d '\r[:space:]')
+    FONT_SCALE_READ_OK=1
+fi
 HIDE_ERROR_DIALOGS_READ_OK=0
 PREV_HIDE_ERROR_DIALOGS=""
 if RAW_HIDE_ERROR_DIALOGS=$("${ADB_CMD[@]}" shell settings get global hide_error_dialogs 2>/dev/null); then
@@ -50,6 +74,20 @@ cleanup() {
         "${ADB_CMD[@]}" shell dumpsys battery reset >/dev/null 2>&1 || true
     else
         "${ADB_CMD[@]}" shell am broadcast -a com.android.systemui.demo -e command exit >/dev/null 2>&1 || true
+    fi
+    if [[ "$DENSITY_READ_OK" == "1" ]]; then
+        if [[ -n "$PREV_OVERRIDE_DENSITY" ]]; then
+            "${ADB_CMD[@]}" shell wm density "$PREV_OVERRIDE_DENSITY" >/dev/null 2>&1 || true
+        else
+            "${ADB_CMD[@]}" shell wm density reset >/dev/null 2>&1 || true
+        fi
+    fi
+    if [[ "$FONT_SCALE_READ_OK" == "1" ]]; then
+        if [[ "$PREV_FONT_SCALE" == "null" || -z "$PREV_FONT_SCALE" ]]; then
+            "${ADB_CMD[@]}" shell settings delete system font_scale >/dev/null 2>&1 || true
+        else
+            "${ADB_CMD[@]}" shell settings put system font_scale "$PREV_FONT_SCALE" >/dev/null 2>&1 || true
+        fi
     fi
     if [[ "$LINEAGE_BATTERY_PERCENT_READ_OK" == "1" ]]; then
         if [[ "$PREV_LINEAGE_BATTERY_PERCENT" == "null" || -z "$PREV_LINEAGE_BATTERY_PERCENT" ]]; then
@@ -81,6 +119,12 @@ cleanup() {
 trap cleanup EXIT
 
 echo "Preparing device (dark mode)..."
+if [[ "$DENSITY_READ_OK" == "1" && -n "$TARGET_DENSITY" ]]; then
+    "${ADB_CMD[@]}" shell wm density "$TARGET_DENSITY" >/dev/null 2>&1 || true
+fi
+if [[ "$FONT_SCALE_READ_OK" == "1" ]]; then
+    "${ADB_CMD[@]}" shell settings put system font_scale 1.0 >/dev/null 2>&1 || true
+fi
 if [[ "$HIDE_ERROR_DIALOGS_READ_OK" == "1" ]]; then
     "${ADB_CMD[@]}" shell settings put global hide_error_dialogs 1 >/dev/null 2>&1 || true
 fi
