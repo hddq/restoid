@@ -829,9 +829,10 @@ fun AddEditPresetScreen(
 
     val savedPresetId = state.id
     if (showIntentSheet && allowExternalIntents && savedPresetId != null) {
+        val savedPresetName = uiState.presets.firstOrNull { it.id == savedPresetId }?.name ?: state.name.trim()
         PresetIntentSheet(
             presetId = savedPresetId,
-            presetName = state.name.trim(),
+            presetName = savedPresetName,
             repositoryName = uiState.selectedRepoName,
             onDismissRequest = { showIntentSheet = false }
         )
