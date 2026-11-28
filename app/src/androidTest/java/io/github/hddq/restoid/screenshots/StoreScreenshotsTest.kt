@@ -187,7 +187,7 @@ class StoreScreenshotsTest {
                 onBack = {},
                 actions = {
                     AppSortMenuButton(
-                        sortOrder = AppSortOrder.NAME_ASCENDING,
+                        sortOrder = AppSortOrder.SIZE_DESCENDING,
                         onSortOrderChange = {}
                     )
                     IconButton(onClick = {}) {
@@ -271,7 +271,8 @@ class StoreScreenshotsTest {
                 actions = {
                     AppSortMenuButton(
                         sortOrder = AppSortOrder.NAME_ASCENDING,
-                        onSortOrderChange = {}
+                        onSortOrderChange = {},
+                        showSizeSort = false
                     )
                 }
             ) { contentPadding ->
@@ -305,7 +306,7 @@ class StoreScreenshotsTest {
                     onBack = {}
                 ) { contentPadding ->
                     ProgressScreenContent(
-                        progress = ScreenshotFixtures.operationProgress(),
+                        progress = ScreenshotFixtures.operationProgress(enUsTargetContext),
                         operationType = stringResource(R.string.operation_run_tasks),
                         onDone = {},
                         contentPadding = contentPadding
@@ -325,7 +326,7 @@ class StoreScreenshotsTest {
         setScreenshotContent {
             TopLevelScreenshotHost(
                 selectedScreen = Screen.Presets,
-                titleRes = Screen.Presets.titleRes,
+                titleRes = R.string.topbar_presets,
                 floatingActionButton = {
                     ExtendedFloatingActionButton(
                         onClick = {},

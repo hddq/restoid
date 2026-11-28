@@ -38,6 +38,7 @@ import io.github.hddq.restoid.model.RestoidMetadata
 import io.github.hddq.restoid.model.Schedule
 import io.github.hddq.restoid.model.TaskPreset
 import io.github.hddq.restoid.model.TriggerConditions
+import io.github.hddq.restoid.R
 import io.github.hddq.restoid.test.R as TestR
 import io.github.hddq.restoid.ui.home.HomeUiState
 import io.github.hddq.restoid.ui.home.SnapshotWithMetadata
@@ -45,9 +46,11 @@ import io.github.hddq.restoid.ui.presets.PresetsUiState
 import io.github.hddq.restoid.ui.runtasks.RunTasksUiState
 import io.github.hddq.restoid.ui.schedules.AddEditScheduleUiState
 import io.github.hddq.restoid.ui.settings.AddRepoUiState
+import io.github.hddq.restoid.ui.shared.AppSortOrder
 import io.github.hddq.restoid.ui.shared.BackupTypes
 import io.github.hddq.restoid.ui.shared.OperationProgress
 import io.github.hddq.restoid.ui.shared.TaskConfigEditorState
+import io.github.hddq.restoid.ui.shared.sortBackupDetails
 import io.github.hddq.restoid.work.BackupTypeSelection
 import io.github.hddq.restoid.work.DeviceDataBackupSelection
 import io.github.hddq.restoid.work.ExclusionConflict
@@ -58,11 +61,15 @@ import java.time.temporal.ChronoUnit
 
 internal object ScreenshotFixtures {
 
-    const val HOSTNAME = "Pixel 9"
+    const val HOSTNAME = "Pixel 8"
     const val PRIMARY_REPO_KEY = "sftp:backup@nas.home:/backups/restoid"
 
     private const val MB = 1024L * 1024L
     private const val KB = 1024L
+
+    private val referenceNow: Instant by lazy { Instant.now() }
+    private val referenceNowMillis: Long
+        get() = referenceNow.toEpochMilli()
 
     val tags: List<BackupTag> = listOf(
         BackupTag(name = "daily", colorArgb = 0xFF00ACC1.toInt()),
@@ -152,28 +159,66 @@ internal object ScreenshotFixtures {
         )
     }
 
+    private data class SampleAppBackupSpec(
+        val packageName: String,
+        val apkSize: Long,
+        val dataSize: Long,
+        val userDeSize: Long
+    ) {
+        val totalSize: Long
+            get() = apkSize + dataSize + userDeSize
+
+        val detailedSizes: Map<String, Long>
+            get() = mapOf(
+                "apk" to apkSize,
+                "data" to dataSize,
+                "user_de" to userDeSize
+            )
+    }
+
+    private val snap1AppSpecs: List<SampleAppBackupSpec> = listOf(
+        SampleAppBackupSpec("paige.navic", apkSize = 38 * MB, dataSize = 7 * MB, userDeSize = 1 * MB),
+        SampleAppBackupSpec("app.organicmaps", apkSize = 31 * MB, dataSize = 6 * MB, userDeSize = 1 * MB),
+        SampleAppBackupSpec("app.alextran.immich", apkSize = 25 * MB, dataSize = 6 * MB, userDeSize = 1 * MB),
+        SampleAppBackupSpec("com.kunzisoft.keepass.libre", apkSize = 20 * MB, dataSize = 3 * MB, userDeSize = 1 * MB),
+        SampleAppBackupSpec("de.danoeh.antennapod", apkSize = 14 * MB, dataSize = 4 * MB, userDeSize = 1 * MB),
+        SampleAppBackupSpec("org.breezyweather", apkSize = 12 * MB, dataSize = 3 * MB, userDeSize = 1 * MB),
+        SampleAppBackupSpec("nodomain.freeyourgadget.gadgetbridge", apkSize = 10 * MB, dataSize = 3 * MB, userDeSize = 1 * MB),
+        SampleAppBackupSpec("com.chiller3.basicsync", apkSize = 8 * MB, dataSize = 2 * MB, userDeSize = 1 * MB),
+        SampleAppBackupSpec("dev.imranr.obtainium.fdroid", apkSize = 6 * MB, dataSize = 1536 * KB, userDeSize = 512 * KB),
+        SampleAppBackupSpec("com.beemdevelopment.aegis", apkSize = 4 * MB, dataSize = 540 * KB, userDeSize = 180 * KB)
+    )
+
+    private val snap1CustomDirectories: Map<String, CustomDirectoryMetadata> = mapOf(
+        "/storage/emulated/0/Documents" to CustomDirectoryMetadata(size = 148 * MB, isDirectory = true),
+        "/storage/emulated/0/backups/gadgetbridge" to CustomDirectoryMetadata(size = 64 * MB, isDirectory = true)
+    )
+
+    private val snap1DeviceData: DeviceDataMetadata = DeviceDataMetadata(
+        contacts = ContactsBackupMetadata(count = 248, size = 1840 * KB, path = "device_data/contacts.vcf"),
+        callLogs = CallLogsBackupMetadata(count = 412, size = 320 * KB, path = "device_data/call_logs.json"),
+        calendar = CalendarBackupMetadata(count = 86, size = 512 * KB, path = "device_data/calendars.ics", calendarCount = 3)
+    )
+
+    private val snap1TotalBytes: Long =
+        snap1AppSpecs.sumOf { it.totalSize } +
+            snap1CustomDirectories.values.sumOf { it.size } +
+            (snap1DeviceData.contacts?.size ?: 0L) +
+            (snap1DeviceData.callLogs?.size ?: 0L) +
+            (snap1DeviceData.calendar?.size ?: 0L)
+
     fun homeUiState(testContext: Context, resticState: ResticState): HomeUiState {
         val apps = sampleApps(testContext)
-        val now = Instant.now()
+        val now = referenceNow
+        val (snap1Info, snap1Metadata, snap1Details) = snapshotDetailsData(testContext)
 
-        val snap1Id = "21aac4a1c455944fdf902abbe174ccb61377b798a28c7c85b70febf1c94d1368"
+        val snap1Id = snap1Info.id
         val snap2Id = "dc648eda9b3102f8c7a4e5b1903d4f8a21c7e9045a1b6d3c8e2f4a7b9c0d1e2f"
         val snap3Id = "8f3b19c04e72a6d51b8c9f0e2a4d6c8b1e3f5a7c9d0b2e4f6a8c1d3e5f7a9b0c"
 
-        val snap1Apps = listOf(
-            apps.first { it.packageName == "paige.navic" },
-            apps.first { it.packageName == "com.beemdevelopment.aegis" },
-            apps.first { it.packageName == "com.kunzisoft.keepass.libre" },
-            apps.first { it.packageName == "com.chiller3.basicsync" },
-            apps.first { it.packageName == "nodomain.freeyourgadget.gadgetbridge" },
-            apps.first { it.packageName == "dev.imranr.obtainium.fdroid" },
-            apps.first { it.packageName == "de.danoeh.antennapod" },
-            apps.first { it.packageName == "org.breezyweather" },
-            apps.first { it.packageName == "app.alextran.immich" },
-            apps.first { it.packageName == "app.organicmaps" }
-        )
+        val snap1Apps = snap1Details.map { it.appInfo }
 
-        val snap2Apps = listOf(
+        val snap3Apps = listOf(
             apps.first { it.packageName == "paige.navic" },
             apps.first { it.packageName == "com.beemdevelopment.aegis" },
             apps.first { it.packageName == "com.kunzisoft.keepass.libre" },
@@ -182,40 +227,15 @@ internal object ScreenshotFixtures {
         )
 
         val snap1 = SnapshotWithMetadata(
-            snapshotInfo = SnapshotInfo(
-                id = snap1Id,
-                time = now.minus(12, ChronoUnit.MINUTES).toString(),
-                paths = listOf("/data/user/0", "/storage/emulated/0/Documents"),
-                tags = listOf("restoid", "daily"),
-                hostname = HOSTNAME
-            ),
-            metadata = RestoidMetadata(
-                apps = snap1Apps.associate { app ->
-                    app.packageName to AppMetadata(
-                        size = 18 * MB,
-                        types = listOf("apk", "data", "user_de", "permissions"),
-                        versionCode = app.versionCode,
-                        versionName = app.versionName,
-                        appName = app.name
-                    )
-                },
-                customDirectories = mapOf(
-                    "/storage/emulated/0/Documents" to CustomDirectoryMetadata(size = 148 * MB, isDirectory = true),
-                    "/storage/emulated/0/backups/gadgetbridge" to CustomDirectoryMetadata(size = 64 * MB, isDirectory = true)
-                ),
-                deviceData = DeviceDataMetadata(
-                    contacts = ContactsBackupMetadata(count = 248, size = 1840 * KB, path = "device_data/contacts.vcf"),
-                    callLogs = CallLogsBackupMetadata(count = 412, size = 320 * KB, path = "device_data/call_logs.json"),
-                    calendar = CalendarBackupMetadata(count = 86, size = 512 * KB, path = "device_data/calendars.ics", calendarCount = 3)
-                )
-            )
+            snapshotInfo = snap1Info,
+            metadata = snap1Metadata
         )
 
         val snap2 = SnapshotWithMetadata(
             snapshotInfo = SnapshotInfo(
                 id = snap2Id,
                 time = now.minus(1, ChronoUnit.DAYS).minus(2, ChronoUnit.HOURS).toString(),
-                paths = listOf("/storage/emulated/0/DCIM/Camera"),
+                paths = listOf("/storage/emulated/0/DCIM/Camera", "/storage/emulated/0/Pictures/Screenshots"),
                 tags = listOf("restoid", "photos"),
                 hostname = HOSTNAME
             ),
@@ -232,12 +252,12 @@ internal object ScreenshotFixtures {
             snapshotInfo = SnapshotInfo(
                 id = snap3Id,
                 time = now.minus(3, ChronoUnit.DAYS).toString(),
-                paths = listOf("/data/user/0"),
+                paths = listOf("/data/user/0", "/storage/emulated/0/Documents"),
                 tags = listOf("restoid", "manual"),
                 hostname = HOSTNAME
             ),
             metadata = RestoidMetadata(
-                apps = snap2Apps.associate { app ->
+                apps = snap3Apps.associate { app ->
                     app.packageName to AppMetadata(
                         size = 12 * MB,
                         types = listOf("apk", "data", "permissions"),
@@ -260,7 +280,7 @@ internal object ScreenshotFixtures {
             appInfoMap = mapOf(
                 snap1Id to snap1Apps,
                 snap2Id to emptyList(),
-                snap3Id to snap2Apps
+                snap3Id to snap3Apps
             ),
             selectedRepo = PRIMARY_REPO_KEY,
             resticState = resticState,
@@ -270,61 +290,35 @@ internal object ScreenshotFixtures {
     }
 
     fun snapshotDetailsData(testContext: Context): Triple<SnapshotInfo, RestoidMetadata, List<BackupDetail>> {
-        val apps = sampleApps(testContext)
-        val navic = apps.first { it.packageName == "paige.navic" }
-        val aegis = apps.first { it.packageName == "com.beemdevelopment.aegis" }
-        val keepass = apps.first { it.packageName == "com.kunzisoft.keepass.libre" }
-        val basicSync = apps.first { it.packageName == "com.chiller3.basicsync" }
+        val appsByPackage = sampleApps(testContext).associateBy { it.packageName }
 
         val snapshot = SnapshotInfo(
             id = "21aac4a1c455944fdf902abbe174ccb61377b798a28c7c85b70febf1c94d1368",
-            time = Instant.now().minus(12, ChronoUnit.MINUTES).toString(),
-            paths = listOf("/data/user/0", "/storage/emulated/0/Documents"),
+            time = referenceNow.minus(12, ChronoUnit.MINUTES).toString(),
+            paths = listOf(
+                "/data/user/0",
+                "/storage/emulated/0/Documents",
+                "/storage/emulated/0/backups/gadgetbridge"
+            ),
             tags = listOf("restoid", "daily"),
             hostname = HOSTNAME
         )
 
-        val backupDetails = listOf(
-            BackupDetail(
-                appInfo = navic,
-                backedUpItems = listOf("APK", "Data", "Device Protected Data", "Permissions"),
-                versionName = navic.versionName,
-                versionCode = navic.versionCode,
-                backupSize = 46 * MB,
-                isDowngrade = false,
-                isInstalled = true,
-                detailedSizes = mapOf("apk" to 38 * MB, "data" to 7 * MB, "user_de" to 1 * MB)
-            ),
-            BackupDetail(
-                appInfo = aegis,
-                backedUpItems = listOf("Data", "Device Protected Data", "Permissions"),
-                versionName = aegis.versionName,
-                versionCode = aegis.versionCode,
-                backupSize = 720 * KB,
-                isDowngrade = false,
-                isInstalled = true,
-                detailedSizes = mapOf("data" to 540 * KB, "user_de" to 180 * KB)
-            ),
-            BackupDetail(
-                appInfo = keepass,
-                backedUpItems = listOf("APK", "Data", "Permissions"),
-                versionName = keepass.versionName,
-                versionCode = keepass.versionCode,
-                backupSize = 24 * MB,
-                isDowngrade = false,
-                isInstalled = true,
-                detailedSizes = mapOf("apk" to 21 * MB, "data" to 3 * MB)
-            ),
-            BackupDetail(
-                appInfo = basicSync,
-                backedUpItems = listOf("APK", "Data", "Device Protected Data", "Permissions"),
-                versionName = basicSync.versionName,
-                versionCode = basicSync.versionCode,
-                backupSize = 11 * MB,
-                isDowngrade = false,
-                isInstalled = true,
-                detailedSizes = mapOf("apk" to 9 * MB, "data" to 2 * MB)
-            )
+        val backupDetails = sortBackupDetails(
+            details = snap1AppSpecs.map { spec ->
+                val app = appsByPackage.getValue(spec.packageName)
+                BackupDetail(
+                    appInfo = app,
+                    backedUpItems = listOf("APK", "Data", "Device Protected Data", "Permissions"),
+                    versionName = app.versionName,
+                    versionCode = app.versionCode,
+                    backupSize = spec.totalSize,
+                    isDowngrade = false,
+                    isInstalled = true,
+                    detailedSizes = spec.detailedSizes
+                )
+            },
+            order = AppSortOrder.SIZE_DESCENDING
         )
 
         val metadata = RestoidMetadata(
@@ -338,21 +332,15 @@ internal object ScreenshotFixtures {
                     detailedSizes = detail.detailedSizes
                 )
             },
-            customDirectories = mapOf(
-                "/storage/emulated/0/Documents" to CustomDirectoryMetadata(size = 148 * MB, isDirectory = true)
-            ),
-            deviceData = DeviceDataMetadata(
-                contacts = ContactsBackupMetadata(count = 248, size = 1840 * KB, path = "device_data/contacts.vcf"),
-                callLogs = CallLogsBackupMetadata(count = 412, size = 320 * KB, path = "device_data/call_logs.json"),
-                calendar = CalendarBackupMetadata(count = 86, size = 512 * KB, path = "device_data/calendars.ics", calendarCount = 3)
-            )
+            customDirectories = snap1CustomDirectories,
+            deviceData = snap1DeviceData
         )
 
         return Triple(snapshot, metadata, backupDetails)
     }
 
     fun taskPresets(): List<TaskPreset> {
-        val nowMs = System.currentTimeMillis()
+        val nowMs = referenceNowMillis
         return listOf(
             TaskPreset(
                 id = "preset-nightly",
@@ -378,6 +366,11 @@ internal object ScreenshotFixtures {
                     forgetSnapshots = true,
                     pruneRepo = false,
                     checkRepo = true,
+                    keepLast = 5,
+                    keepDaily = 7,
+                    keepWeekly = 4,
+                    keepMonthly = 6,
+                    forgetAllHosts = true,
                     backupTags = listOf("daily")
                 ),
                 lastRunTimestamp = nowMs - 12 * 60 * 1000L
@@ -449,7 +442,8 @@ internal object ScreenshotFixtures {
                 keepLast = 5,
                 keepDaily = 7,
                 keepWeekly = 4,
-                keepMonthly = 6
+                keepMonthly = 6,
+                forgetAllHosts = true
             ),
             backupTags = listOf("daily"),
             availableTags = tags
@@ -464,6 +458,7 @@ internal object ScreenshotFixtures {
 
     fun presetsUiState(): PresetsUiState {
         val presets = taskPresets()
+        val nowMs = referenceNowMillis
         val schedules = mapOf(
             "preset-nightly" to listOf(
                 Schedule(
@@ -475,7 +470,8 @@ internal object ScreenshotFixtures {
                         requireBatteryNotLow = true,
                         requireCharging = true,
                         requireUnmeteredNetwork = true
-                    )
+                    ),
+                    lastRunTimestamp = nowMs - 12 * 60 * 1000L
                 )
             ),
             "preset-maintenance" to listOf(
@@ -483,7 +479,8 @@ internal object ScreenshotFixtures {
                     id = "sched-weekly",
                     presetId = "preset-maintenance",
                     name = "Weekly Prune",
-                    intervalHours = 168
+                    intervalHours = 168,
+                    lastRunTimestamp = nowMs - 4 * 24 * 60 * 60 * 1000L
                 )
             )
         )
@@ -509,7 +506,7 @@ internal object ScreenshotFixtures {
                 requireCharging = true,
                 requireUnmeteredNetwork = true
             ),
-            lastRunTimestamp = System.currentTimeMillis() - 12 * 60 * 1000L,
+            lastRunTimestamp = referenceNowMillis - 12 * 60 * 1000L,
             availablePresets = presets
         )
         val conditionStatus = TriggerConditionStatusSnapshot(
@@ -528,18 +525,25 @@ internal object ScreenshotFixtures {
         return state to conditionStatus
     }
 
-    fun operationProgress(): OperationProgress = OperationProgress(
-        stageTitle = "[2/5] Backing up items...",
-        overallPercentage = 0.34f,
-        stagePercentage = 0.62f,
-        totalFiles = 4270,
-        filesProcessed = 2648,
-        totalBytes = 2_480_000_000L,
-        bytesProcessed = 1_537_000_000L,
-        currentFile = "/data/user/0/paige.navic/databases/navic.db",
-        elapsedTime = 18L,
-        isFinished = false
-    )
+    fun operationProgress(context: Context): OperationProgress {
+        val stagePercentage = 0.62f
+        val totalFiles = 4270
+        val filesProcessed = (totalFiles * stagePercentage).roundToInt()
+        val totalBytes = snap1TotalBytes
+        val bytesProcessed = (totalBytes * stagePercentage).toLong()
+        return OperationProgress(
+            stageTitle = context.getString(R.string.backup_stage_running, 2, 5),
+            overallPercentage = (1f + stagePercentage) / 5f,
+            stagePercentage = stagePercentage,
+            totalFiles = totalFiles,
+            filesProcessed = filesProcessed,
+            totalBytes = totalBytes,
+            bytesProcessed = bytesProcessed,
+            currentFile = "/data/user/0/paige.navic/databases/navic.db",
+            elapsedTime = 18L,
+            isFinished = false
+        )
+    }
 
     fun addRepoDialogState(): AddRepoUiState = AddRepoUiState(
         backendType = RepositoryBackendType.LOCAL,

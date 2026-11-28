@@ -94,13 +94,18 @@ if [[ "$IS_EMULATOR" == "1" ]]; then
     "${ADB_CMD[@]}" shell am force-stop com.android.launcher3 >/dev/null 2>&1 || true
     "${ADB_CMD[@]}" shell am force-stop com.google.android.apps.nexuslauncher >/dev/null 2>&1 || true
     "${ADB_CMD[@]}" shell cmd overlay enable com.android.internal.systemui.navbar.gestural >/dev/null 2>&1 || true
-    "${ADB_CMD[@]}" shell dumpsys battery unplug >/dev/null 2>&1 || true
-    "${ADB_CMD[@]}" shell dumpsys battery set level 100 >/dev/null 2>&1 || true
+    "${ADB_CMD[@]}" shell dumpsys battery set ac 1 >/dev/null 2>&1 || true
+    "${ADB_CMD[@]}" shell dumpsys battery set status 2 >/dev/null 2>&1 || true
+    "${ADB_CMD[@]}" shell dumpsys battery set level 94 >/dev/null 2>&1 || true
 else
+    DEVICE_HHMM=$("${ADB_CMD[@]}" shell date +%H%M 2>/dev/null | tr -d '\r[:space:]' || true)
+    if [[ ! "$DEVICE_HHMM" =~ ^[0-9]{4}$ ]]; then
+        DEVICE_HHMM="1200"
+    fi
     "${ADB_CMD[@]}" shell settings put global sysui_demo_allowed 1 >/dev/null 2>&1 || true
     "${ADB_CMD[@]}" shell am broadcast -a com.android.systemui.demo -e command enter >/dev/null 2>&1 || true
-    "${ADB_CMD[@]}" shell am broadcast -a com.android.systemui.demo -e command clock -e hhmm 1200 >/dev/null 2>&1 || true
-    "${ADB_CMD[@]}" shell am broadcast -a com.android.systemui.demo -e command battery -e level 100 -e plugged false >/dev/null 2>&1 || true
+    "${ADB_CMD[@]}" shell am broadcast -a com.android.systemui.demo -e command clock -e hhmm "$DEVICE_HHMM" >/dev/null 2>&1 || true
+    "${ADB_CMD[@]}" shell am broadcast -a com.android.systemui.demo -e command battery -e level 94 -e plugged true >/dev/null 2>&1 || true
     "${ADB_CMD[@]}" shell am broadcast -a com.android.systemui.demo -e command network -e wifi show -e level 4 -e fully true >/dev/null 2>&1 || true
     "${ADB_CMD[@]}" shell am broadcast -a com.android.systemui.demo -e command network -e mobile show -e level 4 -e datatype none >/dev/null 2>&1 || true
     "${ADB_CMD[@]}" shell am broadcast -a com.android.systemui.demo -e command notifications -e visible false >/dev/null 2>&1 || true
