@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Notes
+import androidx.compose.material.icons.outlined.Feedback
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Translate
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -39,6 +40,7 @@ fun AboutSettings(onNavigateToLicenses: () -> Unit) {
         }
     }
     val githubIntent = remember { Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/hddq/restoid")) }
+    val issuesIntent = remember { Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/hddq/restoid/issues/new/choose")) }
     val crowdinIntent = remember { Intent(Intent.ACTION_VIEW, Uri.parse("https://crowdin.com/project/restoid")) }
 
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -46,7 +48,7 @@ fun AboutSettings(onNavigateToLicenses: () -> Unit) {
         ExpressiveCardGroup {
             SegmentedListItem(
                 onClick = onNavigateToLicenses,
-                shapes = ListItemDefaults.segmentedShapes(index = 0, count = 3),
+                shapes = ListItemDefaults.segmentedShapes(index = 0, count = 4),
                 verticalAlignment = Alignment.CenterVertically,
                 colors = expressiveListItemColors(),
                 leadingContent = {
@@ -60,7 +62,7 @@ fun AboutSettings(onNavigateToLicenses: () -> Unit) {
 
             SegmentedListItem(
                 onClick = { context.startActivity(crowdinIntent) },
-                shapes = ListItemDefaults.segmentedShapes(index = 1, count = 3),
+                shapes = ListItemDefaults.segmentedShapes(index = 1, count = 4),
                 verticalAlignment = Alignment.CenterVertically,
                 colors = expressiveListItemColors(),
                 leadingContent = {
@@ -73,8 +75,22 @@ fun AboutSettings(onNavigateToLicenses: () -> Unit) {
             )
 
             SegmentedListItem(
+                onClick = { context.startActivity(issuesIntent) },
+                shapes = ListItemDefaults.segmentedShapes(index = 2, count = 4),
+                verticalAlignment = Alignment.CenterVertically,
+                colors = expressiveListItemColors(),
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Outlined.Feedback,
+                        contentDescription = null
+                    )
+                },
+                content = { Text(stringResource(R.string.issues_and_feedback)) }
+            )
+
+            SegmentedListItem(
                 onClick = { context.startActivity(githubIntent) },
-                shapes = ListItemDefaults.segmentedShapes(index = 2, count = 3),
+                shapes = ListItemDefaults.segmentedShapes(index = 3, count = 4),
                 verticalAlignment = Alignment.CenterVertically,
                 colors = expressiveListItemColors(),
                 leadingContent = {

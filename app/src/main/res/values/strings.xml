@@ -485,6 +485,7 @@
     <string name="version_label">Version</string>
     <string name="open_source_licenses">Open Source Licenses</string>
     <string name="translate">Translate</string>
+    <string name="issues_and_feedback">Issues &amp; feedback</string>
 
     <string name="notifications_enabled">Notifications enabled</string>
     <string name="battery_optimization_description">Disable this to improve reliability of long background operations.</string>
